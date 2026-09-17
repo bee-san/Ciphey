@@ -163,7 +163,7 @@ fn break_vigenere(text: &str, key_length: usize) -> String {
         for key_ch1 in 0..26 {
             for key_ch2 in 0..26 {
                 let mut fitness = 0;
-                for text_idx in (key_idx..(cipher_text.len() - 1)).step_by(key_length) {
+                for text_idx in (key_idx..cipher_text.len().saturating_sub(1)).step_by(key_length) {
                     let clear_ch1 = (VIGENERE_SQUARE[cipher_text[text_idx]][key_ch1] as u8) - b'A';
                     let clear_ch2 =
                         (VIGENERE_SQUARE[cipher_text[text_idx + 1]][key_ch2] as u8) - b'A';
