@@ -148,6 +148,11 @@ fn break_vigenere(text: &str, key_length: usize) -> String {
         }
     }
 
+    // Avoid underflows or logic errors if text is too short
+    if cipher_text.len() < 2 {
+        return " ".repeat(key_length);
+    }
+
     let mut best_fitness = 0;
     let mut best_key_ch2 = ' ';
     let mut best_score_0 = 0;
@@ -163,12 +168,19 @@ fn break_vigenere(text: &str, key_length: usize) -> String {
         for key_ch1 in 0..26 {
             for key_ch2 in 0..26 {
                 let mut fitness = 0;
-                for text_idx in (key_idx..(cipher_text.len() - 1)).step_by(key_length) {
-                    let clear_ch1 = (VIGENERE_SQUARE[cipher_text[text_idx]][key_ch1] as u8) - b'A';
-                    let clear_ch2 =
-                        (VIGENERE_SQUARE[cipher_text[text_idx + 1]][key_ch2] as u8) - b'A';
-                    fitness += ENGLISH_BIGRAMS[clear_ch1 as usize][clear_ch2 as usize];
+
+                // Use saturating_sub to avoid unsize underflow if len is zero.
+                let limit = cipher_text.len().saturating_sub(1);
+
+                for text_idx in (key_idx..limit).step_by(key_length) {
+                    // (Cipher - Key + 26) % 26 guarantees a result between 0 and 25
+                    let clear_ch1 = (cipher_text[text_idx] + 26 - key_ch1) % 26;
+                    let clear_ch2 = (cipher_text[text_idx + 1] + 26 - key_ch2) % 26;
+
+                    // Never panic on 26x26 matrix
+                    fitness += ENGLISH_BIGRAMS[clear_ch1][clear_ch2];
                 }
+
                 if fitness > best_fitness {
                     best_fitness = fitness;
                     best_key_ch1 = ((key_ch1 as u8) + b'A') as char;
