@@ -38,7 +38,7 @@ Some features that may interest you, and that we're proud of.
 
 ![](https://raw.githubusercontent.com/bee-san/ciphey/main/images/better_demo.svg)
 
-ciphey is fast. Very fast. Other decoders such as Ciphey require advance artifical intelligence to determine which path it should take to decode (whether to try Caesar next or Base64 etc).
+ciphey is fast. Very fast. Other decoders such as Ciphey require advanced artificial intelligence to determine which path it should take to decode (whether to try Caesar next or Base64 etc).
 
 ciphey is so fast we don't need to worry about this currently. For every 1 decode Ciphey can do, ciphey can do ~7. That's a 700% increase in speed.
 
@@ -148,5 +148,5 @@ We now store statistics in a database. This is useful for seeing how ciphey is d
 
 We use AI for 2 things:
 1. The TUI is entirely vibe coded.
-2. I made AI spend hours researching every single CTF challenge out there. It created a list of 15,071 CTFs. It then went through every single CTF and looked for writeups. In those writeups it looked for anything related to encoding / decoding. It then created tests out of those. This enabled us to increase our testing coverage and make sure all CTF encoding / decoding challenges are solveable with this tool.
+2. I made AI spend hours researching every single CTF challenge out there. It created a list of 15,071 CTFs. It then went through every single CTF and looked for writeups. In those writeups it looked for anything related to encoding / decoding. It then created tests out of those. This enabled us to increase our testing coverage and make sure all CTF encoding / decoding challenges are solvable with this tool.
 
