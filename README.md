@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bee-san/ciphey/main/images/main_demo.svg" alt="ciphey demo">
+  <img src="https://raw.githubusercontent.com/bee-san/Ciphey/master/images/main_demo.svg" alt="ciphey demo">
 </p>
 
 
@@ -36,7 +36,7 @@ Some features that may interest you, and that we're proud of.
 
 ## Fast
 
-![](https://raw.githubusercontent.com/bee-san/ciphey/main/images/better_demo.svg)
+![](https://raw.githubusercontent.com/bee-san/Ciphey/master/images/better_demo.svg)
 
 ciphey is fast. Very fast. Other decoders such as Ciphey require advance artifical intelligence to determine which path it should take to decode (whether to try Caesar next or Base64 etc).
 
@@ -65,7 +65,7 @@ ciphey already has ~120 tests, documentation tests (to ensure our docs are kept 
 
 ## LemmeKnow
 
-![](https://raw.githubusercontent.com/bee-san/ciphey/main/images/lemmeknow.svg)
+![](https://raw.githubusercontent.com/bee-san/Ciphey/master/images/lemmeknow.svg)
 
 <img width="861" alt="Screenshot 2022-12-18 at 17 08 36" src="https://user-images.githubusercontent.com/10378052/208310491-86e704ca-963d-4850-a2b2-f14b6e0f4797.png">
 
