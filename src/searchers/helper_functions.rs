@@ -94,6 +94,7 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         "UTF-16",
         // Compressed data is usually wrapped in one of the above, and can be nested
         "Zlib",
+        "Gzip",
     ];
     STACKABLE.contains(&prev_decoder) && STACKABLE.contains(&current_cipher)
 }

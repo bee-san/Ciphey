@@ -41,6 +41,14 @@ input = "4d656574206d6520617420746865206f6c64206c69676874686f7573652061667465722
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# Base64 of gzip.compress(text, mtime=0). Gzip reads the Base64 itself, so it is one step.
+kind = "single"
+name = "gzip"
+layers = ["Gzip", "Base64"]
+input = "H4sIAAAAAAAC/x2K0RGAMAjFVnkDeG7iEGixcJbWQ/xwe5W/XJKFOWAMCoQwRitoWiVk3Ndn92CHaem/A/WC1bXXfI3OKeHgJxMhhm8yv/6/JS9UAAAA"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "decimal"
 layers = ["Decimal"]

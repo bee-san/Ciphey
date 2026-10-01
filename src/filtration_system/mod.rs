@@ -30,6 +30,7 @@ use crate::decoders::braille_decoder::BrailleDecoder;
 use crate::decoders::caesar_decoder::CaesarDecoder;
 use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
 use crate::decoders::crack_results::CrackResult;
+use crate::decoders::gzip_decoder::GzipDecoder;
 use crate::decoders::interface::{Crack, Decoder};
 use crate::decoders::jwt_decoder::JwtDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
@@ -277,6 +278,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let brailledecoder = Decoder::<BrailleDecoder>::new();
     let substitution_generic = Decoder::<SubstitutionGenericDecoder>::new();
     let zlib = Decoder::<ZlibDecoder>::new();
+    let gzip = Decoder::<GzipDecoder>::new();
 
     let brainfuck = Decoder::<BrainfuckInterpreter>::new();
 
@@ -323,6 +325,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(a1z26decoder),
             Box::new(brailledecoder),
             Box::new(substitution_generic),
+            Box::new(gzip),
             Box::new(brainfuck),
             Box::new(zlib),
         ],
