@@ -3,16 +3,16 @@
 //! * `startup/config`: building the default config, loading `~/.ciphey/config.toml`
 //!   (the fixture copy, see below) and loading a 5,000 word wordlist.
 //! * `startup/cache`: the SQLite cache every `perform_cracking` call goes through, on a
-//!   database file in a temp dir: schema setup, cache lookups, and an insert.
+//!   database file in a scratch dir: schema setup, cache lookups, and an insert.
 //! * `startup/perform_cracking`: plaintext input end to end against that file, as a
 //!   cache hit and as a cache miss (the miss includes writing the result to the cache).
 //! * `startup/cli` (Unix only): the real `ciphey` binary started as a subprocess, which
 //!   adds process start, argument parsing, logger setup and every lazy `static` the run
 //!   touches (LemmeKnow compiles its ~130 regexes on first use).
 //!
-//! `HOME` is pointed at a temp dir holding `benches/data/config.toml`, so nothing reads or
-//! writes your real `~/.ciphey` and the first-run wizard never starts. The temp dir is
-//! removed afterwards.
+//! `HOME` is pointed at a scratch dir under `target/tmp` holding `benches/data/config.toml`,
+//! so nothing reads or writes your real `~/.ciphey` and the first-run wizard never starts.
+//! The scratch dir is removed afterwards.
 //!
 //! Run: `cargo bench --bench startup`
 
@@ -36,13 +36,16 @@ const BASE64: &str = "TWVldCBtZSBhdCB0aGUgb2xkIGxpZ2h0aG91c2UgYWZ0ZXIgbWlkbmlnaH
 /// Never inserted, for cache misses.
 const NOT_CACHED: &str = "this text is never written to the cache";
 
-/// Temp dir removed on drop.
+/// Scratch dir under `target/`, removed on drop.
 struct TempDir(PathBuf);
 
 impl TempDir {
     fn new() -> Self {
-        let path = std::env::temp_dir().join(format!("ciphey-bench-{}", std::process::id()));
-        std::fs::create_dir_all(path.join(".ciphey")).expect("could not create temp dir");
+        // CARGO_TARGET_TMPDIR is Cargo's scratch space for benches and integration tests,
+        // fixed at compile time (`target/tmp`).
+        let path = Path::new(env!("CARGO_TARGET_TMPDIR"))
+            .join(format!("ciphey-bench-startup-{}", std::process::id()));
+        std::fs::create_dir_all(path.join(".ciphey")).expect("could not create scratch dir");
         std::fs::copy(
             common::data_path("config.toml"),
             path.join(".ciphey").join("config.toml"),
@@ -84,7 +87,7 @@ fn config_benches(c: &mut Criterion) {
 
     group.bench_function("default", |b| b.iter(Config::default));
 
-    // What the CLI does first: read and parse ~/.ciphey/config.toml (HOME is the temp dir).
+    // What the CLI does first: read and parse ~/.ciphey/config.toml (HOME is the scratch dir).
     #[cfg(unix)]
     {
         let loaded = ciphey::config::get_config_file_into_struct();

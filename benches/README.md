@@ -63,7 +63,8 @@ update the fixture. Search results are only checked in optimised builds: under
   checkers have their own suite.
 * `decoders`, `checkers`, `crib` and `search` keep the cache database in memory, so
   every `perform_cracking` call is a cache miss and nothing under `~/.ciphey` is read or
-  written. `startup` uses a temp dir for its database and as `HOME` for the CLI.
+  written. `startup` uses a scratch dir under `target/tmp` for its database and as
+  `HOME` for the CLI.
 * The A* search keeps per-decoder success statistics for the life of the process and
   uses them in its edge costs. The search benchmarks clear them before every
   iteration (`ciphey::reset_decoder_stats`), so each search explores in the same order
