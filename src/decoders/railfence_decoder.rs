@@ -92,16 +92,39 @@ impl Crack for Decoder<RailfenceDecoder> {
 }
 
 /// Decodes a text encoded with the Rail Fence Cipher with the specified number of rails and offset
+///
+/// Position `p` of the plaintext is on rail `zigzag[p]`, and the ciphertext lists the
+/// rails one after another. So the ciphertext fills rail 0's positions left to right,
+/// then rail 1's, and so on: a stable counting sort of the positions by rail.
 fn railfence_decoder(text: &str, rails: usize, offset: usize) -> String {
-    let mut indexes: Vec<_> = zigzag(rails, offset).zip(1..).take(text.len()).collect();
-    indexes.sort();
-    let mut char_with_index: Vec<_> = text
-        .chars()
-        .zip(indexes)
-        .map(|(c, (_, i))| (i, c))
-        .collect();
-    char_with_index.sort();
-    char_with_index.iter().map(|(_, c)| c).collect()
+    // Positions run over the byte length, not the character count, as they always
+    // have: for non-ASCII text some positions stay empty and are skipped.
+    let len = text.len();
+    let rail_of: Vec<usize> = zigzag(rails, offset).take(len).collect();
+
+    // next[r]: where rail r's next position goes in the rail-by-rail order.
+    let mut next = vec![0usize; rails];
+    for &rail in &rail_of {
+        next[rail] += 1;
+    }
+    let mut start = 0;
+    for slot in next.iter_mut() {
+        let count = *slot;
+        *slot = start;
+        start += count;
+    }
+    // order[i]: the plaintext position of the i-th ciphertext character.
+    let mut order = vec![0usize; len];
+    for (position, &rail) in rail_of.iter().enumerate() {
+        order[next[rail]] = position;
+        next[rail] += 1;
+    }
+
+    let mut plaintext: Vec<Option<char>> = vec![None; len];
+    for (c, &position) in text.chars().zip(&order) {
+        plaintext[position] = Some(c);
+    }
+    plaintext.into_iter().flatten().collect()
 }
 
 /// Returns an iterator that yields the indexes of a zigzag pattern with the specified number of rails and offset
@@ -127,6 +150,56 @@ mod tests {
     fn get_athena_checker() -> CheckerTypes {
         let athena_checker = Checker::<Athena>::new();
         CheckerTypes::CheckAthena(athena_checker)
+    }
+
+    /// `railfence_decoder` as it was before the counting sort.
+    fn railfence_decoder_reference(text: &str, rails: usize, offset: usize) -> String {
+        let mut indexes: Vec<_> = zigzag(rails, offset).zip(1..).take(text.len()).collect();
+        indexes.sort();
+        let mut char_with_index: Vec<_> = text
+            .chars()
+            .zip(indexes)
+            .map(|(c, (_, i))| (i, c))
+            .collect();
+        char_with_index.sort();
+        char_with_index.iter().map(|(_, c)| c).collect()
+    }
+
+    #[test]
+    fn railfence_decoder_matches_reference() {
+        let mut texts: Vec<String> = vec![
+            String::new(),
+            "a".into(),
+            "xcz n akt,emiol r gywShfbqajd op uuv".into(),
+            "😂".into(),
+            "héllo wörld, ünïcode mixes byte and char positions 日本語".into(),
+        ];
+        let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyz ABC.,!é日😂".chars().collect();
+        let mut seed: u64 = 0x2545_F491_4F6C_DD1D;
+        for len in 1..60 {
+            texts.push(
+                (0..len)
+                    .map(|_| {
+                        seed ^= seed << 13;
+                        seed ^= seed >> 7;
+                        seed ^= seed << 17;
+                        alphabet[(seed % alphabet.len() as u64) as usize]
+                    })
+                    .collect(),
+            );
+        }
+        // Same rails and offsets as `crack`.
+        for text in &texts {
+            for rails in 2..10 {
+                for offset in 0..=(rails * 2 - 3) {
+                    assert_eq!(
+                        railfence_decoder(text, rails, offset),
+                        railfence_decoder_reference(text, rails, offset),
+                        "{rails} rails, offset {offset}, text {text:?}"
+                    );
+                }
+            }
+        }
     }
 
     #[test]
