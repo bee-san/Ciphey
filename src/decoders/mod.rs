@@ -7,6 +7,8 @@
 
 /// The a1z26_decoder module decodes A1Z26
 pub mod a1z26_decoder;
+/// The ascii85_decoder module decodes Ascii85 (Adobe / btoa Base85)
+pub mod ascii85_decoder;
 /// The atbash_decoder module decodes atbash
 pub mod atbash_decoder;
 /// The base32_decoder module decodes base32
@@ -79,6 +81,7 @@ pub mod brainfuck_interpreter;
 /// The vigenere_decoder module decodes Vigenère cipher text
 pub mod vigenere_decoder;
 
+use ascii85_decoder::Ascii85Decoder;
 use atbash_decoder::AtbashDecoder;
 use base32_decoder::Base32Decoder;
 use base58_bitcoin_decoder::Base58BitcoinDecoder;
@@ -118,6 +121,8 @@ pub enum DecoderType {
     DefaultDecoder(interface::DefaultDecoder),
     /// a1z26 decoder
     A1z26Decoder(a1z26_decoder::A1Z26Decoder),
+    /// ascii85 decoder
+    Ascii85Decoder(ascii85_decoder::Ascii85Decoder),
     /// atbash decoder
     AtbashDecoder(atbash_decoder::AtbashDecoder),
     /// base32 decoder
@@ -247,6 +252,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ),
         ("rot47", DecoderBox::new(Decoder::<ROT47Decoder>::new())),
         ("Z85", DecoderBox::new(Decoder::<Z85Decoder>::new())),
+        ("Ascii85", DecoderBox::new(Decoder::<Ascii85Decoder>::new())),
         ("a1z26", DecoderBox::new(Decoder::<A1Z26Decoder>::new())),
         ("Braille", DecoderBox::new(Decoder::<BrailleDecoder>::new())),
         (

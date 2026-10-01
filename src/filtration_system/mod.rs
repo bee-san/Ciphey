@@ -5,6 +5,7 @@ use std::sync::mpsc::channel;
 
 use crate::checkers::CheckerTypes;
 use crate::cli_pretty_printing;
+use crate::decoders::ascii85_decoder::Ascii85Decoder;
 use crate::decoders::atbash_decoder::AtbashDecoder;
 use crate::decoders::base32_decoder::Base32Decoder;
 use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
@@ -254,6 +255,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let railfencedecoder = Decoder::<RailfenceDecoder>::new();
     let rot47decoder = Decoder::<ROT47Decoder>::new();
     let z85 = Decoder::<Z85Decoder>::new();
+    let ascii85 = Decoder::<Ascii85Decoder>::new();
     let a1z26decoder = Decoder::<A1Z26Decoder>::new();
     let brailledecoder = Decoder::<BrailleDecoder>::new();
     let substitution_generic = Decoder::<SubstitutionGenericDecoder>::new();
@@ -283,6 +285,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(url),
             Box::new(rot47decoder),
             Box::new(z85),
+            Box::new(ascii85),
             Box::new(a1z26decoder),
             Box::new(brailledecoder),
             Box::new(substitution_generic),

@@ -301,3 +301,28 @@ fn cached_plaintext_must_match_the_regex_crib() {
     assert_eq!(second.code, Some(0), "{second}");
     assert!(!second.stdout.contains("The plaintext is"), "{second}");
 }
+
+#[test]
+fn ascii85_issue_example_is_cracked_with_a_crib() {
+    // The example from https://github.com/bee-san/Ciphey/issues/926. Athena doesn't
+    // recognise this pangram as English, so the crib is what identifies the plaintext.
+    let home = TempHome::new("ascii85-crib");
+    let output = run(
+        &home,
+        &[
+            "-d",
+            "--regex",
+            "^Sphinx",
+            "-t",
+            r#"<~;fHDaDKm:BAftQ!@:O'qEHP]1FF#J\C3='"AKYi8+Eh[I/c~>"#,
+        ],
+    );
+    assert_eq!(output.code, Some(0), "{output}");
+    assert!(
+        output
+            .stdout
+            .contains("Sphinx of black quartz, judge my vow."),
+        "{output}"
+    );
+    assert!(output.stdout.contains("Ascii85"), "{output}");
+}

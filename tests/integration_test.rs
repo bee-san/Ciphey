@@ -202,3 +202,53 @@ fn test_search_cracks_base85_twice() {
     let path: Vec<&str> = result.path.iter().map(|step| step.decoder).collect();
     assert_eq!(path, ["Base85", "Base85"]);
 }
+
+/// The decoders on the path of a search result
+fn decoder_path(result: &ciphey::DecoderResult) -> Vec<&str> {
+    result.path.iter().map(|step| step.decoder).collect()
+}
+
+#[test]
+#[serial]
+fn test_ascii85_is_cracked() {
+    // https://github.com/bee-san/Ciphey/issues/926
+    // Python 3: base64.a85encode(b"The quick brown fox jumps over the lazy dog", adobe=True)
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
+
+    let result = perform_cracking(
+        "<~<+ohcEHPu*CER),Dg-(AAoDo:C3=B4F!,CEATAo8BOr<&@=!2AA8c)~>",
+        Config::default(),
+    )
+    .unwrap()
+    .expect("the search should crack Ascii85");
+    assert_eq!(
+        result.text[0],
+        "The quick brown fox jumps over the lazy dog"
+    );
+    assert!(
+        decoder_path(&result).contains(&"Ascii85"),
+        "{:?}",
+        decoder_path(&result)
+    );
+}
+
+#[test]
+#[serial]
+fn test_base64_of_ascii85_is_cracked() {
+    // Base64 of the Ascii85 above, so the search has to chain two encodings
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
+
+    let result = perform_cracking(
+        "PH48K29oY0VIUHUqQ0VSKSxEZy0oQUFvRG86QzM9QjRGISxDRUFUQW84Qk9yPCZAPSEyQUE4Yyl+Pg==",
+        Config::default(),
+    )
+    .unwrap()
+    .expect("the search should crack Base64 -> Ascii85");
+    assert_eq!(
+        result.text[0],
+        "The quick brown fox jumps over the lazy dog"
+    );
+    assert_eq!(decoder_path(&result), ["Base64", "Ascii85"]);
+}

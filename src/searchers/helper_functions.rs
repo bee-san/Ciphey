@@ -80,6 +80,7 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         "Base91",
         "Base65536",
         "Z85",
+        "Ascii85",
         "Hexadecimal",
         "Binary",
         "URL",

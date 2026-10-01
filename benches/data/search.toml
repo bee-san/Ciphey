@@ -118,6 +118,13 @@ input = "Nmbvrj me oa lyfczlxqr qpgarvyk fcbw. Cai ttzq wg proflaxqr bc izqboip 
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
 [[case]]
+kind = "single"
+name = "ascii85"
+layers = ["Ascii85"]
+input = "<~9k@mX+Dk[4@<<W6BOr<)Ch+Z)BkM+$BQ&$7AKYDnFCfJ8D/!NuBkM+$+CT.u+C]A*DJ()6BOr<'@;mb?FD,5.CLqc6@;]Tu@3BZ1Earc8~>"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "multi"
 name = "base64_x3"
 layers = ["Base64", "Base64", "Base64"]
