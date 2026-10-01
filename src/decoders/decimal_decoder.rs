@@ -263,10 +263,11 @@ mod tests {
         result.unencrypted_text.map(|texts| texts[0].clone())
     }
 
-    // The vectors below were produced with CyberChef's `To Decimal` / `To Charcode` (base 10),
-    // Python 3's `' '.join(str(b) for b in text.encode())` / `list(b"...")` and Node's
-    // `String.fromCharCode`, and decoded back with CyberChef's `From Decimal` / `From
-    // Charcode`, `bytes(...).decode()` and `String.fromCharCode`.
+    // The vectors from the issue plan were checked with CyberChef 11.5 (`To Decimal` /
+    // `From Decimal`, `To Charcode` / `From Charcode` in base 10) when the plan was written.
+    // Every vector here was checked with Python 3 (`' '.join(str(b) for b in text.encode())`,
+    // `list(b"...")`, `bytes(...).decode()`, `chr`) and the char-code ones with Node's
+    // `String.fromCharCode` / `String.fromCodePoint`.
 
     #[test]
     fn decodes_the_issue_example() {
