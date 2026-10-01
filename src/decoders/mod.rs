@@ -9,6 +9,8 @@
 pub mod a1z26_decoder;
 /// The ascii85_decoder module decodes Ascii85 (Adobe / btoa Base85)
 pub mod ascii85_decoder;
+/// The affine_decoder module cracks the affine cipher
+pub mod affine_decoder;
 /// The atbash_decoder module decodes atbash
 pub mod atbash_decoder;
 /// The baconian_decoder module decodes Bacon's cipher
@@ -117,6 +119,7 @@ use html_entity_decoder::HtmlEntityDecoder;
 use interface::{Crack, Decoder};
 
 use a1z26_decoder::A1Z26Decoder;
+use affine_decoder::AffineDecoder;
 use base64_decoder::Base64Decoder;
 use base65536_decoder::Base65536Decoder;
 use base85_decoder::Base85Decoder;
@@ -154,6 +157,8 @@ pub enum DecoderType {
     A1z26Decoder(a1z26_decoder::A1Z26Decoder),
     /// ascii85 decoder
     Ascii85Decoder(ascii85_decoder::Ascii85Decoder),
+    /// affine decoder
+    AffineDecoder(affine_decoder::AffineDecoder),
     /// atbash decoder
     AtbashDecoder(atbash_decoder::AtbashDecoder),
     /// baconian decoder
@@ -318,6 +323,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<BaconianDecoder>::new()),
         ),
         ("caesar", DecoderBox::new(Decoder::<CaesarDecoder>::new())),
+        ("Affine", DecoderBox::new(Decoder::<AffineDecoder>::new())),
         (
             "railfence",
             DecoderBox::new(Decoder::<RailfenceDecoder>::new()),

@@ -176,6 +176,14 @@ input = "<~9k@mX+Dk[4@<<W6BOr<)Ch+Z)BkM+$BQ&$7AKYDnFCfJ8D/!NuBkM+$+CT.u+C]A*DJ()
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+kind = "single"
+name = "affine"
+layers = ["Affine"]
+# a = 5, b = 8
+input = "Qccz qc iz zrc alx lwmrzraeuc ihzcp qwxvwmrz ivx npwvm zrc qif, zrc gcy ivx i zapsr."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "multi"
 name = "base64_x3"
 layers = ["Base64", "Base64", "Base64"]

@@ -22,6 +22,7 @@ use crate::decoders::base58_flickr_decoder::Base58FlickrDecoder;
 use crate::decoders::base58_ripple_decoder::Base58RippleDecoder;
 
 use crate::decoders::a1z26_decoder::A1Z26Decoder;
+use crate::decoders::affine_decoder::AffineDecoder;
 use crate::decoders::base64_decoder::Base64Decoder;
 use crate::decoders::base65536_decoder::Base65536Decoder;
 use crate::decoders::base85_decoder::Base85Decoder;
@@ -270,6 +271,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let atbashdecoder = Decoder::<AtbashDecoder>::new();
     let baconian = Decoder::<BaconianDecoder>::new();
     let caesardecoder = Decoder::<CaesarDecoder>::new();
+    let affine = Decoder::<AffineDecoder>::new();
     let railfencedecoder = Decoder::<RailfenceDecoder>::new();
     let rot47decoder = Decoder::<ROT47Decoder>::new();
     let z85 = Decoder::<Z85Decoder>::new();
@@ -314,6 +316,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(atbashdecoder),
             Box::new(baconian),
             Box::new(caesardecoder),
+            Box::new(affine),
             Box::new(railfencedecoder),
             Box::new(citrix_ctx1),
             Box::new(url),
