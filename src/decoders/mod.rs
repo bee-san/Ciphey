@@ -31,6 +31,8 @@ pub mod base58_flickr_decoder;
 pub mod base64_decoder;
 /// The base65536 module decodes base65536
 pub mod base65536_decoder;
+/// The base85_decoder module decodes Base85 with the RFC 1924 alphabet
+pub mod base85_decoder;
 /// The base91_decoder module decodes base91
 pub mod base91_decoder;
 /// The citrix_ctx1_decoder module decodes citrix ctx1
@@ -90,6 +92,7 @@ use interface::{Crack, Decoder};
 use a1z26_decoder::A1Z26Decoder;
 use base64_decoder::Base64Decoder;
 use base65536_decoder::Base65536Decoder;
+use base85_decoder::Base85Decoder;
 use base91_decoder::Base91Decoder;
 use braille_decoder::BrailleDecoder;
 use caesar_decoder::CaesarDecoder;
@@ -135,6 +138,8 @@ pub enum DecoderType {
     Base64Decoder(base64_decoder::Base64Decoder),
     /// base65536 decoder
     Base65536Decoder(base65536_decoder::Base65536Decoder),
+    /// base85 (RFC 1924) decoder
+    Base85Decoder(base85_decoder::Base85Decoder),
     /// base91 decoder
     Base91Decoder(base91_decoder::Base91Decoder),
     /// citrix ctx1 decoder
@@ -217,6 +222,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<Base58FlickrDecoder>::new()),
         ),
         ("Base64", DecoderBox::new(Decoder::<Base64Decoder>::new())),
+        ("Base85", DecoderBox::new(Decoder::<Base85Decoder>::new())),
         ("Base91", DecoderBox::new(Decoder::<Base91Decoder>::new())),
         (
             "Base65536",

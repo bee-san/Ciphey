@@ -155,3 +155,50 @@ fn test_cache_hit_simple_base64() {
     assert_eq!(row.path, expected_path);
     assert!(row.successful);
 }
+
+#[test]
+#[serial]
+fn test_search_cracks_base85() {
+    // RFC 1924 Base85, made with Python's `base64.b85encode`
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
+
+    let result = perform_cracking(
+        "RA^-&adl~9Yan8BZ+C7WW^Z^PYISXJb0BYaWpW^NXk{R5VS0HWWN&8",
+        Config::default(),
+    )
+    .unwrap()
+    .expect("the search should crack Base85");
+    assert_eq!(
+        result.text[0],
+        "The quick brown fox jumps over the lazy dog"
+    );
+    let path: Vec<&str> = result.path.iter().map(|step| step.decoder).collect();
+    assert!(path.contains(&"Base85"), "path was {path:?}");
+}
+
+#[test]
+#[serial]
+fn test_search_cracks_base85_twice() {
+    // Base85 is stackable, so the search may apply it twice in a row. Two layers take
+    // 1-2 s in a debug build; the longer timeout is headroom for slow CI runners.
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
+
+    let config = Config {
+        timeout: 20,
+        ..Config::default()
+    };
+    let result = perform_cracking(
+        "QbArVCShc3emPlTZa6|(D?>L|S6*6PP+3V+SW03rLRn!~a93VVSZjMyHC9tFNLN=*CO7",
+        config,
+    )
+    .unwrap()
+    .expect("the search should crack Base85 applied twice");
+    assert_eq!(
+        result.text[0],
+        "The quick brown fox jumps over the lazy dog"
+    );
+    let path: Vec<&str> = result.path.iter().map(|step| step.decoder).collect();
+    assert_eq!(path, ["Base85", "Base85"]);
+}

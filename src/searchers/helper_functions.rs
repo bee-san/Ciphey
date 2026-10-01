@@ -76,6 +76,7 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         "Base58 Ripple",
         "Base58 Monero",
         "Base58 Flickr",
+        "Base85",
         "Base91",
         "Base65536",
         "Z85",

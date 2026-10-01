@@ -19,6 +19,7 @@ use crate::decoders::base58_ripple_decoder::Base58RippleDecoder;
 use crate::decoders::a1z26_decoder::A1Z26Decoder;
 use crate::decoders::base64_decoder::Base64Decoder;
 use crate::decoders::base65536_decoder::Base65536Decoder;
+use crate::decoders::base85_decoder::Base85Decoder;
 use crate::decoders::base91_decoder::Base91Decoder;
 use crate::decoders::braille_decoder::BrailleDecoder;
 use crate::decoders::caesar_decoder::CaesarDecoder;
@@ -240,6 +241,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let base58_ripple = Decoder::<Base58RippleDecoder>::new();
     let base58_flickr = Decoder::<Base58FlickrDecoder>::new();
     let base64 = Decoder::<Base64Decoder>::new();
+    let base85 = Decoder::<Base85Decoder>::new();
     let base91 = Decoder::<Base91Decoder>::new();
     let base65536 = Decoder::<Base65536Decoder>::new();
     let citrix_ctx1 = Decoder::<CitrixCTX1Decoder>::new();
@@ -268,6 +270,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(base58_ripple),
             Box::new(base58_flickr),
             Box::new(base91),
+            Box::new(base85),
             Box::new(base65536),
             Box::new(binary),
             Box::new(hexadecimal),
