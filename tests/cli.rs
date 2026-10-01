@@ -226,6 +226,33 @@ fn malformed_config_file_falls_back_to_defaults() {
 }
 
 #[test]
+fn wordlist_words_after_a_line_that_is_not_utf8_are_used() {
+    // Loading a wordlist used to stop at the first line that isn't UTF-8 (rockyou.txt
+    // has some), silently dropping every word after it. This word is only identified
+    // as plaintext through the wordlist.
+    let home = TempHome::new("wordlist-not-utf8");
+    let wordlist = home.path.join("wordlist.txt");
+    fs::write(&wordlist, b"\xe9t\xe9\nzqxjvkwpfb\n").expect("Could not write wordlist");
+    let wordlist = wordlist.to_str().expect("temporary path is UTF-8");
+
+    // "zqxjvkwpfb" in Base64
+    let output = run(
+        &home,
+        &[
+            "-d",
+            "-c",
+            "2",
+            "--wordlist",
+            wordlist,
+            "-t",
+            "enF4anZrd3BmYg==",
+        ],
+    );
+    assert_eq!(output.code, Some(0), "{output}");
+    assert!(output.stdout.contains("zqxjvkwpfb"), "{output}");
+}
+
+#[test]
 fn top_results_can_be_set_in_the_config_file() {
     // The CLI used to overwrite the config file's top_results with the --top-results
     // flag, so `top_results = true` (what the first-run setup offers) had no effect.

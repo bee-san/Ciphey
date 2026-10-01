@@ -5,7 +5,7 @@ use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
-use std::io::{self, BufRead, BufReader};
+use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
 
@@ -260,6 +260,9 @@ fn parse_toml_with_unknown_keys(contents: &str) -> Result<Config, toml::de::Erro
 /// Loads a wordlist from a file into a HashSet for efficient lookups
 /// Uses memory mapping for large files to improve performance and memory usage
 ///
+/// Lines that aren't valid UTF-8 are skipped: decoded text is always valid UTF-8, so
+/// they could never match. Real wordlists such as rockyou.txt contain some.
+///
 /// # Arguments
 /// * `path` - Path to the wordlist file
 ///
@@ -271,15 +274,14 @@ fn parse_toml_with_unknown_keys(contents: &str) -> Result<Config, toml::de::Erro
 /// This function will return an error if:
 /// * The file does not exist
 /// * The file cannot be opened due to permissions
-/// * The file cannot be memory-mapped
-/// * The file contains invalid UTF-8 characters
+/// * The file cannot be read or memory-mapped
 ///
 /// # Safety
 /// This implementation uses memory mapping for large files.
 /// `unsafe { Mmap::map(&file) }` is required because the map could become invalid
 /// if the underlying file is modified while the mapping is in use.
 pub fn load_wordlist<P: AsRef<Path>>(path: P) -> io::Result<HashSet<String>> {
-    let file = File::open(path)?;
+    let mut file = File::open(path)?;
     let file_size = file.metadata()?.len();
 
     // For small files (under 10MB), use regular file reading
@@ -289,39 +291,36 @@ pub fn load_wordlist<P: AsRef<Path>>(path: P) -> io::Result<HashSet<String>> {
     // 3. 10MB allows for roughly 1 million words (assuming average word length of 10 chars)
     if file_size < 10_000_000 {
         // 10MB threshold
-        let reader = BufReader::new(file);
-        let mut wordlist = HashSet::new();
-
-        for word in reader.lines().map_while(Result::ok) {
-            let trimmed = word.trim().to_string();
-            if !trimmed.is_empty() {
-                wordlist.insert(trimmed);
-            }
-        }
-
-        Ok(wordlist)
+        let mut contents = Vec::new();
+        file.read_to_end(&mut contents)?;
+        Ok(parse_wordlist(&contents))
     } else {
         // For large files, use memory mapping
-        // First create the memory map
         let mmap = unsafe { Mmap::map(&file)? };
-
-        // Verify the file contains valid UTF-8 before proceeding
-        let mut wordlist = HashSet::new();
-        let content = std::str::from_utf8(&mmap).map_err(|_| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Wordlist file contains invalid UTF-8",
-            )
-        })?;
-        for line in content.lines() {
-            let trimmed = line.trim();
-            if !trimmed.is_empty() {
-                wordlist.insert(trimmed.to_string());
-            }
-        }
-
-        Ok(wordlist)
+        Ok(parse_wordlist(&mmap))
     }
+}
+
+/// Collects the trimmed, non-empty lines of a wordlist, skipping lines that aren't
+/// valid UTF-8
+fn parse_wordlist(contents: &[u8]) -> HashSet<String> {
+    let mut wordlist = HashSet::new();
+    let mut skipped = 0;
+    for line in contents.split(|&byte| byte == b'\n') {
+        match std::str::from_utf8(line) {
+            Ok(line) => {
+                let word = line.trim();
+                if !word.is_empty() {
+                    wordlist.insert(word.to_string());
+                }
+            }
+            Err(_) => skipped += 1,
+        }
+    }
+    if skipped > 0 {
+        log::warn!("Skipped {skipped} wordlist lines that aren't valid UTF-8");
+    }
+    wordlist
 }
 
 /// Get configuration from file or create default if it doesn't exist
@@ -483,5 +482,13 @@ mod tests {
                 "warning"
             ]
         );
+    }
+
+    #[test]
+    fn wordlist_lines_that_are_not_utf8_are_skipped() {
+        let wordlist = parse_wordlist(b"hello\n\xff\xfe \xe9t\xe9\nworld\r\n\n  spaced  \n");
+        let mut words: Vec<&str> = wordlist.iter().map(String::as_str).collect();
+        words.sort_unstable();
+        assert_eq!(words, ["hello", "spaced", "world"]);
     }
 }
