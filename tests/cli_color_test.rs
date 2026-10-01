@@ -17,9 +17,12 @@ struct TempHome {
 }
 
 impl TempHome {
-    /// Creates a new temporary home directory
+    /// Creates a new temporary home directory inside Cargo's scratch directory for
+    /// integration tests (`target/tmp`). The path is fixed at compile time rather
+    /// than read from the environment at runtime.
     fn new(name: &str) -> Self {
-        let path = std::env::temp_dir().join(format!("ciphey-{}-{}", name, std::process::id()));
+        let dir_name = format!("ciphey-{}-{}", name, std::process::id());
+        let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(dir_name);
         let _ = fs::remove_dir_all(&path);
         fs::create_dir_all(path.join(".ciphey")).expect("Could not create temporary home");
         fs::write(path.join(".ciphey").join("config.toml"), "")
