@@ -121,7 +121,7 @@ pub fn read_and_parse_file(file_path: String) -> String {
     contents.trim_end_matches(['\n', '\r']).to_owned()
 }
 
-/// Turns our CLI arguments into a config stuct
+/// Turns our CLI arguments into a config struct
 fn cli_args_into_config_struct(opts: Opts, text: String) -> (String, Config) {
     // Get configuration from file first
     let mut config = get_config_file_into_struct();
