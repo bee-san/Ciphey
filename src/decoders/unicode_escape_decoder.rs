@@ -2,7 +2,7 @@
 //! `U+00E9`.
 //!
 //! The text is scanned once. Every well-formed escape is replaced by its character and
-//! everything else is copied unchanged, so partly escaped text such as `caf\u00e9` decodes
+//! everything else is copied unchanged, so partly escaped text such as `na\u00efve` decodes
 //! too, and a `\u` that isn't followed by hex digits (`C:\users`) is left alone.
 //!
 //! | Form         | Used by                    | Hex digits                                  |
@@ -351,7 +351,7 @@ mod tests {
     #[test]
     fn unicode_escape_decodes_partly_escaped_lowercase_text() {
         // CyberChef (\u), JSON.parse and Python agree
-        assert_eq!(decode(r"caf\u00e9 \u2615").as_deref(), Some("café ☕"));
+        assert_eq!(decode(r"caf\u00e9 \u2615").as_deref(), Some("café ☕")); // codespell:ignore caf
     }
 
     #[test]
