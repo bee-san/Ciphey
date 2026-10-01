@@ -14,6 +14,7 @@ use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::decimal_decoder::DecimalDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
+use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
 use crate::DecoderResult;
 
 use crate::decoders::base58_flickr_decoder::Base58FlickrDecoder;
@@ -242,6 +243,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let decimal = Decoder::<DecimalDecoder>::new();
     let hexadecimal = Decoder::<HexadecimalDecoder>::new();
     let octal = Decoder::<OctalDecoder>::new();
+    let html_entity = Decoder::<HtmlEntityDecoder>::new();
     let base58_bitcoin = Decoder::<Base58BitcoinDecoder>::new();
     let base58_monero = Decoder::<Base58MoneroDecoder>::new();
     let base58_ripple = Decoder::<Base58RippleDecoder>::new();
@@ -283,6 +285,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(binary),
             Box::new(hexadecimal),
             Box::new(octal),
+            Box::new(html_entity),
             Box::new(base32),
             // Before rot47: when two decoders find plaintext in the same step the search
             // reports the one listed first, and LemmeKnow takes rot47 of `104,101,108,...`

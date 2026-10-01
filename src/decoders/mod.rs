@@ -25,6 +25,8 @@ pub mod decimal_decoder;
 pub mod hexadecimal_decoder;
 /// The octal_decoder module decodes octal
 pub mod octal_decoder;
+/// The html_entity_decoder module decodes HTML entities
+pub mod html_entity_decoder;
 
 /// The base58_ripple_decoder module decodes base58 ripple
 pub mod base58_ripple_decoder;
@@ -97,6 +99,7 @@ use base58_ripple_decoder::Base58RippleDecoder;
 use binary_decoder::BinaryDecoder;
 use decimal_decoder::DecimalDecoder;
 use hexadecimal_decoder::HexadecimalDecoder;
+use html_entity_decoder::HtmlEntityDecoder;
 use interface::{Crack, Decoder};
 
 use a1z26_decoder::A1Z26Decoder;
@@ -148,6 +151,8 @@ pub enum DecoderType {
     HexadecimalDecoder(hexadecimal_decoder::HexadecimalDecoder),
     /// octal decoder
     OctalDecoder(octal_decoder::OctalDecoder),
+    /// HTML entity decoder
+    HtmlEntityDecoder(html_entity_decoder::HtmlEntityDecoder),
     /// base58 ripple decoder
     Base58RippleDecoder(base58_ripple_decoder::Base58RippleDecoder),
     /// base58 flickr decoder
@@ -227,6 +232,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<HexadecimalDecoder>::new()),
         ),
         ("Octal", DecoderBox::new(Decoder::<OctalDecoder>::new())),
+        (
+            "HTML Entities",
+            DecoderBox::new(Decoder::<HtmlEntityDecoder>::new()),
+        ),
         (
             "Base58 Bitcoin",
             DecoderBox::new(Decoder::<Base58BitcoinDecoder>::new()),
