@@ -12,6 +12,7 @@ use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
 use crate::decoders::base58_monero_decoder::Base58MoneroDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
+use crate::decoders::octal_decoder::OctalDecoder;
 use crate::DecoderResult;
 
 use crate::decoders::base58_flickr_decoder::Base58FlickrDecoder;
@@ -237,6 +238,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let vigenere = Decoder::<VigenereDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
     let hexadecimal = Decoder::<HexadecimalDecoder>::new();
+    let octal = Decoder::<OctalDecoder>::new();
     let base58_bitcoin = Decoder::<Base58BitcoinDecoder>::new();
     let base58_monero = Decoder::<Base58MoneroDecoder>::new();
     let base58_ripple = Decoder::<Base58RippleDecoder>::new();
@@ -276,6 +278,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(base65536),
             Box::new(binary),
             Box::new(hexadecimal),
+            Box::new(octal),
             Box::new(base32),
             Box::new(morsecodedecoder),
             Box::new(atbashdecoder),

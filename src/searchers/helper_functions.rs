@@ -83,6 +83,7 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         "Ascii85",
         "Hexadecimal",
         "Binary",
+        "Octal",
         "URL",
     ];
     STACKABLE.contains(&prev_decoder) && STACKABLE.contains(&current_cipher)

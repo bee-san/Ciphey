@@ -21,6 +21,8 @@ pub mod base58_monero_decoder;
 pub mod binary_decoder;
 /// The hexadecimal_decoder module decodes hexadecimal
 pub mod hexadecimal_decoder;
+/// The octal_decoder module decodes octal
+pub mod octal_decoder;
 
 /// The base58_ripple_decoder module decodes base58 ripple
 pub mod base58_ripple_decoder;
@@ -101,6 +103,7 @@ use braille_decoder::BrailleDecoder;
 use caesar_decoder::CaesarDecoder;
 use citrix_ctx1_decoder::CitrixCTX1Decoder;
 use morse_code::MorseCodeDecoder;
+use octal_decoder::OctalDecoder;
 use railfence_decoder::RailfenceDecoder;
 use reverse_decoder::ReverseDecoder;
 use rot47_decoder::ROT47Decoder;
@@ -135,6 +138,8 @@ pub enum DecoderType {
     BinaryDecoder(binary_decoder::BinaryDecoder),
     /// hexadecimal decoder
     HexadecimalDecoder(hexadecimal_decoder::HexadecimalDecoder),
+    /// octal decoder
+    OctalDecoder(octal_decoder::OctalDecoder),
     /// base58 ripple decoder
     Base58RippleDecoder(base58_ripple_decoder::Base58RippleDecoder),
     /// base58 flickr decoder
@@ -210,6 +215,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             "Hexadecimal",
             DecoderBox::new(Decoder::<HexadecimalDecoder>::new()),
         ),
+        ("Octal", DecoderBox::new(Decoder::<OctalDecoder>::new())),
         (
             "Base58 Bitcoin",
             DecoderBox::new(Decoder::<Base58BitcoinDecoder>::new()),
