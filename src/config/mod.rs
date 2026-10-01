@@ -217,10 +217,12 @@ fn read_config_file() -> std::io::Result<String> {
     Ok(contents)
 }
 
-/// Parse a TOML string into a Config struct, handling unknown keys
-fn parse_toml_with_unknown_keys(contents: &str) -> Config {
+/// Parse a TOML string into a Config struct, warning about unknown keys
+///
+/// Returns an error if `contents` isn't valid TOML or a setting has the wrong type.
+fn parse_toml_with_unknown_keys(contents: &str) -> Result<Config, toml::de::Error> {
     // First parse into a generic Value to check for unknown keys
-    let parsed_value: toml::Value = toml::from_str(contents).expect("Could not parse config file");
+    let parsed_value: toml::Value = toml::from_str(contents)?;
 
     // Check for unknown keys at the root level
     if let toml::Value::Table(table) = &parsed_value {
@@ -250,9 +252,9 @@ fn parse_toml_with_unknown_keys(contents: &str) -> Config {
     }
 
     // Parse into Config struct
-    let mut config: Config = toml::from_str(contents).expect("Could not parse config file");
+    let mut config: Config = toml::from_str(contents)?;
     update_identifier_in_config(&mut config);
-    config
+    Ok(config)
 }
 
 /// Loads a wordlist from a file into a HashSet for efficient lookups
@@ -370,7 +372,17 @@ pub fn get_config_file_into_struct() -> Config {
         // Existing config - read and parse it
         match read_config_file() {
             Ok(contents) => {
-                let mut config = parse_toml_with_unknown_keys(&contents);
+                let mut config = match parse_toml_with_unknown_keys(&contents) {
+                    Ok(config) => config,
+                    Err(e) => {
+                        eprintln!(
+                            "Error parsing config file '{}'. Using defaults.\n{}",
+                            path.display(),
+                            e.to_string().trim_end()
+                        );
+                        return Config::default();
+                    }
+                };
 
                 // If wordlist is specified in config file, set it in the config struct
                 if let Some(wordlist_path) = &config.wordlist_path {
@@ -404,4 +416,24 @@ fn save_config_to_file(config: &Config, path: &std::path::Path) {
     let mut file = File::create(path).expect("Could not create config file");
     file.write_all(toml_string.as_bytes())
         .expect("Could not write to config file");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_file_is_parsed() {
+        let config = parse_toml_with_unknown_keys("timeout = 10\ntop_results = true\n").unwrap();
+        assert_eq!(config.timeout, 10);
+        assert!(config.top_results);
+    }
+
+    #[test]
+    fn malformed_config_file_is_an_error_not_a_panic() {
+        // Invalid TOML
+        assert!(parse_toml_with_unknown_keys("timeout = ").is_err());
+        // Valid TOML, but the wrong type for a setting
+        assert!(parse_toml_with_unknown_keys("timeout = \"ten\"").is_err());
+    }
 }

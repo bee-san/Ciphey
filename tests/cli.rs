@@ -210,3 +210,17 @@ fn missing_input_is_a_usage_error() {
     assert!(output.stderr.contains("--text"), "{output}");
     assert!(!output.stderr.contains("panicked"), "{output}");
 }
+
+#[test]
+fn malformed_config_file_falls_back_to_defaults() {
+    // A value of the wrong type in config.toml used to panic at startup
+    let home = TempHome::with_config("malformed-config", "timeout = \"ten\"\n");
+    let output = run(&home, &["-d", "-t", "aGVsbG8gd29ybGQ="]);
+    assert_eq!(output.code, Some(0), "{output}");
+    assert!(
+        output.stderr.contains("Error parsing config file"),
+        "{output}"
+    );
+    assert!(!output.stderr.contains("panicked"), "{output}");
+    assert!(output.stdout.contains("hello world"), "{output}");
+}
