@@ -30,6 +30,72 @@ The second best way is to use `cargo install ciphey` and call it with `ciphey`.
 
 You can also `git clone` this repo and run `docker build .` it to get an image.
 
+# MCP server (AI assistants)
+
+`ciphey-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server, so AI assistants such as Claude Desktop and Kiro can decode text with ciphey. It's behind the `mcp` feature, so the normal `ciphey` build doesn't include it:
+
+```sh
+cargo install ciphey --features mcp --bin ciphey-mcp
+# or, from a clone of this repository:
+cargo install --path . --features mcp --bin ciphey-mcp
+```
+
+It provides two tools:
+
+* `decode` decodes `text` and returns the `plaintext` and the `path` of decoders used, with keys such as the Caesar shift. Optional arguments: `timeout_secs` (1 to 30, default 10) and `regex`, a crib the plaintext must match, such as `flag\{`.
+* `list_decoders` lists the encodings and ciphers ciphey supports.
+
+A `decode` result looks like this. `status` is `decoded`, `not_found` or `timed_out`.
+
+```json
+{
+  "status": "decoded",
+  "plaintext": "hello there general",
+  "path": [{ "decoder": "Base64", "key": null }],
+  "checker": "English Checker",
+  "timeout_secs": 10
+}
+```
+
+Each decode runs in its own short-lived process. Input is limited to 65,536 characters, the search to 30 seconds and memory to 1 GiB, and at most two decodes run at once. The server doesn't read or write `~/.ciphey`, so there's no config file and no cache.
+
+## Claude Desktop
+
+Open Settings → Developer → Edit Config, add the server to `claude_desktop_config.json`, then restart Claude Desktop. Use the full path printed by `which ciphey-mcp` (`where ciphey-mcp` on Windows, for example `C:\\Users\\you\\.cargo\\bin\\ciphey-mcp.exe`), because Claude Desktop may not see your shell's `PATH`.
+
+```json
+{
+  "mcpServers": {
+    "ciphey": {
+      "command": "/Users/you/.cargo/bin/ciphey-mcp"
+    }
+  }
+}
+```
+
+## Kiro
+
+```sh
+kiro-cli mcp add --name ciphey --command ciphey-mcp
+```
+
+Or add the entry below to `~/.kiro/settings/mcp.json` (all projects) or `.kiro/settings/mcp.json` (one project).
+
+## Other clients
+
+Most MCP clients take the same `mcpServers` entry: a stdio server started by `ciphey-mcp` with no arguments.
+
+```json
+{
+  "mcpServers": {
+    "ciphey": {
+      "command": "ciphey-mcp",
+      "args": []
+    }
+  }
+}
+```
+
 # Features
 
 Some features that may interest you, and that we're proud of.
