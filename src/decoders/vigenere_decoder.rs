@@ -67,6 +67,38 @@ static ENGLISH_BIGRAMS: Lazy<Vec<Vec<i64>>> = Lazy::new(|| {
     bigrams_vec
 });
 
+/// Lookup tables for [`break_vigenere_letters`], built once from [`VIGENERE_SQUARE`] and
+/// [`ENGLISH_BIGRAMS`] so the key search does flat array reads instead of going through
+/// two `Vec<Vec<_>>` tables (and two `Lazy` checks) per scored bigram.
+struct KeySearchTables {
+    /// `plain[c][k]`: the plaintext letter (0..26) for ciphertext letter `c` under key letter `k`.
+    plain: [[usize; 26]; 26],
+    /// Bigram scores arranged so one slice scores a bigram under all 26 second key letters:
+    /// `scores[p][26 - c + k]` is the score of plaintext letter `p` followed by ciphertext
+    /// letter `c` decrypted with key letter `k`, so `scores[p][26 - c..52 - c]` covers
+    /// `k` = 0..26. This works because `VIGENERE_SQUARE[c][k]` only depends on `c - k`.
+    scores: [[i64; 52]; 26],
+}
+
+/// See [`KeySearchTables`].
+static KEY_SEARCH_TABLES: Lazy<KeySearchTables> = Lazy::new(|| {
+    let mut plain = [[0; 26]; 26];
+    for (c, row) in plain.iter_mut().enumerate() {
+        for (k, letter) in row.iter_mut().enumerate() {
+            *letter = (VIGENERE_SQUARE[c][k] as u8 - b'A') as usize;
+        }
+    }
+    let mut scores = [[0; 52]; 26];
+    for (p, row) in scores.iter_mut().enumerate() {
+        for (c, plain_row) in plain.iter().enumerate() {
+            for (k, &second) in plain_row.iter().enumerate() {
+                row[26 - c + k] = ENGLISH_BIGRAMS[p][second];
+            }
+        }
+    }
+    KeySearchTables { plain, scores }
+});
+
 /// The Vigenère decoder struct
 pub struct VigenereDecoder;
 
@@ -97,9 +129,10 @@ impl Crack for Decoder<VigenereDecoder> {
         let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Medium);
         let mut checker_result = checker_with_sensitivity.check(text);
 
+        let letters = cipher_letters(text);
         for key_length in 3..30 {
             // Use Medium sensitivity for Vigenere decoder
-            let key = break_vigenere(text, key_length);
+            let key = break_vigenere_letters(&letters, key_length);
             let key_str = key.as_str().trim();
             if key_str.is_empty() {
                 continue;
@@ -144,16 +177,36 @@ impl Crack for Decoder<VigenereDecoder> {
 
 /// Ported from the PHP implementation shown in https://www.guballa.de/bits-and-bytes/implementierung-des-vigenere-solvers
 /// Attempts to break the Vigenere cipher using bigrams
+#[cfg(test)]
 fn break_vigenere(text: &str, key_length: usize) -> String {
-    let mut cipher_text: Vec<usize> = Vec::new();
-    for c in text.chars() {
-        // Must be ASCII: `is_alphabetic` also accepts e.g. 'À', whose
-        // `to_ascii_uppercase() as u8 - b'A'` lands outside the 26-entry
-        // VIGENERE_SQUARE and panics. `decrypt` below uses the same filter.
-        if c.is_ascii_alphabetic() {
-            cipher_text.push(((c.to_ascii_uppercase() as u8) - b'A') as usize);
-        }
-    }
+    break_vigenere_letters(&cipher_letters(text), key_length)
+}
+
+/// The ASCII letters of `text` as 0..26, which is what the key search works on.
+fn cipher_letters(text: &str) -> Vec<usize> {
+    // Must be ASCII: `is_alphabetic` also accepts e.g. 'À', whose
+    // `to_ascii_uppercase() as u8 - b'A'` lands outside the 26-entry
+    // VIGENERE_SQUARE and panics. `decrypt` below uses the same filter.
+    // Bytes of multi-byte characters are never ASCII, so filtering bytes is the same
+    // as filtering chars.
+    text.bytes()
+        .filter(u8::is_ascii_alphabetic)
+        .map(|c| (c.to_ascii_uppercase() - b'A') as usize)
+        .collect()
+}
+
+/// [`break_vigenere`] on text already reduced to letters by [`cipher_letters`].
+///
+/// For each key position this scores every pair of adjacent key letters (`key_ch1`,
+/// `key_ch2`) by summing the English bigram scores of the bigrams they decrypt, and keeps
+/// the first best pair in `key_ch1`-major order. All 26 `key_ch2` scores for one
+/// `key_ch1` are summed together, one bigram at a time, from a slice of
+/// [`KeySearchTables::scores`]. The sums are exact integers, so the scores and the key
+/// are the same as summing each pair separately.
+fn break_vigenere_letters(cipher_text: &[usize], key_length: usize) -> String {
+    let tables = &*KEY_SEARCH_TABLES;
+    // (first, second) ciphertext letters of the bigrams scored at one key position.
+    let mut bigrams: Vec<(usize, usize)> = Vec::with_capacity(cipher_text.len() / key_length + 1);
 
     let mut best_fitness = 0;
     let mut best_key_ch2 = ' ';
@@ -167,15 +220,26 @@ fn break_vigenere(text: &str, key_length: usize) -> String {
         let mut best_key_ch1 = ' ';
         best_fitness = 0;
 
+        bigrams.clear();
+        bigrams.extend(
+            (key_idx..(cipher_text.len() - 1))
+                .step_by(key_length)
+                .map(|text_idx| (cipher_text[text_idx], cipher_text[text_idx + 1])),
+        );
+
         for key_ch1 in 0..26 {
-            for key_ch2 in 0..26 {
-                let mut fitness = 0;
-                for text_idx in (key_idx..(cipher_text.len() - 1)).step_by(key_length) {
-                    let clear_ch1 = (VIGENERE_SQUARE[cipher_text[text_idx]][key_ch1] as u8) - b'A';
-                    let clear_ch2 =
-                        (VIGENERE_SQUARE[cipher_text[text_idx + 1]][key_ch2] as u8) - b'A';
-                    fitness += ENGLISH_BIGRAMS[clear_ch1 as usize][clear_ch2 as usize];
+            // fitness[key_ch2] for this key_ch1
+            let mut fitness = [0i64; 26];
+            for &(first, second) in &bigrams {
+                let clear_ch1 = tables.plain[first][key_ch1];
+                let scores: &[i64; 26] = tables.scores[clear_ch1][26 - second..52 - second]
+                    .try_into()
+                    .expect("slice of 26 scores");
+                for (total, score) in fitness.iter_mut().zip(scores) {
+                    *total += score;
                 }
+            }
+            for (key_ch2, &fitness) in fitness.iter().enumerate() {
                 if fitness > best_fitness {
                     best_fitness = fitness;
                     best_key_ch1 = ((key_ch1 as u8) + b'A') as char;
@@ -459,5 +523,112 @@ mod tests {
     #[test]
     fn test_vigenere_square_mt() {
         assert_eq!(VIGENERE_SQUARE[12][19], 'T');
+    }
+
+    /// The key search as it was before it used `KEY_SEARCH_TABLES`, kept to check
+    /// that the faster version picks exactly the same keys.
+    fn break_vigenere_reference(text: &str, key_length: usize) -> String {
+        let mut cipher_text: Vec<usize> = Vec::new();
+        for c in text.chars() {
+            if c.is_ascii_alphabetic() {
+                cipher_text.push(((c.to_ascii_uppercase() as u8) - b'A') as usize);
+            }
+        }
+
+        let mut best_fitness = 0;
+        let mut best_key_ch2 = ' ';
+        let mut best_score_0 = 0;
+        let mut best_key_ch1_0 = ' ';
+        let mut prev_best_score = 0;
+        let mut prev_best_key_ch2 = ' ';
+
+        let mut key = vec![' '; key_length];
+        for (key_idx, key_char) in key.iter_mut().enumerate().take(key_length) {
+            let mut best_key_ch1 = ' ';
+            best_fitness = 0;
+
+            for key_ch1 in 0..26 {
+                for key_ch2 in 0..26 {
+                    let mut fitness = 0;
+                    for text_idx in (key_idx..(cipher_text.len() - 1)).step_by(key_length) {
+                        let clear_ch1 =
+                            (VIGENERE_SQUARE[cipher_text[text_idx]][key_ch1] as u8) - b'A';
+                        let clear_ch2 =
+                            (VIGENERE_SQUARE[cipher_text[text_idx + 1]][key_ch2] as u8) - b'A';
+                        fitness += ENGLISH_BIGRAMS[clear_ch1 as usize][clear_ch2 as usize];
+                    }
+                    if fitness > best_fitness {
+                        best_fitness = fitness;
+                        best_key_ch1 = ((key_ch1 as u8) + b'A') as char;
+                        best_key_ch2 = ((key_ch2 as u8) + b'A') as char;
+                    }
+                }
+            }
+            if key_idx == 0 {
+                best_score_0 = best_fitness;
+                best_key_ch1_0 = best_key_ch1;
+            } else {
+                *key_char = if prev_best_score > best_fitness {
+                    prev_best_key_ch2
+                } else {
+                    best_key_ch1
+                };
+            }
+            prev_best_score = best_fitness;
+            prev_best_key_ch2 = best_key_ch2
+        }
+        key[0] = if best_fitness > best_score_0 {
+            best_key_ch2
+        } else {
+            best_key_ch1_0
+        };
+        key.into_iter().collect()
+    }
+
+    #[test]
+    fn test_key_search_matches_reference() {
+        // Deterministic pseudo-random texts of many lengths, including texts shorter than
+        // the key (empty key positions), repeated letters (tied scores), non-letters and
+        // non-ASCII letters, plus the real ciphertexts from the tests above.
+        let alphabet: Vec<char> =
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ .,'!0123456789éÖ"
+                .chars()
+                .collect();
+        let mut seed: u64 = 0x9E37_79B9_7F4A_7C15;
+        let mut texts: Vec<String> = vec![
+            "a".into(),
+            "ab".into(),
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".into(),
+            "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz".into(),
+            "Altd hlbe tg lrncmwxpo kpxs evl ztrsuicp qptspf. Ivplyprr th pw clhoic pozc".into(),
+            "Altd hlbe Ö tg lrncmwxpo kpxs ż evl ztrsuicp Ā qptspf. Ivplyprr Ж th pw clhoic pozc"
+                .into(),
+            "Ck jdp tqiyr, p vib'u gsebta gonpgl bq tmkxz uqjr dy bpg vvehamf jsgyikg fd xma mavq."
+                .into(),
+        ];
+        for len in (1..40).chain([57, 83, 128, 200]) {
+            let text = (0..len)
+                .map(|_| {
+                    seed ^= seed << 13;
+                    seed ^= seed >> 7;
+                    seed ^= seed << 17;
+                    alphabet[(seed % alphabet.len() as u64) as usize]
+                })
+                .collect();
+            texts.push(text);
+        }
+        for text in &texts {
+            if cipher_letters(text).is_empty() {
+                continue;
+            }
+            // 3..30 is what `crack` uses; 1 and 2 cover a key position per letter or so.
+            for key_length in [1, 2, 3, 4, 5, 6, 7, 9, 11, 13, 17, 23, 29] {
+                assert_eq!(
+                    break_vigenere(text, key_length),
+                    break_vigenere_reference(text, key_length),
+                    "key length {key_length} on {text:?}"
+                );
+            }
+        }
     }
 }
