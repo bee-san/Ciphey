@@ -1,0 +1,5 @@
+# Local tooling / scratch output from HyperFrames and Python
+video/node_modules
+video/renders/
+video/snapshots/
+__pycache__/

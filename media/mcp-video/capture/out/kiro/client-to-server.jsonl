@@ -1,0 +1,4 @@
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"Q DEV CLI","version":"1.0.0"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"progressToken":0}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"_meta":{"progressToken":1},"name":"decode","arguments":{"text":"NzM3OTZlNzQ3YjcwNzY2Mzc1NzI2YzVmNjY2MzcyNmU3ODY2NWY3YTcwNjM3ZA=="}}}

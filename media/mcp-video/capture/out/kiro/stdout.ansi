@@ -1,0 +1,9 @@
+Running tool [38;5;141mdecode[0m with the param[38;5;244m (from mcp server: ciphey)[0m
+ ⋮  {
+ ⋮    "text": "NzM3OTZlNzQ3YjcwNzY2Mzc1NzI2YzVmNjY2MzcyNmU3ODY2NWY3YTcwNjM3ZA=="
+ ⋮  }
+[0m[38;5;244m - Completed in 0.115s[0m
+
+[38;5;141m> [0mDecoded: [38;5;10mflag{ciphey_speaks_mcp}[0m[0m[0m
+[0m[0m
+It was three layers: Base64 → hex → ROT13 (Caesar shift 13). The intermediate was [38;5;10msynt{pvcurl_fcrnxf_zpc}[0m, which is the flag under ROT13.

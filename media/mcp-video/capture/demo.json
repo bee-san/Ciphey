@@ -1,0 +1,5 @@
+{
+  "plaintext": "flag{ciphey_speaks_mcp}",
+  "encode": ["rot13", "hex", "base64"],
+  "prompt": "I found this string in a CTF challenge. Can you decode it? {ciphertext}"
+}
