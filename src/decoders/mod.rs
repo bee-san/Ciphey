@@ -105,6 +105,9 @@ use ascii85_decoder::Ascii85Decoder;
 /// The zlib_decoder module inflates zlib (RFC 1950) streams
 pub mod zlib_decoder;
 
+/// The xor_single_byte_decoder module cracks single-byte XOR
+pub mod xor_single_byte_decoder;
+
 use atbash_decoder::AtbashDecoder;
 use baconian_decoder::BaconianDecoder;
 use base32_decoder::Base32Decoder;
@@ -140,6 +143,7 @@ use unicode_escape_decoder::UnicodeEscapeDecoder;
 use url_decoder::URLDecoder;
 use utf16_decoder::Utf16Decoder;
 use vigenere_decoder::VigenereDecoder;
+use xor_single_byte_decoder::XorSingleByteDecoder;
 use z85_decoder::Z85Decoder;
 use zlib_decoder::ZlibDecoder;
 
@@ -227,6 +231,8 @@ pub enum DecoderType {
     VigenereDecoder(vigenere_decoder::VigenereDecoder),
     /// zlib decoder
     ZlibDecoder(zlib_decoder::ZlibDecoder),
+    /// single-byte xor cracker
+    XorSingleByteDecoder(xor_single_byte_decoder::XorSingleByteDecoder),
 }
 
 /// Wrapper struct to hold Decoders for DECODER_MAP
@@ -342,5 +348,9 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<BrainfuckInterpreter>::new()),
         ),
         ("Zlib", DecoderBox::new(Decoder::<ZlibDecoder>::new())),
+        (
+            "Single-byte XOR",
+            DecoderBox::new(Decoder::<XorSingleByteDecoder>::new()),
+        ),
     ])
 });

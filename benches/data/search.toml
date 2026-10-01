@@ -184,6 +184,13 @@ input = "Qccz qc iz zrc alx lwmrzraeuc ihzcp qwxvwmrz ivx npwvm zrc qif, zrc gcy
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+kind = "single"
+name = "xor_single_byte"
+layers = ["Single-byte XOR", "Hexadecimal"]
+input = "674f4f5e0a474f0a4b5e0a5e424f0a45464e0a46434d425e42455f594f0a4b4c5e4f580a47434e44434d425e0a4b444e0a485843444d0a5e424f0a474b5a060a5e424f0a414f530a4b444e0a4b0a5e4558494204"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "multi"
 name = "base64_x3"
 layers = ["Base64", "Base64", "Base64"]
@@ -265,6 +272,13 @@ kind = "multi"
 name = "rot13_zlib"
 layers = ["caesar", "Zlib"]
 input = "eJwdisENgDAMxFa5ARAD8WtROB4o0NBUNNMD/Vm2FzMiDErQDbkX9FadnvftszdNEK2k30FTwSkt1fGGrtOAx46RFMxy+fwCLvgetQ=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "base64_xor_base64"
+layers = ["Base64", "Single-byte XOR", "Base64"]
+input = "FhUULiYBADYYEQAqJgEAciMFFyUgcDopCwU6MhhwKnIjBXtzIXAXJRsVGHIYGgslIBUuKSAvLiwjChMlGxV3KQsFCDsjFXcsCwoQLRgRADYbGgMxCwoQLRgRADAYGiklGxV3KQsFByUmBXs7G3AlNw=="
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

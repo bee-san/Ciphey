@@ -44,6 +44,7 @@ use crate::decoders::unicode_escape_decoder::UnicodeEscapeDecoder;
 use crate::decoders::url_decoder::URLDecoder;
 use crate::decoders::utf16_decoder::Utf16Decoder;
 use crate::decoders::vigenere_decoder::VigenereDecoder;
+use crate::decoders::xor_single_byte_decoder::XorSingleByteDecoder;
 use crate::decoders::z85_decoder::Z85Decoder;
 use crate::decoders::zlib_decoder::ZlibDecoder;
 
@@ -283,6 +284,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let gzip = Decoder::<GzipDecoder>::new();
 
     let brainfuck = Decoder::<BrainfuckInterpreter>::new();
+    let xor_single_byte = Decoder::<XorSingleByteDecoder>::new();
 
     Decoders {
         components: vec![
@@ -312,6 +314,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // reports the one listed first, and LemmeKnow takes rot47 of `104,101,108,...`
             // for a Bitcoin Cash address.
             Box::new(decimal),
+            // Before the classical ciphers: when several decoders find plaintext in one
+            // search batch, the first in this list wins a tie, and rot47 turns Base64
+            // into strings LemmeKnow takes for URLs.
+            Box::new(xor_single_byte),
             Box::new(morsecodedecoder),
             Box::new(atbashdecoder),
             Box::new(baconian),
