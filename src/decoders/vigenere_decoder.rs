@@ -143,7 +143,10 @@ impl Crack for Decoder<VigenereDecoder> {
 fn break_vigenere(text: &str, key_length: usize) -> String {
     let mut cipher_text: Vec<usize> = Vec::new();
     for c in text.chars() {
-        if c.is_alphabetic() {
+        // Must be ASCII: `is_alphabetic` also accepts e.g. 'À', whose
+        // `to_ascii_uppercase() as u8 - b'A'` lands outside the 26-entry
+        // VIGENERE_SQUARE and panics. `decrypt` below uses the same filter.
+        if c.is_ascii_alphabetic() {
             cipher_text.push(((c.to_ascii_uppercase() as u8) - b'A') as usize);
         }
     }
@@ -375,6 +378,34 @@ mod tests {
             .crack("12345!@#$%", &get_athena_checker())
             .unencrypted_text;
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_hex_decoded_latin1_input_does_not_panic() {
+        // Regression test for https://github.com/bee-san/ciphey/issues/908
+        // `ciphey -t "Mjc1NjI2ZDY1N2U2ZjU1NjY3OTY2Ng=="` base64 decodes to
+        // "275626d657e6f556679666", which the hexadecimal decoder turns into this string.
+        // 'Ö' (U+00D6) used to become index 149 into VIGENERE_SQUARE and panic.
+        let vigenere_decoder = Decoder::<VigenereDecoder>::new();
+        let result = vigenere_decoder.crack("'V&ÖWæõVg\u{96}f", &get_athena_checker());
+        assert!(result.unencrypted_text.is_some());
+    }
+
+    #[test]
+    fn test_non_ascii_letters_are_ignored_when_breaking_key() {
+        // Regression test for https://github.com/bee-san/ciphey/issues/908 and #902
+        // Non-ASCII letters are not part of the Vigenère alphabet. They used to be fed
+        // into the key search, indexing past VIGENERE_SQUARE ('Ö' -> 149, 'ż' -> 59) or
+        // underflowing ('Ā', 'Ж'). They must be skipped like `decrypt` skips them, so
+        // they neither panic nor shift the key alignment.
+        let text =
+            "Altd hlbe Ö tg lrncmwxpo kpxs ż evl ztrsuicp Ā qptspf. Ivplyprr Ж th pw clhoic pozc";
+        let key = break_vigenere(text, 5);
+        assert_eq!(key, "HELLO");
+        assert_eq!(
+            decrypt(text, &key),
+            "This text Ö is encrypted with ż the vigenere Ā cipher. Breaking Ж it is rather easy"
+        );
     }
 
     #[test]
