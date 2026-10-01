@@ -93,7 +93,10 @@ impl Crack for Decoder<RailfenceDecoder> {
 
 /// Decodes a text encoded with the Rail Fence Cipher with the specified number of rails and offset
 fn railfence_decoder(text: &str, rails: usize, offset: usize) -> String {
-    let mut indexes: Vec<_> = zigzag(rails, offset).zip(1..).take(text.len()).collect();
+    let mut indexes: Vec<_> = zigzag(rails, offset)
+        .zip(1..)
+        .take(text.chars().count())
+        .collect();
     indexes.sort();
     let mut char_with_index: Vec<_> = text
         .chars()
@@ -183,6 +186,12 @@ mod tests {
             .crack("", &get_athena_checker())
             .unencrypted_text;
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn railfence_decoder_counts_chars_not_bytes() {
+        // 'Ä' is two bytes; the zigzag must be sized by characters.
+        assert_eq!(railfence_decoder("ÄCEBDF", 2, 0), "ÄBCDEF");
     }
 
     #[test]
