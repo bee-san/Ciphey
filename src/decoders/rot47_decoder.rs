@@ -1,6 +1,6 @@
 //! Decode a ROT47 cipher string
 //! Performs error handling and returns a string
-//! Call rot47_decoder.crack to use. It returns option<String> and check with
+//! Call rot47_decoder.crack to use. It returns `Option<String>` and check with
 //! `result.is_some()` to see if it returned okay.
 //! Uses Low sensitivity for gibberish detection.
 
@@ -29,7 +29,7 @@ impl Crack for Decoder<ROT47Decoder> {
     }
 
     /// This function does the actual decoding
-    /// It returns an Option<string> if it was successful
+    /// It returns an `Option<String>` if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying rot47 with text {:?}", text);

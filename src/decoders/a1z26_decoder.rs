@@ -24,7 +24,7 @@ impl Crack for Decoder<A1Z26Decoder> {
     }
 
     /// Decode using the A1Z26 encoding
-    /// It returns an Option<string> if it was successful
+    /// It returns an `Option<String>` if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
     ///
     /// A1Z26 is an encoding that maps each letter to its numeric position in the alphabet. This
@@ -96,7 +96,7 @@ impl Crack for Decoder<A1Z26Decoder> {
 }
 
 /// This function does the actual decoding
-/// It returns an Option<string> if it was successful
+/// It returns an `Option<String>` if it was successful
 /// Else the Option returns nothing and the error is logged in Trace
 fn decode_a1z26(ctext: &str) -> Option<String> {
     let re_has_a_digit = Regex::new(r"[0-9]").expect("Regex should be valid");

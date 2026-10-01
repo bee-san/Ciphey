@@ -32,9 +32,9 @@ pub struct Checker<Type> {
     /// Enhanced gibberish detector using BERT model
     /// This is only used when enhanced detection is enabled
     pub enhanced_detector: Option<()>, // Changed from GibberishDetector to () since we don't have the actual type
-    /// https://doc.rust-lang.org/std/marker/struct.PhantomData.html
+    /// <https://doc.rust-lang.org/std/marker/struct.PhantomData.html>
     /// Let's us save memory by telling the compiler that our type
-    /// acts like a type <T> even though it doesn't.
+    /// acts like a type `T` even though it doesn't.
     /// Stops the compiler complaining, else we'd need to implement
     /// some magic to make it work.
     pub _phantom: std::marker::PhantomData<Type>,

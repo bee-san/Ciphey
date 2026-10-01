@@ -25,7 +25,17 @@ impl Crack for Decoder<SubstitutionGenericDecoder> {
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying SubstitutionGenericDecoder with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
-        let unique_symbols: Vec<char> = text.chars().collect::<HashSet<_>>().into_iter().collect();
+        // Symbols in order of first appearance, so mappings are always tried in the same
+        // order and the same plaintext is found on every run.
+        let mut unique_symbols: Vec<char> = Vec::new();
+        for c in text.chars() {
+            if !unique_symbols.contains(&c) {
+                unique_symbols.push(c);
+            }
+            if unique_symbols.len() > 4 {
+                return results;
+            }
+        }
         let num_symbols = unique_symbols.len();
 
         // Early return for invalid symbol counts
@@ -68,6 +78,15 @@ impl Crack for Decoder<SubstitutionGenericDecoder> {
                 _ => continue,
             };
 
+            // Only the checker can say a mapping produced plaintext
+            if decoder_result.success {
+                results.success = true;
+                results.unencrypted_text = decoder_result.unencrypted_text;
+                results.checker_name = decoder_result.checker_name;
+                results.checker_description = decoder_result.checker_description;
+                return results;
+            }
+
             if let Some(texts) = decoder_result.unencrypted_text {
                 for text in texts {
                     trace!("Found potential decoded string: {}", text);
@@ -76,8 +95,8 @@ impl Crack for Decoder<SubstitutionGenericDecoder> {
             }
         }
 
+        // Nothing was identified as plaintext; return the decodings for the search to try
         if !decoded_strings.is_empty() {
-            results.success = true;
             results.unencrypted_text = Some(decoded_strings.into_iter().collect());
         }
 
@@ -176,22 +195,31 @@ mod tests {
 
     #[test]
     fn test_binary_substitution() {
+        // "hello" in 8-bit binary, with A for 0 and B for 1
+        let decoder = Decoder::<SubstitutionGenericDecoder>::new();
+        let result = decoder.crack(
+            "ABBABAAAABBAABABABBABBAAABBABBAAABBABBBB",
+            &get_athena_checker(),
+        );
+
+        assert!(result.success, "Result: {:?}", result);
+        assert_eq!(result.unencrypted_text, Some(vec!["hello".to_string()]));
+        assert!(!result.checker_name.is_empty());
+    }
+
+    #[test]
+    fn test_substitution_without_plaintext_is_not_a_success() {
+        // Every mapping decodes to something, but none of it is plaintext. This used to
+        // be reported as a success, so junk like "M A" was returned as the answer
+        // without the checker (and therefore --regex and the human checker) being asked.
         let decoder = Decoder::<SubstitutionGenericDecoder>::new();
         let result = decoder.crack("AABBAABBAABBAABBAABBAA", &get_athena_checker());
 
-        // Print debug info if test fails
-        if !result.success {
-            println!("Binary substitution test failed. Result: {:?}", result);
-        }
-
-        assert!(result.success);
-
-        // For binary, we're looking for any valid binary string that might decode to something
-        if let Some(texts) = result.unencrypted_text {
-            println!("Decoded binary texts: {:?}", texts);
-            assert!(!texts.is_empty(), "Expected non-empty decoded texts");
-        } else {
-            panic!("No decoded texts found");
-        }
+        assert!(!result.success, "Result: {:?}", result);
+        // The decodings are still returned so the search can keep going from them
+        let texts = result
+            .unencrypted_text
+            .expect("expected candidate decodings");
+        assert!(!texts.is_empty());
     }
 }

@@ -1,11 +1,11 @@
 /// import general checker
 use lemmeknow::Identifier;
 use memmap2::Mmap;
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
-use std::io::{self, BufRead, BufReader};
+use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
 
@@ -74,15 +74,33 @@ pub struct Config {
 /// Cell for storing global Config
 static CONFIG: OnceCell<Config> = OnceCell::new();
 
+/// Returned by [`get_config`] until [`set_global_config`] is called
+static DEFAULT_CONFIG: Lazy<Config> = Lazy::new(Config::default);
+
 /// To initialize global config with custom values
 pub fn set_global_config(config: Config) {
     CONFIG.set(config).ok(); // ok() used to make compiler happy about using Result
 }
 
 /// Get the global config.
-/// This will return default config if the config wasn't already initialized
+///
+/// Until [`set_global_config`] is called this returns the default config, without
+/// stopping a later [`set_global_config`] call from taking effect:
+/// ```rust
+/// use ciphey::config::{get_config, set_global_config, Config};
+///
+/// assert_eq!(get_config().timeout, 5);
+///
+/// let mut config = Config::default();
+/// config.timeout = 42;
+/// set_global_config(config);
+/// assert_eq!(get_config().timeout, 42);
+/// ```
 pub fn get_config() -> &'static Config {
-    CONFIG.get_or_init(Config::default)
+    // Don't initialise CONFIG here: anything printed before the real config is set
+    // (e.g. a warning while parsing the config file) would otherwise lock in the
+    // defaults and silently discard every CLI option.
+    CONFIG.get().unwrap_or_else(|| &DEFAULT_CONFIG)
 }
 
 /// Creates a default lemmeknow config
@@ -199,10 +217,12 @@ fn read_config_file() -> std::io::Result<String> {
     Ok(contents)
 }
 
-/// Parse a TOML string into a Config struct, handling unknown keys
-fn parse_toml_with_unknown_keys(contents: &str) -> Config {
+/// Parse a TOML string into a Config struct, warning about unknown keys
+///
+/// Returns an error if `contents` isn't valid TOML or a setting has the wrong type.
+fn parse_toml_with_unknown_keys(contents: &str) -> Result<Config, toml::de::Error> {
     // First parse into a generic Value to check for unknown keys
-    let parsed_value: toml::Value = toml::from_str(contents).expect("Could not parse config file");
+    let parsed_value: toml::Value = toml::from_str(contents)?;
 
     // Check for unknown keys at the root level
     if let toml::Value::Table(table) = &parsed_value {
@@ -232,13 +252,16 @@ fn parse_toml_with_unknown_keys(contents: &str) -> Config {
     }
 
     // Parse into Config struct
-    let mut config: Config = toml::from_str(contents).expect("Could not parse config file");
+    let mut config: Config = toml::from_str(contents)?;
     update_identifier_in_config(&mut config);
-    config
+    Ok(config)
 }
 
 /// Loads a wordlist from a file into a HashSet for efficient lookups
 /// Uses memory mapping for large files to improve performance and memory usage
+///
+/// Lines that aren't valid UTF-8 are skipped: decoded text is always valid UTF-8, so
+/// they could never match. Real wordlists such as rockyou.txt contain some.
 ///
 /// # Arguments
 /// * `path` - Path to the wordlist file
@@ -251,15 +274,14 @@ fn parse_toml_with_unknown_keys(contents: &str) -> Config {
 /// This function will return an error if:
 /// * The file does not exist
 /// * The file cannot be opened due to permissions
-/// * The file cannot be memory-mapped
-/// * The file contains invalid UTF-8 characters
+/// * The file cannot be read or memory-mapped
 ///
 /// # Safety
 /// This implementation uses memory mapping for large files.
 /// `unsafe { Mmap::map(&file) }` is required because the map could become invalid
 /// if the underlying file is modified while the mapping is in use.
 pub fn load_wordlist<P: AsRef<Path>>(path: P) -> io::Result<HashSet<String>> {
-    let file = File::open(path)?;
+    let mut file = File::open(path)?;
     let file_size = file.metadata()?.len();
 
     // For small files (under 10MB), use regular file reading
@@ -269,39 +291,36 @@ pub fn load_wordlist<P: AsRef<Path>>(path: P) -> io::Result<HashSet<String>> {
     // 3. 10MB allows for roughly 1 million words (assuming average word length of 10 chars)
     if file_size < 10_000_000 {
         // 10MB threshold
-        let reader = BufReader::new(file);
-        let mut wordlist = HashSet::new();
-
-        for word in reader.lines().map_while(Result::ok) {
-            let trimmed = word.trim().to_string();
-            if !trimmed.is_empty() {
-                wordlist.insert(trimmed);
-            }
-        }
-
-        Ok(wordlist)
+        let mut contents = Vec::new();
+        file.read_to_end(&mut contents)?;
+        Ok(parse_wordlist(&contents))
     } else {
         // For large files, use memory mapping
-        // First create the memory map
         let mmap = unsafe { Mmap::map(&file)? };
-
-        // Verify the file contains valid UTF-8 before proceeding
-        let mut wordlist = HashSet::new();
-        let content = std::str::from_utf8(&mmap).map_err(|_| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Wordlist file contains invalid UTF-8",
-            )
-        })?;
-        for line in content.lines() {
-            let trimmed = line.trim();
-            if !trimmed.is_empty() {
-                wordlist.insert(trimmed.to_string());
-            }
-        }
-
-        Ok(wordlist)
+        Ok(parse_wordlist(&mmap))
     }
+}
+
+/// Collects the trimmed, non-empty lines of a wordlist, skipping lines that aren't
+/// valid UTF-8
+fn parse_wordlist(contents: &[u8]) -> HashSet<String> {
+    let mut wordlist = HashSet::new();
+    let mut skipped = 0;
+    for line in contents.split(|&byte| byte == b'\n') {
+        match std::str::from_utf8(line) {
+            Ok(line) => {
+                let word = line.trim();
+                if !word.is_empty() {
+                    wordlist.insert(word.to_string());
+                }
+            }
+            Err(_) => skipped += 1,
+        }
+    }
+    if skipped > 0 {
+        log::warn!("Skipped {skipped} wordlist lines that aren't valid UTF-8");
+    }
+    wordlist
 }
 
 /// Get configuration from file or create default if it doesn't exist
@@ -310,28 +329,11 @@ pub fn get_config_file_into_struct() -> Config {
 
     if !path.exists() {
         // First run - get user preferences
-        let first_run_config = crate::cli::run_first_time_setup();
-        let colourscheme = first_run_config
-            .iter()
-            .filter(|(k, _)| !k.starts_with("wordlist") && *k != "timeout")
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
-        let mut config = Config {
-            colourscheme,
-            ..Config::default()
-        };
+        let mut config = config_from_first_run(crate::cli::run_first_time_setup());
 
-        // Set timeout if present
-        if let Some(timeout) = first_run_config.get("timeout") {
-            config.timeout = timeout.parse().unwrap_or(5);
-        }
-
-        // Extract wordlist path if present
-        if let Some(wordlist_path) = first_run_config.get("wordlist_path") {
-            config.wordlist_path = Some(wordlist_path.clone());
-
-            // Load the wordlist
-            match load_wordlist(wordlist_path) {
+        // Load the wordlist if one was chosen
+        if let Some(wordlist_path) = config.wordlist_path.clone() {
+            match load_wordlist(&wordlist_path) {
                 Ok(wordlist) => {
                     config.wordlist = Some(wordlist);
                 }
@@ -352,7 +354,17 @@ pub fn get_config_file_into_struct() -> Config {
         // Existing config - read and parse it
         match read_config_file() {
             Ok(contents) => {
-                let mut config = parse_toml_with_unknown_keys(&contents);
+                let mut config = match parse_toml_with_unknown_keys(&contents) {
+                    Ok(config) => config,
+                    Err(e) => {
+                        eprintln!(
+                            "Error parsing config file '{}'. Using defaults.\n{}",
+                            path.display(),
+                            e.to_string().trim_end()
+                        );
+                        return Config::default();
+                    }
+                };
 
                 // If wordlist is specified in config file, set it in the config struct
                 if let Some(wordlist_path) = &config.wordlist_path {
@@ -380,10 +392,103 @@ pub fn get_config_file_into_struct() -> Config {
     }
 }
 
+/// Builds the config from the answers to the first-run setup.
+///
+/// The setup returns everything in one map, so the settings are taken out of it
+/// and the colour roles that are left become the colour scheme.
+fn config_from_first_run(mut answers: HashMap<String, String>) -> Config {
+    let mut config = Config::default();
+    if let Some(timeout) = answers.remove("timeout") {
+        config.timeout = timeout.parse().unwrap_or(config.timeout);
+    }
+    if let Some(top_results) = answers.remove("top_results") {
+        config.top_results = top_results == "true";
+    }
+    if let Some(enhanced_detection) = answers.remove("enhanced_detection") {
+        config.enhanced_detection = enhanced_detection == "true";
+    }
+    config.model_path = answers.remove("model_path");
+    config.wordlist_path = answers.remove("wordlist_path");
+    config.colourscheme = answers;
+    config
+}
+
 /// Save a Config struct to a file
 fn save_config_to_file(config: &Config, path: &std::path::Path) {
     let toml_string = toml::to_string_pretty(config).expect("Could not serialize config");
     let mut file = File::create(path).expect("Could not create config file");
     file.write_all(toml_string.as_bytes())
         .expect("Could not write to config file");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_file_is_parsed() {
+        let config = parse_toml_with_unknown_keys("timeout = 10\ntop_results = true\n").unwrap();
+        assert_eq!(config.timeout, 10);
+        assert!(config.top_results);
+    }
+
+    #[test]
+    fn malformed_config_file_is_an_error_not_a_panic() {
+        // Invalid TOML
+        assert!(parse_toml_with_unknown_keys("timeout = ").is_err());
+        // Valid TOML, but the wrong type for a setting
+        assert!(parse_toml_with_unknown_keys("timeout = \"ten\"").is_err());
+    }
+
+    #[test]
+    fn first_run_answers_become_settings() {
+        // These answers used to be saved as entries in the colour scheme, so choosing
+        // top results mode or enhanced detection during the first run did nothing.
+        let answers: HashMap<String, String> = [
+            ("informational", "255,215,0"),
+            ("warning", "255,0,0"),
+            ("success", "0,255,0"),
+            ("question", "255,215,0"),
+            ("statement", "255,255,255"),
+            ("top_results", "true"),
+            ("timeout", "3"),
+            ("enhanced_detection", "true"),
+            ("model_path", "/models/model.bin"),
+            ("wordlist_path", "/wordlists/words.txt"),
+        ]
+        .into_iter()
+        .map(|(key, value)| (key.to_string(), value.to_string()))
+        .collect();
+
+        let config = config_from_first_run(answers);
+
+        assert!(config.top_results);
+        assert_eq!(config.timeout, 3);
+        assert!(config.enhanced_detection);
+        assert_eq!(config.model_path.as_deref(), Some("/models/model.bin"));
+        assert_eq!(
+            config.wordlist_path.as_deref(),
+            Some("/wordlists/words.txt")
+        );
+        let mut roles: Vec<&str> = config.colourscheme.keys().map(String::as_str).collect();
+        roles.sort_unstable();
+        assert_eq!(
+            roles,
+            [
+                "informational",
+                "question",
+                "statement",
+                "success",
+                "warning"
+            ]
+        );
+    }
+
+    #[test]
+    fn wordlist_lines_that_are_not_utf8_are_skipped() {
+        let wordlist = parse_wordlist(b"hello\n\xff\xfe \xe9t\xe9\nworld\r\n\n  spaced  \n");
+        let mut words: Vec<&str> = wordlist.iter().map(String::as_str).collect();
+        words.sort_unstable();
+        assert_eq!(words, ["hello", "spaced", "world"]);
+    }
 }

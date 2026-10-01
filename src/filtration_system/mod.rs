@@ -1,4 +1,4 @@
-//! Proposal: https://broadleaf-angora-7db.notion.site/Filtration-System-7143b36a42f1466faea3077bfc7e859e
+//! Proposal: <https://broadleaf-angora-7db.notion.site/Filtration-System-7143b36a42f1466faea3077bfc7e859e>
 //! Given a filter object, return an array of decoders/crackers which have been filtered
 
 use std::sync::mpsc::channel;

@@ -5,18 +5,19 @@ pub use first_run::run_first_time_setup;
 use std::{fs::File, io::Read};
 
 use crate::cli_pretty_printing;
-use crate::cli_pretty_printing::panic_failure_both_input_and_fail_provided;
 use crate::config::{get_config_file_into_struct, load_wordlist, Config};
 /// This doc string acts as a help message when the uses run '--help' in CLI mode
 /// as do all doc strings on fields
-use clap::Parser;
+use clap::{ArgGroup, Parser};
 use log::trace;
 
 /// The struct for Clap CLI arguments
 #[derive(Parser)]
 #[command(author = "Bee <bee@skerritt.blog>", about, long_about = None)]
+// Exactly one of --text and --file is required
+#[command(group(ArgGroup::new("input").required(true).args(["text", "file"])))]
 pub struct Opts {
-    /// Some input. Because this isn't an Option<T> it's required to be used
+    /// The text to decode. Use either this or `--file`
     #[arg(short, long)]
     text: Option<String>,
 
@@ -67,8 +68,8 @@ pub struct Opts {
 /// Parse CLI Arguments turns a Clap Opts struct, seen above
 /// Into a library Struct for use within the program
 /// The library struct can be found in the [config](../config) folder.
-/// # Panics
-/// This function can panic when it gets both a file and text input at the same time.
+///
+/// Exits with a usage error unless exactly one of `--text` and `--file` is given.
 pub fn parse_cli_args() -> (String, Config) {
     let mut opts: Opts = Opts::parse();
     let min_log_level = match opts.verbose {
@@ -81,16 +82,10 @@ pub fn parse_cli_args() -> (String, Config) {
         env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, min_log_level),
     );
 
-    let input_text: String = match (opts.file.take(), opts.text.take()) {
-        (Some(_), Some(_)) => {
-            panic_failure_both_input_and_fail_provided();
-            unreachable!("panic helper should terminate the process");
-        }
-        (Some(file), None) => read_and_parse_file(file),
-        (None, Some(text)) => text,
-        (None, None) => {
-            panic!("Error. No input was provided. Please use ciphey --help")
-        }
+    // clap has already checked that exactly one of these was given
+    let input_text: String = match opts.file.take() {
+        Some(file) => read_and_parse_file(file),
+        None => opts.text.take().unwrap_or_default(),
     };
 
     trace!("Program was called with CLI 😉");
@@ -159,8 +154,10 @@ fn cli_args_into_config_struct(opts: Opts, text: String) -> (String, Config) {
         }
     }
 
-    // Set top_results mode if the flag is present
-    config.top_results = opts.top_results;
+    // --top-results turns top results mode on; without it the config file decides
+    if opts.top_results {
+        config.top_results = true;
+    }
 
     // If top_results is enabled, automatically disable the human checker
     if config.top_results {
@@ -179,4 +176,40 @@ fn cli_args_into_config_struct(opts: Opts, text: String) -> (String, Config) {
     }
 
     (text, config)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Opts;
+    use clap::error::ErrorKind;
+    use clap::{CommandFactory, Parser};
+
+    #[test]
+    fn cli_definition_is_valid() {
+        Opts::command().debug_assert();
+    }
+
+    #[test]
+    fn missing_input_is_a_usage_error() {
+        // Used to panic with "Error. No input was provided"
+        let error = Opts::try_parse_from(["ciphey"])
+            .err()
+            .expect("no input should be rejected");
+        assert_eq!(error.kind(), ErrorKind::MissingRequiredArgument);
+    }
+
+    #[test]
+    fn text_and_file_together_is_a_usage_error() {
+        // Used to panic with "Failed -- both file and text were provided"
+        let error = Opts::try_parse_from(["ciphey", "-t", "aGVsbG8=", "-f", "input.txt"])
+            .err()
+            .expect("--text with --file should be rejected");
+        assert_eq!(error.kind(), ErrorKind::ArgumentConflict);
+    }
+
+    #[test]
+    fn text_or_file_alone_is_accepted() {
+        assert!(Opts::try_parse_from(["ciphey", "-t", "aGVsbG8="]).is_ok());
+        assert!(Opts::try_parse_from(["ciphey", "-f", "input.txt"]).is_ok());
+    }
 }

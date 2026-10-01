@@ -1,4 +1,4 @@
-//! ciphey is an automatic decoding and cracking tool. https://github.com/bee-san/ciphey
+//! ciphey is an automatic decoding and cracking tool. <https://github.com/bee-san/ciphey>
 // Warns in case we forget to include documentation
 #![warn(
     missing_docs,
@@ -89,7 +89,7 @@ pub use error::CipheyError;
 /// assert!(result.unwrap().unwrap().text[0] == "The main function to call which performs the cracking.");
 /// ```
 /// The human checker defaults to off in the config, but it returns the first thing it finds currently.
-/// We have an issue for that here https://github.com/bee-san/ciphey/issues/129
+/// We have an issue for that here <https://github.com/bee-san/ciphey/issues/129>
 /// ```rust
 /// use ciphey::perform_cracking;
 /// use ciphey::config::Config;
@@ -134,6 +134,13 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
         storage::wait_athena_storage::clear_plaintext_results();
     }
 
+    // The cache maps an input to the plaintext the default checkers accepted. Skip it:
+    // * with a regex crib: a cached plaintext may not match the crib, and a crib match
+    //   (which can be an intermediate encoding) isn't the answer for other runs
+    // * in top_results mode: every candidate has to be found by searching, and the one
+    //   returned is just the first candidate, not a confirmed plaintext
+    let use_cache = modified_config.regex.is_none() && !modified_config.top_results;
+
     config::set_global_config(modified_config);
     let text = text.to_string();
 
@@ -152,7 +159,11 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
     /*  Checks to see if the encoded text already exists in the cache
      *  returns cached result if so
      */
-    let cache_result = storage::database::read_cache(&text);
+    let cache_result = if use_cache {
+        storage::database::read_cache(&text)
+    } else {
+        Ok(None)
+    };
     match cache_result {
         Ok(cache_row) => match cache_row {
             Some(row) => {
@@ -216,16 +227,18 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
             path: vec![crack_result],
         };
 
-        let cache_result = success_result_to_cache(&text, start_time, &output);
-        match cache_result {
-            Ok(_) => (),
-            Err(e) => {
-                cli_pretty_printing::warning(&format!(
-                    "DEBUG: lib.rs - Error inserting decoder result into cache table: {}",
-                    e
-                ));
-            }
-        };
+        if use_cache {
+            let cache_result = success_result_to_cache(&text, start_time, &output);
+            match cache_result {
+                Ok(_) => (),
+                Err(e) => {
+                    cli_pretty_printing::warning(&format!(
+                        "DEBUG: lib.rs - Error inserting decoder result into cache table: {}",
+                        e
+                    ));
+                }
+            };
+        }
 
         return Ok(Some(output));
     }
@@ -252,16 +265,18 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
     }
 
     if let Some(output) = &result {
-        let cache_result = success_result_to_cache(&text, start_time, output);
-        match cache_result {
-            Ok(_) => (),
-            Err(e) => {
-                cli_pretty_printing::warning(&format!(
-                    "DEBUG: lib.rs - Error inserting decoder result into cache table: {}",
-                    e
-                ));
-            }
-        };
+        if use_cache {
+            let cache_result = success_result_to_cache(&text, start_time, output);
+            match cache_result {
+                Ok(_) => (),
+                Err(e) => {
+                    cli_pretty_printing::warning(&format!(
+                        "DEBUG: lib.rs - Error inserting decoder result into cache table: {}",
+                        e
+                    ));
+                }
+            };
+        }
     }
 
     Ok(result)

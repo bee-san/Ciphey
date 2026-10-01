@@ -1,5 +1,5 @@
 use crate::checkers::CheckerTypes;
-use crate::decoders::interface::check_string_success;
+use crate::decoders::interface::{bytes_to_string, check_string_success};
 
 use super::crack_results::CrackResult;
 use super::interface::Crack;
@@ -23,7 +23,7 @@ impl Crack for Decoder<BinaryDecoder> {
     }
 
     /// This function does the actual decoding
-    /// It returns an Option<string> if it was successful
+    /// It returns an `Option<String>` if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying binary with text {:?}", text);
@@ -79,7 +79,7 @@ impl Crack for Decoder<BinaryDecoder> {
 /// Decodes binary to string
 /// bit is the byte length
 fn binary_to_string(binary: &str, bit: u8) -> String {
-    let mut out = String::new();
+    let mut bytes: Vec<u8> = Vec::new();
     let mut iter = binary.as_bytes().iter().filter_map(|byte| match byte {
         b'0' => Some(0),
         b'1' => Some(1),
@@ -91,11 +91,11 @@ fn binary_to_string(binary: &str, bit: u8) -> String {
             .take(usize::from(bit))
             .reduce(|acc, elem| (acc << 1) | elem);
         match byte {
-            Some(byte) => out.push(char::from(byte)),
+            Some(byte) => bytes.push(byte),
             None => break,
         }
     }
-    out
+    bytes_to_string(bytes)
 }
 
 #[cfg(test)]
@@ -169,6 +169,18 @@ mod tests {
         let decoder = Decoder::<BinaryDecoder>::new();
         let result = decoder.crack("0110100001100101011011000110110001101111001000000111011101101111011100100110110001100100", &get_athena_checker());
         assert_eq!(result.unencrypted_text.unwrap()[0], "hello world");
+    }
+
+    #[test]
+    fn binary_decodes_utf8_text() {
+        // Every byte used to become its own Latin-1 character: "café" came out as "cafÃ©"
+        let cafe = "0110001101100001011001101100001110101001";
+        assert_eq!(binary_to_string(cafe, 8), "café");
+        // Latin-1 encoded text still decodes
+        assert_eq!(
+            binary_to_string("01100011011000010110011011101001", 8),
+            "café"
+        );
     }
 
     #[test]

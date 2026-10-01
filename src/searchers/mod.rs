@@ -1,7 +1,7 @@
 //! The search algorithm decides what encryptions to do next
 //! And also runs the decryption modules
 //! Click here to find out more:
-//! https://broadleaf-angora-7db.notion.site/Search-Nodes-Edges-What-should-they-look-like-b74c43ca7ac341a1a5cfdbeb84a7eef0
+//! <https://broadleaf-angora-7db.notion.site/Search-Nodes-Edges-What-should-they-look-like-b74c43ca7ac341a1a5cfdbeb84a7eef0>
 
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -93,30 +93,57 @@ fn wait_for_search_result(
                 // Continue searching for more results
             } else {
                 // In normal mode, we stop the search and return the result
-                stop.store(true, std::sync::atomic::Ordering::Relaxed);
-                // Wait for the thread to finish
-                handle.join().unwrap();
+                stop_search(&stop, handle, &result_recv);
                 return Ok(res);
             }
         }
 
         if timer.try_recv().is_ok() {
-            stop.store(true, std::sync::atomic::Ordering::Relaxed);
             log::info!("Search timer expired");
             // Wait for the thread to finish to ensure any ongoing human checker interaction completes
-            handle.join().unwrap();
+            let late_result = stop_search(&stop, handle, &result_recv);
 
             // In top_results mode, return the first result we found (if any)
             if top_results_mode {
-                return Ok(first_result);
+                return Ok(first_result.or(late_result));
             }
 
-            return Err(CipheyError::Timeout { secs: timeout });
+            // A result sent while the search was stopping (for example one the user
+            // accepted at the human checker prompt) is still a result.
+            return match late_result {
+                Some(res) => Ok(Some(res)),
+                None => Err(CipheyError::Timeout { secs: timeout }),
+            };
         }
 
         // Small sleep to prevent CPU spinning
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
+}
+
+/// Tells the search thread to stop, waits for it to finish and returns the first result
+/// it sent in the meantime.
+///
+/// The result channel is drained while waiting. In `top_results` mode the search thread
+/// can be blocked sending a result into the bounded channel, so joining it without
+/// receiving would deadlock.
+fn stop_search(
+    stop: &AtomicBool,
+    handle: thread::JoinHandle<()>,
+    result_recv: &Receiver<Option<DecoderResult>>,
+) -> Option<DecoderResult> {
+    stop.store(true, std::sync::atomic::Ordering::Relaxed);
+
+    let mut late_result = None;
+    while !handle.is_finished() {
+        if let Ok(Some(res)) = result_recv.recv_timeout(std::time::Duration::from_millis(10)) {
+            late_result.get_or_insert(res);
+        }
+    }
+    handle.join().unwrap();
+
+    // Anything sent just before the thread finished is still buffered
+    late_result.or_else(|| result_recv.try_iter().flatten().next())
 }
 
 /// Performs the decodings by getting all of the decoders
@@ -230,5 +257,68 @@ mod tests {
         );
 
         assert_eq!(result.unwrap().unwrap().text[0], "first");
+    }
+
+    /// Runs `wait_for_search_result` on another thread so a deadlock fails the test
+    /// instead of hanging it.
+    fn wait_with_deadline(
+        result_rx: Receiver<Option<DecoderResult>>,
+        timer_rx: Receiver<()>,
+        handle: thread::JoinHandle<()>,
+        top_results_mode: bool,
+    ) -> Result<Option<DecoderResult>, CipheyError> {
+        let (done_tx, done_rx) = bounded(1);
+        thread::spawn(move || {
+            let result = wait_for_search_result(
+                result_rx,
+                timer_rx,
+                Arc::default(),
+                handle,
+                top_results_mode,
+                7,
+            );
+            done_tx.send(result).unwrap();
+        });
+        done_rx
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("wait_for_search_result deadlocked")
+    }
+
+    #[test]
+    fn top_results_mode_does_not_deadlock_when_search_is_blocked_sending() {
+        // In top_results mode A* sends every result it finds. Once the timer has fired
+        // nobody receives any more, so the second send into the bounded(1) channel
+        // blocks, and joining the search thread used to hang forever.
+        let (result_tx, result_rx) = bounded(1);
+        let (timer_tx, timer_rx) = bounded(1);
+        timer_tx.send(()).unwrap();
+        let search = thread::spawn(move || {
+            for i in 0..3 {
+                result_tx
+                    .send(Some(DecoderResult::_new(&format!("result {i}"))))
+                    .unwrap();
+            }
+        });
+
+        let result = wait_with_deadline(result_rx, timer_rx, search, true);
+
+        assert_eq!(result.unwrap().unwrap().text[0], "result 0");
+    }
+
+    #[test]
+    fn result_sent_while_stopping_is_returned_instead_of_timeout() {
+        // e.g. the user accepted a plaintext at the human checker prompt just as the
+        // timer expired
+        let (result_tx, result_rx) = bounded(1);
+        let (timer_tx, timer_rx) = bounded(1);
+        timer_tx.send(()).unwrap();
+        let search = thread::spawn(move || {
+            thread::sleep(std::time::Duration::from_millis(50));
+            result_tx.send(Some(DecoderResult::_new("late"))).unwrap();
+        });
+
+        let result = wait_with_deadline(result_rx, timer_rx, search, false);
+
+        assert_eq!(result.unwrap().unwrap().text[0], "late");
     }
 }
