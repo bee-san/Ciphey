@@ -200,3 +200,13 @@ fn human_checker_rejection_is_final() {
     assert!(output.stdout.contains("Possible plaintext"), "{output}");
     assert!(!output.stdout.contains("The plaintext is"), "{output}");
 }
+
+#[test]
+fn missing_input_is_a_usage_error() {
+    // Used to panic ("Error. No input was provided") and exit with 101
+    let home = TempHome::new("missing-input");
+    let output = run(&home, &[]);
+    assert_eq!(output.code, Some(2), "{output}");
+    assert!(output.stderr.contains("--text"), "{output}");
+    assert!(!output.stderr.contains("panicked"), "{output}");
+}
