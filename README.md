@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bee-san/ciphey/main/images/main_demo.svg" alt="ciphey demo">
+  <img src="https://raw.githubusercontent.com/bee-san/Ciphey/master/images/main_demo.svg" alt="ciphey demo">
 </p>
 
 
@@ -36,9 +36,9 @@ Some features that may interest you, and that we're proud of.
 
 ## Fast
 
-![](https://raw.githubusercontent.com/bee-san/ciphey/main/images/better_demo.svg)
+![](https://raw.githubusercontent.com/bee-san/Ciphey/master/images/better_demo.svg)
 
-ciphey is fast. Very fast. Other decoders such as Ciphey require advance artifical intelligence to determine which path it should take to decode (whether to try Caesar next or Base64 etc).
+ciphey is fast. Very fast. Other decoders such as Ciphey require advanced artificial intelligence to determine which path it should take to decode (whether to try Caesar next or Base64 etc).
 
 ciphey is so fast we don't need to worry about this currently. For every 1 decode Ciphey can do, ciphey can do ~7. That's a 700% increase in speed.
 
@@ -65,7 +65,7 @@ ciphey already has ~120 tests, documentation tests (to ensure our docs are kept 
 
 ## LemmeKnow
 
-![](https://raw.githubusercontent.com/bee-san/ciphey/main/images/lemmeknow.svg)
+![](https://raw.githubusercontent.com/bee-san/Ciphey/master/images/lemmeknow.svg)
 
 <img width="861" alt="Screenshot 2022-12-18 at 17 08 36" src="https://user-images.githubusercontent.com/10378052/208310491-86e704ca-963d-4850-a2b2-f14b6e0f4797.png">
 
@@ -148,5 +148,5 @@ We now store statistics in a database. This is useful for seeing how ciphey is d
 
 We use AI for 2 things:
 1. The TUI is entirely vibe coded.
-2. I made AI spend hours researching every single CTF challenge out there. It created a list of 15,071 CTFs. It then went through every single CTF and looked for writeups. In those writeups it looked for anything related to encoding / decoding. It then created tests out of those. This enabled us to increase our testing coverage and make sure all CTF encoding / decoding challenges are solveable with this tool.
+2. I made AI spend hours researching every single CTF challenge out there. It created a list of 15,071 CTFs. It then went through every single CTF and looked for writeups. In those writeups it looked for anything related to encoding / decoding. It then created tests out of those. This enabled us to increase our testing coverage and make sure all CTF encoding / decoding challenges are solvable with this tool.
 
