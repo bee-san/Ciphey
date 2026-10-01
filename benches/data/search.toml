@@ -70,6 +70,13 @@ expected = "Meet me at the old lighthouse after midnight and bring the map, the 
 
 [[case]]
 kind = "single"
+name = "octal"
+layers = ["Octal"]
+input = "115 145 145 164 40 155 145 40 141 164 40 164 150 145 40 157 154 144 40 154 151 147 150 164 150 157 165 163 145 40 141 146 164 145 162 40 155 151 144 156 151 147 150 164 40 141 156 144 40 142 162 151 156 147 40 164 150 145 40 155 141 160 54 40 164 150 145 40 153 145 171 40 141 156 144 40 141 40 164 157 162 143 150 56"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
 name = "morse"
 layers = ["Morse Code"]
 input = "-- . . - / -- . / .- - / - .... . / --- .-.. -.. / .-.. .. --. .... - .... --- ..- ... . / .- ..-. - . .-. / -- .. -.. -. .. --. .... - / .- -. -.. / -... .-. .. -. --. / - .... . / -- .- .--. --..-- / - .... . / -.- . -.-- / .- -. -.. / .- / - --- .-. -.-. .... .-.-.-"
@@ -171,6 +178,13 @@ kind = "multi"
 name = "binary_base64"
 layers = ["Binary", "Base64"]
 input = "MDEwMDExMDEgMDExMDAxMDEgMDExMDAxMDEgMDExMTAxMDAgMDAxMDAwMDAgMDExMDExMDEgMDExMDAxMDEgMDAxMDAwMDAgMDExMDAwMDEgMDExMTAxMDAgMDAxMDAwMDAgMDExMTAxMDAgMDExMDEwMDAgMDExMDAxMDEgMDAxMDAwMDAgMDExMDExMTEgMDExMDExMDAgMDExMDAxMDAgMDAxMDAwMDAgMDExMDExMDAgMDExMDEwMDEgMDExMDAxMTEgMDExMDEwMDAgMDExMTAxMDAgMDExMDEwMDAgMDExMDExMTEgMDExMTAxMDEgMDExMTAwMTEgMDExMDAxMDEgMDAxMDAwMDAgMDExMDAwMDEgMDExMDAxMTAgMDExMTAxMDAgMDExMDAxMDEgMDExMTAwMTAgMDAxMDAwMDAgMDExMDExMDEgMDExMDEwMDEgMDExMDAxMDAgMDExMDExMTAgMDExMDEwMDEgMDExMDAxMTEgMDExMDEwMDAgMDExMTAxMDAgMDAxMDAwMDAgMDExMDAwMDEgMDExMDExMTAgMDExMDAxMDAgMDAxMDAwMDAgMDExMDAwMTAgMDExMTAwMTAgMDExMDEwMDEgMDExMDExMTAgMDExMDAxMTEgMDAxMDAwMDAgMDExMTAxMDAgMDExMDEwMDAgMDExMDAxMDEgMDAxMDAwMDAgMDExMDExMDEgMDExMDAwMDEgMDExMTAwMDAgMDAxMDExMDAgMDAxMDAwMDAgMDExMTAxMDAgMDExMDEwMDAgMDExMDAxMDEgMDAxMDAwMDAgMDExMDEwMTEgMDExMDAxMDEgMDExMTEwMDEgMDAxMDAwMDAgMDExMDAwMDEgMDExMDExMTAgMDExMDAxMDAgMDAxMDAwMDAgMDExMDAwMDEgMDAxMDAwMDAgMDExMTAxMDAgMDExMDExMTEgMDExMTAwMTAgMDExMDAwMTEgMDExMDEwMDAgMDAxMDExMTA="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "octal_base64"
+layers = ["Octal", "Base64"]
+input = "MTE1IDE0NSAxNDUgMTY0IDQwIDE1NSAxNDUgNDAgMTQxIDE2NCA0MCAxNjQgMTUwIDE0NSA0MCAxNTcgMTU0IDE0NCA0MCAxNTQgMTUxIDE0NyAxNTAgMTY0IDE1MCAxNTcgMTY1IDE2MyAxNDUgNDAgMTQxIDE0NiAxNjQgMTQ1IDE2MiA0MCAxNTUgMTUxIDE0NCAxNTYgMTUxIDE0NyAxNTAgMTY0IDQwIDE0MSAxNTYgMTQ0IDQwIDE0MiAxNjIgMTUxIDE1NiAxNDcgNDAgMTY0IDE1MCAxNDUgNDAgMTU1IDE0MSAxNjAgNTQgNDAgMTY0IDE1MCAxNDUgNDAgMTUzIDE0NSAxNzEgNDAgMTQxIDE1NiAxNDQgNDAgMTQxIDQwIDE2NCAxNTcgMTYyIDE0MyAxNTAgNTY="
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
