@@ -104,7 +104,7 @@ impl Decoders {
 }
 
 /// [`Enum`] for our custom results.
-/// if our checker succeed, we return `Break` variant contining [`CrackResult`]
+/// if our checker succeed, we return `Break` variant containing [`CrackResult`]
 /// else we return `Continue` with the decoded results.
 pub enum MyResults {
     /// Variant containing successful [`CrackResult`]

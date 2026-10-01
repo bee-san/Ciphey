@@ -1,0 +1,3 @@
+[codespell]
+# "ue" appears in Caesar-cipher test vectors in caesar_decoder.rs
+ignore-words-list = ue

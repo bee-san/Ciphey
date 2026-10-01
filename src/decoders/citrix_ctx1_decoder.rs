@@ -164,7 +164,7 @@ mod tests {
 
     #[test]
     fn citrix_ctx1_handles_substraction_overflow() {
-        // This tests if Citrix CTX1 can handle substraction overflows
+        // This tests if Citrix CTX1 can handle subtraction overflows
         // It should return None and not panic
         let citrix_ctx1_decoder = Decoder::<CitrixCTX1Decoder>::new();
         let result = citrix_ctx1_decoder
