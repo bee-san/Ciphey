@@ -807,6 +807,8 @@ mod tests {
             "0x",
             "\\x",
             ".",
+            "   ",
+            "\t\n",
         ] {
             assert!(crack(input).unencrypted_text.is_none(), "{input}");
         }
