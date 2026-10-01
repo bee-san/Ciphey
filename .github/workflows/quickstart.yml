@@ -2,6 +2,11 @@ on: [push, pull_request]
 
 name: Test
 
+# Least-privilege GITHUB_TOKEN: every job only needs to read the repo.
+# (Swatinem/rust-cache uses the Actions cache service, which doesn't need extra scopes.)
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   # Fail the build on any rustc warning so they don't accumulate.
