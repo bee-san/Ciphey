@@ -1,117 +1,80 @@
-//! # A* Search Implementation for Decoding
+//! A* search over decoder sequences.
 //!
-//! This module implements the A* search algorithm for finding the correct sequence of decoders
-//! to decode an encrypted or encoded text. The A* algorithm is a best-first search algorithm
-//! that uses a heuristic function to prioritize which paths to explore.
+//! Each node is a piece of text plus the decoder path that produced it. Expanding a node
+//! runs every applicable decoder on the text; each output becomes a child, and outputs the
+//! decoder's own checker flagged as plaintext become result nodes.
 //!
-//! ## Algorithm Overview
-//!
-//! 1. Start with the initial input text
-//! 2. At each step:
-//!    - Extract a batch of nodes from the priority queue
-//!    - Process these nodes in parallel
-//!    - First run all "decoder"-tagged decoders (these are prioritized)
-//!    - Then run all other decoders with heuristic prioritization
-//! 3. For each successful decoding, create a new node and add it to the priority queue
-//! 4. Continue until a plaintext is found or the search space is exhausted
-//!
-//! ## Node Prioritization
-//!
-//! Nodes are prioritized using an f-score where:
-//! - f = g + h
-//! - g = depth in the search tree (cost so far)
-//! - h = heuristic value (estimated cost to goal)
-//!
-//! The current implementation uses a simple placeholder heuristic of 1.0,
-//! but has been improved with Cipher Identifier for better prioritization.
-//!
-//! ## Parallel Processing
-//!
-//! The implementation uses parallel node expansion to improve performance:
-//! - Multiple nodes are processed simultaneously using Rayon
-//! - Thread-safe data structures ensure correctness
-//! - Batch processing extracts multiple nodes from the priority queue
-//! - Special result nodes handle successful decodings in a thread-safe manner
+//! Nodes are ordered by `f = g + h`, where `g` is the summed [`edge_cost`] of the path and
+//! `h` is [`generate_heuristic`]. Ties go to the deeper node. Up to `PARALLEL_BATCH_SIZE`
+//! nodes are expanded concurrently per iteration, and within a node all decoders run
+//! concurrently.
 
-use crate::cli_pretty_printing;
 use crate::cli_pretty_printing::decoded_how_many_times;
+use crate::decoders::interface::Crack;
 use crate::filtration_system::get_all_decoders;
-use crate::filtration_system::{get_decoder_by_name, get_decoder_tagged_decoders, MyResults};
 use crossbeam::channel::Sender;
 
 use log::{debug, trace};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering as AtomicOrdering};
+use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::sync::{Arc, Mutex};
 
-// Add imports for parallel processing
 use dashmap::DashSet;
 use rayon::prelude::*;
 
 use crate::checkers::athena::Athena;
 use crate::checkers::checker_type::{Check, Checker};
+use crate::checkers::english::EnglishChecker;
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
 use crate::searchers::helper_functions::{
-    calculate_string_worth, generate_heuristic, update_decoder_stats,
+    calculate_string_worth, check_if_string_cant_be_decoded, edge_cost, generate_heuristic,
+    is_common_sequence, update_decoder_stats,
 };
 use crate::storage::wait_athena_storage;
 use crate::DecoderResult;
+use gibberish_or_not::Sensitivity;
 
-/// Threshold for pruning the seen_strings HashSet to prevent excessive memory usage
-const PRUNE_THRESHOLD: usize = 100000;
+/// Clear the seen-set once it grows past this many entries.
+const PRUNE_THRESHOLD: usize = 200_000;
 
-/// Initial pruning threshold for dynamic adjustment
-const INITIAL_PRUNE_THRESHOLD: usize = PRUNE_THRESHOLD;
-
-/// Maximum depth for search (used for dynamic threshold adjustment)
-const MAX_DEPTH: u32 = 100;
-
-/// Number of nodes to process in parallel
+/// Number of nodes to expand in parallel per iteration of the main loop.
 const PARALLEL_BATCH_SIZE: usize = 10;
 
-/// Calculate a hash for a string to use in the seen_strings set
-fn calculate_hash(text: &str) -> String {
+/// Hash for the seen-set.
+fn calculate_hash(text: &str) -> u64 {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
 
     let mut hasher = DefaultHasher::new();
     text.hash(&mut hasher);
-    hasher.finish().to_string()
+    hasher.finish()
 }
 
-/// A* search node with priority based on f = g + h
-///
-/// Each node represents a state in the search space, with:
-/// - The current decoded text
-/// - The path of decoders used to reach this state
-/// - Cost metrics for prioritization
+/// A search node.
 #[derive(Debug)]
 struct AStarNode {
-    /// Current state containing the decoded text and path of decoders used
+    /// Text at this node (exactly one string) and the decoder path to it.
     state: DecoderResult,
-
-    /// Cost so far (g) - represents the depth in the search tree
-    /// This increases by 1 for each decoder applied
-    cost: u32,
-
-    /// Total cost (f = g + h) used for prioritization in the queue
-    /// Nodes with lower total_cost are explored first
+    /// Number of decoders applied.
+    depth: u32,
+    /// g: summed `edge_cost` along the path.
+    cost: f32,
+    /// f = g + h.
     total_cost: f32,
-
-    /// The name of the next decoder to try when this node is expanded
-    next_decoder_name: Option<String>,
+    /// The last decoder's checker identified `state.text` as plaintext.
+    is_result: bool,
 }
 
-// Custom ordering for the priority queue
 impl Ord for AStarNode {
     fn cmp(&self, other: &Self) -> Ordering {
-        // Reverse ordering for min-heap (lowest f value has highest priority)
+        // Min-heap on f; deeper node wins ties.
         other
             .total_cost
             .partial_cmp(&self.total_cost)
             .unwrap_or(Ordering::Equal)
+            .then_with(|| self.depth.cmp(&other.depth))
     }
 }
 
@@ -123,498 +86,336 @@ impl PartialOrd for AStarNode {
 
 impl PartialEq for AStarNode {
     fn eq(&self, other: &Self) -> bool {
-        self.total_cost == other.total_cost
+        self.total_cost == other.total_cost && self.depth == other.depth
     }
 }
 
 impl Eq for AStarNode {}
 
-/// Thread-safe priority queue wrapper for A* open set
+/// The open set.
 struct ThreadSafePriorityQueue {
-    /// Heap backing the open set, guarded for concurrent access.
+    /// Backing heap.
     queue: Mutex<BinaryHeap<AStarNode>>,
 }
 
 impl ThreadSafePriorityQueue {
-    /// Creates an empty thread-safe priority queue.
+    /// Empty queue.
     fn new() -> Self {
         ThreadSafePriorityQueue {
             queue: Mutex::new(BinaryHeap::new()),
         }
     }
 
-    /// Pushes a node into the queue.
+    /// Push one node.
     fn push(&self, node: AStarNode) {
-        let mut queue = self.queue.lock().unwrap();
-        queue.push(node);
+        self.queue.lock().unwrap().push(node);
     }
 
-    /// Removes and returns the highest-priority node, if any.
-    fn pop(&self) -> Option<AStarNode> {
-        let mut queue = self.queue.lock().unwrap();
-        queue.pop()
-    }
-
-    /// Returns whether the queue currently has no nodes.
+    /// Whether the queue is empty.
     fn is_empty(&self) -> bool {
-        let queue = self.queue.lock().unwrap();
-        queue.is_empty()
+        self.queue.lock().unwrap().is_empty()
     }
 
-    /// Returns the number of queued nodes.
+    /// Number of queued nodes.
     fn len(&self) -> usize {
-        let queue = self.queue.lock().unwrap();
-        queue.len()
+        self.queue.lock().unwrap().len()
     }
 
-    /// Extracts up to `batch_size` highest-priority nodes from the queue.
+    /// Pop up to `batch_size` nodes.
     fn extract_batch(&self, batch_size: usize) -> Vec<AStarNode> {
         let mut queue = self.queue.lock().unwrap();
         let mut batch = Vec::with_capacity(batch_size);
-
         for _ in 0..batch_size {
-            if let Some(node) = queue.pop() {
-                batch.push(node);
-            } else {
-                break;
+            match queue.pop() {
+                Some(node) => batch.push(node),
+                None => break,
             }
         }
-
         batch
     }
 }
 
-/// Expands a single node and returns a vector of new nodes
-fn expand_node(
-    current_node: &AStarNode,
-    seen_strings: &DashSet<String>,
-    stop: &Arc<AtomicBool>,
-    _prune_threshold: usize,
-) -> Vec<AStarNode> {
-    let mut new_nodes = Vec::new();
-
-    // Check stop signal
-    if stop.load(AtomicOrdering::Relaxed) {
-        return new_nodes;
+/// Skip edges that cannot make progress: a reciprocal decoder applied twice is the
+/// identity, and two consecutive Caesar shifts (or substitutions, etc.) collapse into one.
+/// Binary-to-text encodings are exempt since `base64(base64(x))` is a common layering.
+fn should_try_decoder(decoder: &(dyn Crack + Sync), last: Option<&crate::CrackResult>) -> bool {
+    let Some(last) = last else {
+        return true;
+    };
+    let name = decoder.get_name();
+    if last.decoder != name {
+        return true;
     }
-
-    // Determine which decoders to use based on next_decoder_name
-    let mut decoders;
-    if let Some(decoder_name) = &current_node.next_decoder_name {
-        // If we have a specific decoder name, filter all decoders to only include that one
-        trace!("Using specific decoder: {}", decoder_name);
-        // use get decoder by name from filtration
-        decoders = get_decoder_by_name(decoder_name);
-        // Update stats for the decoder
-        if !decoders.components.is_empty() {
-            update_decoder_stats(decoder_name, true);
-        }
-    } else {
-        decoders = get_decoder_tagged_decoders(&current_node.state);
+    if decoder.get_tags().contains(&"reciprocal") {
+        return false;
     }
-
-    // Prevent reciprocal decoders from being applied consecutively
-    if let Some(last_decoder) = current_node.state.path.last() {
-        if last_decoder.checker_description.contains("reciprocal") {
-            let excluded_name = &last_decoder.decoder;
-            decoders
-                .components
-                .retain(|d| d.get_name() != *excluded_name);
-        }
-    }
-
-    if !decoders.components.is_empty() {
-        trace!(
-            "Found {} decoder-tagged decoders to execute",
-            decoders.components.len()
-        );
-
-        // Check stop signal before processing decoders
-        if stop.load(AtomicOrdering::Relaxed) {
-            return new_nodes;
-        }
-
-        let athena_checker = Checker::<Athena>::new();
-        let checker = CheckerTypes::CheckAthena(athena_checker);
-        // since we only have decoders with the same name
-        // we are cheating and just run that one decoder lol
-        let decoder_results = decoders.run(&current_node.state.text[0], checker);
-
-        // Process decoder results
-        match decoder_results {
-            MyResults::Break(res) => {
-                // Handle successful decoding
-                // This part remains mostly unchanged, but instead of sending results directly,
-                // we'll return a special marker node that indicates a successful result
-                if res.success {
-                    let mut decoders_used = current_node.state.path.clone();
-                    let text = res.unencrypted_text.clone().unwrap_or_default();
-                    decoders_used.push(res.clone());
-
-                    // Create a special "result" node with a very low total_cost to ensure it's processed first
-                    let result_node = AStarNode {
-                        state: DecoderResult {
-                            text: text.clone(),
-                            path: decoders_used,
-                        },
-                        cost: current_node.cost + 1,
-                        total_cost: -1000.0, // Very negative to ensure highest priority
-                        next_decoder_name: Some("__RESULT__".to_string()), // Special marker
-                    };
-
-                    new_nodes.push(result_node);
-                }
-            }
-            MyResults::Continue(results) => {
-                // Process each result
-                for r in results {
-                    // Skip if stop signal is set
-                    if stop.load(AtomicOrdering::Relaxed) {
-                        break;
-                    }
-
-                    // Clone path to avoid modifying the original
-                    let mut decoders_used = current_node.state.path.clone();
-
-                    // Get decoded text
-                    let text = r.unencrypted_text.clone().unwrap_or_default();
-
-                    // Skip if text is empty or already seen
-                    if text.is_empty() {
-                        update_decoder_stats(r.decoder, false);
-                        continue;
-                    }
-
-                    // Check if string is worth being decoded
-                    // uses string heuristics. if heuristic is too low, it goes bye bye!
-                    if !calculate_string_worth(&text[0]) {
-                        update_decoder_stats(r.decoder, false);
-                        continue;
-                    }
-
-                    // Check if we've seen this string before to prevent cycles
-                    let text_hash = calculate_hash(&text[0]);
-                    if !seen_strings.insert(text_hash) {
-                        update_decoder_stats(r.decoder, false);
-                        continue;
-                    }
-
-                    decoders_used.push(r.clone());
-
-                    // Create new node with updated cost and heuristic
-                    let cost = current_node.cost + 1;
-                    let heuristic = generate_heuristic(&text[0], &decoders_used, &None);
-                    let total_cost = cost as f32 + heuristic;
-
-                    let new_node = AStarNode {
-                        state: DecoderResult {
-                            text,
-                            path: decoders_used,
-                        },
-                        cost,
-                        total_cost,
-                        next_decoder_name: Some(r.decoder.to_string()),
-                    };
-
-                    // Add to new nodes
-                    new_nodes.push(new_node);
-
-                    // Update decoder stats - mark as successful since it produced valid output
-                    update_decoder_stats(r.decoder, true);
-                }
-            }
-        }
-    }
-
-    // If no decoder-tagged decoders or they didn't produce results,
-    // try all available decoders
-    if new_nodes.is_empty() {
-        // This part remains similar to the original implementation
-        // but adapted to return nodes instead of adding them to open_set
-
-        // Get all decoders
-        let all_decoders = get_all_decoders();
-
-        // Process each decoder
-        for decoder in all_decoders.components {
-            // Skip if stop signal is set
-            if stop.load(AtomicOrdering::Relaxed) {
-                break;
-            }
-
-            // Skip decoders that were already tried
-            if let Some(last_decoder) = current_node.state.path.last() {
-                if last_decoder.decoder == decoder.get_name() {
-                    continue;
-                }
-
-                // Skip reciprocal decoders if the last one was reciprocal
-                if last_decoder.checker_description.contains("reciprocal")
-                    && last_decoder.decoder == decoder.get_name()
-                {
-                    continue;
-                }
-            }
-
-            // Run the decoder
-            let athena_checker = Checker::<Athena>::new();
-            let checker = CheckerTypes::CheckAthena(athena_checker);
-            let result = decoder.crack(&current_node.state.text[0], &checker);
-
-            // Process the result
-            if let Some(decoded_text) = &result.unencrypted_text {
-                if let Some(first_text) = decoded_text.first() {
-                    // Skip if text is empty
-                    if first_text.is_empty() {
-                        update_decoder_stats(decoder.get_name(), false);
-                        continue;
-                    }
-
-                    // Check if we've seen this string before
-                    let text_hash = calculate_hash(first_text);
-                    if !seen_strings.insert(text_hash) {
-                        update_decoder_stats(decoder.get_name(), false);
-                        continue;
-                    }
-
-                    // Create decoder result
-                    let mut decoders_used = current_node.state.path.clone();
-                    decoders_used.push(result.clone());
-
-                    // Create new node
-                    let cost = current_node.cost + 1;
-                    let heuristic = generate_heuristic(first_text, &decoders_used, &None);
-                    let total_cost = cost as f32 + heuristic;
-
-                    let new_node = AStarNode {
-                        state: DecoderResult {
-                            text: decoded_text.clone(),
-                            path: decoders_used,
-                        },
-                        cost,
-                        total_cost,
-                        next_decoder_name: Some(decoder.get_name().to_string()),
-                    };
-
-                    // Add to new nodes
-                    new_nodes.push(new_node);
-
-                    // Update decoder stats
-                    update_decoder_stats(decoder.get_name(), true);
-                }
-            } else {
-                // Update decoder stats for failed decoding
-                update_decoder_stats(decoder.get_name(), false);
-            }
-        }
-    }
-
-    new_nodes
+    is_common_sequence(last.decoder, name)
 }
 
-/// A* search implementation for finding the correct sequence of decoders
-///
-/// This algorithm prioritizes decoders using a heuristic function and executes
-/// "decoder"-tagged decoders immediately at each level. The search proceeds in a
-/// best-first manner, exploring the most promising nodes first based on the f-score.
-///
-/// ## Execution Order
-///
-/// 1. At each node, first run all "decoder"-tagged decoders
-///    - These are considered more likely to produce meaningful results
-///    - If any of these decoders produces plaintext, we return immediately
-///
-/// 2. Then run all non-"decoder"-tagged decoders
-///    - These are prioritized using the heuristic function
-///    - Results are added to the priority queue for future exploration
-///
-/// ## Pruning Mechanism
-///
-/// To prevent memory exhaustion and avoid cycles:
-///
-/// 1. We maintain a HashSet of seen strings to avoid revisiting states
-/// 2. When the HashSet grows beyond PRUNE_THRESHOLD (10,000 entries):
-///    - We retain only strings shorter than 100 characters
-///    - This is based on the heuristic that shorter strings are more likely to be valuable
-///
-/// ## Parameters
-///
-/// - `input`: The initial text to decode
-/// - `result_sender`: Channel to send the result when found
-/// - `stop`: Atomic boolean to signal when to stop the search
+/// Reject results no correct answer could look like: under 3 chars, mostly non-printable,
+/// under 5% of the input length (no decoder shrinks text that much), or an English-checker
+/// hit that is more than a third punctuation.
+fn result_passes_sanity(node: &AStarNode, original_input_len: usize) -> bool {
+    let Some(text) = node.state.text.first() else {
+        return false;
+    };
+    if check_if_string_cant_be_decoded(text) {
+        return false;
+    }
+    if original_input_len >= 40 && text.chars().count() * 20 < original_input_len {
+        return false;
+    }
+    // gibberish_or_not at Medium passes strings like `-t{)-+&it|{})h"#/,")isoe'$h` on bigrams.
+    if let Some(last) = node.state.path.last() {
+        if last.checker_name == "English Checker" {
+            let total = text.chars().count().max(1);
+            let symbols = text
+                .chars()
+                .filter(|c| !c.is_alphanumeric() && !c.is_whitespace())
+                .count();
+            if symbols * 3 > total {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// Run every applicable decoder on the node's text and return the children.
+fn expand_node(
+    current_node: &AStarNode,
+    seen_strings: &DashSet<u64>,
+    stop: &Arc<AtomicBool>,
+) -> Vec<AStarNode> {
+    if stop.load(AtomicOrdering::Relaxed) {
+        return Vec::new();
+    }
+
+    let Some(text) = current_node.state.text.first() else {
+        return Vec::new();
+    };
+    let last_decoder = current_node.state.path.last();
+    let decoders = get_all_decoders();
+
+    decoders
+        .components
+        .par_iter()
+        .filter(|d| should_try_decoder(d.as_ref(), last_decoder))
+        .flat_map_iter(|decoder| {
+            let mut children = Vec::new();
+            if stop.load(AtomicOrdering::Relaxed) {
+                return children;
+            }
+
+            let checker = CheckerTypes::CheckAthena(Checker::<Athena>::new());
+            let result = decoder.crack(text, &checker);
+
+            let Some(candidates) = result.unencrypted_text.as_ref() else {
+                update_decoder_stats(decoder.get_name(), false);
+                return children;
+            };
+
+            if result.success {
+                let plaintext = candidates.first().cloned().unwrap_or_default();
+                if !plaintext.is_empty() {
+                    let mut path = current_node.state.path.clone();
+                    path.push(result.clone());
+                    children.push(AStarNode {
+                        state: DecoderResult {
+                            text: vec![plaintext],
+                            path,
+                        },
+                        depth: current_node.depth + 1,
+                        cost: current_node.cost + 1.0,
+                        total_cost: f32::NEG_INFINITY,
+                        is_result: true,
+                    });
+                    update_decoder_stats(decoder.get_name(), true);
+                }
+                return children;
+            }
+
+            let step_cost = edge_cost(decoder.as_ref(), candidates.len());
+            let mut produced_any = false;
+            for candidate in candidates {
+                if candidate.is_empty() || !calculate_string_worth(candidate) {
+                    continue;
+                }
+                if !seen_strings.insert(calculate_hash(candidate)) {
+                    continue;
+                }
+                produced_any = true;
+
+                let mut path = current_node.state.path.clone();
+                let mut step = result.clone();
+                step.unencrypted_text = Some(vec![candidate.clone()]);
+                path.push(step);
+
+                let cost = current_node.cost + step_cost;
+                let heuristic = generate_heuristic(candidate, &path, Some(decoder.as_ref()));
+                children.push(AStarNode {
+                    state: DecoderResult {
+                        text: vec![candidate.clone()],
+                        path,
+                    },
+                    depth: current_node.depth + 1,
+                    cost,
+                    total_cost: cost + heuristic,
+                    is_result: false,
+                });
+            }
+            update_decoder_stats(decoder.get_name(), produced_any);
+            children
+        })
+        .collect()
+}
+
+/// Sort key for competing results from one batch: regex-style checker hits and strict
+/// English hits first, lenient English hits second, then cheaper paths. Without this a
+/// Vigenere output that scrapes past the Medium English check can beat a correct Reverse.
+fn result_confidence(node: &AStarNode) -> (u8, f32) {
+    let Some(text) = node.state.text.first() else {
+        return (u8::MAX, f32::INFINITY);
+    };
+    let Some(last) = node.state.path.last() else {
+        return (u8::MAX, f32::INFINITY);
+    };
+    let class = if last.checker_name == "English Checker" {
+        let strict = Checker::<EnglishChecker>::new().with_sensitivity(Sensitivity::Low);
+        if strict.check(text).is_identified {
+            0
+        } else {
+            1
+        }
+    } else {
+        0
+    };
+    (class, node.cost)
+}
+
+/// Search for a decoder sequence that turns `input` into plaintext. Sends `Some(result)`
+/// on success (repeatedly in `top_results` mode), `None` if the space is exhausted.
 pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Arc<AtomicBool>) {
+    let original_input_len = input.chars().count();
     let initial = DecoderResult {
         text: vec![input],
         path: vec![],
     };
 
-    // Thread-safe set to track visited states to prevent cycles
-    let seen_strings = DashSet::new();
-    let seen_results = DashSet::new(); // Track unique results
-    let _seen_count = Arc::new(AtomicUsize::new(0));
-
-    // Thread-safe priority queue for open set
+    let seen_strings: DashSet<u64> = DashSet::new();
+    let seen_results: DashSet<u64> = DashSet::new();
     let open_set = ThreadSafePriorityQueue::new();
 
-    // Add initial node to open set
     open_set.push(AStarNode {
         state: initial,
-        cost: 0,
+        depth: 0,
+        cost: 0.0,
         total_cost: 0.0,
-        next_decoder_name: None,
+        is_result: false,
     });
 
-    let curr_depth = Arc::new(AtomicU32::new(1));
-    let prune_threshold = Arc::new(AtomicUsize::new(INITIAL_PRUNE_THRESHOLD));
+    let mut curr_depth: u32 = 0;
+    let mut expanded_nodes: usize = 0;
 
-    // Main A* loop
     while !open_set.is_empty() && !stop.load(AtomicOrdering::Relaxed) {
+        let batch = open_set.extract_batch(PARALLEL_BATCH_SIZE);
+        if let Some(deepest) = batch.iter().map(|n| n.depth).max() {
+            curr_depth = curr_depth.max(deepest);
+        }
+        expanded_nodes += batch.len();
         trace!(
-            "Current depth is {:?}, open set size: {}",
-            curr_depth.load(AtomicOrdering::Relaxed),
-            open_set.len()
+            "Expanding batch of {} nodes (depth {}, open set {}, seen {}, expanded {})",
+            batch.len(),
+            curr_depth,
+            open_set.len(),
+            seen_strings.len(),
+            expanded_nodes
         );
 
-        // Extract a batch of nodes to process in parallel
-        let batch_size = std::cmp::min(PARALLEL_BATCH_SIZE, open_set.len());
-        let batch = open_set.extract_batch(batch_size);
-
-        trace!("Processing batch of {} nodes in parallel", batch.len());
-
-        // Process nodes in parallel
         let new_nodes: Vec<AStarNode> = batch
             .par_iter()
-            .flat_map(|node| {
-                expand_node(
-                    node,
-                    &seen_strings,
-                    &stop,
-                    prune_threshold.load(AtomicOrdering::Relaxed),
-                )
-            })
+            .flat_map(|node| expand_node(node, &seen_strings, &stop))
             .collect();
 
-        // Check for result nodes
-        for node in &new_nodes {
-            if let Some(decoder_name) = &node.next_decoder_name {
-                if decoder_name == "__RESULT__" {
-                    debug!("DEBUG: Checking result node");
-                    // Check if we've already processed this result
-                    if let Some(text) = node.state.text.first() {
-                        let result_hash = calculate_hash(text);
-                        if !seen_results.insert(result_hash) {
-                            debug!("DEBUG: Skipping duplicate result: {:?}", text);
-                            continue; // Skip this result, we've already processed it
-                        } else {
-                            debug!("DEBUG: Processing new result: {:?}", text);
-                        }
-                    }
+        let (mut results, children): (Vec<AStarNode>, Vec<AStarNode>) =
+            new_nodes.into_iter().partition(|n| n.is_result);
 
-                    debug!("DEBUG: Found result node with text: {:?}", node.state.text);
-                    // Found a result node
-                    decoded_how_many_times(curr_depth.load(AtomicOrdering::Relaxed));
+        if results.len() > 1 {
+            results.sort_by(|a, b| {
+                result_confidence(a)
+                    .partial_cmp(&result_confidence(b))
+                    .unwrap_or(Ordering::Equal)
+            });
+        }
 
-                    cli_pretty_printing::success(&format!(
-                        "DEBUG: astar.rs - Sending successful result with {} decoders",
-                        node.state.path.len()
-                    ));
-
-                    // If in top_results mode, store the result in the WaitAthena storage
-                    if get_config().top_results {
-                        // Store the first text in the vector (there should only be one)
-                        if let Some(plaintext) = node.state.text.first() {
-                            debug!(
-                                "DEBUG: Processing result in top_results mode with plaintext: {}",
-                                plaintext
-                            );
-                            // Get the last decoder used
-                            let decoder_name = if let Some(last_decoder) = node.state.path.last() {
-                                last_decoder.decoder.to_string()
-                            } else {
-                                "Unknown".to_string()
-                            };
-
-                            // Get the checker name from the last decoder
-                            let checker_name = if let Some(last_decoder) = node.state.path.last() {
-                                last_decoder.checker_name.to_string()
-                            } else {
-                                "Unknown".to_string()
-                            };
-
-                            // Only store results that have a valid checker name
-                            if !checker_name.is_empty() && checker_name != "Unknown" {
-                                log::trace!(
-                                    "Storing plaintext in WaitAthena storage: {} (decoder: {}, checker: {})",
-                                    plaintext,
-                                    decoder_name,
-                                    checker_name
-                                );
-                                wait_athena_storage::add_plaintext_result(
-                                    plaintext.clone(),
-                                    format!(
-                                        "Decoded successfully at depth {}",
-                                        curr_depth.load(AtomicOrdering::Relaxed)
-                                    ),
-                                    checker_name,
-                                    decoder_name,
-                                );
-                            }
-                        }
-                    }
-
-                    // Send the result
-                    result_sender
-                        .send(Some(node.state.clone()))
-                        .expect("Should successfully send the result");
-
-                    // Only stop if not in top_results mode
-                    if !get_config().top_results {
-                        // Stop further iterations
-                        stop.store(true, AtomicOrdering::Relaxed);
-                        return;
-                    }
-                    // In top_results mode, continue searching
+        for node in results {
+            let Some(text) = node.state.text.first() else {
+                continue;
+            };
+            if !seen_results.insert(calculate_hash(text)) {
+                debug!("Skipping duplicate result: {:?}", text);
+                continue;
+            }
+            if !result_passes_sanity(&node, original_input_len) {
+                debug!(
+                    "Rejected implausible result {:?} from path {:?}; continuing search",
+                    text,
+                    node.state
+                        .path
+                        .iter()
+                        .map(|p| p.decoder)
+                        .collect::<Vec<_>>()
+                );
+                if seen_strings.insert(calculate_hash(text)) {
+                    let heuristic = generate_heuristic(text, &node.state.path, None);
+                    open_set.push(AStarNode {
+                        total_cost: node.cost + heuristic,
+                        is_result: false,
+                        ..node
+                    });
                 }
+                continue;
+            }
+
+            debug!(
+                "Found result after expanding {} nodes: {:?}",
+                expanded_nodes, node.state.text
+            );
+            decoded_how_many_times(node.depth);
+
+            if get_config().top_results {
+                if let Some(last) = node.state.path.last() {
+                    if !last.checker_name.is_empty() {
+                        wait_athena_storage::add_plaintext_result(
+                            text.clone(),
+                            format!("Decoded successfully at depth {}", node.depth),
+                            last.checker_name.to_string(),
+                            last.decoder.to_string(),
+                        );
+                    }
+                }
+            }
+
+            result_sender
+                .send(Some(node.state.clone()))
+                .expect("Should successfully send the result");
+
+            if !get_config().top_results {
+                stop.store(true, AtomicOrdering::Relaxed);
+                return;
             }
         }
 
-        // Filter out result nodes and add remaining nodes to open set
-        for node in new_nodes {
-            if let Some(decoder_name) = &node.next_decoder_name {
-                if decoder_name != "__RESULT__" {
-                    open_set.push(node);
-                }
-            } else {
-                open_set.push(node);
-            }
+        for node in children {
+            open_set.push(node);
         }
 
-        // Update current depth based on the nodes in the open set
-        if let Some(top_node) = open_set.pop() {
-            let new_depth = top_node.cost;
-            curr_depth.store(new_depth, AtomicOrdering::Relaxed);
-
-            // Put the node back
-            open_set.push(top_node);
-
-            // Prune seen strings if we've accumulated too many
-            let current_seen_count = seen_strings.len();
-            if current_seen_count > prune_threshold.load(AtomicOrdering::Relaxed) {
-                // Prune seen strings (implementation depends on how you want to handle this)
-                // This is a simplified version - you might want a more sophisticated approach
-                seen_strings.clear();
-
-                // Adjust threshold based on search progress
-                let progress_factor = new_depth as f32 / MAX_DEPTH as f32;
-                let new_threshold = INITIAL_PRUNE_THRESHOLD - (progress_factor * 5000.0) as usize;
-                prune_threshold.store(new_threshold, AtomicOrdering::Relaxed);
-
-                debug!("Pruned seen strings (new threshold: {})", new_threshold);
-            }
+        if seen_strings.len() > PRUNE_THRESHOLD {
+            debug!("Seen-set exceeded {} entries; clearing", PRUNE_THRESHOLD);
+            seen_strings.clear();
         }
     }
 
-    // If we get here, we've exhausted all possibilities without finding a solution
     if !stop.load(AtomicOrdering::Relaxed) {
         result_sender
             .send(None)
@@ -631,11 +432,7 @@ mod tests {
     fn astar_handles_empty_input() {
         let (sender, receiver) = bounded::<Option<DecoderResult>>(1);
         let stop = Arc::new(AtomicBool::new(false));
-
-        // Run A* with empty input
         astar("".to_string(), sender, stop);
-
-        // Should receive None since there's nothing to decode
         let result = receiver.recv().unwrap();
         assert!(result.is_none());
     }
@@ -644,37 +441,74 @@ mod tests {
     fn astar_prevents_cycles() {
         let (sender, receiver) = bounded::<Option<DecoderResult>>(1);
         let stop = Arc::new(AtomicBool::new(false));
-
-        // Run A* with input that could cause cycles
         astar("AAAA".to_string(), sender, stop);
-
-        // Should eventually complete without hanging
         let _ = receiver.recv().unwrap();
     }
 
     #[test]
     fn test_parallel_astar() {
-        // Create channels for result communication
         let (sender, receiver) = bounded::<Option<DecoderResult>>(1);
-
-        // Create stop signal
         let stop = Arc::new(AtomicBool::new(false));
-
-        // Run A* in a separate thread with Base64 encoded "Hello World"
         let input = "SGVsbG8gV29ybGQ=".to_string();
         let stop_clone = stop.clone();
-
         std::thread::spawn(move || {
             astar(input, sender, stop_clone);
         });
-
-        // Wait for result with timeout
         let result = receiver.recv().unwrap();
-
-        // Verify we got a result (not necessarily "Hello World" as it depends on decoders)
         assert!(result.is_some());
         if let Some(decoder_result) = result {
             assert!(!decoder_result.path.is_empty());
         }
+    }
+
+    #[test]
+    fn reciprocal_decoder_is_not_applied_twice() {
+        let decoders = get_all_decoders();
+        let rot47 = decoders
+            .components
+            .iter()
+            .find(|d| d.get_name() == "rot47")
+            .unwrap();
+        let base64 = decoders
+            .components
+            .iter()
+            .find(|d| d.get_name() == "Base64")
+            .unwrap();
+
+        let mut last = crate::CrackResult::new(&crate::Decoder::default(), String::new());
+        last.decoder = "rot47";
+        assert!(!should_try_decoder(rot47.as_ref(), Some(&last)));
+        assert!(should_try_decoder(base64.as_ref(), Some(&last)));
+
+        // Stackable encodings may repeat.
+        last.decoder = "Base64";
+        assert!(should_try_decoder(base64.as_ref(), Some(&last)));
+    }
+
+    #[test]
+    fn sanity_rejects_tiny_outputs_from_long_inputs() {
+        let node = AStarNode {
+            state: DecoderResult {
+                text: vec!["\u{2}".to_string()],
+                path: vec![],
+            },
+            depth: 1,
+            cost: 1.0,
+            total_cost: 0.0,
+            is_result: true,
+        };
+        assert!(!result_passes_sanity(&node, 800));
+
+        let node = AStarNode {
+            state: DecoderResult {
+                text: vec!["Hello World".to_string()],
+                path: vec![],
+            },
+            depth: 1,
+            cost: 1.0,
+            total_cost: 0.0,
+            is_result: true,
+        };
+        assert!(result_passes_sanity(&node, 16));
     }
 }

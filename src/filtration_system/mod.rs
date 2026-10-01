@@ -142,6 +142,7 @@ impl DecoderFilter {
     }
 
     /// Add a tag to include
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn include_tag(mut self, tag: &str) -> Self {
         self.include_tags.push(tag.to_string());
         self
@@ -188,6 +189,7 @@ impl DecoderFilter {
 }
 
 /// Get decoders with the "decoder" tag
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn get_decoder_tagged_decoders(text_struct: &DecoderResult) -> Decoders {
     trace!("Getting decoder-tagged decoders");
     let filter = DecoderFilter::new().include_tag("decoder");
@@ -287,6 +289,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
 }
 
 /// Get a specific decoder by name
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn get_decoder_by_name(decoder_name: &str) -> Decoders {
     trace!("Getting decoder by name: {}", decoder_name);
     let all_decoders = get_all_decoders();
