@@ -88,6 +88,7 @@ fn crib(c: &mut Criterion) {
         let input = fixtures.input(input);
         // Unoptimised builds (`cargo test --benches`) may not finish within the timeout.
         if !cfg!(debug_assertions) {
+            common::fresh_search();
             let result = perform_cracking(input, crib_config())
                 .unwrap_or_else(|e| panic!("crib search {name} failed: {e}"))
                 .unwrap_or_else(|| panic!("crib search {name} found nothing"));
@@ -98,9 +99,12 @@ fn crib(c: &mut Criterion) {
         }
         group.bench_function(*name, |b| {
             b.iter_batched(
-                crib_config,
+                || {
+                    common::fresh_search();
+                    crib_config()
+                },
                 |config| perform_cracking(black_box(input), config),
-                BatchSize::SmallInput,
+                BatchSize::PerIteration,
             )
         });
     }

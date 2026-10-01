@@ -24,6 +24,8 @@ mod bfs;
 /// This module contains helper functions used by the A* search algorithm.
 mod helper_functions;
 
+pub(crate) use helper_functions::reset_decoder_stats;
+
 /*pub struct Tree <'a> {
     // Wrap in a box because
     // https://doc.rust-lang.org/error-index.html#E0072

@@ -31,6 +31,11 @@ pub fn update_decoder_stats(decoder: &str, success: bool) {
     // TODO: Write this data to a file for persistence
 }
 
+/// Forget the decoder statistics, as if the process had just started.
+pub fn reset_decoder_stats() {
+    DECODER_SUCCESS_RATES.lock().unwrap().clear();
+}
+
 /// Get the success rate of a decoder
 ///
 /// # Arguments

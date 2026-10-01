@@ -52,10 +52,10 @@ update the fixture. Search results are only checked in optimised builds: under
 * `decoders`, `checkers`, `crib` and `search` keep the cache database in memory, so
   every `perform_cracking` call is a cache miss and nothing under `~/.ciphey` is read or
   written. `startup` uses a temp dir for its database and as `HOME` for the CLI.
-* Decoder success statistics are process-wide and feed into the A* edge costs, so a
-  search can explore in a slightly different order depending on which cases ran
-  before it. The fixtures are robust to this, but don't compare a case run on its own
-  with the same case run as part of the whole suite.
+* The A* search keeps per-decoder success statistics for the life of the process and
+  uses them in its edge costs. The search benchmarks clear them before every
+  iteration (`ciphey::reset_decoder_stats`), so each search explores in the same order
+  as in a fresh `ciphey` process instead of depending on how many searches ran before.
 * The no-solution searches end when the decoders run out of candidates, when the
   search settles on a false positive (most gibberish ends up as rot47 → Vigenere), or
   at the timeout. Which one happens can depend on machine speed, so only the

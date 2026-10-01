@@ -358,6 +358,14 @@ impl DecoderResult {
     }
 }
 
+/// Clears the decoder success statistics the A* search keeps for the life of the
+/// process, so the next search starts the way it would in a fresh `ciphey` process.
+/// Benchmarks use it to make repeated searches comparable.
+#[doc(hidden)]
+pub fn reset_decoder_stats() {
+    searchers::reset_decoder_stats();
+}
+
 /// Gets the test directory path
 #[doc(hidden)]
 pub fn get_test_dir_path() -> std::path::PathBuf {

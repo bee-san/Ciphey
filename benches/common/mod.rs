@@ -56,6 +56,16 @@ pub fn init(config: Config) {
     );
 }
 
+/// Call before every timed search.
+///
+/// The A* search keeps per-decoder success statistics for the life of the process and
+/// uses them in its edge costs, so without this a search's path, and so its time,
+/// depends on how many searches ran before it in the same process (and so on how fast
+/// the code is). A real `ciphey` run always starts with empty statistics.
+pub fn fresh_search() {
+    ciphey::reset_decoder_stats();
+}
+
 /// Parses a sensitivity name from the fixtures, defaulting to Medium.
 pub fn sensitivity(name: Option<&str>) -> Sensitivity {
     match name {

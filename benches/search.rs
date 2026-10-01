@@ -36,6 +36,13 @@ fn search_config() -> Config {
     }
 }
 
+/// Per-iteration setup: a fresh config, and decoder statistics cleared so every search
+/// explores in the same order a fresh `ciphey` process would (see `common::fresh_search`).
+fn setup() -> Config {
+    common::fresh_search();
+    search_config()
+}
+
 fn search(c: &mut Criterion) {
     common::init(search_config());
     let fixtures: SearchFixtures = common::load("search.toml");
@@ -60,9 +67,9 @@ fn search(c: &mut Criterion) {
             verify(case);
             group.bench_function(&case.name, |b| {
                 b.iter_batched(
-                    search_config,
+                    setup,
                     |config| perform_cracking(black_box(&case.input), config),
-                    BatchSize::SmallInput,
+                    BatchSize::PerIteration,
                 )
             });
         }
@@ -75,7 +82,7 @@ fn verify(case: &SearchCase) {
     if !VERIFY {
         return;
     }
-    let result = perform_cracking(&case.input, search_config());
+    let result = perform_cracking(&case.input, setup());
     match (case.kind.as_str(), case.outcome.as_deref()) {
         ("no_solution", Some("exhausted")) => assert!(
             matches!(result, Ok(None)),
