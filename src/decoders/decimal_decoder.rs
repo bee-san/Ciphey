@@ -13,7 +13,7 @@
 //!
 //! The numbers are separated by runs of whitespace, `,`, `;`, `:` or `-`. A
 //! `String.fromCharCode(...)` or `[...]` wrapper is removed first. A single run of digits
-//! with no separators is read as zero-padded 3-digit bytes, so `104101108` is `hel`.
+//! with no separators is read as zero-padded 3-digit bytes, so `104105033` is `hi!`.
 
 use crate::checkers::CheckerTypes;
 use crate::decoders::interface::{bytes_to_string, check_string_success};
@@ -190,7 +190,7 @@ fn is_separator(byte: u8) -> bool {
 /// or the `[...]` that Python's `list(b"...")` and JSON arrays print.
 fn strip_wrapper(text: &str) -> &str {
     if let Some(inner) = text.strip_prefix("String.fromCharCode(") {
-        let inner = inner.strip_suffix(';').unwrap_or(inner);
+        let inner = inner.strip_suffix(';').unwrap_or(inner).trim_end();
         return inner.strip_suffix(')').unwrap_or(text);
     }
     text.strip_prefix('[')
@@ -298,6 +298,10 @@ mod tests {
             crack("String.fromCharCode(104, 101, 108, 108, 111);").unwrap(),
             "hello"
         );
+        assert_eq!(
+            crack("String.fromCharCode(104, 101, 108, 108, 111) ;").unwrap(),
+            "hello"
+        );
     }
 
     #[test]
@@ -375,7 +379,7 @@ mod tests {
     #[test]
     fn decodes_leading_zeros() {
         assert_eq!(crack("072 101 108 108 111").unwrap(), "Hello");
-        assert_eq!(crack("0000072 0101 108").unwrap(), "Hel");
+        assert_eq!(crack("0000072 0101 121").unwrap(), "Hey");
     }
 
     #[test]
