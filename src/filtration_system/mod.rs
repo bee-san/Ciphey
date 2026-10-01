@@ -11,6 +11,7 @@ use crate::decoders::base32_decoder::Base32Decoder;
 use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
 use crate::decoders::base58_monero_decoder::Base58MoneroDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
+use crate::decoders::decimal_decoder::DecimalDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
 use crate::DecoderResult;
@@ -237,6 +238,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     trace!("Filtering and getting all decoders");
     let vigenere = Decoder::<VigenereDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
+    let decimal = Decoder::<DecimalDecoder>::new();
     let hexadecimal = Decoder::<HexadecimalDecoder>::new();
     let octal = Decoder::<OctalDecoder>::new();
     let base58_bitcoin = Decoder::<Base58BitcoinDecoder>::new();
@@ -280,6 +282,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(hexadecimal),
             Box::new(octal),
             Box::new(base32),
+            // Before rot47: when two decoders find plaintext in the same step the search
+            // reports the one listed first, and LemmeKnow takes rot47 of `104,101,108,...`
+            // for a Bitcoin Cash address.
+            Box::new(decimal),
             Box::new(morsecodedecoder),
             Box::new(atbashdecoder),
             Box::new(caesardecoder),

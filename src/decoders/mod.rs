@@ -19,6 +19,8 @@ pub mod base58_bitcoin_decoder;
 pub mod base58_monero_decoder;
 /// The binary_decoder module decodes binary
 pub mod binary_decoder;
+/// The decimal_decoder module decodes decimal character codes
+pub mod decimal_decoder;
 /// The hexadecimal_decoder module decodes hexadecimal
 pub mod hexadecimal_decoder;
 /// The octal_decoder module decodes octal
@@ -91,6 +93,7 @@ use base58_flickr_decoder::Base58FlickrDecoder;
 use base58_monero_decoder::Base58MoneroDecoder;
 use base58_ripple_decoder::Base58RippleDecoder;
 use binary_decoder::BinaryDecoder;
+use decimal_decoder::DecimalDecoder;
 use hexadecimal_decoder::HexadecimalDecoder;
 use interface::{Crack, Decoder};
 
@@ -136,6 +139,8 @@ pub enum DecoderType {
     Base58MoneroDecoder(base58_monero_decoder::Base58MoneroDecoder),
     /// binary decoder
     BinaryDecoder(binary_decoder::BinaryDecoder),
+    /// decimal decoder
+    DecimalDecoder(decimal_decoder::DecimalDecoder),
     /// hexadecimal decoder
     HexadecimalDecoder(hexadecimal_decoder::HexadecimalDecoder),
     /// octal decoder
@@ -211,6 +216,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<VigenereDecoder>::new()),
         ),
         ("Binary", DecoderBox::new(Decoder::<BinaryDecoder>::new())),
+        ("Decimal", DecoderBox::new(Decoder::<DecimalDecoder>::new())),
         (
             "Hexadecimal",
             DecoderBox::new(Decoder::<HexadecimalDecoder>::new()),
