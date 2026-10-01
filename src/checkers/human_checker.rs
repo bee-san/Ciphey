@@ -47,6 +47,19 @@ pub fn human_checker(input: &CheckResult) -> bool {
         return true;
     }
 
+    let result = ask_once(input, prompt_user);
+    timer::resume();
+
+    cli_pretty_printing::success(&format!("DEBUG: Human checker returning: {}", result));
+    result
+}
+
+/// Asks the human about `input` with `ask`, unless they were already asked about it.
+///
+/// Only one prompt is shown at a time. Accepting a candidate ends the search, so a
+/// candidate that was already asked about was rejected and is rejected again without
+/// asking.
+fn ask_once(input: &CheckResult, ask: impl FnOnce(&CheckResult) -> bool) -> bool {
     // Acquire the lock to ensure only one thread prompts the user at a time
     let lock_result = get_prompt_lock().lock();
     let _guard = match lock_result {
@@ -63,22 +76,17 @@ pub fn human_checker(input: &CheckResult) -> bool {
     // Double-check HUMAN_CONFIRMED after acquiring the lock
     // Another thread might have confirmed while we were waiting for the lock
     if HUMAN_CONFIRMED.load(Ordering::Acquire) {
-        timer::resume();
         return true;
     }
 
     // Check if we've already prompted for this text
     let prompt_key = format!("{}{}", input.description, input.text);
     if !get_seen_prompts().insert(prompt_key) {
-        timer::resume();
-        return true; // Return true to allow the search to continue
+        // The human already rejected it; returning true here used to accept it anyway
+        return false;
     }
 
-    human_checker_check(&input.description, &input.text);
-
-    let reply: String = read!("{}\n");
-    cli_pretty_printing::success(&format!("DEBUG: Human checker received reply: '{}'", reply));
-    let result = reply.to_ascii_lowercase().starts_with('y');
+    let result = ask(input);
     // If the user confirmed, set the atomic boolean to true
     if result {
         HUMAN_CONFIRMED.store(true, Ordering::Release);
@@ -86,12 +94,18 @@ pub fn human_checker(input: &CheckResult) -> bool {
             "DEBUG: Human confirmed a result, future checks will be skipped",
         );
     }
-
     // Lock is released here when _guard goes out of scope
-    drop(_guard);
-    timer::resume();
+    result
+}
 
-    cli_pretty_printing::success(&format!("DEBUG: Human checker returning: {}", result));
+/// Shows the prompt for `input` and reads the answer from stdin.
+/// Rejections are recorded in the database.
+fn prompt_user(input: &CheckResult) -> bool {
+    human_checker_check(&input.description, &input.text);
+
+    let reply: String = read!("{}\n");
+    cli_pretty_printing::success(&format!("DEBUG: Human checker received reply: '{}'", reply));
+    let result = reply.to_ascii_lowercase().starts_with('y');
 
     if !result {
         let fd_result = database::insert_human_rejection(uuid::Uuid::new_v4(), &input.text, input);
@@ -104,7 +118,48 @@ pub fn human_checker(input: &CheckResult) -> bool {
                 ));
             }
         }
-        return false;
     }
-    true
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::checkers::checker_type::{Check, Checker};
+    use crate::checkers::english::EnglishChecker;
+
+    /// A candidate plaintext as the English checker would report it
+    fn candidate(text: &str) -> CheckResult {
+        let mut result = CheckResult::new(&Checker::<EnglishChecker>::new());
+        result.is_identified = true;
+        result.text = text.to_string();
+        result.description = "Words".to_string();
+        result
+    }
+
+    #[test]
+    fn rejected_candidate_is_not_accepted_when_seen_again() {
+        // The prompt history is global, so use text no other test checks
+        let rejected = candidate("human checker test: candidate seen twice");
+        let mut prompts = 0;
+
+        assert!(!ask_once(&rejected, |_| {
+            prompts += 1;
+            false
+        }));
+        // Used to return true, accepting the candidate the human had just rejected
+        assert!(!ask_once(&rejected, |_| {
+            prompts += 1;
+            false
+        }));
+        assert_eq!(prompts, 1, "the human should only be asked once");
+
+        // Other candidates are still asked about
+        let other = candidate("human checker test: a different candidate");
+        assert!(!ask_once(&other, |_| {
+            prompts += 1;
+            false
+        }));
+        assert_eq!(prompts, 2);
+    }
 }

@@ -180,3 +180,23 @@ fn regex_crib_is_respected() {
     assert!(!output.stdout.contains("The plaintext is"), "{output}");
     assert!(output.stdout.contains("failed to decode"), "{output}");
 }
+
+#[test]
+fn human_checker_rejection_is_final() {
+    // stdin is empty, so every prompt is answered "no". Caesar finds the plaintext first
+    // and it's rejected; when Vigenere found the same text later the human checker used
+    // to accept it without asking, because that prompt had already been shown.
+    let home = TempHome::new("human-checker-rejection");
+    let output = run(
+        &home,
+        &[
+            "-c",
+            "2",
+            "-t",
+            "Uryyb jbeyq, guvf vf n grfg bs gur uhzna purpxre",
+        ],
+    );
+    assert_eq!(output.code, Some(0), "{output}");
+    assert!(output.stdout.contains("Possible plaintext"), "{output}");
+    assert!(!output.stdout.contains("The plaintext is"), "{output}");
+}
