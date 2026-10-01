@@ -330,28 +330,11 @@ pub fn get_config_file_into_struct() -> Config {
 
     if !path.exists() {
         // First run - get user preferences
-        let first_run_config = crate::cli::run_first_time_setup();
-        let colourscheme = first_run_config
-            .iter()
-            .filter(|(k, _)| !k.starts_with("wordlist") && *k != "timeout")
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
-        let mut config = Config {
-            colourscheme,
-            ..Config::default()
-        };
+        let mut config = config_from_first_run(crate::cli::run_first_time_setup());
 
-        // Set timeout if present
-        if let Some(timeout) = first_run_config.get("timeout") {
-            config.timeout = timeout.parse().unwrap_or(5);
-        }
-
-        // Extract wordlist path if present
-        if let Some(wordlist_path) = first_run_config.get("wordlist_path") {
-            config.wordlist_path = Some(wordlist_path.clone());
-
-            // Load the wordlist
-            match load_wordlist(wordlist_path) {
+        // Load the wordlist if one was chosen
+        if let Some(wordlist_path) = config.wordlist_path.clone() {
+            match load_wordlist(&wordlist_path) {
                 Ok(wordlist) => {
                     config.wordlist = Some(wordlist);
                 }
@@ -410,6 +393,27 @@ pub fn get_config_file_into_struct() -> Config {
     }
 }
 
+/// Builds the config from the answers to the first-run setup.
+///
+/// The setup returns everything in one map, so the settings are taken out of it
+/// and the colour roles that are left become the colour scheme.
+fn config_from_first_run(mut answers: HashMap<String, String>) -> Config {
+    let mut config = Config::default();
+    if let Some(timeout) = answers.remove("timeout") {
+        config.timeout = timeout.parse().unwrap_or(config.timeout);
+    }
+    if let Some(top_results) = answers.remove("top_results") {
+        config.top_results = top_results == "true";
+    }
+    if let Some(enhanced_detection) = answers.remove("enhanced_detection") {
+        config.enhanced_detection = enhanced_detection == "true";
+    }
+    config.model_path = answers.remove("model_path");
+    config.wordlist_path = answers.remove("wordlist_path");
+    config.colourscheme = answers;
+    config
+}
+
 /// Save a Config struct to a file
 fn save_config_to_file(config: &Config, path: &std::path::Path) {
     let toml_string = toml::to_string_pretty(config).expect("Could not serialize config");
@@ -435,5 +439,49 @@ mod tests {
         assert!(parse_toml_with_unknown_keys("timeout = ").is_err());
         // Valid TOML, but the wrong type for a setting
         assert!(parse_toml_with_unknown_keys("timeout = \"ten\"").is_err());
+    }
+
+    #[test]
+    fn first_run_answers_become_settings() {
+        // These answers used to be saved as entries in the colour scheme, so choosing
+        // top results mode or enhanced detection during the first run did nothing.
+        let answers: HashMap<String, String> = [
+            ("informational", "255,215,0"),
+            ("warning", "255,0,0"),
+            ("success", "0,255,0"),
+            ("question", "255,215,0"),
+            ("statement", "255,255,255"),
+            ("top_results", "true"),
+            ("timeout", "3"),
+            ("enhanced_detection", "true"),
+            ("model_path", "/models/model.bin"),
+            ("wordlist_path", "/wordlists/words.txt"),
+        ]
+        .into_iter()
+        .map(|(key, value)| (key.to_string(), value.to_string()))
+        .collect();
+
+        let config = config_from_first_run(answers);
+
+        assert!(config.top_results);
+        assert_eq!(config.timeout, 3);
+        assert!(config.enhanced_detection);
+        assert_eq!(config.model_path.as_deref(), Some("/models/model.bin"));
+        assert_eq!(
+            config.wordlist_path.as_deref(),
+            Some("/wordlists/words.txt")
+        );
+        let mut roles: Vec<&str> = config.colourscheme.keys().map(String::as_str).collect();
+        roles.sort_unstable();
+        assert_eq!(
+            roles,
+            [
+                "informational",
+                "question",
+                "statement",
+                "success",
+                "warning"
+            ]
+        );
     }
 }

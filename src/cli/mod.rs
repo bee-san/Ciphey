@@ -154,8 +154,10 @@ fn cli_args_into_config_struct(opts: Opts, text: String) -> (String, Config) {
         }
     }
 
-    // Set top_results mode if the flag is present
-    config.top_results = opts.top_results;
+    // --top-results turns top results mode on; without it the config file decides
+    if opts.top_results {
+        config.top_results = true;
+    }
 
     // If top_results is enabled, automatically disable the human checker
     if config.top_results {

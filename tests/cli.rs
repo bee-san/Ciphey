@@ -224,3 +224,16 @@ fn malformed_config_file_falls_back_to_defaults() {
     assert!(!output.stderr.contains("panicked"), "{output}");
     assert!(output.stdout.contains("hello world"), "{output}");
 }
+
+#[test]
+fn top_results_can_be_set_in_the_config_file() {
+    // The CLI used to overwrite the config file's top_results with the --top-results
+    // flag, so `top_results = true` (what the first-run setup offers) had no effect.
+    let home = TempHome::with_config("top-results-config", "top_results = true\n");
+    let output = run(&home, &["-c", "1", "-t", "SGVsbG8sIFdvcmxkIQ=="]);
+    assert_eq!(output.code, Some(0), "{output}");
+    assert!(
+        output.stdout.contains("List of Possible Plaintexts"),
+        "{output}"
+    );
+}
