@@ -69,6 +69,8 @@ impl<'de> Deserialize<'de> for CrackResult {
     where
         D: serde::Deserializer<'de>,
     {
+        use serde::de::Error;
+
         #[allow(unused)]
         #[derive(Deserialize)]
         struct TempCrackResult {
@@ -91,11 +93,17 @@ impl<'de> Deserialize<'de> for CrackResult {
             /// Link information about the decode method
             pub link: String,
         }
-        let temp_cr: TempCrackResult =
-            TempCrackResult::deserialize(deserializer).expect("Error deserializing CrackResult");
+        let temp_cr = TempCrackResult::deserialize(deserializer)?;
+        // A cached result can name a decoder or checker this version of ciphey doesn't
+        // have, e.g. one written by a different version. That's an error, not a panic.
         let decoder = DECODER_MAP
             .get(temp_cr.decoder.as_str())
-            .unwrap_or_else(|| panic!("Error during deserialization of CrackResult: could not find matching decoder for {}", temp_cr.decoder.as_str()))
+            .ok_or_else(|| {
+                D::Error::custom(format!(
+                    "could not find matching decoder for {}",
+                    temp_cr.decoder
+                ))
+            })?
             .get::<DecoderType>();
         if temp_cr.checker_name.is_empty() {
             return Ok(CrackResult {
@@ -112,7 +120,12 @@ impl<'de> Deserialize<'de> for CrackResult {
         }
         let checker = CHECKER_MAP
             .get(temp_cr.checker_name.as_str())
-            .unwrap_or_else(|| panic!("Error during deserialization of CrackResult: could not find matching checker for {}", temp_cr.checker_name.as_str()))
+            .ok_or_else(|| {
+                D::Error::custom(format!(
+                    "could not find matching checker for {}",
+                    temp_cr.checker_name
+                ))
+            })?
             .get::<CheckerTypes>();
         Ok(CrackResult {
             success: temp_cr.success,
@@ -281,5 +294,41 @@ mod tests {
         assert_eq!(crack_result.description, expected_crack_result.description);
         assert_eq!(crack_result.link, expected_crack_result.link);
         assert_eq!(crack_result.key, expected_crack_result.key);
+    }
+
+    /// A serialised Base64 CrackResult with the given decoder and checker names
+    fn crack_result_json(decoder: &str, checker_name: &str) -> String {
+        format!(
+            r#"{{"success":true,"encrypted_text":"aGk=","unencrypted_text":["hi"],"decoder":"{decoder}","checker_name":"{checker_name}","checker_description":"","key":null,"description":"","link":""}}"#
+        )
+    }
+
+    #[test]
+    fn deserialize_malformed_crack_result_is_an_error() {
+        // Used to panic: "Error deserializing CrackResult"
+        assert!(serde_json::from_str::<CrackResult>("{}").is_err());
+    }
+
+    #[test]
+    fn deserialize_crack_result_with_unknown_decoder_is_an_error() {
+        // Used to panic. A cache written by another version of ciphey can contain one.
+        let json = crack_result_json("No Such Decoder", "English Checker");
+        let error = serde_json::from_str::<CrackResult>(&json).unwrap_err();
+        assert!(error.to_string().contains("No Such Decoder"), "{error}");
+    }
+
+    #[test]
+    fn deserialize_crack_result_with_unknown_checker_is_an_error() {
+        let json = crack_result_json("Base64", "No Such Checker");
+        let error = serde_json::from_str::<CrackResult>(&json).unwrap_err();
+        assert!(error.to_string().contains("No Such Checker"), "{error}");
+    }
+
+    #[test]
+    fn deserialize_crack_result_with_known_names() {
+        let json = crack_result_json("Base64", "English Checker");
+        let crack_result = serde_json::from_str::<CrackResult>(&json).unwrap();
+        assert_eq!(crack_result.decoder, "Base64");
+        assert_eq!(crack_result.checker_name, "English Checker");
     }
 }
