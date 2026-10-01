@@ -108,6 +108,9 @@ pub mod zlib_decoder;
 /// The xor_single_byte_decoder module cracks single-byte XOR
 pub mod xor_single_byte_decoder;
 
+/// The xor_repeating_key_decoder module cracks XOR with a repeating multi-byte key
+pub mod xor_repeating_key_decoder;
+
 use atbash_decoder::AtbashDecoder;
 use baconian_decoder::BaconianDecoder;
 use base32_decoder::Base32Decoder;
@@ -144,6 +147,7 @@ use url_decoder::URLDecoder;
 use utf16_decoder::Utf16Decoder;
 use vigenere_decoder::VigenereDecoder;
 use xor_single_byte_decoder::XorSingleByteDecoder;
+use xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use z85_decoder::Z85Decoder;
 use zlib_decoder::ZlibDecoder;
 
@@ -233,6 +237,8 @@ pub enum DecoderType {
     ZlibDecoder(zlib_decoder::ZlibDecoder),
     /// single-byte xor cracker
     XorSingleByteDecoder(xor_single_byte_decoder::XorSingleByteDecoder),
+    /// repeating-key XOR cracker
+    XorRepeatingKeyDecoder(xor_repeating_key_decoder::XorRepeatingKeyDecoder),
 }
 
 /// Wrapper struct to hold Decoders for DECODER_MAP
@@ -266,6 +272,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Vigenere",
             DecoderBox::new(Decoder::<VigenereDecoder>::new()),
+        ),
+        (
+            "Repeating-key XOR",
+            DecoderBox::new(Decoder::<XorRepeatingKeyDecoder>::new()),
         ),
         ("Binary", DecoderBox::new(Decoder::<BinaryDecoder>::new())),
         ("Decimal", DecoderBox::new(Decoder::<DecimalDecoder>::new())),

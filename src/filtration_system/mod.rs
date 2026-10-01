@@ -45,6 +45,7 @@ use crate::decoders::url_decoder::URLDecoder;
 use crate::decoders::utf16_decoder::Utf16Decoder;
 use crate::decoders::vigenere_decoder::VigenereDecoder;
 use crate::decoders::xor_single_byte_decoder::XorSingleByteDecoder;
+use crate::decoders::xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use crate::decoders::z85_decoder::Z85Decoder;
 use crate::decoders::zlib_decoder::ZlibDecoder;
 
@@ -248,6 +249,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     trace!("Filtering and getting all decoders");
     let jwt = Decoder::<JwtDecoder>::new();
     let vigenere = Decoder::<VigenereDecoder>::new();
+    let xor_repeating_key = Decoder::<XorRepeatingKeyDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
     let decimal = Decoder::<DecimalDecoder>::new();
     let hexadecimal = Decoder::<HexadecimalDecoder>::new();
@@ -293,6 +295,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // LemmeKnow checker takes for URLs, which must not beat the decoded JWT.
             Box::new(jwt),
             Box::new(vigenere),
+            Box::new(xor_repeating_key),
             Box::new(reversedecoder),
             Box::new(base64),
             Box::new(base58_bitcoin),

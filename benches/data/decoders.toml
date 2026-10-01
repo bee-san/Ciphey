@@ -11,7 +11,7 @@
 # Entity" with "Convert all characters". Zlib inputs are Python's
 # base64.b64encode(zlib.compress(text)); the Zlib decoder reads the Base64 itself.
 # Single-byte XOR uses key 0x2a written as hex (medium) and key 0xc3 written as Base64
-# (long).
+# (long). Repeating-key XOR uses the key Ciphey, shown as hex (medium) and Base64 (long).
 #
 #   decoder  = key into ciphey::decoders::DECODER_MAP
 #   size     = "medium" | "long"
@@ -428,6 +428,20 @@ decoder = "railfence"
 size = "long"
 success = true
 input = "Ces oeeit.uvtctoneeair w  tsno,ttuv k   e  h sc o yslei,e hnatehetol l mhaopes am r,dow fsmit dipntoohit eet edh etnfcutf lg zhsdry  msr tgtg oiihyi natmtddcdn ol o iei nrpe recddtx n ttist okotwa a oet t ihu o aigt nwtekyo vntecpe.I erhstruhmn osbedcdns hcsec addt osewehri ok ieEgiho ace  nw atr uha nealades n tp hni id oehn htraslk litx.Ms ftetm hstksls hnascn,wihmksi ad o atr h lgcalne,pzl ut n o noewosube cosasrnesrn nalgfl.p aua ogoYg eyd o td eoruhwd iwoyhnooherehirtaehgapi ogckacie  t lsknsrtskntncs idsassetnstgae eae t  eia sa o ca hyrpeeahesuenafanhtlas a ii  e"
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
+[[case]]
+decoder = "Repeating-key XOR"
+size = "medium"
+success = true
+input = "0e0c151c45142649111c450d2b0c5007091d6305190f0d0d2b06051b0059220f040d17592e0014060c1e2b1d50090b1d630b02010b1e631d180d451422195c48111126491b0d1c592207144804593706020b0d57"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "Repeating-key XOR"
+size = "long"
+success = true
+input = "AAAAAAAAYwADSAQXYwgFHAoUIh0VDEUdJgofDAwXJEkEBwoVbUkpBxBZJAAGDUUQN0kVBgYLOhkEDQFZLBtQDQsaLA0VDEUNJhEESAQXJ0kZHEUNMQAVG0UNLEkHBxcSYwYFHEUOKwgESBIYMEkUBwscYx0fSAwNb0kHARERLBwESBwWNkkYCRMQLQ5QHApZKAcfH0UNKwxQAwAAYwYCSAAPJgdQHA0cYwoZGA0cMUdQIRFZMAwRGgYRJhpQHA0LLBwXAEUUIgcJSBUWMBoZCgkcYw0VCwodKgcXG0lZIAEVCw4KYwwRCw1ZIAgeDAwdIh0VSBEWYxoVDUUOKwwEAAALYwAESAkWLAIDSAkQKAxQLQseLwADAEUWMUkdCREaKwwDSARZKAcfHwtZMwgEHAALLUkDHQYRYwgDSAQXYwwdCQwVYwgUDBccMBpcSAQXJ0kDHAoJMEkHAAAXYwAESAMQLQ0DSBYWLgwEAAwXJEkEAAQNYxsVCQEKYwUZAwBZMwURAQsNJhEERkU0LBoESAofYx0YDUUNKgQVSBERKhpQHAQSJhpQBAAKMEkEAAQXYwhQGwAaLAcUREUOKwATAEUUIgIVG0UQN0kYCQsdOkkWBxdZIAgAHBALJkkEAABZJQURD0UaKwgcBAAXJAwDREUJNhMKBABZKxweHBZZIgcUSAMWMUkRBhwWLQxQHw0WYxoEHQgbLwwDSAQaMQYDG0UYYxoEGgQXJAxQGxELKgcXSAwXYwhQBAoeYw8ZBABX"
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
 [[case]]

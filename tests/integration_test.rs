@@ -478,3 +478,70 @@ fn test_jwt_inside_base64_is_decoded() {
     let decoders: Vec<&str> = result.path.iter().map(|step| step.decoder).collect();
     assert_eq!(decoders, ["Base64", "JWT"]);
 }
+
+/// Runs the full search on `input` and checks it finds `plaintext` with the repeating-key
+/// XOR cracker in the path
+fn assert_search_cracks_repeating_key_xor(input: &str, plaintext: &str) -> Vec<&'static str> {
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
+
+    let result = perform_cracking(input, Config::default())
+        .unwrap()
+        .expect("the search should crack repeating-key XOR");
+    let path: Vec<&str> = result.path.iter().map(|step| step.decoder).collect();
+    assert_eq!(result.text[0], plaintext, "path was {path:?}");
+    assert!(path.contains(&"Repeating-key XOR"), "path was {path:?}");
+    path
+}
+
+#[test]
+#[serial]
+fn test_search_cracks_repeating_key_xor_hex() {
+    // Cryptopals set 1 challenge 5, key "ICE"
+    assert_search_cracks_repeating_key_xor(
+        "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f",
+        "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal",
+    );
+}
+
+#[test]
+#[serial]
+fn test_search_cracks_repeating_key_xor_base64() {
+    // Key "Ciphey", made with CyberChef XOR (UTF8 key) then To Base64
+    assert_search_cracks_repeating_key_xor(
+        "Ch1QHwQKYx0YDUUbJhoESAofYx0ZBQAKb0kZHEUOIhpQHA0cYx4fGhYNYwYWSBEQLgwDREUQN0kHCRZZNwEVSAQeJkkfDkUOKhoUBwhVYwAESBIYMEkEAABZIg4VSAofYw8fBwkQMAEeDRYKb0kZHEUOIhpQHA0cYwwABwYRYwYWSAccLwAVDks=",
+        "It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief.",
+    );
+}
+
+#[test]
+#[serial]
+fn test_search_cracks_repeating_key_xor_short_base64() {
+    // Key "XORkey"
+    assert_search_cracks_repeating_key_xor(
+        "ECo+BwpVeBg9GQkdeW8GAwwKeCYhSwRZKyoxGQANeCI3GBYYPypyDQoLeDY9Hks=",
+        "Hello, World! This is a secret message for you.",
+    );
+}
+
+#[test]
+#[serial]
+fn test_search_cracks_repeating_key_xor_flag() {
+    // Key 0x1337beef, recovered from the flag{ crib
+    assert_search_cracks_repeating_key_xor(
+        "755bdf886845db9f7656ca867d50e184764ee1977c45e1866068d49a6043e1997a50db817645dbb07c59e18d6a43db9c6e",
+        "flag{repeating_key_xor_is_just_vigenere_on_bytes}",
+    );
+}
+
+#[test]
+#[serial]
+fn test_search_cracks_repeating_key_xor_then_reverse() {
+    // Reversed text XORed with "ICE". The checker rejects the reversed text, but the
+    // cracker passes it on because it scores like English, and Reverse finishes it.
+    let path = assert_search_cracks_repeating_key_xor(
+        "672f242b2e3c2a63246931242c2b6500632b2c2b32693a3f283126692c22690a65652e2a2d302c3e63232663202e22652c2b316930243e63312063693a26282037652f2c653d30372634652c2b316930243e63312063693a26282037652f2c653d30202b63202137653a223269370c",
+        "It was the best of times, it was the worst of times, it was the age of wisdom, I go crazy when I hear a cymbal.",
+    );
+    assert_eq!(path, ["Repeating-key XOR", "Reverse"]);
+}

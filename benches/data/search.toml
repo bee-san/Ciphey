@@ -191,6 +191,14 @@ input = "674f4f5e0a474f0a4b5e0a5e424f0a45464e0a46434d425e42455f594f0a4b4c5e4f580
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+kind = "single"
+name = "xor_repeating_key"
+# The cracker reads the hex itself, so the search path is just Repeating-key XOR
+layers = ["Repeating-key XOR", "Hexadecimal"]
+input = "0e0c151c45142649111c450d2b0c5007091d6305190f0d0d2b06051b0059220f040d17592e0014060c1e2b1d50090b1d630b02010b1e631d180d451422195c48111126491b0d1c592207144804593706020b0d57"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "multi"
 name = "base64_x3"
 layers = ["Base64", "Base64", "Base64"]
