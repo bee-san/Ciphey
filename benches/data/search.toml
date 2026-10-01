@@ -223,6 +223,13 @@ input = "NGE1NjUzNTc0YjM1NDI0MTRlNTY1MzUzNDE1OTRjNTU0NTQyMzI0NzUxNWE0YTQxNGUzNTU
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+kind = "multi"
+name = "utf16le_base64"
+layers = ["UTF-16", "Base64"]
+input = "TQBlAGUAdAAgAG0AZQAgAGEAdAAgAHQAaABlACAAbwBsAGQAIABsAGkAZwBoAHQAaABvAHUAcwBlACAAYQBmAHQAZQByACAAbQBpAGQAbgBpAGcAaAB0ACAAYQBuAGQAIABiAHIAaQBuAGcAIAB0AGgAZQAgAG0AYQBwACwAIAB0AGgAZQAgAGsAZQB5ACAAYQBuAGQAIABhACAAdABvAHIAYwBoAC4A"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "no_solution"
 name = "gibberish"
 outcome = "false_positive"
