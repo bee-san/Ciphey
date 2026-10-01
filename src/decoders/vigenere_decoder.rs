@@ -413,6 +413,30 @@ mod tests {
     }
 
     #[test]
+    fn test_vigenere_decoding_with_non_ascii_letters() {
+        // Regression test for https://github.com/bee-san/ciphey/issues/902
+        // The whole `crack` must still recover the key and plaintext when the
+        // ciphertext contains a non-ASCII letter, which is passed through unchanged
+        // without using up a key character.
+        let vigenere_decoder = Decoder::<VigenereDecoder>::new();
+        let result = vigenere_decoder.crack(
+            "Altd hlbe tg lrncmwxpo kpxs evl Ztrsuèvp nwwlpc. Pyilvwuk eswz md coalpc shwj",
+            &get_athena_checker(),
+        );
+
+        let decoded_text = result
+            .unencrypted_text
+            .expect("No unencrypted text for Vigenere decoder");
+        assert_eq!(
+            decoded_text
+                .first()
+                .expect("No unencrypted text for Vigenere decoder"),
+            "This text is encrypted with the Vigenère cipher. Breaking this is rather easy"
+        );
+        assert_eq!(result.key.expect("No key for Vigenere decoder"), "HELLO");
+    }
+
+    #[test]
     fn test_vigenere_square_aa() {
         assert_eq!(VIGENERE_SQUARE[0][0], 'A');
     }

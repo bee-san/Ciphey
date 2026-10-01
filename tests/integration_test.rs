@@ -32,6 +32,18 @@ fn test_no_panic_if_empty_string() {
     assert_eq!(true, true);
 }
 
+#[test]
+#[parallel]
+fn test_no_panic_with_non_ascii_letters() {
+    // Regression test for https://github.com/bee-san/ciphey/issues/902
+    // Every decoder runs on the input, and the Vigenère decoder used to panic on
+    // non-ASCII letters ('ż' became index 59 of a 26-entry table, 'ę' underflowed),
+    // which crashed the whole search. Any result or a timeout is fine, a panic is not.
+    for text in ["Może jutro", "Dziękuję, cześć"] {
+        let _ = perform_cracking(text, Config::default());
+    }
+}
+
 /*
 #[test]
 fn test_program_parses_files_and_cracks() {
