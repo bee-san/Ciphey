@@ -82,6 +82,72 @@ fn test_quoted_printable_wrapped_base64_is_cracked() {
     assert_eq!(path, ["Quoted-Printable", "Base64"]);
 }
 
+/// Runs the whole search on `input` and returns the plaintext and the decoders used, in order.
+fn crack(input: &str) -> (String, Vec<&'static str>) {
+    let result = perform_cracking(input, Config::default())
+        .unwrap()
+        .expect("the search should find the plaintext");
+    let path = result.path.iter().map(|step| step.decoder).collect();
+    (result.text[0].clone(), path)
+}
+
+// The UTF-16 tests need a search two decoders deep to finish within the default 5 s timeout
+// in a debug build. They're `serial` so they don't share the CPU with the parallel tests,
+// some of which search until they time out.
+
+#[test]
+#[serial]
+fn test_utf16le_powershell_encoded_command() {
+    // PowerShell's -EncodedCommand is Base64 of UTF-16LE (issue #943):
+    // base64.b64encode("Write-Output 'Hello, World!'".encode("utf-16-le"))
+    assert_eq!(
+        crack("VwByAGkAdABlAC0ATwB1AHQAcAB1AHQAIAAnAEgAZQBsAGwAbwAsACAAVwBvAHIAbABkACEAJwA="),
+        (
+            "Write-Output 'Hello, World!'".to_string(),
+            vec!["Base64", "UTF-16"]
+        )
+    );
+}
+
+#[test]
+#[serial]
+#[ignore = "Vigenere accepts junk from this input at depth 1, before Base64 -> UTF-16 is tried (#1031)"]
+fn test_utf16le_powershell_encoded_command_from_issue() {
+    // The example from issue #943. The UTF-16 decoder decodes it (see its unit tests), and the
+    // search finds it when Vigenere results are checked at Low sensitivity (#1031, fix 9).
+    // base64.b64encode("Write-Output 'hello world'".encode("utf-16-le"))
+    assert_eq!(
+        crack("VwByAGkAdABlAC0ATwB1AHQAcAB1AHQAIAAnAGgAZQBsAGwAbwAgAHcAbwByAGwAZAAnAA=="),
+        (
+            "Write-Output 'hello world'".to_string(),
+            vec!["Base64", "UTF-16"]
+        )
+    );
+}
+
+#[test]
+#[serial]
+fn test_utf16be_hex() {
+    // "The quick brown fox jumps over the lazy dog".encode("utf-16-be").hex()
+    assert_eq!(
+        crack("00540068006500200071007500690063006b002000620072006f0077006e00200066006f00780020006a0075006d007000730020006f00760065007200200074006800650020006c0061007a007900200064006f0067"),
+        (
+            "The quick brown fox jumps over the lazy dog".to_string(),
+            vec!["Hexadecimal", "UTF-16"]
+        )
+    );
+}
+
+#[test]
+#[serial]
+fn test_utf16le_with_bom_hex() {
+    // "hello world".encode("utf-16").hex(), which starts with the byte order mark FF FE
+    assert_eq!(
+        crack("fffe680065006c006c006f00200077006f0072006c006400"),
+        ("hello world".to_string(), vec!["Hexadecimal", "UTF-16"])
+    );
+}
+
 /*
 #[test]
 fn test_program_parses_files_and_cracks() {

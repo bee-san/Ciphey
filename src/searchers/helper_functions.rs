@@ -68,7 +68,9 @@ pub fn get_decoder_success_rate(decoder: &str) -> f32 {
 ///
 /// * `true` if the sequence is common, `false` otherwise
 pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
-    // Any two binary-to-text encodings stack, including the same one twice.
+    // Any two binary-to-text encodings stack, including the same one twice. UTF-16 decodes
+    // the bytes they produce (PowerShell's -EncodedCommand is Base64 of UTF-16LE). Running it
+    // twice in a row is cheap: its output has no NULs, so its first check rejects it.
     const STACKABLE: &[&str] = &[
         "Base64",
         "Base32",
@@ -89,6 +91,7 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         "URL",
         "Unicode Escapes",
         "Quoted-Printable",
+        "UTF-16",
     ];
     STACKABLE.contains(&prev_decoder) && STACKABLE.contains(&current_cipher)
 }

@@ -54,6 +54,8 @@ pub mod quoted_printable_decoder;
 pub mod unicode_escape_decoder;
 /// The url_decoder module decodes url
 pub mod url_decoder;
+/// The utf16_decoder module decodes UTF-16 (LE/BE) text
+pub mod utf16_decoder;
 
 /// The interface module defines the interface for decoders
 /// Each and every decoder has the same struct & traits
@@ -121,6 +123,7 @@ use rot47_decoder::ROT47Decoder;
 use substitution_generic_decoder::SubstitutionGenericDecoder;
 use unicode_escape_decoder::UnicodeEscapeDecoder;
 use url_decoder::URLDecoder;
+use utf16_decoder::Utf16Decoder;
 use vigenere_decoder::VigenereDecoder;
 use z85_decoder::Z85Decoder;
 
@@ -176,6 +179,8 @@ pub enum DecoderType {
     UnicodeEscapeDecoder(unicode_escape_decoder::UnicodeEscapeDecoder),
     /// quoted-printable decoder
     QuotedPrintableDecoder(quoted_printable_decoder::QuotedPrintableDecoder),
+    /// UTF-16 decoder
+    Utf16Decoder(utf16_decoder::Utf16Decoder),
     /// reverse decoder
     ReverseDecoder(reverse_decoder::ReverseDecoder),
     /// morse decoder
@@ -277,6 +282,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             "Quoted-Printable",
             DecoderBox::new(Decoder::<QuotedPrintableDecoder>::new()),
         ),
+        ("UTF-16", DecoderBox::new(Decoder::<Utf16Decoder>::new())),
         ("Base32", DecoderBox::new(Decoder::<Base32Decoder>::new())),
         ("Reverse", DecoderBox::new(Decoder::<ReverseDecoder>::new())),
         (
