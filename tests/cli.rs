@@ -1,0 +1,132 @@
+//! End-to-end tests that run the `ciphey` binary.
+//!
+//! Every test gets its own temporary home directory containing a ciphey config file,
+//! so the interactive first-run setup is skipped and the cache starts out empty.
+//!
+//! On Windows `dirs::home_dir()` ignores `HOME`, so ciphey can't be pointed at a
+//! temporary home directory there and these tests only run on Unix.
+#![cfg(unix)]
+
+use std::fmt;
+use std::fs;
+use std::io::Read;
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
+
+/// How long a single ciphey run may take before the test fails.
+/// Generous because CI runners are slow; the timeouts used below are 1-2 seconds.
+const DEADLINE: Duration = Duration::from_secs(60);
+
+/// A temporary home directory with a ciphey config file, removed when dropped.
+struct TempHome {
+    /// Path to the temporary home directory
+    path: PathBuf,
+}
+
+impl TempHome {
+    /// Creates a home directory whose `.ciphey/config.toml` is empty, so every setting
+    /// has its default value.
+    fn new(name: &str) -> Self {
+        Self::with_config(name, "")
+    }
+
+    /// Creates a home directory whose `.ciphey/config.toml` contains `config`.
+    /// It lives in Cargo's scratch directory for integration tests (`target/tmp`).
+    fn with_config(name: &str, config: &str) -> Self {
+        let dir_name = format!("ciphey-cli-{}-{}", name, std::process::id());
+        let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(dir_name);
+        let _ = fs::remove_dir_all(&path);
+        fs::create_dir_all(path.join(".ciphey")).expect("Could not create temporary home");
+        fs::write(path.join(".ciphey").join("config.toml"), config)
+            .expect("Could not create config file");
+        TempHome { path }
+    }
+}
+
+impl Drop for TempHome {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.path);
+    }
+}
+
+/// What a finished ciphey run printed.
+struct Output {
+    /// Exit code, or None if ciphey was killed by a signal
+    code: Option<i32>,
+    /// Everything printed to stdout
+    stdout: String,
+    /// Everything printed to stderr
+    stderr: String,
+}
+
+impl fmt::Display for Output {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "exit code: {:?}\n--- stdout ---\n{}\n--- stderr ---\n{}",
+            self.code, self.stdout, self.stderr
+        )
+    }
+}
+
+/// Reads a pipe to the end on another thread, so ciphey never blocks on a full pipe.
+fn read_in_background(mut pipe: impl Read + Send + 'static) -> thread::JoinHandle<String> {
+    thread::spawn(move || {
+        let mut bytes = Vec::new();
+        let _ = pipe.read_to_end(&mut bytes);
+        String::from_utf8_lossy(&bytes).into_owned()
+    })
+}
+
+/// Runs ciphey with `args` and no stdin, failing the test if it doesn't exit within
+/// [`DEADLINE`].
+fn run(home: &TempHome, args: &[&str]) -> Output {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_ciphey"))
+        .args(args)
+        .env("HOME", &home.path)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Could not run ciphey");
+    let stdout = read_in_background(child.stdout.take().expect("stdout is piped"));
+    let stderr = read_in_background(child.stderr.take().expect("stderr is piped"));
+
+    let started = Instant::now();
+    let status = loop {
+        if let Some(status) = child.try_wait().expect("Could not wait for ciphey") {
+            break status;
+        }
+        if started.elapsed() > DEADLINE {
+            let _ = child.kill();
+            let _ = child.wait();
+            panic!("ciphey {args:?} was still running after {DEADLINE:?}");
+        }
+        thread::sleep(Duration::from_millis(20));
+    };
+
+    Output {
+        code: status.code(),
+        stdout: stdout.join().expect("stdout reader panicked"),
+        stderr: stderr.join().expect("stderr reader panicked"),
+    }
+}
+
+#[test]
+fn top_results_mode_exits_when_the_timer_expires() {
+    // Used to hang forever: the search thread blocked sending a result into a full
+    // channel while the main thread waited for it to finish.
+    let home = TempHome::new("top-results-exits");
+    let output = run(
+        &home,
+        &["--top-results", "-c", "1", "-t", "SGVsbG8sIFdvcmxkIQ=="],
+    );
+    assert_eq!(output.code, Some(0), "{output}");
+    assert!(
+        output.stdout.contains("List of Possible Plaintexts"),
+        "{output}"
+    );
+    assert!(output.stdout.contains("Hello, World!"), "{output}");
+}
