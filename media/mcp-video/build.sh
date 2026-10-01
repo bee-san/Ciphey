@@ -49,8 +49,10 @@ mp4="$OUT/ciphey-mcp.mp4"
 # drifting rows change every pixel of every frame and make the GIF several times larger.
 (cd "$HERE/video" && npx --yes "$HF" render --crf 18 --strict-variables --variables '{"bgDrift":false}' --output "$TMPV/still.mp4")
 
-# GIF: the chat scene (9.6-24.0 s), cropped to the window and captions and scaled to 60 %.
-ffmpeg -v error -y -ss 9.6 -t 14.4 -i "$TMPV/still.mp4" \
+# GIF: the chat scene, cropped to the window and captions and scaled to 60 %. It starts at
+# 10.7 s, once the question and its caption are fully in, because GitHub shows the first frame
+# as the still preview when animated images don't autoplay; it ends as the chat exits (24.0 s).
+ffmpeg -v error -y -ss 10.7 -t 13.3 -i "$TMPV/still.mp4" \
   -vf "crop=1600:900:160:30,fps=10,scale=960:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=none:diff_mode=rectangle" \
   -loop 0 "$OUT/ciphey-mcp.gif"
 # Poster: the tool result, with the plaintext and the decoder path highlighted.

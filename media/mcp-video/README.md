@@ -5,7 +5,7 @@ A 29.5 s video of `ciphey-mcp`, the MCP server from [#1034](https://github.com/b
 | File | What it is |
 | --- | --- |
 | `out/ciphey-mcp.mp4` | 1920×1080 H.264 (High, yuv420p), 30 fps, 29.5 s, 5.1 MB |
-| `out/ciphey-mcp.gif` | the chat scene (14.4 s), 960×540, 10 fps, for the README |
+| `out/ciphey-mcp.gif` | the chat scene (13.3 s), 960×540, 10 fps, for the README |
 | `out/ciphey-mcp-poster.jpg` | poster frame: the tool result, with the plaintext and the decoder path highlighted |
 | `out/ciphey-mcp-stills.jpg` | 2×2 contact sheet: setup, tool result, reply, end card |
 
