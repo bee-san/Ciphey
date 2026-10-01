@@ -52,6 +52,8 @@ pub mod crack_results;
 pub mod quoted_printable_decoder;
 /// The unicode_escape_decoder module decodes Unicode escapes like `\u00e9`, `%u00E9` and `U+00E9`
 pub mod unicode_escape_decoder;
+/// The jwt_decoder module decodes JSON Web Tokens (JWT)
+pub mod jwt_decoder;
 /// The url_decoder module decodes url
 pub mod url_decoder;
 /// The utf16_decoder module decodes UTF-16 (LE/BE) text
@@ -114,6 +116,7 @@ use base91_decoder::Base91Decoder;
 use braille_decoder::BrailleDecoder;
 use caesar_decoder::CaesarDecoder;
 use citrix_ctx1_decoder::CitrixCTX1Decoder;
+use jwt_decoder::JwtDecoder;
 use morse_code::MorseCodeDecoder;
 use octal_decoder::OctalDecoder;
 use quoted_printable_decoder::QuotedPrintableDecoder;
@@ -173,6 +176,8 @@ pub enum DecoderType {
     Base91Decoder(base91_decoder::Base91Decoder),
     /// citrix ctx1 decoder
     CitrixCtx1Decoder(citrix_ctx1_decoder::CitrixCTX1Decoder),
+    /// jwt decoder
+    JwtDecoder(jwt_decoder::JwtDecoder),
     /// url decoder
     UrlDecoder(url_decoder::URLDecoder),
     /// unicode escape decoder
@@ -273,6 +278,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             "Citrix Ctx1",
             DecoderBox::new(Decoder::<CitrixCTX1Decoder>::new()),
         ),
+        ("JWT", DecoderBox::new(Decoder::<JwtDecoder>::new())),
         ("URL", DecoderBox::new(Decoder::<URLDecoder>::new())),
         (
             "Unicode Escapes",

@@ -356,3 +356,68 @@ fn test_base64_of_ascii85_is_cracked() {
     );
     assert_eq!(decoder_path(&result), ["Base64", "Ascii85"]);
 }
+
+/// The example token from jwt.io (HS256, secret `your-256-bit-secret`)
+const JWT_IO_TOKEN: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+/// The payload of [`JWT_IO_TOKEN`]
+const JWT_IO_PAYLOAD: &str = r#"{"sub":"1234567890","name":"John Doe","iat":1516239022}"#;
+
+#[test]
+#[serial]
+fn test_jwt_is_decoded() {
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
+
+    let result = perform_cracking(JWT_IO_TOKEN, Config::default())
+        .unwrap()
+        .expect("the JWT should be decoded");
+    assert_eq!(result.text[0], JWT_IO_PAYLOAD);
+    let last = result.path.last().unwrap();
+    assert_eq!(last.decoder, "JWT");
+    assert!(last.success);
+    assert_eq!(last.key.as_deref(), Some(r#"{"alg":"HS256","typ":"JWT"}"#));
+
+    // The cached path names the "JWT Structure" checker, which has to be known to read
+    // the cache back
+    let row = database::read_cache(&JWT_IO_TOKEN.to_string())
+        .unwrap()
+        .expect("the result should be cached");
+    let cached_last: CrackResult = serde_json::from_str(row.path.last().unwrap()).unwrap();
+    assert_eq!(cached_last.decoder, "JWT");
+    assert_eq!(cached_last.checker_name, "JWT Structure");
+}
+
+#[test]
+#[serial]
+fn test_jwt_with_flag_claim_is_decoded() {
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
+
+    // {"alg":"none","typ":"JWT"} . {"flag":"flag{jwt_is_not_encryption}"} . (no signature)
+    let result = perform_cracking(
+        "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJmbGFnIjoiZmxhZ3tqd3RfaXNfbm90X2VuY3J5cHRpb259In0.",
+        Config::default(),
+    )
+    .unwrap()
+    .expect("the JWT should be decoded");
+    assert_eq!(result.text[0], r#"{"flag":"flag{jwt_is_not_encryption}"}"#);
+    assert_eq!(result.path.last().unwrap().decoder, "JWT");
+}
+
+#[test]
+#[serial]
+fn test_jwt_inside_base64_is_decoded() {
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
+
+    // Base64 of JWT_IO_TOKEN
+    let result = perform_cracking(
+        "ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnpkV0lpT2lJeE1qTTBOVFkzT0Rrd0lpd2libUZ0WlNJNklrcHZhRzRnUkc5bElpd2lhV0YwSWpveE5URTJNak01TURJeWZRLlNmbEt4d1JKU01lS0tGMlFUNGZ3cE1lSmYzNlBPazZ5SlZfYWRRc3N3NWM=",
+        Config::default(),
+    )
+    .unwrap()
+    .expect("the JWT should be decoded");
+    assert_eq!(result.text[0], JWT_IO_PAYLOAD);
+    let decoders: Vec<&str> = result.path.iter().map(|step| step.decoder).collect();
+    assert_eq!(decoders, ["Base64", "JWT"]);
+}

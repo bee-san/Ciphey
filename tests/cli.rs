@@ -326,3 +326,65 @@ fn ascii85_issue_example_is_cracked_with_a_crib() {
     );
     assert!(output.stdout.contains("Ascii85"), "{output}");
 }
+
+/// The example token from jwt.io
+const JWT_IO_TOKEN: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+
+#[test]
+fn regex_crib_is_checked_against_jwt_claims() {
+    // A crib anchored to a claim doesn't match the whole payload, so the JWT decoder
+    // checks the crib against the payload's string values too
+    let home = TempHome::new("jwt-regex-crib-claim");
+    let output = run(
+        &home,
+        &[
+            "-d",
+            "-c",
+            "2",
+            "--regex",
+            r"^flag\{.*\}$",
+            "-t",
+            // {"alg":"none","typ":"JWT"} . {"flag":"flag{jwt_is_not_encryption}"} .
+            "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJmbGFnIjoiZmxhZ3tqd3RfaXNfbm90X2VuY3J5cHRpb259In0.",
+        ],
+    );
+    assert_eq!(output.code, Some(0), "{output}");
+    assert!(output.stdout.contains("The plaintext is"), "{output}");
+    assert!(
+        output
+            .stdout
+            .contains(r#"{"flag":"flag{jwt_is_not_encryption}"}"#),
+        "{output}"
+    );
+}
+
+#[test]
+fn jwt_does_not_bypass_the_regex_crib() {
+    // Without a crib a well-formed JWT is accepted on its structure. With one, only a
+    // match may end the search.
+    let home = TempHome::new("jwt-regex-crib-respected");
+    let output = run(
+        &home,
+        &["-d", "-c", "1", "--regex", "^xyz", "-t", JWT_IO_TOKEN],
+    );
+    assert_eq!(output.code, Some(0), "{output}");
+    assert!(!output.stdout.contains("The plaintext is"), "{output}");
+}
+
+#[test]
+fn human_checker_is_asked_about_the_decoded_jwt() {
+    // stdin is empty, so the prompt is answered "no". The human is asked about the whole
+    // payload as a JSON Web Token, not about the claim "1234567890" (which the LemmeKnow
+    // checker takes for a phone number).
+    let home = TempHome::new("jwt-human-checker");
+    let output = run(&home, &["-c", "1", "-t", JWT_IO_TOKEN]);
+    assert_eq!(output.code, Some(0), "{output}");
+    assert!(output.stdout.contains("JSON Web Token"), "{output}");
+    assert!(
+        output
+            .stdout
+            .contains(r#"{"sub":"1234567890","name":"John Doe","iat":1516239022}"#),
+        "{output}"
+    );
+    assert!(!output.stdout.contains("Phone Number"), "{output}");
+}

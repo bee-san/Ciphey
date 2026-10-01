@@ -30,6 +30,7 @@ use crate::decoders::caesar_decoder::CaesarDecoder;
 use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::{Crack, Decoder};
+use crate::decoders::jwt_decoder::JwtDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
@@ -240,6 +241,7 @@ pub fn get_all_decoders() -> Decoders {
 /// Currently takes no args as this is just a spike to get all the basic functionality working
 pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     trace!("Filtering and getting all decoders");
+    let jwt = Decoder::<JwtDecoder>::new();
     let vigenere = Decoder::<VigenereDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
     let decimal = Decoder::<DecimalDecoder>::new();
@@ -276,6 +278,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
 
     Decoders {
         components: vec![
+            // First: the search ranks results found in the same step by checker class and
+            // path cost, then keeps this order. Railfence rearranges a JWT into strings the
+            // LemmeKnow checker takes for URLs, which must not beat the decoded JWT.
+            Box::new(jwt),
             Box::new(vigenere),
             Box::new(reversedecoder),
             Box::new(base64),
