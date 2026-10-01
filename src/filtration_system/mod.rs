@@ -31,6 +31,7 @@ use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::{Crack, Decoder};
 use crate::decoders::morse_code::MorseCodeDecoder;
+use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
 use crate::decoders::reverse_decoder::ReverseDecoder;
 use crate::decoders::rot47_decoder::ROT47Decoder;
@@ -255,6 +256,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let citrix_ctx1 = Decoder::<CitrixCTX1Decoder>::new();
     let url = Decoder::<URLDecoder>::new();
     let unicode_escape = Decoder::<UnicodeEscapeDecoder>::new();
+    let quoted_printable = Decoder::<QuotedPrintableDecoder>::new();
     let base32 = Decoder::<Base32Decoder>::new();
     let reversedecoder = Decoder::<ReverseDecoder>::new();
     let morsecodedecoder = Decoder::<MorseCodeDecoder>::new();
@@ -283,6 +285,9 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(base85),
             Box::new(base65536),
             Box::new(binary),
+            // Before Hexadecimal, which skips the `=` in `=48=65` and decodes it too: when
+            // two decoders find the same plaintext the search reports the first one.
+            Box::new(quoted_printable),
             Box::new(hexadecimal),
             Box::new(octal),
             Box::new(html_entity),

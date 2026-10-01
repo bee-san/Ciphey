@@ -488,6 +488,21 @@ mod tests {
     }
 
     #[test]
+    fn quoted_printable_may_be_applied_twice() {
+        // Layered Quoted-Printable: `=3D41` -> `=41` -> `A`
+        let decoders = get_all_decoders();
+        let quoted_printable = decoders
+            .components
+            .iter()
+            .find(|d| d.get_name() == "Quoted-Printable")
+            .unwrap();
+
+        let mut last = crate::CrackResult::new(&crate::Decoder::default(), String::new());
+        last.decoder = "Quoted-Printable";
+        assert!(should_try_decoder(quoted_printable.as_ref(), Some(&last)));
+    }
+
+    #[test]
     fn sanity_rejects_tiny_outputs_from_long_inputs() {
         let node = AStarNode {
             state: DecoderResult {

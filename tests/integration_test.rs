@@ -44,6 +44,44 @@ fn test_no_panic_with_non_ascii_letters() {
     }
 }
 
+#[test]
+#[serial]
+fn test_quoted_printable_is_cracked() {
+    // https://github.com/bee-san/ciphey/issues/937
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
+
+    let result = perform_cracking("=48=65=6C=6C=6F=20=57=6F=72=6C=64", Config::default())
+        .unwrap()
+        .expect("the search should crack Quoted-Printable");
+    assert_eq!(result.text[0], "Hello World");
+    let path: Vec<&str> = result.path.iter().map(|step| step.decoder).collect();
+    assert!(path.contains(&"Quoted-Printable"), "path was {path:?}");
+}
+
+#[test]
+#[serial]
+fn test_quoted_printable_wrapped_base64_is_cracked() {
+    // Python's `quopri.encodestring` of unpadded Base64 longer than 76 characters. Only the
+    // soft line break shows it's Quoted-Printable, and Base64 can't decode it until the
+    // break is removed.
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
+
+    let result = perform_cracking(
+        "UXVvdGVkLVByaW50YWJsZSB3cmFwcyBsb25nIGxpbmVzIGF0IDc2IGNoYXJhY3RlcnMgd2l0aCB=\r\nzb2Z0IGxpbmUgYnJlYWtz",
+        Config::default(),
+    )
+    .unwrap()
+    .expect("the search should crack Base64 wrapped in Quoted-Printable");
+    assert_eq!(
+        result.text[0],
+        "Quoted-Printable wraps long lines at 76 characters with soft line breaks"
+    );
+    let path: Vec<&str> = result.path.iter().map(|step| step.decoder).collect();
+    assert_eq!(path, ["Quoted-Printable", "Base64"]);
+}
+
 /*
 #[test]
 fn test_program_parses_files_and_cracks() {
