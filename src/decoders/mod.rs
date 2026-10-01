@@ -46,6 +46,8 @@ pub mod citrix_ctx1_decoder;
 /// The crack_results module defines the CrackResult
 /// Each and every decoder return same CrackResult
 pub mod crack_results;
+/// The unicode_escape_decoder module decodes Unicode escapes like `\u00e9`, `%u00E9` and `U+00E9`
+pub mod unicode_escape_decoder;
 /// The url_decoder module decodes url
 pub mod url_decoder;
 
@@ -111,6 +113,7 @@ use railfence_decoder::RailfenceDecoder;
 use reverse_decoder::ReverseDecoder;
 use rot47_decoder::ROT47Decoder;
 use substitution_generic_decoder::SubstitutionGenericDecoder;
+use unicode_escape_decoder::UnicodeEscapeDecoder;
 use url_decoder::URLDecoder;
 use vigenere_decoder::VigenereDecoder;
 use z85_decoder::Z85Decoder;
@@ -161,6 +164,8 @@ pub enum DecoderType {
     CitrixCtx1Decoder(citrix_ctx1_decoder::CitrixCTX1Decoder),
     /// url decoder
     UrlDecoder(url_decoder::URLDecoder),
+    /// unicode escape decoder
+    UnicodeEscapeDecoder(unicode_escape_decoder::UnicodeEscapeDecoder),
     /// reverse decoder
     ReverseDecoder(reverse_decoder::ReverseDecoder),
     /// morse decoder
@@ -250,6 +255,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<CitrixCTX1Decoder>::new()),
         ),
         ("URL", DecoderBox::new(Decoder::<URLDecoder>::new())),
+        (
+            "Unicode Escapes",
+            DecoderBox::new(Decoder::<UnicodeEscapeDecoder>::new()),
+        ),
         ("Base32", DecoderBox::new(Decoder::<Base32Decoder>::new())),
         ("Reverse", DecoderBox::new(Decoder::<ReverseDecoder>::new())),
         (
