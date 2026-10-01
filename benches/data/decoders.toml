@@ -292,6 +292,22 @@ success = true
 input = "43697068657920697320616e206175746f6d61746564206465636f64696e6720746f6f6c2e20596f75206769766520697420656e63727970746564206f7220656e636f646564207465787420616e6420697420747269657320746f20776f726b206f757420776861742077617320646f6e6520746f2069742c20776974686f757420796f7520686176696e6720746f206b6e6f7720746865206b6579206f72206576656e20746865206369706865722e204974207365617263686573207468726f756768206d616e7920706f737369626c65206465636f64696e67732c20636865636b7320656163682063616e64696461746520746f207365652077686574686572206974206c6f6f6b73206c696b6520456e676c697368206f72206d6174636865732061206b6e6f776e207061747465726e207375636820617320616e20656d61696c20616464726573732c20616e642073746f7073207768656e2069742066696e647320736f6d657468696e672074686174207265616473206c696b6520706c61696e746578742e204d6f7374206f66207468652074696d6520746869732074616b6573206c657373207468616e2061207365636f6e642c207768696368206d616b65732069742068616e647920666f7220636170747572652074686520666c6167206368616c6c656e6765732c2070757a7a6c652068756e747320616e6420666f7220616e796f6e652077686f207374756d626c6573206163726f7373206120737472616e676520737472696e6720696e2061206c6f672066696c652e"
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+# JWT: {"message": <plaintext>} signed HS256 with PyJWT 2.4.0 (secret
+# "your-256-bit-secret"); crack() returns the payload JSON as encoded.
+[[case]]
+decoder = "JWT"
+size = "medium"
+success = true
+input = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXNzYWdlIjoiTWVldCBtZSBhdCB0aGUgb2xkIGxpZ2h0aG91c2UgYWZ0ZXIgbWlkbmlnaHQgYW5kIGJyaW5nIHRoZSBtYXAsIHRoZSBrZXkgYW5kIGEgdG9yY2guIn0.5Vqa-YNwPDF1X1owIllTfLrzaG-zTBadnJUARiUgb0Y"
+expected = "{\"message\":\"Meet me at the old lighthouse after midnight and bring the map, the key and a torch.\"}"
+
+[[case]]
+decoder = "JWT"
+size = "long"
+success = true
+input = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXNzYWdlIjoiQ2lwaGV5IGlzIGFuIGF1dG9tYXRlZCBkZWNvZGluZyB0b29sLiBZb3UgZ2l2ZSBpdCBlbmNyeXB0ZWQgb3IgZW5jb2RlZCB0ZXh0IGFuZCBpdCB0cmllcyB0byB3b3JrIG91dCB3aGF0IHdhcyBkb25lIHRvIGl0LCB3aXRob3V0IHlvdSBoYXZpbmcgdG8ga25vdyB0aGUga2V5IG9yIGV2ZW4gdGhlIGNpcGhlci4gSXQgc2VhcmNoZXMgdGhyb3VnaCBtYW55IHBvc3NpYmxlIGRlY29kaW5ncywgY2hlY2tzIGVhY2ggY2FuZGlkYXRlIHRvIHNlZSB3aGV0aGVyIGl0IGxvb2tzIGxpa2UgRW5nbGlzaCBvciBtYXRjaGVzIGEga25vd24gcGF0dGVybiBzdWNoIGFzIGFuIGVtYWlsIGFkZHJlc3MsIGFuZCBzdG9wcyB3aGVuIGl0IGZpbmRzIHNvbWV0aGluZyB0aGF0IHJlYWRzIGxpa2UgcGxhaW50ZXh0LiBNb3N0IG9mIHRoZSB0aW1lIHRoaXMgdGFrZXMgbGVzcyB0aGFuIGEgc2Vjb25kLCB3aGljaCBtYWtlcyBpdCBoYW5keSBmb3IgY2FwdHVyZSB0aGUgZmxhZyBjaGFsbGVuZ2VzLCBwdXp6bGUgaHVudHMgYW5kIGZvciBhbnlvbmUgd2hvIHN0dW1ibGVzIGFjcm9zcyBhIHN0cmFuZ2Ugc3RyaW5nIGluIGEgbG9nIGZpbGUuIn0.PHWCXgSGDvMV116MHoSrBC8cdz40Yh4-UPAKtvMT8hI"
+expected = "{\"message\":\"Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file.\"}"
+
 [[case]]
 decoder = "HTML Entities"
 size = "medium"
