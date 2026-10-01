@@ -12,18 +12,6 @@ use once_cell::sync::Lazy;
 use std::fs;
 use std::path::Path;
 
-/// Vigenere square where the first index is ciphertext and the second index
-/// is the key
-static VIGENERE_SQUARE: Lazy<Vec<Vec<char>>> = Lazy::new(|| {
-    let mut square = vec![vec![' '; 26]; 26];
-    for (i, row) in square.iter_mut().enumerate() {
-        for (j, element) in row.iter_mut().enumerate() {
-            *element = (((((i as i32) - (j as i32) + 26) % 26) as u8) + b'A') as char;
-        }
-    }
-    square
-});
-
 /// English bigrams for determining fitness
 static ENGLISH_BIGRAMS: Lazy<Vec<Vec<i64>>> = Lazy::new(|| {
     let mut bigrams_vec = vec![vec![0; 26]; 26];
@@ -141,9 +129,13 @@ impl Crack for Decoder<VigenereDecoder> {
 /// Ported from the PHP implementation shown in https://www.guballa.de/bits-and-bytes/implementierung-des-vigenere-solvers
 /// Attempts to break the Vigenere cipher using bigrams
 fn break_vigenere(text: &str, key_length: usize) -> String {
+    // Only ASCII letters are part of the cipher alphabet, matching `crack` and
+    // `decrypt`. Non-ASCII letters (e.g. 'Ö', Cyrillic) previously produced
+    // out-of-range indices or a u8 subtraction overflow (#908) and shifted the
+    // key positions relative to `decrypt`.
     let mut cipher_text: Vec<usize> = Vec::new();
     for c in text.chars() {
-        if c.is_alphabetic() {
+        if c.is_ascii_alphabetic() {
             cipher_text.push(((c.to_ascii_uppercase() as u8) - b'A') as usize);
         }
     }
@@ -390,27 +382,37 @@ mod tests {
     }
 
     #[test]
-    fn test_vigenere_square_aa() {
-        assert_eq!(VIGENERE_SQUARE[0][0], 'A');
+    fn test_non_ascii_letters_do_not_panic() {
+        // Regression test for #908. The first three inputs are strings that reached
+        // this decoder while cracking `Mjc1NjI2ZDY1N2U2ZjU1NjY3OTY2Ng==` and panicked
+        // with "index out of bounds". The others contain non-ASCII letters whose low
+        // byte is below b'A', which overflowed the u8 subtraction in debug builds.
+        let inputs = [
+            "'V&ÖWæõVg\u{96}f",
+            "2!\u{12}-Á",
+            "\u{8}\u{1e}[g2 ўS",
+            "Привет мир abc",
+            "Ādam ćat đog abc",
+            "Привет мир",
+        ];
+        let vigenere_decoder = Decoder::<VigenereDecoder>::new();
+        for input in inputs {
+            let _ = vigenere_decoder.crack(input, &get_athena_checker());
+            for key_length in 3..30 {
+                let _ = break_vigenere(input, key_length);
+            }
+        }
     }
 
     #[test]
-    fn test_vigenere_square_az() {
-        assert_eq!(VIGENERE_SQUARE[0][25], 'B');
-    }
-
-    #[test]
-    fn test_vigenere_square_za() {
-        assert_eq!(VIGENERE_SQUARE[25][0], 'Z');
-    }
-
-    #[test]
-    fn test_vigenere_square_zz() {
-        assert_eq!(VIGENERE_SQUARE[25][25], 'A');
-    }
-
-    #[test]
-    fn test_vigenere_square_mt() {
-        assert_eq!(VIGENERE_SQUARE[12][19], 'T');
+    fn test_break_vigenere_ignores_non_ascii_letters() {
+        // `decrypt` passes non-ASCII letters through without consuming a key
+        // character, so they must not shift the key positions here either.
+        let ascii_only =
+            "Altd hlbe tg lrncmwxpo kpxs evl ztrsuicp qptspf. Ivplyprr th pw clhoic pozc";
+        let with_non_ascii =
+            "Altd hlbe ÖÄ tg lrncmwxpo kpxs evl ztrsuicp qptspf. Ivplyprr th pw clhoic pozc";
+        assert_eq!(break_vigenere(ascii_only, 5), "HELLO");
+        assert_eq!(break_vigenere(with_non_ascii, 5), "HELLO");
     }
 }
