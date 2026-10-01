@@ -386,20 +386,11 @@ pub fn program_exiting_successful_decoding(result: DecoderResult) {
     /// If 30% of the characters are invisible characters, then prompt the
     /// user to save the resulting plaintext into a file
     const INVIS_CHARS_DETECTION_PERCENTAGE: f64 = 0.3;
-    let mut invis_chars_found: f64 = 0.0;
-    for char in plaintext[0].chars() {
-        if storage::INVISIBLE_CHARS
-            .iter()
-            .any(|invis_chars| *invis_chars == char)
-        {
-            invis_chars_found += 1.0;
-        }
-    }
 
     // If the percentage of invisible characters in the plaintext exceeds
     // the detection percentage, prompt the user asking if they want to
     // save the plaintext into a file
-    let invis_char_percentage = invis_chars_found / plaintext[0].len() as f64;
+    let invis_char_percentage = invisible_char_ratio(&plaintext[0]);
     if invis_char_percentage > INVIS_CHARS_DETECTION_PERCENTAGE {
         let invis_char_percentage_string = format!("{:2.0}%", invis_char_percentage * 100.0);
         println!(
@@ -436,6 +427,22 @@ pub fn program_exiting_successful_decoding(result: DecoderResult) {
         success(&plaintext[0]),
         decoded_path_string
     );
+}
+
+/// Fraction of the characters in `text` that are invisible, between 0.0 and 1.0.
+///
+/// Counts characters rather than bytes: zero-width characters take 3 bytes in UTF-8,
+/// so dividing by the byte length made text that is entirely invisible look 33% invisible.
+fn invisible_char_ratio(text: &str) -> f64 {
+    let total = text.chars().count();
+    if total == 0 {
+        return 0.0;
+    }
+    let invisible = text
+        .chars()
+        .filter(|c| storage::INVISIBLE_CHARS.contains(c))
+        .count();
+    invisible as f64 / total as f64
 }
 
 /// Prints the number of decoding attempts performed.
@@ -688,4 +695,21 @@ fn test_parse_rgb() {
         let result = parse_rgb(case);
         assert!(result.is_some());
     }
+}
+
+#[test]
+fn test_invisible_char_ratio_counts_characters_not_bytes() {
+    let zero_width_space = '\u{200B}';
+    // Entirely invisible, but 3 bytes per character
+    let all_invisible = zero_width_space.to_string().repeat(10);
+    assert!((invisible_char_ratio(&all_invisible) - 1.0).abs() < f64::EPSILON);
+
+    // Half invisible. Dividing by bytes gave 25%, below the 30% threshold.
+    let half_invisible: String = "abcde"
+        .chars()
+        .flat_map(|c| [c, zero_width_space])
+        .collect();
+    assert!((invisible_char_ratio(&half_invisible) - 0.5).abs() < f64::EPSILON);
+
+    assert!(invisible_char_ratio("").abs() < f64::EPSILON);
 }
