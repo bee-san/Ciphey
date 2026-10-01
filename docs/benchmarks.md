@@ -69,6 +69,23 @@ What that means:
 
 Items 1, 2, 4 and 5 are in Ciphey's code. Items 3, 6 and 7 are in dependencies.
 
+## After the first speedups
+
+Items 1, 2, 4 and 5 above, plus railfence's sorts, were fixed in the follow-up PR.
+Measured as interleaved A/B runs of the old and new bench binaries (same fixtures,
+back to back, twice with the order swapped) because the shared host's load varied
+too much for a before/after pair of full runs.
+
+| What | Before | After | Speedup |
+|---|---:|---:|---:|
+| One layer (`search/single`, 13 cases) | 10.5 to 71.8 ms | 4.6 to 23.7 ms | 1.2x to 3.6x, geomean 2.2x |
+| Two or three layers (`search/multi`, 9 cases) | 37 to 160 ms | 20 to 108 ms | 1.0x to 2.2x, geomean 1.7x |
+| Input every decoder rejects (`unicode_exhausts`) | 10.4 ms | 0.67 ms | 15.5x |
+| `--regex` crib search (`crib/search`) | 12 to 38 ms | 1.5 to 4.2 ms | 7.7x to 9.1x |
+| Vigenere decoder | 0.2 to 4.1 ms | 0.05 to 0.9 ms | 3.9x to 5.4x |
+
+The English checker in `gibberish_or_not` is now most of the search's CPU time.
+
 ## Results
 
 ### decoders
