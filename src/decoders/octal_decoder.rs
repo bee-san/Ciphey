@@ -259,7 +259,7 @@ mod tests {
 
     #[test]
     fn octal_decodes_python_ciphey_test_vector() {
-        // test_octal in the original Python Ciphey's tests/test_main.py
+        // test_octal in Python Ciphey 5.14.0's tests/test_main.py (tag 5.14.0 of this repo)
         assert_cracks_to(
             "110 145 154 154 157 40 155 171 40 156 141 155 145 40 151 163 40 142 145 145 40 141 156 144 40 111 40 154 151 153 145 40 144 157 147 40 141 156 144 40 141 160 160 154 145 40 141 156 144 40 164 162 145 145",
             "Hello my name is bee and I like dog and apple and tree",
