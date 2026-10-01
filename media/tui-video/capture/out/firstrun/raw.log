@@ -58,7 +58,7 @@ Would you like to enable Enhanced Plaintext Detection?[0m
         o( ( ))
         
 🕵️ I think the plaintext is [0m[1m[38;2;237;69;146mWords[0m.
-Possible plaintext: '[0m[1m[38;2;237;69;146mwow that was a cool configuration[0m' (y/N): 
+Possible plaintext: '[0m[1m[38;2;237;69;146mWow! That was a cool configuration![0m' (y/N): 
 y
 
 🥳 ciphey has decoded [0m[1m[38;2;255;148;219m64[0m times.

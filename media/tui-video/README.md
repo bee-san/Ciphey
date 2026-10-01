@@ -28,13 +28,13 @@ The Fast clip takes its numbers from the recordings: the `real` time is parsed o
 | `layers` | `base64(base64(base64(base64(text))))` | `Ciphey peels back every layer of encoding`, path `Base64 → Base64 → Base64 → Base64` |
 | `identify` | hex | `flag{ciphey_did_the_hard_part}`, a "Capture The Flag (CTF) Flag" |
 | `firstrun` | the base32 string from `images/first_run.tape` | the setup wizard (GirlyPop theme), then `Wow! That was a cool configuration!` |
-| `fast` | `base64(hex(rot13("Ciphey is very fast")))`, run as `time ciphey -d -t …` | the plaintext, path `Base64 → Hexadecimal → caesar`, `real 0m0.156s` |
+| `fast` | `base64(hex(rot13("Ciphey is very fast")))`, run as `time ciphey -d -t …` | the plaintext, path `Base64 → Hexadecimal → caesar`, `real 0m0.157s` |
 | `lk_mount` | `base64("mount -o username=bee,password=hunter2")` | "Mount Command With Clear Credentials" |
 | `lk_totp` | `base64("otpauth://totp/bee?secret=JBSWY3DPEHPK3PXP&digits=6")` | "Time-Based One-Time Password (TOTP) URI" (`JBSWY3DPEHPK3PXP` is the usual example secret, not a real one) |
 | `lk_ip` | `hex("192.168.0.1")` | "Internet Protocol (IP) Address Version 4" |
 | `crib` | `base64("picoCTF{b4s3_64_1s_fun}")`, run with `-r 'picoCTF\{'` | "Regex matched: picoCTF\{", then the flag |
 
-Every demo except `firstrun` starts with `capture/config-capptucin.toml`, the config the wizard writes when you pick Capptucin. `firstrun` starts without a config so the wizard appears. The recordings in `capture/out/` were made from `master` at 42fbebcc (v0.12.1 plus fixes).
+Every demo except `firstrun` starts with `capture/config-capptucin.toml`, the config the wizard writes when you pick Capptucin. `firstrun` starts without a config so the wizard appears. The recordings in `capture/out/` were made from `master` at 47bd16d6 (v0.12.1 plus fixes, including #1033). The `fast` recording is the middle one of five takes (0.152–0.163 s).
 
 ## Speed numbers
 
@@ -44,17 +44,17 @@ Every demo except `firstrun` starts with `capture/config-capptucin.toml`, the co
 - Python Ciphey runs with `-g`.
 - Every run of either is wrapped in `timeout 60`, and every answer is compared with the known plaintext.
 
-The committed results are the wall-clock median of 10 runs per input (Python: 3) on a shared 16-CPU Linux machine (load average 13–28 during the run):
+The committed results (Ciphey at 47bd16d6) are the wall-clock median of 10 runs per input (Python: 3) on a shared 16-CPU Linux machine, with a load average of about 17–20 during the run:
 
 | Input | Ciphey | Python Ciphey 5.14.0 |
 | --- | --- | --- |
-| Base64 | 0.08 s | 0.75 s |
-| Hex → Base64 | 0.12 s | 0.88 s |
-| ROT13 → Hex → Base64 (the Fast clip) | 0.15 s | no answer within 60 s |
-| URL → Base64 → Hex | 0.21 s | 1.15 s |
-| Base64 ×4 | 0.52 s | 0.87 s |
-| Hex → Base32 → Base64 → Hex | 0.82 s | 0.80 s, wrong answer |
-| ROT13 → Hex → Base64 → Base32 | 1.65 s | no answer within 60 s |
+| Base64 | 0.11 s | 0.92 s |
+| Hex → Base64 | 0.14 s | 1.02 s |
+| ROT13 → Hex → Base64 (the Fast clip) | 0.19 s | no answer within 60 s |
+| URL → Base64 → Hex | 0.24 s | 1.15 s |
+| Base64 ×4 | 0.41 s | 0.78 s |
+| Hex → Base32 → Base64 → Hex | 0.54 s | 0.72 s, wrong answer |
+| ROT13 → Hex → Base64 → Base32 | 1.15 s | no answer within 60 s |
 
 ```bash
 python3 -m venv /tmp/pyciphey && /tmp/pyciphey/bin/pip install ciphey==5.14.0
@@ -95,4 +95,4 @@ To change a story, edit `SCENES` in `video/index.html` or the `scenes` passed to
 - HyperFrames CLI 0.8.103, using the Chrome build it pins (`npx hyperframes browser ensure`); GSAP 3.14.2 from jsDelivr
 - Fonts in `video/assets/fonts`: JetBrains Mono 2.304, Inter 4.1, and a subset of Noto Color Emoji 2.051 containing only the emoji ciphey prints. All are SIL OFL 1.1; the licence files are next to the fonts.
 - Rendered with FFmpeg 8.1.3; any recent FFmpeg should work.
-- `--top-results` is not used in any video: with more than 10 candidates it waits on a y/N prompt before the search is stopped (see the README PR).
+- `--top-results` is not used in any video. With more than 10 candidates it asks "write to a file? (y/N)" before the search is stopped, so without a terminal on stdin it can wait forever while the search keeps running.

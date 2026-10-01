@@ -61,7 +61,7 @@ Do you want to see a cute cat?
         o( ( ))
 
 🕵️ I think the plaintext is Words.
-Possible plaintext: 'wow that was a cool configuration' (y/N):
+Possible plaintext: 'Wow! That was a cool configuration!' (y/N):
 y
 
 🥳 ciphey has decoded 64 times.

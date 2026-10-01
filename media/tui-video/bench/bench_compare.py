@@ -108,7 +108,9 @@ def main():
     py_version = subprocess.run([os.path.join(os.path.dirname(PY_CIPHEY), "python"), "-c",
                                  "import importlib.metadata as m; print(m.version('ciphey'))"],
                                 capture_output=True, text=True).stdout.strip()
-    rev = subprocess.run(["git", "-C", ROOT, "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+    # The commit of the checkout the binary was built in (RUST_CIPHEY may point at another clone).
+    rev = subprocess.run(["git", "-C", os.path.dirname(os.path.abspath(RUST)), "rev-parse", "--short", "HEAD"],
+                         capture_output=True, text=True).stdout.strip()
     meta = {
         "date_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "ciphey_rust_commit": rev,

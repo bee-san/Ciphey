@@ -1,7 +1,7 @@
 ❯ ciphey -t 'VlZSS2MyUXlSa2hXYWxaS1UwVktjMWRzWkRSbGEyeElVMjFvV2sxdVRtNVhiR2hoWWtkT2RXRXl
 aR2xTTUZreFYyeG9TbG95U1hsWFYyUmhWbnBXY1ZscVNsTmpSMHAwV1hvd1BRPT0='
 🕵️ I think the plaintext is Words.
-Possible plaintext: 'ciphey peels back every layer of encoding' (y/N):
+Possible plaintext: 'Ciphey peels back every layer of encoding' (y/N):
 y
 
 🥳 ciphey has decoded 256 times.

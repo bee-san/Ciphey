@@ -6,7 +6,7 @@ The plaintext is:
 [0m[1m[38;2;166;218;149mCiphey is very fast[0m
 the decoders used are [0m[1m[38;2;238;212;159mBase64 → Hexadecimal → caesar[0m
 
-real	0m0.156s
-user	0m0.644s
-sys	0m0.041s
+real	0m0.157s
+user	0m0.619s
+sys	0m0.048s
 [?2004h[1;38;2;166;227;161m❯[0m 
