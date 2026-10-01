@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Ciphey TUI promo</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <!-- Real terminal output, generated from tmux captures by ../capture/ansi_to_json.mjs -->
+    <script src="captures.js"></script>
+    <style>
+      @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Bold.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Medium.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-SemiBold.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Inter Display"; src: url("assets/fonts/InterDisplay-Bold.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "Inter Display"; src: url("assets/fonts/InterDisplay-ExtraBold.woff2") format("woff2"); font-weight: 800; }
+      @font-face { font-family: "Noto Color Emoji"; src: url("assets/fonts/NotoColorEmoji-ciphey-subset.woff2") format("woff2"); }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0b0a12; }
+      #root {
+        position: relative; width: 100%; height: 100%; overflow: hidden;
+        font-family: "Inter", sans-serif; color: #cdd6f4;
+      }
+      .clip { position: absolute; inset: 0; }
+
+      /* ---------- background ---------- */
+      #bg { background: linear-gradient(180deg, #0e0c18 0%, #09080e 100%); }
+      #glyphs {
+        position: absolute; inset: 0; overflow: hidden;
+        -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+        mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+      }
+      #vignette {
+        position: absolute; inset: 0;
+        background: radial-gradient(ellipse 1050px 620px at 50% 46%, rgba(10, 9, 16, 0.92) 0%, rgba(10, 9, 16, 0.6) 55%, rgba(10, 9, 16, 0) 100%);
+      }
+      #glow {
+        position: absolute; inset: 0;
+        background:
+          radial-gradient(1100px 680px at 50% 40%, rgba(203, 166, 247, 0.15), transparent 70%),
+          radial-gradient(900px 620px at 88% 100%, rgba(237, 69, 146, 0.12), transparent 70%),
+          radial-gradient(800px 600px at 6% 0%, rgba(137, 180, 250, 0.09), transparent 70%);
+      }
+      .grow {
+        position: absolute; left: -400px; white-space: nowrap;
+        font-family: "JetBrains Mono", monospace; font-size: 22px; letter-spacing: 0.08em;
+        color: #cba6f7;
+      }
+
+      /* ---------- title + end card ---------- */
+      .center-stack {
+        position: absolute; inset: 0; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; text-align: center;
+      }
+      .eyebrow-mono {
+        font-family: "JetBrains Mono", monospace; font-size: 26px; color: #a6adc8;
+        letter-spacing: 0.04em; opacity: 0;
+      }
+      .eyebrow-mono b { color: #a6e3a1; font-weight: 700; }
+      .wordmark {
+        position: relative; height: 200px; width: 610px; margin: 18px 0 8px;
+        font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 168px; line-height: 200px;
+      }
+      .slot { position: absolute; top: 0; width: 101px; height: 200px; text-align: center; }
+      .slot span { position: absolute; left: 0; right: 0; top: 0; opacity: 0; }
+      .slot .noise { color: #6c7086; }
+      .tagline {
+        font-family: "Inter Display", sans-serif; font-weight: 700; font-size: 54px;
+        letter-spacing: -0.01em; color: #f5f5fa; opacity: 0;
+      }
+      .subline {
+        margin-top: 22px; font-family: "JetBrains Mono", monospace; font-size: 25px;
+        color: #a6adc8; opacity: 0;
+      }
+      .subline i { font-style: normal; color: #f5c2e7; padding: 0 10px; }
+
+      /* ---------- terminal window ---------- */
+      /* Window starts compact (13 visible rows) for the short demos and grows to the
+         full 20-row pane for the first-run wizard; both sizes show the same tmux pane. */
+      #winWrap { position: absolute; left: 244px; top: 176px; width: 1433px; height: 539px; opacity: 0; }
+      #win {
+        position: relative; width: 100%; height: 100%; border-radius: 18px; overflow: hidden;
+        background: #1e1e2e; border: 1px solid rgba(205, 214, 244, 0.12);
+        box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 0 90px rgba(203, 166, 247, 0.14);
+      }
+      .titlebar {
+        position: relative; height: 48px; background: #181825; display: flex; align-items: center;
+        padding: 0 20px; border-bottom: 1px solid rgba(205, 214, 244, 0.07);
+      }
+      .dot { width: 14px; height: 14px; border-radius: 50%; margin-right: 9px; }
+      .dot.r { background: #f38ba8; } .dot.y { background: #f9e2af; } .dot.g { background: #a6e3a1; }
+      .wtitle {
+        position: absolute; left: 0; right: 0; text-align: center;
+        font-family: "Inter", sans-serif; font-weight: 500; font-size: 18px; color: #a6adc8;
+      }
+      .screen {
+        position: absolute; left: 14px; top: 66px; width: 1405px; height: 455px; overflow: hidden;
+        font-family: "JetBrains Mono", "Noto Color Emoji", monospace; font-size: 26px; line-height: 35px;
+        color: #cdd6f4;
+      }
+      .demo { position: absolute; inset: 0; opacity: 0; }
+      .rows { position: absolute; left: 16px; top: 0; width: 1373px; height: 700px; }
+      .run { position: absolute; height: 35px; white-space: pre; opacity: 0; }
+      .run.b { font-weight: 700; }
+      .run.w2 {
+        width: 31.2px; text-align: center; font-family: "Noto Color Emoji", sans-serif; font-size: 22px;
+      }
+      .cursor { position: absolute; left: 0; top: 1px; width: 15.6px; height: 33px; background: #f5e0dc; opacity: 0; }
+      .hl {
+        position: absolute; border-radius: 7px; border: 2px solid #f5c2e7; opacity: 0;
+        background: rgba(245, 194, 231, 0.10); box-shadow: 0 0 24px rgba(245, 194, 231, 0.32);
+      }
+
+      /* ---------- captions ---------- */
+      #captions { position: absolute; left: 120px; right: 120px; top: 743px; height: 190px; }
+      .cap-eyebrow {
+        position: absolute; left: 0; right: 0; top: 0; text-align: center; opacity: 0;
+        font-family: "Inter", sans-serif; font-weight: 600; font-size: 21px; letter-spacing: 0.24em; color: #f5c2e7;
+      }
+      .cap {
+        position: absolute; left: 0; right: 0; top: 40px; text-align: center; opacity: 0;
+        font-family: "Inter", sans-serif; font-weight: 600; font-size: 42px; line-height: 54px; color: #f5f5fa;
+      }
+      .cap em { font-style: normal; color: #f5c2e7; }
+      .cap code { font-family: "JetBrains Mono", monospace; font-size: 38px; color: #a6e3a1; }
+      #watermark {
+        position: absolute; right: 36px; bottom: 22px; opacity: 0;
+        font-family: "JetBrains Mono", monospace; font-size: 19px; color: rgba(205, 214, 244, 0.55);
+      }
+
+      /* ---------- end card ---------- */
+      #end .wordmark { height: 170px; width: 520px; font-size: 144px; line-height: 170px; margin: 0 0 6px; }
+      #end .slot { width: 86.4px; height: 170px; }
+      .install {
+        margin-top: 44px; padding: 20px 38px; border-radius: 16px; opacity: 0;
+        background: #1e1e2e; border: 1px solid rgba(205, 214, 244, 0.14);
+        font-family: "JetBrains Mono", monospace; font-size: 40px; color: #cdd6f4;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      }
+      .install b { color: #a6e3a1; }
+      .link {
+        margin-top: 30px; font-family: "Inter", sans-serif; font-weight: 600; font-size: 38px; color: #f5c2e7; opacity: 0;
+      }
+      .chips { margin-top: 38px; display: flex; gap: 18px; }
+      .chip {
+        padding: 10px 22px; border-radius: 999px; opacity: 0;
+        border: 1px solid rgba(203, 166, 247, 0.45); background: rgba(203, 166, 247, 0.10);
+        font-family: "Inter", sans-serif; font-weight: 500; font-size: 24px; color: #e6e1f5;
+      }
+      .credit {
+        position: absolute; left: 0; right: 0; bottom: 40px; text-align: center; opacity: 0;
+        font-family: "Inter", sans-serif; font-weight: 500; font-size: 22px; color: rgba(205, 214, 244, 0.6);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="41" data-width="1920" data-height="1080">
+      <div id="bg" class="clip" data-start="0" data-duration="41" data-track-index="0">
+        <div id="glyphs" data-layout-allow-overflow data-layout-allow-occlusion></div>
+        <div id="vignette"></div>
+        <div id="glow"></div>
+      </div>
+
+      <section id="title" class="clip" data-start="0" data-duration="4.6" data-track-index="1">
+        <div id="titleStack" class="center-stack">
+          <div id="titleEyebrow" class="eyebrow-mono"><b>❯</b> github.com/bee-san/Ciphey</div>
+          <div id="titleMark" class="wordmark"></div>
+          <div id="titleTag" class="tagline">Automatic decoding &amp; cracking, right in your terminal</div>
+          <div id="titleSub" class="subline">Rust<i>·</i>A* search<i>·</i>24 decoders &amp; crackers<i>·</i>LemmeKnow</div>
+        </div>
+      </section>
+
+      <section id="stage" class="clip" data-start="4.3" data-duration="31.3" data-track-index="2">
+        <div id="winWrap">
+          <div id="win">
+            <div class="titlebar">
+              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+              <div class="wtitle">bash</div>
+            </div>
+            <div id="screen" class="screen"></div>
+          </div>
+        </div>
+        <div id="captions"></div>
+        <div id="watermark">❯ ciphey · github.com/bee-san/Ciphey</div>
+      </section>
+
+      <section id="end" class="clip" data-start="35.1" data-duration="5.9" data-track-index="3">
+        <div id="endStack" class="center-stack">
+          <div id="endMark" class="wordmark"></div>
+          <div id="endTag" class="tagline">Paste in the gibberish. Get the plaintext back.</div>
+          <div id="endInstall" class="install"><b>❯</b> cargo install ciphey</div>
+          <div id="endLink" class="link">github.com/bee-san/Ciphey</div>
+          <div id="endChips" class="chips">
+            <div class="chip">24 decoders &amp; crackers</div>
+            <div class="chip">A* search</div>
+            <div class="chip">LemmeKnow detection</div>
+            <div class="chip">Colour themes</div>
+          </div>
+        </div>
+        <div id="endCredit" class="credit">Made with HyperFrames · every terminal scene replays a real ciphey session captured in tmux</div>
+      </section>
+    </div>
+
+    <script>
+      (function () {
+        const CAP = window.CIPHEY_CAPTURES;
+        const DUR = 41;
+        const CW = 15.6; // JetBrains Mono advance at 26px (0.6em)
+        const LH = 35;
+        const ROWS = 20;
+        const COLS = 88;
+        const ROW_STAGGER = 0.014; // streaming feel for multi-line output
+        const tl = gsap.timeline({ paused: true });
+
+        // ---------- scene script (times in seconds, frame "at" values relative to scene start) ----------
+        const SCENES = [
+          {
+            id: "layers", start: 4.9, end: 13.9, eyebrow: "01 · MULTI-LAYER DECODING",
+            frames: [
+              { at: 0 },
+              { at: 0.5, typing: [[11, 0.05], [Infinity, 0.0045]] },
+              { at: 2.35 },
+              { at: 4.85 },
+              { at: 5.15 },
+            ],
+            captions: [
+              { at: 0.0, end: 2.3, html: "Got text that's been encoded over and over? Paste it in." },
+              { at: 2.35, end: 5.05, html: "Ciphey searches chains of decoders, then <em>checks with you</em> when it finds plaintext." },
+              { at: 5.15, end: 9.0, html: "Four layers of <code>Base64</code>, unwrapped automatically." },
+            ],
+            highlights: [
+              { text: "ciphey peels back every layer of encoding", at: 2.6, end: 4.85 },
+              { text: "Ciphey peels back every layer of encoding", at: 5.45, end: 8.75 },
+              { text: "Base64 → Base64 → Base64 → Base64", at: 5.75, end: 8.75 },
+            ],
+          },
+          {
+            id: "identify", start: 13.9, end: 21.5, eyebrow: "02 · KNOWS WHAT IT FOUND",
+            frames: [
+              { at: 0 },
+              { at: 0.4, typing: [[11, 0.05], [Infinity, 0.008]] },
+              { at: 1.85 },
+              { at: 4.3 },
+              { at: 4.6 },
+            ],
+            captions: [
+              { at: 0.0, end: 1.8, html: "No need to say which encoding was used." },
+              { at: 1.85, end: 4.5, html: "It recognises what it found: here, a <em>CTF flag</em> (via LemmeKnow)." },
+              { at: 4.6, end: 7.6, html: "<code>flag{…}</code> recovered from Hexadecimal." },
+            ],
+            highlights: [
+              { text: "Capture The Flag (CTF) Flag", at: 2.1, end: 4.3 },
+              { text: "flag{ciphey_did_the_hard_part}", at: 4.9, end: 7.35, last: true },
+            ],
+          },
+          {
+            id: "firstrun", start: 21.5, end: 35.5, eyebrow: "03 · FIRST-RUN SETUP",
+            frames: [
+              { at: 0 },
+              { at: 0.35, typing: [[11, 0.05], [Infinity, 0.008]] },
+              { at: 1.55 },
+              { at: 2.45 }, { at: 2.7 },   // tutorial? n
+              { at: 3.55 }, { at: 3.8 },   // custom colour scheme? y  -> theme list
+              { at: 6.0 }, { at: 6.3 },    // pick 3 (GirlyPop)
+              { at: 7.15 }, { at: 7.4 },   // ask about each plaintext: 1
+              { at: 8.0 },                 // no wordlist
+              { at: 8.55 },                // no enhanced detection
+              { at: 9.15 }, { at: 9.4 },   // cute cat? y
+              { at: 10.7 }, { at: 11.0 },  // confirm plaintext
+            ],
+            captions: [
+              { at: 0.0, end: 3.75, html: "First run? A short wizard sets Ciphey up, right in the terminal." },
+              { at: 3.8, end: 6.25, html: "Pick a <em>colour theme</em>, or define your own." },
+              { at: 6.3, end: 9.35, html: "Choose how results are shown, add wordlists, opt into enhanced detection." },
+              { at: 9.4, end: 10.95, html: "(Yes, there's a cat.)" },
+              { at: 11.0, end: 13.6, html: "The theme applies straight away and is saved to <code>~/.ciphey/config.toml</code>" },
+            ],
+            highlights: [
+              { text: "3. 💖✨💐 GirlyPop", at: 4.5, end: 6.3, rows: 2, minWidth: 61 },
+              { text: "Wow! That was a cool configuration!", at: 11.3, end: 13.25, last: true },
+            ],
+          },
+        ];
+
+        // ---------- helpers ----------
+        function mulberry32(seed) {
+          return function () {
+            seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+            let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+        function make(tag, cls, parent, text) {
+          const node = document.createElement(tag);
+          if (cls) node.className = cls;
+          if (text != null) node.textContent = text;
+          if (parent) parent.appendChild(node);
+          return node;
+        }
+        // Rebuild a row as an array of column cells (wide glyphs take two).
+        function rowCells(lines, r) {
+          const cells = [];
+          for (const [t, , , c, w] of lines[r] || []) {
+            if (w === 2) { cells[c] = t; cells[c + 1] = ""; continue; }
+            Array.from(t).forEach((ch, i) => { cells[c + i] = ch; });
+          }
+          return cells;
+        }
+        function findText(cap, text, last) {
+          const order = [...cap.lines.keys()];
+          if (last) order.reverse();
+          for (const r of order) {
+            const cells = rowCells(cap.lines, r);
+            // One map entry per code point -> its column (a wide/VS16 glyph is one cell).
+            let str = "";
+            const map = [];
+            for (let col = 0; col < cells.length; col++) {
+              const ch = cells[col] ?? " ";
+              if (ch === "") continue;
+              for (const cp of Array.from(ch)) { map.push(col); str += cp; }
+            }
+            const idx = str.indexOf(text);
+            if (idx < 0) continue;
+            const first = Array.from(str.slice(0, idx)).length;
+            const lastCp = Array.from(str.slice(0, idx + text.length)).length - 1;
+            const startCol = map[first];
+            const endCol = map[lastCp] + (cells[map[lastCp] + 1] === "" ? 2 : 1);
+            return { row: r, col: startCol, width: endCol - startCol };
+          }
+          throw new Error("text not found in capture: " + text);
+        }
+
+        // ---------- background glyph rows (real ciphertext from the captures) ----------
+        const glyphHost = document.getElementById("glyphs");
+        const typedStrings = SCENES.map((s) => {
+          const cmd = CAP[s.id].frames.find((f) => f.typed).typed;
+          return cmd.slice(cmd.indexOf("'") + 1, cmd.lastIndexOf("'"));
+        });
+        const rnd = mulberry32(42);
+        for (let i = 0; i < 16; i++) {
+          const src = typedStrings[i % typedStrings.length];
+          const row = make("div", "grow", glyphHost, (src + "  ").repeat(Math.ceil(300 / src.length)));
+          row.setAttribute("data-layout-allow-overflow", "");
+          row.setAttribute("data-layout-allow-occlusion", "");
+          row.style.top = 18 + i * 66 + "px";
+          const alpha = 0.035 + rnd() * 0.05;
+          row.style.opacity = alpha.toFixed(3);
+          const dir = i % 2 ? 1 : -1;
+          const x0 = -rnd() * 600;
+          tl.fromTo(row, { x: x0 }, { x: x0 + dir * (160 + rnd() * 120), duration: DUR, ease: "none" }, 0);
+        }
+
+        // ---------- wordmark scramble (title + end card) ----------
+        const NOISE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+        const LETTER_COLORS = ["#cba6f7", "#d3a6f1", "#dca7ea", "#e6a8e2", "#f0a3d6", "#f5c2e7"];
+        function buildWordmark(host, slotWidth, seed, startAt) {
+          const word = "Ciphey";
+          const r = mulberry32(seed);
+          Array.from(word).forEach((letter, i) => {
+            const slot = make("div", "slot", host);
+            slot.style.left = i * slotWidth + "px";
+            slot.style.width = slotWidth + "px";
+            const steps = 5 + i * 2;
+            let t = startAt;
+            for (let k = 0; k < steps; k++) {
+              const g = make("span", "noise", slot, NOISE[Math.floor(r() * NOISE.length)]);
+              tl.set(g, { opacity: 1 }, t);
+              t += 0.055;
+              tl.set(g, { opacity: 0 }, t);
+            }
+            const fin = make("span", "", slot, letter);
+            fin.style.color = LETTER_COLORS[i];
+            tl.fromTo(fin, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.25, ease: "power3.out" }, t);
+          });
+        }
+
+        // ---------- title card ----------
+        buildWordmark(document.getElementById("titleMark"), 101, 7, 0.45);
+        tl.fromTo("#titleEyebrow", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.2);
+        tl.fromTo("#titleTag", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 1.45);
+        tl.fromTo("#titleSub", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 1.9);
+        tl.to("#titleStack", { opacity: 0, y: -50, scale: 0.97, duration: 0.45, ease: "power2.in" }, 4.0);
+
+        // ---------- terminal window ----------
+        tl.fromTo("#winWrap", { opacity: 0, y: 70, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.75, ease: "power3.out" }, 4.4);
+        tl.fromTo("#watermark", { opacity: 0 }, { opacity: 1, duration: 0.6 }, 4.9);
+        tl.to("#winWrap", { opacity: 0, y: -156, scale: 0.92, duration: 0.45, ease: "power2.in" }, 34.8);
+        tl.to("#captions", { opacity: 0, duration: 0.4 }, 34.8);
+        tl.to("#watermark", { opacity: 0, duration: 0.4 }, 34.8);
+
+        const screen = document.getElementById("screen");
+        const captionsHost = document.getElementById("captions");
+
+        function buildScene(scene) {
+          const cap = CAP[scene.id];
+          const demo = make("div", "demo", screen);
+          demo.id = "demo-" + scene.id;
+          const rowsEl = make("div", "rows", demo);
+          rowsEl.style.height = Math.max(ROWS, cap.lines.length) * LH + "px";
+          rowsEl.setAttribute("data-layout-allow-overflow", ""); // scrollback lives above the viewport
+          const T = (k) => scene.start + scene.frames[k].at;
+
+          // Cells grouped by the snapshot ("frame") in which they first appeared.
+          const byFrame = cap.frames.map(() => []);
+          cap.lines.forEach((runs, r) => {
+            runs.forEach(([t, s, b, c, w]) => {
+              const st = cap.styles[s];
+              const span = make("span", "run" + (st.b ? " b" : "") + (w === 2 ? " w2" : ""), rowsEl, t);
+              span.style.left = c * CW + "px";
+              span.style.top = r * LH + "px";
+              if (st.fg) span.style.color = st.fg;
+              if (st.bg) span.style.background = st.bg;
+              byFrame[b].push({ el: span, r, c, len: w === 2 ? 2 : Array.from(t).length });
+            });
+          });
+          const cursor = make("div", "cursor", rowsEl);
+
+          // Scene in/out.
+          tl.set(demo, { opacity: 1 }, scene.start);
+          tl.to(demo, { opacity: 0, duration: 0.3, ease: "power1.in" }, scene.end - 0.3);
+
+          const cursorEvents = []; // [time, row, col]
+          let top = 0;
+          const scrollTo = (newTop, t) => {
+            if (newTop <= top) return;
+            tl.fromTo(rowsEl, { y: -top * LH }, { y: -newTop * LH, duration: 0.12, ease: "power2.out", immediateRender: false }, t);
+            top = newTop;
+          };
+
+          cap.frames.forEach((frame, k) => {
+            const t0 = T(k);
+            const cells = byFrame[k].sort((a, b) => a.r - b.r || a.c - b.c);
+            if (frame.kind === "type") {
+              const plan = scene.frames[k].typing || [[Infinity, 0.07]];
+              let t = t0, seg = 0, used = 0;
+              cells.forEach((cell) => {
+                tl.set(cell.el, { opacity: 1 }, t);
+                if (cell.r - ROWS + 1 > top) scrollTo(cell.r - ROWS + 1, t);
+                const next = cell.c + cell.len >= COLS ? [cell.r + 1, 0] : [cell.r, cell.c + cell.len];
+                cursorEvents.push([t, next[0], next[1]]);
+                used++;
+                if (used >= plan[seg][0] && seg < plan.length - 1) { seg++; used = 0; }
+                t += plan[seg][1];
+              });
+            } else {
+              const rows = [...new Set(cells.map((c) => c.r))];
+              rows.forEach((r, j) => {
+                const t = t0 + j * ROW_STAGGER;
+                cells.filter((c) => c.r === r).forEach((c) => tl.set(c.el, { opacity: 1 }, t));
+                if (r - ROWS + 1 > top) scrollTo(Math.min(frame.top, r - ROWS + 1), t);
+              });
+              const tEnd = t0 + Math.max(0, rows.length - 1) * ROW_STAGGER;
+              scrollTo(frame.top, tEnd);
+              cursorEvents.push([k === 0 ? scene.start : tEnd, frame.cursor[0], frame.cursor[1]]);
+            }
+          });
+
+          // Cursor: follow events, blink while idle (finite, seek-safe).
+          cursorEvents.sort((a, b) => a[0] - b[0]);
+          cursorEvents.forEach(([t, r, c], i) => {
+            tl.set(cursor, { x: c * CW, y: r * LH, opacity: 1 }, t);
+            const next = i + 1 < cursorEvents.length ? cursorEvents[i + 1][0] : scene.end - 0.3;
+            for (let b = t + 0.55, on = false; b < next - 0.12; b += 0.5, on = !on) {
+              tl.set(cursor, { opacity: on ? 1 : 0 }, b);
+            }
+          });
+
+          // Highlights attached to the scrolling rows.
+          (scene.highlights || []).forEach((h) => {
+            const pos = findText(cap, h.text, h.last);
+            const box = make("div", "hl", rowsEl);
+            const rowsSpan = h.rows || 1;
+            const width = Math.max(pos.width, h.minWidth || 0) * CW;
+            box.style.left = pos.col * CW - 5 + "px";
+            box.style.top = pos.row * LH - 1 + "px";
+            box.style.width = width + 10 + "px";
+            box.style.height = rowsSpan * LH + 2 + "px";
+            tl.fromTo(box, { opacity: 0, scale: 0.97 }, { opacity: 1, scale: 1, duration: 0.3, ease: "power2.out" }, scene.start + h.at);
+            tl.to(box, { opacity: 0, duration: 0.25 }, scene.start + h.end);
+          });
+
+          // Captions.
+          const eyebrow = make("div", "cap-eyebrow", captionsHost, scene.eyebrow);
+          tl.fromTo(eyebrow, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, scene.start);
+          tl.to(eyebrow, { opacity: 0, duration: 0.25 }, scene.end - 0.3);
+          scene.captions.forEach((c) => {
+            const node = make("div", "cap", captionsHost);
+            node.innerHTML = c.html;
+            tl.fromTo(node, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, scene.start + c.at);
+            tl.to(node, { opacity: 0, y: -10, duration: 0.25, ease: "power1.in" }, scene.start + c.end - 0.25);
+          });
+        }
+        SCENES.forEach(buildScene);
+
+        // Grow the window from the compact 13-row view to the full 20-row pane for the wizard.
+        tl.to("#winWrap", { y: -126, height: 784, duration: 0.6, ease: "power3.inOut" }, 21.25);
+        tl.to("#screen", { height: 700, duration: 0.6, ease: "power3.inOut" }, 21.25);
+        tl.to("#captions", { y: 119, duration: 0.6, ease: "power3.inOut" }, 21.25);
+
+        // ---------- end card ----------
+        buildWordmark(document.getElementById("endMark"), 86.4, 99, 35.35);
+        tl.fromTo("#endTag", { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.55, ease: "power3.out" }, 36.2);
+        tl.fromTo("#endInstall", { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.55, ease: "power3.out" }, 36.55);
+        tl.fromTo("#endLink", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 36.9);
+        gsap.utils.toArray("#endChips .chip").forEach((chip, i) => {
+          tl.fromTo(chip, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 37.2 + i * 0.12);
+        });
+        tl.fromTo("#endCredit", { opacity: 0 }, { opacity: 1, duration: 0.6 }, 37.8);
+
+        // Register only after fonts are ready so the first frame uses the real faces.
+        const faces = [
+          '400 26px "JetBrains Mono"', '700 26px "JetBrains Mono"', '500 22px "Inter"', '600 42px "Inter"',
+          '700 54px "Inter Display"', '22px "Noto Color Emoji"',
+        ];
+        Promise.all(faces.map((f) => document.fonts.load(f, f.includes("Emoji") ? "🕵🤠🥳💖✨💐" : "Ciphey")))
+          .catch(() => {})
+          .then(() => document.fonts.ready)
+          .then(() => {
+            window.__timelines["main"] = tl;
+            if (window.__hfForceTimelineRebind) window.__hfForceTimelineRebind();
+          });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,70 @@
+{
+ "demo": "identify",
+ "cols": 88,
+ "rows": 20,
+ "title": "Recognises what it found",
+ "frames": [
+  {
+   "index": 0,
+   "kind": "output",
+   "label": "shell prompt",
+   "file": "00.ansi",
+   "elapsed": 0.65,
+   "history": 0,
+   "cursor_x": 2,
+   "cursor_y": 0,
+   "cols": 88,
+   "rows": 20
+  },
+  {
+   "index": 1,
+   "kind": "type",
+   "label": "run ciphey",
+   "file": "01.ansi",
+   "elapsed": 0.982,
+   "history": 0,
+   "cursor_x": 74,
+   "cursor_y": 0,
+   "cols": 88,
+   "rows": 20,
+   "typed": "ciphey -t '666c61677b6369706865795f6469645f7468655f686172645f706172747d'"
+  },
+  {
+   "index": 2,
+   "kind": "output",
+   "label": "run ciphey",
+   "file": "02.ansi",
+   "elapsed": 1.655,
+   "history": 0,
+   "cursor_x": 0,
+   "cursor_y": 3,
+   "cols": 88,
+   "rows": 20
+  },
+  {
+   "index": 3,
+   "kind": "type",
+   "label": "confirm plaintext",
+   "file": "03.ansi",
+   "elapsed": 1.994,
+   "history": 0,
+   "cursor_x": 1,
+   "cursor_y": 3,
+   "cols": 88,
+   "rows": 20,
+   "typed": "y"
+  },
+  {
+   "index": 4,
+   "kind": "output",
+   "label": "confirm plaintext",
+   "file": "04.ansi",
+   "elapsed": 2.703,
+   "history": 0,
+   "cursor_x": 2,
+   "cursor_y": 10,
+   "cols": 88,
+   "rows": 20
+  }
+ ]
+}

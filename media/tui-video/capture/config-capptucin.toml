@@ -1,0 +1,19 @@
+verbose = 0
+lemmeknow_min_rarity = 0.0
+lemmeknow_max_rarity = 0.0
+lemmeknow_tags = []
+lemmeknow_exclude_tags = []
+lemmeknow_boundaryless = false
+human_checker_on = false
+timeout = 5
+top_results = false
+api_mode = false
+enhanced_detection = false
+
+[colourscheme]
+statement = "244,219,214"
+informational = "238,212,159"
+warning = "237,135,150"
+question = "202,211,245"
+top_results = "false"
+success = "166,218,149"

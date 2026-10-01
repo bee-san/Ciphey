@@ -1,0 +1,95 @@
+{
+  "cols": 88,
+  "rows": 20,
+  "demos": {
+    "layers": {
+      "title": "Multi-layer decoding",
+      "config": "config-capptucin.toml",
+      "plaintext": "Ciphey peels back every layer of encoding",
+      "encoding": "base64(base64(base64(base64(plaintext))))",
+      "steps": [
+        {
+          "type": "ciphey -t 'VlZSS2MyUXlSa2hXYWxaS1UwVktjMWRzWkRSbGEyeElVMjFvV2sxdVRtNVhiR2hoWWtkT2RXRXlaR2xTTUZreFYyeG9TbG95U1hsWFYyUmhWbnBXY1ZscVNsTmpSMHAwV1hvd1BRPT0='",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "run ciphey"
+        },
+        {
+          "type": "y",
+          "expect": "^❯\\s*$",
+          "label": "confirm plaintext"
+        }
+      ]
+    },
+    "identify": {
+      "title": "Recognises what it found",
+      "config": "config-capptucin.toml",
+      "plaintext": "flag{ciphey_did_the_hard_part}",
+      "encoding": "hex(plaintext)",
+      "steps": [
+        {
+          "type": "ciphey -t '666c61677b6369706865795f6469645f7468655f686172645f706172747d'",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "run ciphey"
+        },
+        {
+          "type": "y",
+          "expect": "^❯\\s*$",
+          "label": "confirm plaintext"
+        }
+      ]
+    },
+    "firstrun": {
+      "title": "First run: pick a theme",
+      "config": null,
+      "plaintext": "Wow! That was a cool configuration!",
+      "encoding": "base32(plaintext) (input taken from images/first_run.tape)",
+      "steps": [
+        {
+          "type": "ciphey -t 'K5XXOIJAKRUGC5BAO5QXGIDBEBRW633MEBRW63TGNFTXK4TBORUW63RB'",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "run ciphey (first run)"
+        },
+        {
+          "type": "n",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "tutorial? no"
+        },
+        {
+          "type": "y",
+          "expect": "\\(1-5\\):\\s*$",
+          "label": "custom colour scheme? yes"
+        },
+        {
+          "type": "3",
+          "expect": "\\(1-2\\):\\s*$",
+          "label": "pick GirlyPop"
+        },
+        {
+          "type": "1",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "ask me about each plaintext"
+        },
+        {
+          "type": "",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "no wordlist"
+        },
+        {
+          "type": "",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "no enhanced detection"
+        },
+        {
+          "type": "y",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "cute cat? yes"
+        },
+        {
+          "type": "y",
+          "expect": "^❯\\s*$",
+          "label": "confirm plaintext"
+        }
+      ]
+    }
+  }
+}
