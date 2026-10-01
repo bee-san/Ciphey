@@ -320,6 +320,22 @@ success = true
 input = "-.-. .. .--. .... . -.-- / .. ... / .- -. / .- ..- - --- -- .- - . -.. / -.. . -.-. --- -.. .. -. --. / - --- --- .-.. .-.-.- / -.-- --- ..- / --. .. ...- . / .. - / . -. -.-. .-. -.-- .--. - . -.. / --- .-. / . -. -.-. --- -.. . -.. / - . -..- - / .- -. -.. / .. - / - .-. .. . ... / - --- / .-- --- .-. -.- / --- ..- - / .-- .... .- - / .-- .- ... / -.. --- -. . / - --- / .. - --..-- / .-- .. - .... --- ..- - / -.-- --- ..- / .... .- ...- .. -. --. / - --- / -.- -. --- .-- / - .... . / -.- . -.-- / --- .-. / . ...- . -. / - .... . / -.-. .. .--. .... . .-. .-.-.- / .. - / ... . .- .-. -.-. .... . ... / - .... .-. --- ..- --. .... / -- .- -. -.-- / .--. --- ... ... .. -... .-.. . / -.. . -.-. --- -.. .. -. --. ... --..-- / -.-. .... . -.-. -.- ... / . .- -.-. .... / -.-. .- -. -.. .. -.. .- - . / - --- / ... . . / .-- .... . - .... . .-. / .. - / .-.. --- --- -.- ... / .-.. .. -.- . / . -. --. .-.. .. ... .... / --- .-. / -- .- - -.-. .... . ... / .- / -.- -. --- .-- -. / .--. .- - - . .-. -. / ... ..- -.-. .... / .- ... / .- -. / . -- .- .. .-.. / .- -.. -.. .-. . ... ... --..-- / .- -. -.. / ... - --- .--. ... / .-- .... . -. / .. - / ..-. .. -. -.. ... / ... --- -- . - .... .. -. --. / - .... .- - / .-. . .- -.. ... / .-.. .. -.- . / .--. .-.. .- .. -. - . -..- - .-.-.- / -- --- ... - / --- ..-. / - .... . / - .. -- . / - .... .. ... / - .- -.- . ... / .-.. . ... ... / - .... .- -. / .- / ... . -.-. --- -. -.. --..-- / .-- .... .. -.-. .... / -- .- -.- . ... / .. - / .... .- -. -.. -.-- / ..-. --- .-. / -.-. .- .--. - ..- .-. . / - .... . / ..-. .-.. .- --. / -.-. .... .- .-.. .-.. . -. --. . ... --..-- / .--. ..- --.. --.. .-.. . / .... ..- -. - ... / .- -. -.. / ..-. --- .-. / .- -. -.-- --- -. . / .-- .... --- / ... - ..- -- -... .-.. . ... / .- -.-. .-. --- ... ... / .- / ... - .-. .- -. --. . / ... - .-. .. -. --. / .. -. / .- / .-.. --- --. / ..-. .. .-.. . .-.-.-"
 expected = "CIPHEY IS AN AUTOMATED DECODING TOOL. YOU GIVE IT ENCRYPTED OR ENCODED TEXT AND IT TRIES TO WORK OUT WHAT WAS DONE TO IT, WITHOUT YOU HAVING TO KNOW THE KEY OR EVEN THE CIPHER. IT SEARCHES THROUGH MANY POSSIBLE DECODINGS, CHECKS EACH CANDIDATE TO SEE WHETHER IT LOOKS LIKE ENGLISH OR MATCHES A KNOWN PATTERN SUCH AS AN EMAIL ADDRESS, AND STOPS WHEN IT FINDS SOMETHING THAT READS LIKE PLAINTEXT. MOST OF THE TIME THIS TAKES LESS THAN A SECOND, WHICH MAKES IT HANDY FOR CAPTURE THE FLAG CHALLENGES, PUZZLE HUNTS AND FOR ANYONE WHO STUMBLES ACROSS A STRANGE STRING IN A LOG FILE."
 
+# Python's quopri.encodestring(text, quotetabs=True): spaces become =20 and lines are
+# wrapped at 76 characters with soft line breaks.
+[[case]]
+decoder = "Quoted-Printable"
+size = "medium"
+success = true
+input = "Meet=20me=20at=20the=20old=20lighthouse=20after=20midnight=20and=20bring=20=\nthe=20map,=20the=20key=20and=20a=20torch."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "Quoted-Printable"
+size = "long"
+success = true
+input = "Ciphey=20is=20an=20automated=20decoding=20tool.=20You=20give=20it=20encrypt=\ned=20or=20encoded=20text=20and=20it=20tries=20to=20work=20out=20what=20was=\n=20done=20to=20it,=20without=20you=20having=20to=20know=20the=20key=20or=20=\neven=20the=20cipher.=20It=20searches=20through=20many=20possible=20decoding=\ns,=20checks=20each=20candidate=20to=20see=20whether=20it=20looks=20like=20E=\nnglish=20or=20matches=20a=20known=20pattern=20such=20as=20an=20email=20addr=\ness,=20and=20stops=20when=20it=20finds=20something=20that=20reads=20like=20=\nplaintext.=20Most=20of=20the=20time=20this=20takes=20less=20than=20a=20seco=\nnd,=20which=20makes=20it=20handy=20for=20capture=20the=20flag=20challenges,=\n=20puzzle=20hunts=20and=20for=20anyone=20who=20stumbles=20across=20a=20stra=\nnge=20string=20in=20a=20log=20file."
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
 [[case]]
 decoder = "Octal"
 size = "medium"

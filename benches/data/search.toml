@@ -105,6 +105,13 @@ expected = "Meet me at the old lighthouse after midnight and bring the map, the 
 
 [[case]]
 kind = "single"
+name = "quoted_printable"
+layers = ["Quoted-Printable"]
+input = "Meet=20me=20at=20the=20old=20lighthouse=20after=20midnight=20and=20bring=20=\nthe=20map,=20the=20key=20and=20a=20torch."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
 name = "citrix_ctx1"
 layers = ["Citrix Ctx1"]
 input = "OIENINCIOIENJMDJLMBJNBHELEBBJEDBPFFAIBCEKBAENFHALNBINIHNPIFNJHDCPLFOJPDKLPBKNDHGLKBPNNHILFBAMBGEKJAMMGGDLDBGMAGFKFAAIFCAOEEBICCHPGFDJDDGOBEEMBGEKMAJMFGAKBAEMPGKKGADMBGEKJAMNNHIPNFIJMDJPCFHJGDDLGBDNEHBKGADMPGKKBAEMGGDOGEDJCDHPKFPJPDKLPBKNCHHLDBGMDGGOPEKMPGKLLBONDHGLGBDJGDDPNFIJIDNOBEEMBGEKAAFMOGLKKAPIKCPOLEOMLGOLPBKNAHFKCAHMBGEKJAMIHCC"
