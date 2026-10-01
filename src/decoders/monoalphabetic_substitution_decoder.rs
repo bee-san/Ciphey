@@ -111,7 +111,13 @@ const WORD_WEIGHT: f64 = 1.0;
 /// A decryption without word breaks is only shown to the checker if dictionary words
 /// can cover this share of its letters. The checker can't judge it otherwise: it reads
 /// the whole text as one word.
-const MIN_WORD_COVERAGE: f64 = 0.9;
+const MIN_COVERAGE_WITHOUT_BREAKS: f64 = 0.9;
+
+/// A decryption with word breaks is only shown to the checker if this share of the
+/// letters of its words are in dictionary words. Paragraphs of English novels have at
+/// least 0.38 (median 0.92), the modern test texts 0.64. The checker accepted two short
+/// decryptions of Vigenère ciphertexts, with 0.10 and 0.22.
+const MIN_COVERAGE_WITH_BREAKS: f64 = 0.3;
 
 /// The cache is cleared when it grows past this many patterns.
 const CACHE_LIMIT: usize = 1024;
@@ -167,7 +173,7 @@ impl Crack for Decoder<MonoalphabeticSubstitutionDecoder> {
     fn new() -> Decoder<MonoalphabeticSubstitutionDecoder> {
         Decoder {
             name: "Monoalphabetic Substitution",
-            description: "A simple substitution cipher replaces every letter with another letter, using any permutation of the alphabet as the key, as in cryptograms, keyword ciphers, Aristocrats and Patristocrats. Ciphey finds the key with simulated annealing scored by English quadgram frequencies. Uses Low sensitivity for gibberish detection when the text has word breaks. Without them, the decryption is first split into dictionary words, and only checked, at High sensitivity, if words cover 90% of it.",
+            description: "A simple substitution cipher replaces every letter with another letter, using any permutation of the alphabet as the key, as in cryptograms, keyword ciphers, Aristocrats and Patristocrats. Ciphey finds the key with simulated annealing scored by English quadgram frequencies. Uses Low sensitivity for gibberish detection when the text has word breaks, once 30% of its letters are in dictionary words. Without word breaks, the decryption is split into dictionary words and only checked, at High sensitivity, if they cover 90% of it.",
             link: "https://en.wikipedia.org/wiki/Substitution_cipher",
             tags: vec!["substitution", "monoalphabetic", "classic", "cryptogram"],
             popularity: 0.4,
@@ -293,7 +299,7 @@ enum Reason {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Layout {
     /// Words are separated by spaces, as in an Aristocrat. Checked at Low sensitivity,
-    /// like the other classical ciphers.
+    /// like the other classical ciphers, once enough of the words are dictionary words.
     Words,
     /// No word breaks: a Patristocrat, maybe in groups of five letters. The whitespace is
     /// removed, and the checker only sees decryptions that dictionary words mostly
@@ -516,7 +522,11 @@ fn search<T>(
 
     for candidate in candidates.iter().take(MAX_CHECKED) {
         let plaintext = ciphertext.decrypt(text, &candidate.key);
-        if ciphertext.layout == Layout::Unspaced && word_coverage(&plaintext) < MIN_WORD_COVERAGE {
+        let reads_as_words = match &words {
+            Some(words) => words.coverage(&candidate.key) >= MIN_COVERAGE_WITH_BREAKS,
+            None => word_coverage(&plaintext) >= MIN_COVERAGE_WITHOUT_BREAKS,
+        };
+        if !reads_as_words {
             continue;
         }
         stats.checked += 1;
@@ -992,6 +1002,12 @@ impl Words {
     /// Number of letters in words that are in the dictionary under `key`.
     fn dictionary_letters(&self, key: &[u8; 26]) -> usize {
         (0..self.words.len()).map(|w| self.score(w, key)).sum()
+    }
+
+    /// The share of the letters that are in dictionary words under `key`.
+    fn coverage(&self, key: &[u8; 26]) -> f64 {
+        let letters: usize = self.words.iter().map(Vec::len).sum();
+        self.dictionary_letters(key) as f64 / letters.max(1) as f64
     }
 }
 
@@ -1995,7 +2011,7 @@ mod tests {
         assert!(!DICTIONARY.contains(b"XQZ"));
         assert!(!DICTIONARY.contains(b"the"));
         let coverage = word_coverage(DICKENS_UNSPACED);
-        assert!(coverage > MIN_WORD_COVERAGE, "{coverage}");
+        assert!(coverage > MIN_COVERAGE_WITHOUT_BREAKS, "{coverage}");
         assert_eq!(word_coverage("ITWASTHEBESTOFTIMES"), 1.0);
         assert!(word_coverage("XQZJXQZJXQZJXQZJ") < 0.2);
         assert_eq!(word_coverage(""), 0.0);
@@ -2019,6 +2035,24 @@ mod tests {
             "https://en.wikipedia.org/wiki/Substitution_cipher"
         );
         assert!(crate::decoders::DECODER_MAP.contains_key(name));
+    }
+
+    #[test]
+    fn words_coverage() {
+        let words = Words::new(DICKENS);
+        assert_eq!(words.words.len(), 48);
+        // "FOOLISHNESS" and "EPOCH" (twice) aren't in the word list
+        assert_eq!(words.dictionary_letters(&IDENTITY), 174 - 11 - 2 * 5);
+        let coverage = words.coverage(&IDENTITY);
+        assert!((coverage - 153.0 / 174.0).abs() < 1e-12, "{coverage}");
+        // Decrypted with a wrong key, almost nothing is a word
+        let mut wrong = IDENTITY;
+        wrong.swap(4, 19); // E <-> T
+        wrong.swap(0, 14); // A <-> O
+        assert!(words.coverage(&wrong) < MIN_COVERAGE_WITH_BREAKS);
+        // Words with non-ASCII letters are left out
+        assert_eq!(Words::new("café au lait").words.len(), 2);
+        assert_eq!(Words::new("").coverage(&IDENTITY), 0.0);
     }
 
     #[test]
