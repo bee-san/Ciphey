@@ -42,6 +42,13 @@ expected = "Meet me at the old lighthouse after midnight and bring the map, the 
 
 [[case]]
 kind = "single"
+name = "decimal"
+layers = ["Decimal"]
+input = "77 101 101 116 32 109 101 32 97 116 32 116 104 101 32 111 108 100 32 108 105 103 104 116 104 111 117 115 101 32 97 102 116 101 114 32 109 105 100 110 105 103 104 116 32 97 110 100 32 98 114 105 110 103 32 116 104 101 32 109 97 112 44 32 116 104 101 32 107 101 121 32 97 110 100 32 97 32 116 111 114 99 104 46"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
 name = "base32"
 layers = ["Base32"]
 input = "JVSWK5BANVSSAYLUEB2GQZJAN5WGIIDMNFTWQ5DIN52XGZJAMFTHIZLSEBWWSZDONFTWQ5BAMFXGIIDCOJUW4ZZAORUGKIDNMFYCYIDUNBSSA23FPEQGC3TEEBQSA5DPOJRWQLQ="

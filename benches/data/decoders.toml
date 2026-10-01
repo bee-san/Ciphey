@@ -263,6 +263,20 @@ input = "OGEDIPCKPPFKJHDCPCFHILCOKLAOMCGHLBBEJBDEPAFFJODLLOBLNPHKKKAPNOHLLBBENMH
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
 [[case]]
+decoder = "Decimal"
+size = "medium"
+success = true
+input = "77 101 101 116 32 109 101 32 97 116 32 116 104 101 32 111 108 100 32 108 105 103 104 116 104 111 117 115 101 32 97 102 116 101 114 32 109 105 100 110 105 103 104 116 32 97 110 100 32 98 114 105 110 103 32 116 104 101 32 109 97 112 44 32 116 104 101 32 107 101 121 32 97 110 100 32 97 32 116 111 114 99 104 46"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "Decimal"
+size = "long"
+success = true
+input = "67 105 112 104 101 121 32 105 115 32 97 110 32 97 117 116 111 109 97 116 101 100 32 100 101 99 111 100 105 110 103 32 116 111 111 108 46 32 89 111 117 32 103 105 118 101 32 105 116 32 101 110 99 114 121 112 116 101 100 32 111 114 32 101 110 99 111 100 101 100 32 116 101 120 116 32 97 110 100 32 105 116 32 116 114 105 101 115 32 116 111 32 119 111 114 107 32 111 117 116 32 119 104 97 116 32 119 97 115 32 100 111 110 101 32 116 111 32 105 116 44 32 119 105 116 104 111 117 116 32 121 111 117 32 104 97 118 105 110 103 32 116 111 32 107 110 111 119 32 116 104 101 32 107 101 121 32 111 114 32 101 118 101 110 32 116 104 101 32 99 105 112 104 101 114 46 32 73 116 32 115 101 97 114 99 104 101 115 32 116 104 114 111 117 103 104 32 109 97 110 121 32 112 111 115 115 105 98 108 101 32 100 101 99 111 100 105 110 103 115 44 32 99 104 101 99 107 115 32 101 97 99 104 32 99 97 110 100 105 100 97 116 101 32 116 111 32 115 101 101 32 119 104 101 116 104 101 114 32 105 116 32 108 111 111 107 115 32 108 105 107 101 32 69 110 103 108 105 115 104 32 111 114 32 109 97 116 99 104 101 115 32 97 32 107 110 111 119 110 32 112 97 116 116 101 114 110 32 115 117 99 104 32 97 115 32 97 110 32 101 109 97 105 108 32 97 100 100 114 101 115 115 44 32 97 110 100 32 115 116 111 112 115 32 119 104 101 110 32 105 116 32 102 105 110 100 115 32 115 111 109 101 116 104 105 110 103 32 116 104 97 116 32 114 101 97 100 115 32 108 105 107 101 32 112 108 97 105 110 116 101 120 116 46 32 77 111 115 116 32 111 102 32 116 104 101 32 116 105 109 101 32 116 104 105 115 32 116 97 107 101 115 32 108 101 115 115 32 116 104 97 110 32 97 32 115 101 99 111 110 100 44 32 119 104 105 99 104 32 109 97 107 101 115 32 105 116 32 104 97 110 100 121 32 102 111 114 32 99 97 112 116 117 114 101 32 116 104 101 32 102 108 97 103 32 99 104 97 108 108 101 110 103 101 115 44 32 112 117 122 122 108 101 32 104 117 110 116 115 32 97 110 100 32 102 111 114 32 97 110 121 111 110 101 32 119 104 111 32 115 116 117 109 98 108 101 115 32 97 99 114 111 115 115 32 97 32 115 116 114 97 110 103 101 32 115 116 114 105 110 103 32 105 110 32 97 32 108 111 103 32 102 105 108 101 46"
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
+[[case]]
 decoder = "Hexadecimal"
 size = "medium"
 success = true
