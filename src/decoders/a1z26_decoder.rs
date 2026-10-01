@@ -6,7 +6,18 @@ use super::interface::Crack;
 use super::interface::Decoder;
 
 use log::{debug, info, trace};
+use once_cell::sync::Lazy;
 use regex::Regex;
+
+/// Input has at least one digit.
+static RE_HAS_A_DIGIT: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"[0-9]").expect("Regex should be valid"));
+/// Input is only digits and delimiters.
+static RE_ALL_VALID_CHARS: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\A([0-9,;:\-\s])*\z").expect("Regex should be valid"));
+/// Delimiters between the numbers.
+static RE_DELIMITERS: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"[,;:\-\s]+").expect("Regex should be valid"));
 
 /// A1Z26 Decoder
 pub struct A1Z26Decoder;
@@ -99,18 +110,15 @@ impl Crack for Decoder<A1Z26Decoder> {
 /// It returns an `Option<String>` if it was successful
 /// Else the Option returns nothing and the error is logged in Trace
 fn decode_a1z26(ctext: &str) -> Option<String> {
-    let re_has_a_digit = Regex::new(r"[0-9]").expect("Regex should be valid");
-    if !re_has_a_digit.is_match(ctext) {
+    if !RE_HAS_A_DIGIT.is_match(ctext) {
         return None;
     }
 
-    let re_all_valid_chars = Regex::new(r"\A([0-9,;:\-\s])*\z").expect("Regex should be valid");
-    if !re_all_valid_chars.is_match(ctext) {
+    if !RE_ALL_VALID_CHARS.is_match(ctext) {
         return None;
     }
 
-    let re_delimiters = Regex::new(r"[,;:\-\s]+").expect("Regex should be valid");
-    let letters: Option<Vec<char>> = re_delimiters
+    let letters: Option<Vec<char>> = RE_DELIMITERS
         .split(ctext)
         .filter(|x| !x.is_empty())
         .map(decode_one_char_a1z26)

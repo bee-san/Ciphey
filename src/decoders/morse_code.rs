@@ -6,7 +6,11 @@ use super::interface::Crack;
 use super::interface::Decoder;
 
 use log::{debug, info, trace};
+use once_cell::sync::Lazy;
 use regex::Regex;
+
+/// Runs of whitespace, collapsed to one space in the decoded text.
+static RE_WHITESPACE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").unwrap());
 
 /// Morse Code Decoder
 /// Does not support decoding of morse code with / instead of a space
@@ -35,8 +39,8 @@ impl Crack for Decoder<MorseCodeDecoder> {
         let decoded_text: Option<String> = text.split(' ').map(morse_to_alphanumeric).collect();
 
         // remove leading and trailing spaces, and collapse repeated spaces into a single space
-        let re = Regex::new(r"\s+").unwrap();
-        let decoded_text = decoded_text.map(|s| re.replace_all(s.trim(), " ").into_owned());
+        let decoded_text =
+            decoded_text.map(|s| RE_WHITESPACE.replace_all(s.trim(), " ").into_owned());
 
         trace!("Decoded text for morse code: {:?}", decoded_text);
         let mut results = CrackResult::new(self, text.to_string());
