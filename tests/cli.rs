@@ -264,3 +264,40 @@ fn top_results_can_be_set_in_the_config_file() {
         "{output}"
     );
 }
+
+#[test]
+fn top_results_mode_lists_results_when_the_input_is_cached() {
+    let home = TempHome::new("top-results-cached");
+    // Decode normally first so the plaintext is in the cache
+    let first = run(&home, &["-d", "-t", "SGVsbG8sIFdvcmxkIQ=="]);
+    assert!(first.stdout.contains("Hello, World!"), "{first}");
+
+    // Used to return the cached result straight away, and as top results mode only
+    // prints when the search timer expires, nothing at all was printed
+    let second = run(
+        &home,
+        &["--top-results", "-c", "1", "-t", "SGVsbG8sIFdvcmxkIQ=="],
+    );
+    assert_eq!(second.code, Some(0), "{second}");
+    assert!(
+        second.stdout.contains("List of Possible Plaintexts"),
+        "{second}"
+    );
+    assert!(second.stdout.contains("Hello, World!"), "{second}");
+}
+
+#[test]
+fn cached_plaintext_must_match_the_regex_crib() {
+    let home = TempHome::new("regex-crib-cached");
+    // Decode normally first so the plaintext is in the cache
+    let first = run(&home, &["-d", "-t", "aGVsbG8gd29ybGQ="]);
+    assert!(first.stdout.contains("hello world"), "{first}");
+
+    // "hello world" doesn't match the crib, but used to be returned from the cache
+    let second = run(
+        &home,
+        &["-d", "-c", "1", "--regex", "^xyz", "-t", "aGVsbG8gd29ybGQ="],
+    );
+    assert_eq!(second.code, Some(0), "{second}");
+    assert!(!second.stdout.contains("The plaintext is"), "{second}");
+}
