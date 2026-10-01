@@ -7,7 +7,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread;
 
-use crossbeam::channel::{bounded, Receiver};
+use crossbeam::channel::{bounded, Receiver, Select, TryRecvError};
 
 use crate::checkers::athena::Athena;
 use crate::checkers::checker_type::{Check, Checker};
@@ -81,45 +81,69 @@ fn wait_for_search_result(
     // If we're in top_results mode, we'll store the first result to return
     // at the end of the timer
     let mut first_result = None;
+    // A channel whose sender is gone is always "ready", so stop waiting on it.
+    let mut result_disconnected = false;
+    let mut timer_disconnected = false;
 
     loop {
-        if let Ok(res) = result_recv.try_recv() {
-            log::info!("Found potential plaintext result");
-            log::trace!("Result details: {:?}", res);
+        match result_recv.try_recv() {
+            Ok(res) => {
+                log::info!("Found potential plaintext result");
+                log::trace!("Result details: {:?}", res);
 
-            // In top_results mode, we store the first result but don't stop the search
-            if top_results_mode {
-                if first_result.is_none() {
-                    first_result = res;
+                // In top_results mode, we store the first result but don't stop the search
+                if top_results_mode {
+                    if first_result.is_none() {
+                        first_result = res;
+                    }
+                    // Continue searching for more results
+                } else {
+                    // In normal mode, we stop the search and return the result
+                    stop_search(&stop, handle, &result_recv);
+                    return Ok(res);
                 }
-                // Continue searching for more results
-            } else {
-                // In normal mode, we stop the search and return the result
-                stop_search(&stop, handle, &result_recv);
-                return Ok(res);
             }
+            Err(TryRecvError::Disconnected) => result_disconnected = true,
+            Err(TryRecvError::Empty) => {}
         }
 
-        if timer.try_recv().is_ok() {
-            log::info!("Search timer expired");
-            // Wait for the thread to finish to ensure any ongoing human checker interaction completes
-            let late_result = stop_search(&stop, handle, &result_recv);
+        match timer.try_recv() {
+            Ok(()) => {
+                log::info!("Search timer expired");
+                // Wait for the thread to finish to ensure any ongoing human checker interaction completes
+                let late_result = stop_search(&stop, handle, &result_recv);
 
-            // In top_results mode, return the first result we found (if any)
-            if top_results_mode {
-                return Ok(first_result.or(late_result));
+                // In top_results mode, return the first result we found (if any)
+                if top_results_mode {
+                    return Ok(first_result.or(late_result));
+                }
+
+                // A result sent while the search was stopping (for example one the user
+                // accepted at the human checker prompt) is still a result.
+                return match late_result {
+                    Some(res) => Ok(Some(res)),
+                    None => Err(CipheyError::Timeout { secs: timeout }),
+                };
             }
-
-            // A result sent while the search was stopping (for example one the user
-            // accepted at the human checker prompt) is still a result.
-            return match late_result {
-                Some(res) => Ok(Some(res)),
-                None => Err(CipheyError::Timeout { secs: timeout }),
-            };
+            Err(TryRecvError::Disconnected) => timer_disconnected = true,
+            Err(TryRecvError::Empty) => {}
         }
 
-        // Small sleep to prevent CPU spinning
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        // Sleep until one of the channels has something, then check them again in the
+        // order above, so a result still wins over a timer that fires at the same time.
+        let mut select = Select::new();
+        if !result_disconnected {
+            select.recv(&result_recv);
+        }
+        if !timer_disconnected {
+            select.recv(&timer);
+        }
+        if result_disconnected && timer_disconnected {
+            // Nothing can arrive any more; poll like before rather than spin.
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        } else {
+            select.ready();
+        }
     }
 }
 
@@ -322,5 +346,37 @@ mod tests {
         let result = wait_with_deadline(result_rx, timer_rx, search, false);
 
         assert_eq!(result.unwrap().unwrap().text[0], "late");
+    }
+
+    #[test]
+    fn search_thread_exiting_without_a_result_waits_for_the_timer() {
+        // The search thread dropped its sender without sending anything. The result
+        // channel is then always ready, and waiting on it must not spin or end early.
+        let (result_tx, result_rx) = bounded::<Option<DecoderResult>>(1);
+        drop(result_tx);
+        let (timer_tx, timer_rx) = bounded(1);
+        let timer = thread::spawn(move || {
+            thread::sleep(std::time::Duration::from_millis(50));
+            timer_tx.send(()).unwrap();
+        });
+
+        let result = wait_with_deadline(result_rx, timer_rx, thread::spawn(|| {}), false);
+
+        assert!(matches!(result, Err(CipheyError::Timeout { secs: 7 })));
+        timer.join().unwrap();
+    }
+
+    #[test]
+    fn result_sent_while_waiting_is_returned() {
+        let (result_tx, result_rx) = bounded(1);
+        let (_timer_tx, timer_rx) = bounded(1);
+        let search = thread::spawn(move || {
+            thread::sleep(std::time::Duration::from_millis(30));
+            result_tx.send(Some(DecoderResult::_new("found"))).unwrap();
+        });
+
+        let result = wait_with_deadline(result_rx, timer_rx, search, false);
+
+        assert_eq!(result.unwrap().unwrap().text[0], "found");
     }
 }
