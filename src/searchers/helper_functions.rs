@@ -92,6 +92,8 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         "Unicode Escapes",
         "Quoted-Printable",
         "UTF-16",
+        // Compressed data is usually wrapped in one of the above, and can be nested
+        "Zlib",
     ];
     STACKABLE.contains(&prev_decoder) && STACKABLE.contains(&current_cipher)
 }

@@ -43,6 +43,7 @@ use crate::decoders::url_decoder::URLDecoder;
 use crate::decoders::utf16_decoder::Utf16Decoder;
 use crate::decoders::vigenere_decoder::VigenereDecoder;
 use crate::decoders::z85_decoder::Z85Decoder;
+use crate::decoders::zlib_decoder::ZlibDecoder;
 
 use crate::decoders::brainfuck_interpreter::BrainfuckInterpreter;
 
@@ -275,6 +276,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let a1z26decoder = Decoder::<A1Z26Decoder>::new();
     let brailledecoder = Decoder::<BrailleDecoder>::new();
     let substitution_generic = Decoder::<SubstitutionGenericDecoder>::new();
+    let zlib = Decoder::<ZlibDecoder>::new();
 
     let brainfuck = Decoder::<BrainfuckInterpreter>::new();
 
@@ -322,6 +324,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(brailledecoder),
             Box::new(substitution_generic),
             Box::new(brainfuck),
+            Box::new(zlib),
         ],
     }
 }

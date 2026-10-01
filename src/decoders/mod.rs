@@ -98,6 +98,9 @@ pub mod brainfuck_interpreter;
 pub mod vigenere_decoder;
 
 use ascii85_decoder::Ascii85Decoder;
+/// The zlib_decoder module inflates zlib (RFC 1950) streams
+pub mod zlib_decoder;
+
 use atbash_decoder::AtbashDecoder;
 use baconian_decoder::BaconianDecoder;
 use base32_decoder::Base32Decoder;
@@ -132,6 +135,7 @@ use url_decoder::URLDecoder;
 use utf16_decoder::Utf16Decoder;
 use vigenere_decoder::VigenereDecoder;
 use z85_decoder::Z85Decoder;
+use zlib_decoder::ZlibDecoder;
 
 use brainfuck_interpreter::BrainfuckInterpreter;
 
@@ -211,6 +215,8 @@ pub enum DecoderType {
     BrainfuckInterpreter(brainfuck_interpreter::BrainfuckInterpreter),
     /// vigenere decoder
     VigenereDecoder(vigenere_decoder::VigenereDecoder),
+    /// zlib decoder
+    ZlibDecoder(zlib_decoder::ZlibDecoder),
 }
 
 /// Wrapper struct to hold Decoders for DECODER_MAP
@@ -323,5 +329,6 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             "Brainfuck",
             DecoderBox::new(Decoder::<BrainfuckInterpreter>::new()),
         ),
+        ("Zlib", DecoderBox::new(Decoder::<ZlibDecoder>::new())),
     ])
 });

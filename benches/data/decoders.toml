@@ -8,7 +8,8 @@
 # inputs come from Python's base64.b85encode. Ascii85 is hand-rolled, so its inputs come
 # from Python's base64.a85encode(adobe=True). HTML Entities writes every character as a
 # decimal (medium) or hexadecimal (long) character reference, like CyberChef's "To HTML
-# Entity" with "Convert all characters".
+# Entity" with "Convert all characters". Zlib inputs are Python's
+# base64.b64encode(zlib.compress(text)); the Zlib decoder reads the Base64 itself.
 #
 #   decoder  = key into ciphey::decoders::DECODER_MAP
 #   size     = "medium" | "long"
@@ -513,4 +514,18 @@ decoder = "Z85"
 size = "long"
 success = true
 input = "lUQHMwQbzjB0a[eayPzmz/5{8wN(]]wN/T?x(mMaBz(8le*aqnBS+shC4z!gBrCdjv@=<lBy!#9z/M$izEWP}wN({9wQ5qtvqYP#x(>FtA+P9aaARJACw?IqaA8yAaA}HcBrC^oB0b1izE<@jzY&+oefGdJBzbPnBrC<EBS+vaC4>&baARJAyI[6maARpdazULlaA8oywP?T5aARpday/b8xK#ipaw3U$B7F^2v}YB{aARpqz/]Yaaz>L8C{46AB8#58y?j-1wN/T?x(mN8efFCowN/H%az1$>xDQ![zE^D(vru66Bz&pywO00dxK#p0wPw]cBrCyrz!<zpy?WV@avQfXy?W%7aA8oyzddJ@xK#lcvixu6z*c7wAa9<gwPzVhB9g#aayPslvqWi0zddc{ayO!>A+frkefFwswft@nz/x+uCw7M9azC{uw[=c[B0bKxzdN*5x(mMaBzb98aAz44woe(fx>}o5Abn@%zGGDmBs[Xgz/Z1yz!pblxK@rdx(dA7BzbxfaAR4cwPF#gwPI]nBzb92ayMylwN/T@wgO<ExLy%&az>L5wPF#dBrCm9zE!2nw]zYjv{%s#B-I4oBzbkdw]7)*ay/7[y&0W2xjVcnaAhEHDtEdnxMXimB0a[ewftG5AV!!dD2EOiaA}HqaAITEzdmr)B0a[3A=l2uayMylBAg/cxjSibBAh8kxcp]aayMyez!yh8x(4uk"
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
+[[case]]
+decoder = "Zlib"
+size = "medium"
+success = true
+input = "eJwditERgDAIxVZ5A3hu4hBosXCW1kP8cHuVv1yShTlgDAqEMEYraFolZNzXZ/dgh2npvwP1gtW113yNzinh4CcTIYZvMr/7+h2x"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "Zlib"
+size = "long"
+success = true
+input = "eJw9kUGS3DAIRa/CAab6EqksspgDZEkk2qIsC5fA7XGffj5OKhvZKuD/x9cP3ZtcpE48iI+wjUMqVSlWdSwUZv1Bv+2gRV9CGiSjzGvPJpt5sYrfkK+AQs2GmCqOQTptrmRH0NkYBztVG5IVjQ86NVoWL2g3fv01o3XYSdGEVlClwUvGfS8JOh/0K8iFZ2np0aYdS6ONx0W7ueufLv/Z/YPQVVYn4dKoAE8rtksbFwGVQHgmcjdDW9dV6OdYunpLb0Rx2/BNNWjnCJmD/IAc34nJxtqJa53i8MsEPGz3FB+p/NRRndw2eN0rZhRTuP6z2zvryPQe9GkeZM9729ANR8OzBK9A6JDPWbwR2IuNigCbltw963BCsV70BHfhPY4pt9Cz84IYuHcZiwBxP95vhNSOEX7z5gTyy5c5G5KJY0OKqJWJRNMvJmM2v7mBJkO3Bat1eXwDiyDQ/g=="
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
