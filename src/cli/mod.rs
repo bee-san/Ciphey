@@ -95,7 +95,7 @@ pub fn parse_cli_args() -> (String, Config) {
 
     trace!("Program was called with CLI 😉");
     trace!("Parsed the arguments");
-    trace!("The inputted text is {}", &input_text);
+    trace!("The inputted text is {}", input_text);
 
     cli_args_into_config_struct(opts, input_text)
 }

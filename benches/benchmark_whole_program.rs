@@ -1,8 +1,9 @@
 use ciphey::config::Config;
 use ciphey::perform_cracking;
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use env_logger::Builder;
 use log::LevelFilter;
+use std::hint::black_box;
 use std::time::Duration;
 
 // Test cases with different encodings/encryptions and varying complexity
@@ -95,12 +96,14 @@ fn benchmark_with_config(
                 },
                 |_| {
                     // Create config and set necessary parameters
-                    let mut config = Config::default();
-                    config.timeout = timeout;
-                    config.top_results = top_results;
-                    config.verbose = 0;
-                    config.human_checker_on = false;
-                    config.api_mode = true; // Set to true to suppress output
+                    let config = Config {
+                        timeout,
+                        top_results,
+                        verbose: 0,
+                        human_checker_on: false,
+                        api_mode: true, // Set to true to suppress output
+                        ..Config::default()
+                    };
 
                     // Use perform_cracking with the configuration
                     perform_cracking(black_box(text), config)

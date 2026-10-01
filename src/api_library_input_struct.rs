@@ -25,6 +25,9 @@ pub struct LibraryInput<Type> {
 }
 
 /// Creates a default lemmeknow config
+// Only reachable through `LibraryInput::default()`, which is currently unused
+// (see `cli_input_parser::_main`). Kept for the library API.
+#[allow(dead_code)]
 const LEMMEKNOW_DEFAULT_CONFIG: Identifier = Identifier {
     min_rarity: 0.0,
     max_rarity: 0.0,

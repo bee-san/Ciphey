@@ -3,7 +3,8 @@ use ciphey::checkers::checker_type::{Check, Checker};
 use ciphey::checkers::CheckerTypes;
 use ciphey::decoders::base64_decoder::Base64Decoder;
 use ciphey::decoders::interface::{Crack, Decoder};
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     let decode_base64 = Decoder::<Base64Decoder>::new();
