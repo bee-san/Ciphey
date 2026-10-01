@@ -166,3 +166,17 @@ fn cli_options_apply_with_unknown_config_keys() {
         "API mode must not print to stdout\n{output}"
     );
 }
+
+#[test]
+fn regex_crib_is_respected() {
+    // The simplesubstitution decoder used to declare success without asking the checker,
+    // so the search returned junk like "W T" even though it doesn't match the crib.
+    let home = TempHome::new("regex-crib");
+    let output = run(
+        &home,
+        &["-d", "-c", "2", "--regex", "^xyz", "-t", "aGVsbG8gd29ybGQ="],
+    );
+    assert_eq!(output.code, Some(0), "{output}");
+    assert!(!output.stdout.contains("The plaintext is"), "{output}");
+    assert!(output.stdout.contains("failed to decode"), "{output}");
+}
