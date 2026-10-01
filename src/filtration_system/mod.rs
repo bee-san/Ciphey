@@ -7,6 +7,7 @@ use crate::checkers::CheckerTypes;
 use crate::cli_pretty_printing;
 use crate::decoders::ascii85_decoder::Ascii85Decoder;
 use crate::decoders::atbash_decoder::AtbashDecoder;
+use crate::decoders::baconian_decoder::BaconianDecoder;
 use crate::decoders::base32_decoder::Base32Decoder;
 use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
 use crate::decoders::base58_monero_decoder::Base58MoneroDecoder;
@@ -265,6 +266,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let reversedecoder = Decoder::<ReverseDecoder>::new();
     let morsecodedecoder = Decoder::<MorseCodeDecoder>::new();
     let atbashdecoder = Decoder::<AtbashDecoder>::new();
+    let baconian = Decoder::<BaconianDecoder>::new();
     let caesardecoder = Decoder::<CaesarDecoder>::new();
     let railfencedecoder = Decoder::<RailfenceDecoder>::new();
     let rot47decoder = Decoder::<ROT47Decoder>::new();
@@ -306,6 +308,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(decimal),
             Box::new(morsecodedecoder),
             Box::new(atbashdecoder),
+            Box::new(baconian),
             Box::new(caesardecoder),
             Box::new(railfencedecoder),
             Box::new(citrix_ctx1),

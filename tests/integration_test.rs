@@ -148,6 +148,63 @@ fn test_utf16le_with_bom_hex() {
     );
 }
 
+/// Runs the full search on `ciphertext` and checks it finds `plaintext` through the
+/// decoders in `path`.
+fn assert_search_cracks(ciphertext: &str, plaintext: &str, path: &[&str]) {
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
+
+    let result = perform_cracking(ciphertext, Config::default())
+        .unwrap()
+        .expect("the search found nothing");
+    let found_path: Vec<&str> = result.path.iter().map(|step| step.decoder).collect();
+    assert_eq!(result.text[0], plaintext, "path {found_path:?}");
+    assert_eq!(found_path, path);
+}
+
+#[test]
+#[parallel]
+fn test_search_cracks_baconian() {
+    // The 26-letter example from https://github.com/bee-san/Ciphey/issues/996. (The
+    // issue's 24-letter example, AABBB AABAA ABABA ABABA ABBAB, never reaches the
+    // search: the English checker accepts the input itself as plaintext.)
+    assert_search_cracks("AABBB AABAA ABABB ABABB ABBBA", "HELLO", &["Baconian"]);
+}
+
+#[test]
+#[parallel]
+fn test_search_cracks_baconian_sentence() {
+    // CyberChef "Bacon Cipher Encode", Standard (I=J and U=V) alphabet, A/B
+    assert_search_cracks(
+        "ABAAA BAABA BABAA AAAAA BAAAB BAABA AABBB AABAA AAAAB AABAA BAAAB BAABA ABBAB AABAB BAABA ABAAA ABABB AABAA BAAAB",
+        "ITWASTHEBESTOFTIMES",
+        &["Baconian"],
+    );
+}
+
+#[test]
+#[parallel]
+fn test_search_cracks_baconian_inverted_binary() {
+    // CyberChef "Bacon Cipher Encode", Standard alphabet, 0/1, Invert Translation
+    assert_search_cracks(
+        "10111 01101 01011 11111 01110 01101 11000 11011 11110 11011 01110 01101 10010 11010 01101 10111 10100 11011 01110",
+        "ITWASTHEBESTOFTIMES",
+        &["Baconian"],
+    );
+}
+
+#[test]
+#[parallel]
+fn test_search_cracks_base64_of_baconian() {
+    // Base64 of "00111 00100 01010 01010 01101" (HELLO, Standard, 0/1): the search has
+    // to chain Base64 -> Baconian
+    assert_search_cracks(
+        "MDAxMTEgMDAxMDAgMDEwMTAgMDEwMTAgMDExMDE=",
+        "HELLO",
+        &["Base64", "Baconian"],
+    );
+}
+
 /*
 #[test]
 fn test_program_parses_files_and_cracks() {

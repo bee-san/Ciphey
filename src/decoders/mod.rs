@@ -11,6 +11,8 @@ pub mod a1z26_decoder;
 pub mod ascii85_decoder;
 /// The atbash_decoder module decodes atbash
 pub mod atbash_decoder;
+/// The baconian_decoder module decodes Bacon's cipher
+pub mod baconian_decoder;
 /// The base32_decoder module decodes base32
 pub mod base32_decoder;
 /// The base58_bitcoin_decoder module decodes base58 bitcoin
@@ -97,6 +99,7 @@ pub mod vigenere_decoder;
 
 use ascii85_decoder::Ascii85Decoder;
 use atbash_decoder::AtbashDecoder;
+use baconian_decoder::BaconianDecoder;
 use base32_decoder::Base32Decoder;
 use base58_bitcoin_decoder::Base58BitcoinDecoder;
 use base58_flickr_decoder::Base58FlickrDecoder;
@@ -146,6 +149,8 @@ pub enum DecoderType {
     Ascii85Decoder(ascii85_decoder::Ascii85Decoder),
     /// atbash decoder
     AtbashDecoder(atbash_decoder::AtbashDecoder),
+    /// baconian decoder
+    BaconianDecoder(baconian_decoder::BaconianDecoder),
     /// base32 decoder
     Base32Decoder(base32_decoder::Base32Decoder),
     /// base58 bitcoin decoder
@@ -296,6 +301,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<MorseCodeDecoder>::new()),
         ),
         ("atbash", DecoderBox::new(Decoder::<AtbashDecoder>::new())),
+        (
+            "Baconian",
+            DecoderBox::new(Decoder::<BaconianDecoder>::new()),
+        ),
         ("caesar", DecoderBox::new(Decoder::<CaesarDecoder>::new())),
         (
             "railfence",
