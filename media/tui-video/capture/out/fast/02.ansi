@@ -1,0 +1,20 @@
+[1m[38;2;166;227;161m❯[0m time ciphey -d -t 'NTA3NjYzNzU3MjZjMjA3NjY2MjA2OTcyNjU2YzIwNzM2ZTY2Njc='
+
+🥳 ciphey has decoded [1m[38;2;244;219;214m192[0m times.
+
+The plaintext is:
+[1m[38;2;166;218;149mCiphey is very fast[0m
+the decoders used are [1m[38;2;238;212;159mBase64 → Hexadecimal → caesar[0m
+
+real	0m0.156s
+user	0m0.644s
+sys	0m0.041s
+[1m[38;2;166;227;161m❯[0m
+
+
+
+
+
+
+
+

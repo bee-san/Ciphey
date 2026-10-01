@@ -1,0 +1,11 @@
+ciphey -t 'b3RwYXV0aDovL3RvdHAvYmVlP3NlY3JldD1KQlNXWTNEUEVIUEszUFhQJmRpZ2l0cz02'
+[?2004l🕵️ I think the plaintext is [0m[1m[38;2;238;212;159mTime-Based One-Time Password (TOTP) URI[0m.
+Possible plaintext: '[0m[1m[38;2;238;212;159motpauth://totp/bee?secret=JBSWY3DPEHPK3PXP&digits=6[0m' (y/N): 
+y
+
+🥳 ciphey has decoded [0m[1m[38;2;244;219;214m64[0m times.
+
+The plaintext is:
+[0m[1m[38;2;166;218;149motpauth://totp/bee?secret=JBSWY3DPEHPK3PXP&digits=6[0m
+the decoder used is [0m[1m[38;2;238;212;159mBase64[0m
+[?2004h[1;38;2;166;227;161m❯[0m 

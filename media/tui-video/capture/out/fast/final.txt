@@ -1,0 +1,12 @@
+❯ time ciphey -d -t 'NTA3NjYzNzU3MjZjMjA3NjY2MjA2OTcyNjU2YzIwNzM2ZTY2Njc='
+
+🥳 ciphey has decoded 192 times.
+
+The plaintext is:
+Ciphey is very fast
+the decoders used are Base64 → Hexadecimal → caesar
+
+real	0m0.156s
+user	0m0.644s
+sys	0m0.041s
+❯

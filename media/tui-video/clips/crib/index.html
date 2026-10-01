@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en" data-composition-variables='[{"id":"bgDrift","type":"boolean","label":"Drift the background ciphertext","default":true}]'>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Ciphey · Crib / regex mode</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <!-- Real terminal output, generated from tmux captures by ../capture/ansi_to_json.mjs -->
+    <script src="captures.js"></script>
+    <script src="clip-engine.js"></script>
+    <link rel="stylesheet" href="clip.css" />
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="14.5" data-width="1920" data-height="1080">
+      <div id="bg" class="clip" data-start="0" data-duration="14.5" data-track-index="0">
+        <div id="glyphs" data-layout-allow-overflow data-layout-allow-occlusion></div>
+        <div id="vignette"></div>
+        <div id="glow"></div>
+      </div>
+
+      <section id="title" class="clip" data-start="0" data-duration="2.4" data-track-index="1">
+        <div class="center-stack" data-out="1.85">
+          <div class="kicker reveal" data-in="0.1">CIPHEY · CRIB / REGEX MODE</div>
+          <div class="headline reveal" data-in="0.3">Got a <em>crib</em>? Use it.</div>
+          <div class="subline reveal" data-in="0.65">ciphey -t '…' -r 'pattern'</div>
+        </div>
+      </section>
+
+      <section id="stage" class="clip" data-start="1.9" data-duration="8.9" data-track-index="2">
+        <div id="winWrap">
+          <div id="win">
+            <div class="titlebar">
+              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+              <div class="wtitle">bash</div>
+            </div>
+            <div id="screen" class="screen"></div>
+          </div>
+        </div>
+        <div id="captions"></div>
+        <div id="watermark">❯ ciphey · github.com/bee-san/Ciphey</div>
+      </section>
+
+      <section id="end" class="clip" data-start="10.7" data-duration="3.8" data-track-index="3">
+        <div class="center-stack">
+          <div class="statement reveal" data-in="10.85"><code>-r</code> takes any regex</div>
+          <div class="chips">
+            <div class="chip reveal" data-in="11.2" data-dy="12">a flag format: <code>flag\{</code></div>
+            <div class="chip reveal" data-in="11.3" data-dy="12">a word you know is in there</div>
+            <div class="chip reveal" data-in="11.4" data-dy="12">a known prefix: <code>^BEGIN</code></div>
+          </div>
+          <div class="bars-note reveal" data-in="11.7">The other checkers switch off, so only plaintext that matches your pattern is accepted.</div>
+          <div class="install reveal" data-in="12.2"><b>❯</b> cargo install ciphey</div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const clip = CipheyClip.run({
+        duration: 14.5,
+        seed: 37,
+        window: { in: 1.9, out: 10.35 },
+        scenes: [
+          {
+            id: "crib", start: 2.3, end: 10.7, eyebrow: "KNOWN-PLAINTEXT SEARCH",
+            frames: [
+              { at: 0 },
+              // "ciphey -t '" | the ciphertext | "' -r 'picoCTF\{'"
+              { at: 0.4, typing: [[11, 0.05], [32, 0.012], [Infinity, 0.055]] },
+              { at: 2.6 },
+              { at: 5.0 },
+              { at: 5.25 },
+            ],
+            captions: [
+              { at: 0.0, end: 2.55, html: "Know part of the answer, like the flag format? Pass it with <code>-r</code>." },
+              { at: 2.6, end: 5.2, html: "With a regex set, Ciphey only accepts text that <em>matches it</em>." },
+              { at: 5.25, end: 8.4, html: "<code>picoCTF{…}</code>, straight out of Base64." },
+            ],
+            highlights: [
+              { text: "-r 'picoCTF\\{'", at: 2.3, end: 4.9 },
+              { text: "Regex matched: picoCTF\\{", at: 2.85, end: 4.9 },
+              { text: "picoCTF{b4s3_64_1s_fun}", at: 5.5, end: 8.1, last: true },
+            ],
+          },
+        ],
+      });
+      clip.ready.then(() => {
+        window.__timelines = window.__timelines || {};
+        window.__timelines["main"] = clip.tl;
+        if (window.__hfForceTimelineRebind) window.__hfForceTimelineRebind();
+      });
+    </script>
+  </body>
+</html>

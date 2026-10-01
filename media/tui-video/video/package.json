@@ -1,0 +1,11 @@
+{
+  "name": "ciphey-tui-promo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "captures": "node ../capture/ansi_to_json.mjs",
+    "dev": "npx --yes hyperframes@0.8.103 preview",
+    "check": "npx --yes hyperframes@0.8.103 check",
+    "render": "npx --yes hyperframes@0.8.103 render --crf 22 --output ../out/ciphey-tui-promo.mp4"
+  }
+}

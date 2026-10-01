@@ -1,0 +1,11 @@
+❯ ciphey -t 'b3RwYXV0aDovL3RvdHAvYmVlP3NlY3JldD1KQlNXWTNEUEVIUEszUFhQJmRpZ2l0cz02'
+🕵️ I think the plaintext is Time-Based One-Time Password (TOTP) URI.
+Possible plaintext: 'otpauth://totp/bee?secret=JBSWY3DPEHPK3PXP&digits=6' (y/N):
+y
+
+🥳 ciphey has decoded 64 times.
+
+The plaintext is:
+otpauth://totp/bee?secret=JBSWY3DPEHPK3PXP&digits=6
+the decoder used is Base64
+❯

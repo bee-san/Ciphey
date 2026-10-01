@@ -1,0 +1,11 @@
+❯ ciphey -t 'cGljb0NURntiNHMzXzY0XzFzX2Z1bn0=' -r 'picoCTF\{'
+🕵️ I think the plaintext is Regex matched: picoCTF\{.
+Possible plaintext: 'picoCTF{b4s3_64_1s_fun}' (y/N):
+y
+
+🥳 ciphey has decoded 64 times.
+
+The plaintext is:
+picoCTF{b4s3_64_1s_fun}
+the decoder used is Base64
+❯

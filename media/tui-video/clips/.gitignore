@@ -1,0 +1,12 @@
+# Copied in by sync.sh from ../video and shared/; edit the originals instead.
+*/assets/
+*/captures.js
+*/bench.js
+*/clip-engine.js
+*/clip.css
+!shared/clip-engine.js
+!shared/clip.css
+# HyperFrames scratch output
+*/renders/
+*/snapshots/
+*/node_modules/

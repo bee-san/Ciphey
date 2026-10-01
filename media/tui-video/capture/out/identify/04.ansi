@@ -1,0 +1,20 @@
+[1m[38;2;166;227;161m❯[0m ciphey -t '666c61677b6369706865795f6469645f7468655f686172645f706172747d'
+🕵️ I think the plaintext is [1m[38;2;238;212;159mCapture The Flag (CTF) Flag[0m.
+Possible plaintext: '[1m[38;2;238;212;159mflag{ciphey_did_the_hard_part}[0m' (y/N):
+y
+
+🥳 ciphey has decoded [1m[38;2;244;219;214m64[0m times.
+
+The plaintext is:
+[1m[38;2;166;218;149mflag{ciphey_did_the_hard_part}[0m
+the decoder used is [1m[38;2;238;212;159mHexadecimal[0m
+[1m[38;2;166;227;161m❯[0m
+
+
+
+
+
+
+
+
+

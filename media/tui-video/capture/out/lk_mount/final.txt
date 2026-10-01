@@ -1,0 +1,11 @@
+❯ ciphey -t 'bW91bnQgLW8gdXNlcm5hbWU9YmVlLHBhc3N3b3JkPWh1bnRlcjI='
+🕵️ I think the plaintext is Mount Command With Clear Credentials.
+Possible plaintext: 'mount -o username=bee,password=hunter2' (y/N):
+y
+
+🥳 ciphey has decoded 64 times.
+
+The plaintext is:
+mount -o username=bee,password=hunter2
+the decoder used is Base64
+❯

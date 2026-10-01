@@ -1,0 +1,180 @@
+{
+  "cols": 88,
+  "rows": 20,
+  "demos": {
+    "layers": {
+      "title": "Multi-layer decoding",
+      "config": "config-capptucin.toml",
+      "plaintext": "Ciphey peels back every layer of encoding",
+      "encoding": "base64(base64(base64(base64(plaintext))))",
+      "steps": [
+        {
+          "type": "ciphey -t 'VlZSS2MyUXlSa2hXYWxaS1UwVktjMWRzWkRSbGEyeElVMjFvV2sxdVRtNVhiR2hoWWtkT2RXRXlaR2xTTUZreFYyeG9TbG95U1hsWFYyUmhWbnBXY1ZscVNsTmpSMHAwV1hvd1BRPT0='",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "run ciphey"
+        },
+        {
+          "type": "y",
+          "expect": "^❯\\s*$",
+          "label": "confirm plaintext"
+        }
+      ]
+    },
+    "identify": {
+      "title": "Recognises what it found",
+      "config": "config-capptucin.toml",
+      "plaintext": "flag{ciphey_did_the_hard_part}",
+      "encoding": "hex(plaintext)",
+      "steps": [
+        {
+          "type": "ciphey -t '666c61677b6369706865795f6469645f7468655f686172645f706172747d'",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "run ciphey"
+        },
+        {
+          "type": "y",
+          "expect": "^❯\\s*$",
+          "label": "confirm plaintext"
+        }
+      ]
+    },
+    "firstrun": {
+      "title": "First run: pick a theme",
+      "config": null,
+      "plaintext": "Wow! That was a cool configuration!",
+      "encoding": "base32(plaintext) (input taken from images/first_run.tape)",
+      "steps": [
+        {
+          "type": "ciphey -t 'K5XXOIJAKRUGC5BAO5QXGIDBEBRW633MEBRW63TGNFTXK4TBORUW63RB'",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "run ciphey (first run)"
+        },
+        {
+          "type": "n",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "tutorial? no"
+        },
+        {
+          "type": "y",
+          "expect": "\\(1-5\\):\\s*$",
+          "label": "custom colour scheme? yes"
+        },
+        {
+          "type": "3",
+          "expect": "\\(1-2\\):\\s*$",
+          "label": "pick GirlyPop"
+        },
+        {
+          "type": "1",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "ask me about each plaintext"
+        },
+        {
+          "type": "",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "no wordlist"
+        },
+        {
+          "type": "",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "no enhanced detection"
+        },
+        {
+          "type": "y",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "cute cat? yes"
+        },
+        {
+          "type": "y",
+          "expect": "^❯\\s*$",
+          "label": "confirm plaintext"
+        }
+      ]
+    },
+    "fast": {
+      "title": "Fast",
+      "config": "config-capptucin.toml",
+      "plaintext": "Ciphey is very fast",
+      "encoding": "base64(hex(rot13(plaintext)))",
+      "steps": [
+        {
+          "type": "time ciphey -d -t 'NTA3NjYzNzU3MjZjMjA3NjY2MjA2OTcyNjU2YzIwNzM2ZTY2Njc='",
+          "expect": "^❯\\s*$",
+          "label": "run ciphey, timed, human checker off"
+        }
+      ]
+    },
+    "lk_mount": {
+      "title": "LemmeKnow: credentials",
+      "config": "config-capptucin.toml",
+      "plaintext": "mount -o username=bee,password=hunter2",
+      "encoding": "base64(plaintext)",
+      "steps": [
+        {
+          "type": "ciphey -t 'bW91bnQgLW8gdXNlcm5hbWU9YmVlLHBhc3N3b3JkPWh1bnRlcjI='",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "run ciphey"
+        },
+        {
+          "type": "y",
+          "expect": "^❯\\s*$",
+          "label": "confirm plaintext"
+        }
+      ]
+    },
+    "lk_totp": {
+      "title": "LemmeKnow: TOTP secret",
+      "config": "config-capptucin.toml",
+      "plaintext": "otpauth://totp/bee?secret=JBSWY3DPEHPK3PXP&digits=6",
+      "encoding": "base64(plaintext); JBSWY3DPEHPK3PXP is the well-known example secret from the Google Authenticator key-URI docs",
+      "steps": [
+        {
+          "type": "ciphey -t 'b3RwYXV0aDovL3RvdHAvYmVlP3NlY3JldD1KQlNXWTNEUEVIUEszUFhQJmRpZ2l0cz02'",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "run ciphey"
+        },
+        {
+          "type": "y",
+          "expect": "^❯\\s*$",
+          "label": "confirm plaintext"
+        }
+      ]
+    },
+    "lk_ip": {
+      "title": "LemmeKnow: IP address",
+      "config": "config-capptucin.toml",
+      "plaintext": "192.168.0.1",
+      "encoding": "hex(plaintext)",
+      "steps": [
+        {
+          "type": "ciphey -t '3139322e3136382e302e31'",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "run ciphey"
+        },
+        {
+          "type": "y",
+          "expect": "^❯\\s*$",
+          "label": "confirm plaintext"
+        }
+      ]
+    },
+    "crib": {
+      "title": "Crib / regex mode",
+      "config": "config-capptucin.toml",
+      "plaintext": "picoCTF{b4s3_64_1s_fun}",
+      "encoding": "base64(plaintext); without -r the default checkers do not recognise picoCTF{...}",
+      "steps": [
+        {
+          "type": "ciphey -t 'cGljb0NURntiNHMzXzY0XzFzX2Z1bn0=' -r 'picoCTF\\{'",
+          "expect": "\\((y/N|Y/n)\\):\\s*$",
+          "label": "run ciphey with a crib"
+        },
+        {
+          "type": "y",
+          "expect": "^❯\\s*$",
+          "label": "confirm plaintext"
+        }
+      ]
+    }
+  }
+}

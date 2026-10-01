@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en" data-composition-variables='[{"id":"bgDrift","type":"boolean","label":"Drift the background ciphertext","default":true}]'>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Ciphey · LemmeKnow</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <!-- Real terminal output, generated from tmux captures by ../capture/ansi_to_json.mjs -->
+    <script src="captures.js"></script>
+    <script src="clip-engine.js"></script>
+    <link rel="stylesheet" href="clip.css" />
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="21" data-width="1920" data-height="1080">
+      <div id="bg" class="clip" data-start="0" data-duration="21" data-track-index="0">
+        <div id="glyphs" data-layout-allow-overflow data-layout-allow-occlusion></div>
+        <div id="vignette"></div>
+        <div id="glow"></div>
+      </div>
+
+      <section id="title" class="clip" data-start="0" data-duration="2.4" data-track-index="1">
+        <div class="center-stack" data-out="1.85">
+          <div class="kicker reveal" data-in="0.1">CIPHEY · LEMMEKNOW</div>
+          <div class="headline reveal" data-in="0.3">Knows <em>what</em> it found</div>
+          <div class="subline reveal" data-in="0.65">decode<i>·</i>identify<i>·</i>real ciphey output</div>
+        </div>
+      </section>
+
+      <section id="stage" class="clip" data-start="1.9" data-duration="16.2" data-track-index="2">
+        <div id="winWrap">
+          <div id="win">
+            <div class="titlebar">
+              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+              <div class="wtitle">bash</div>
+            </div>
+            <div id="screen" class="screen"></div>
+          </div>
+        </div>
+        <div id="captions"></div>
+        <div id="watermark">❯ ciphey · github.com/bee-san/Ciphey</div>
+      </section>
+
+      <section id="end" class="clip" data-start="17.9" data-duration="3.1" data-track-index="3">
+        <div class="center-stack">
+          <div class="statement reveal" data-in="18.0">Built on <em>LemmeKnow</em>: 120+ patterns<br />checked against every candidate plaintext</div>
+          <div class="chips">
+            <div class="chip reveal" data-in="18.3" data-dy="12">API keys</div>
+            <div class="chip reveal" data-in="18.37" data-dy="12">passwords in commands</div>
+            <div class="chip reveal" data-in="18.44" data-dy="12">TOTP secrets</div>
+            <div class="chip reveal" data-in="18.51" data-dy="12">IP addresses</div>
+            <div class="chip reveal" data-in="18.58" data-dy="12">emails &amp; URLs</div>
+            <div class="chip reveal" data-in="18.65" data-dy="12">card numbers</div>
+            <div class="chip reveal" data-in="18.72" data-dy="12">crypto wallets</div>
+            <div class="chip reveal" data-in="18.79" data-dy="12">AWS ARNs</div>
+            <div class="chip reveal" data-in="18.86" data-dy="12">CTF flags</div>
+          </div>
+          <div class="install reveal" data-in="19.2"><b>❯</b> cargo install ciphey</div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const clip = CipheyClip.run({
+        duration: 21,
+        seed: 23,
+        window: { in: 1.9, out: 17.55 },
+        scenes: [
+          {
+            id: "lk_mount", start: 2.3, end: 8.6, eyebrow: "01 · A PASSWORD IN A COMMAND",
+            frames: [
+              { at: 0 },
+              { at: 0.4, typing: [[11, 0.05], [Infinity, 0.011]] },
+              { at: 1.8 },
+              { at: 4.1 },
+              { at: 4.35 },
+            ],
+            captions: [
+              { at: 0.0, end: 1.8, html: "Some Base64 turns up in a log." },
+              { at: 1.8, end: 4.3, html: "Ciphey decodes it <em>and names it</em>: a mount command with a password." },
+              { at: 4.35, end: 6.3, html: "Leaked credentials, spotted straight away." },
+            ],
+            highlights: [
+              { text: "Mount Command With Clear Credentials", at: 2.0, end: 4.1 },
+              { text: "password=hunter2", at: 4.6, end: 6.0, last: true },
+            ],
+          },
+          {
+            id: "lk_totp", start: 8.6, end: 14.2, eyebrow: "02 · A 2FA SECRET",
+            frames: [
+              { at: 0 },
+              { at: 0.3, typing: [[11, 0.045], [Infinity, 0.009]] },
+              { at: 1.6 },
+              { at: 3.6 },
+              { at: 3.85 },
+            ],
+            captions: [
+              { at: 0.0, end: 1.6, html: "Different input, same command." },
+              { at: 1.6, end: 3.8, html: "This one is a <em>TOTP secret</em>: the seed behind someone's 2FA codes." },
+              { at: 3.85, end: 5.6, html: "No flags, no format hints." },
+            ],
+            highlights: [
+              { text: "Time-Based One-Time Password (TOTP) URI", at: 1.8, end: 3.6 },
+              { text: "secret=JBSWY3DPEHPK3PXP", at: 4.05, end: 5.35, last: true },
+            ],
+          },
+          {
+            id: "lk_ip", start: 14.2, end: 17.9, eyebrow: "03 · HEX THIS TIME",
+            frames: [
+              { at: 0 },
+              { at: 0.25, typing: [[11, 0.04], [Infinity, 0.012]] },
+              { at: 1.1 },
+              { at: 2.3 },
+              { at: 2.5 },
+            ],
+            captions: [
+              { at: 0.0, end: 1.1, html: "Hex this time…" },
+              { at: 1.1, end: 3.7, html: "…and out comes an <em>IPv4 address</em>." },
+            ],
+            highlights: [
+              { text: "Internet Protocol (IP) Address Version 4", at: 1.3, end: 2.3 },
+              { text: "192.168.0.1", at: 2.7, end: 3.5, last: true },
+            ],
+          },
+        ],
+      });
+      clip.ready.then(() => {
+        window.__timelines = window.__timelines || {};
+        window.__timelines["main"] = clip.tl;
+        if (window.__hfForceTimelineRebind) window.__hfForceTimelineRebind();
+      });
+    </script>
+  </body>
+</html>

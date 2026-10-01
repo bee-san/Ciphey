@@ -1,0 +1,11 @@
+ciphey -t 'cGljb0NURntiNHMzXzY0XzFzX2Z1bn0=' -r 'picoCTF\{'
+[?2004l🕵️ I think the plaintext is [0m[1m[38;2;238;212;159mRegex matched: picoCTF\{[0m.
+Possible plaintext: '[0m[1m[38;2;238;212;159mpicoCTF{b4s3_64_1s_fun}[0m' (y/N): 
+y
+
+🥳 ciphey has decoded [0m[1m[38;2;244;219;214m64[0m times.
+
+The plaintext is:
+[0m[1m[38;2;166;218;149mpicoCTF{b4s3_64_1s_fun}[0m
+the decoder used is [0m[1m[38;2;238;212;159mBase64[0m
+[?2004h[1;38;2;166;227;161m❯[0m 

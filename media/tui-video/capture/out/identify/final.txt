@@ -1,0 +1,11 @@
+❯ ciphey -t '666c61677b6369706865795f6469645f7468655f686172645f706172747d'
+🕵️ I think the plaintext is Capture The Flag (CTF) Flag.
+Possible plaintext: 'flag{ciphey_did_the_hard_part}' (y/N):
+y
+
+🥳 ciphey has decoded 64 times.
+
+The plaintext is:
+flag{ciphey_did_the_hard_part}
+the decoder used is Hexadecimal
+❯

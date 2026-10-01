@@ -1,0 +1,143 @@
+/* Shared look for the short feature clips (fast.html, lemmeknow.html, crib.html).
+   Same palette, fonts and terminal window as the TUI promo in index.html. */
+@font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Bold.woff2") format("woff2"); font-weight: 700; }
+@font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Medium.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: "Inter"; src: url("assets/fonts/Inter-SemiBold.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "Inter Display"; src: url("assets/fonts/InterDisplay-Bold.woff2") format("woff2"); font-weight: 700; }
+@font-face { font-family: "Inter Display"; src: url("assets/fonts/InterDisplay-ExtraBold.woff2") format("woff2"); font-weight: 800; }
+@font-face { font-family: "Noto Color Emoji"; src: url("assets/fonts/NotoColorEmoji-ciphey-subset.woff2") format("woff2"); }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0b0a12; }
+#root { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "Inter", sans-serif; color: #cdd6f4; }
+.clip { position: absolute; inset: 0; }
+
+/* ---------- background ---------- */
+#bg { background: linear-gradient(180deg, #0e0c18 0%, #09080e 100%); }
+#glyphs {
+  position: absolute; inset: 0; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+}
+#vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 1050px 620px at 50% 46%, rgba(10, 9, 16, 0.92) 0%, rgba(10, 9, 16, 0.6) 55%, rgba(10, 9, 16, 0) 100%);
+}
+#glow {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(1100px 680px at 50% 40%, rgba(203, 166, 247, 0.15), transparent 70%),
+    radial-gradient(900px 620px at 88% 100%, rgba(237, 69, 146, 0.12), transparent 70%),
+    radial-gradient(800px 600px at 6% 0%, rgba(137, 180, 250, 0.09), transparent 70%);
+}
+.grow {
+  position: absolute; left: -400px; white-space: nowrap;
+  font-family: "JetBrains Mono", monospace; font-size: 22px; letter-spacing: 0.08em; color: #cba6f7;
+}
+
+/* ---------- title + end cards ---------- */
+.center-stack {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+}
+.reveal { opacity: 0; }
+.eyebrow-mono { font-family: "JetBrains Mono", monospace; font-size: 26px; color: #a6adc8; letter-spacing: 0.04em; }
+.eyebrow-mono b { color: #a6e3a1; font-weight: 700; }
+.kicker {
+  font-family: "Inter", sans-serif; font-weight: 600; font-size: 24px; letter-spacing: 0.24em; color: #f5c2e7;
+}
+.headline {
+  margin-top: 22px; font-family: "Inter Display", sans-serif; font-weight: 800; font-size: 118px;
+  line-height: 1.04; letter-spacing: -0.02em; color: #f5f5fa;
+}
+.headline em { font-style: normal; color: #f5c2e7; }
+.subline { margin-top: 30px; font-family: "JetBrains Mono", monospace; font-size: 27px; color: #a6adc8; }
+.subline i { font-style: normal; color: #f5c2e7; padding: 0 10px; }
+.statement {
+  font-family: "Inter Display", sans-serif; font-weight: 700; font-size: 60px; line-height: 1.15;
+  letter-spacing: -0.01em; color: #f5f5fa; max-width: 1500px;
+}
+.statement em { font-style: normal; color: #f5c2e7; }
+.statement code { font-family: "JetBrains Mono", monospace; font-size: 54px; color: #a6e3a1; }
+.install {
+  margin-top: 46px; padding: 18px 36px; border-radius: 16px;
+  background: #1e1e2e; border: 1px solid rgba(205, 214, 244, 0.14);
+  font-family: "JetBrains Mono", monospace; font-size: 38px; color: #cdd6f4;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+.install b { color: #a6e3a1; }
+.link { margin-top: 26px; font-family: "Inter", sans-serif; font-weight: 600; font-size: 34px; color: #f5c2e7; }
+.chips { margin-top: 40px; display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; max-width: 1560px; }
+.chip {
+  padding: 10px 22px; border-radius: 999px;
+  border: 1px solid rgba(203, 166, 247, 0.45); background: rgba(203, 166, 247, 0.10);
+  font-family: "Inter", sans-serif; font-weight: 500; font-size: 26px; color: #e6e1f5;
+}
+.chip code { font-family: "JetBrains Mono", monospace; font-size: 25px; color: #a6e3a1; }
+.credit {
+  position: absolute; left: 0; right: 0; bottom: 40px; text-align: center;
+  font-family: "Inter", sans-serif; font-weight: 500; font-size: 22px; color: rgba(205, 214, 244, 0.6);
+}
+
+/* ---------- comparison bars (fast.html) ---------- */
+.bars { margin-top: 44px; width: 1380px; display: flex; flex-direction: column; gap: 26px; }
+.bar-row { display: grid; grid-template-columns: 330px 1fr; align-items: center; column-gap: 28px; text-align: left; }
+.who { font-family: "Inter", sans-serif; font-weight: 600; font-size: 32px; color: #f5f5fa; text-align: right; }
+.who small { display: block; font-weight: 500; font-size: 21px; color: #a6adc8; }
+.track { position: relative; height: 64px; border-radius: 12px; background: rgba(205, 214, 244, 0.06); }
+.fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 12px; }
+/* Solid fills: gradients band badly in the GIF previews. */
+.fill.rust { background: #a6e3a1; }
+.fill.py { background: rgba(243, 139, 168, 0.6); }
+.val {
+  position: absolute; top: 0; height: 64px; line-height: 64px; white-space: nowrap;
+  font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 32px; color: #f5f5fa;
+}
+.bars-note { margin-top: 26px; font-family: "Inter", sans-serif; font-weight: 500; font-size: 22px; color: #a6adc8; }
+
+/* ---------- terminal window ---------- */
+#winWrap { position: absolute; left: 244px; top: 176px; width: 1433px; height: 539px; opacity: 0; }
+#win {
+  position: relative; width: 100%; height: 100%; border-radius: 18px; overflow: hidden;
+  background: #1e1e2e; border: 1px solid rgba(205, 214, 244, 0.12);
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 0 90px rgba(203, 166, 247, 0.14);
+}
+.titlebar {
+  position: relative; height: 48px; background: #181825; display: flex; align-items: center;
+  padding: 0 20px; border-bottom: 1px solid rgba(205, 214, 244, 0.07);
+}
+.dot { width: 14px; height: 14px; border-radius: 50%; margin-right: 9px; }
+.dot.r { background: #f38ba8; } .dot.y { background: #f9e2af; } .dot.g { background: #a6e3a1; }
+.wtitle { position: absolute; left: 0; right: 0; text-align: center; font-family: "Inter", sans-serif; font-weight: 500; font-size: 18px; color: #a6adc8; }
+.screen {
+  position: absolute; left: 14px; top: 66px; width: 1405px; height: 455px; overflow: hidden;
+  font-family: "JetBrains Mono", "Noto Color Emoji", monospace; font-size: 26px; line-height: 35px; color: #cdd6f4;
+}
+.demo { position: absolute; inset: 0; opacity: 0; }
+.rows { position: absolute; left: 16px; top: 0; width: 1373px; height: 700px; }
+.run { position: absolute; height: 35px; white-space: pre; opacity: 0; }
+.run.b { font-weight: 700; }
+.run.w2 { width: 31.2px; text-align: center; font-family: "Noto Color Emoji", sans-serif; font-size: 22px; }
+.cursor { position: absolute; left: 0; top: 1px; width: 15.6px; height: 33px; background: #f5e0dc; opacity: 0; }
+.hl {
+  position: absolute; border-radius: 7px; border: 2px solid #f5c2e7; opacity: 0;
+  background: rgba(245, 194, 231, 0.10); box-shadow: 0 0 24px rgba(245, 194, 231, 0.32);
+}
+
+/* ---------- captions ---------- */
+#captions { position: absolute; left: 120px; right: 120px; top: 743px; height: 190px; }
+.cap-eyebrow {
+  position: absolute; left: 0; right: 0; top: 0; text-align: center; opacity: 0;
+  font-family: "Inter", sans-serif; font-weight: 600; font-size: 21px; letter-spacing: 0.24em; color: #f5c2e7;
+}
+.cap {
+  position: absolute; left: 0; right: 0; top: 40px; text-align: center; opacity: 0;
+  font-family: "Inter", sans-serif; font-weight: 600; font-size: 42px; line-height: 54px; color: #f5f5fa;
+}
+.cap em { font-style: normal; color: #f5c2e7; }
+.cap code { font-family: "JetBrains Mono", monospace; font-size: 38px; color: #a6e3a1; }
+#watermark {
+  position: absolute; right: 36px; bottom: 22px; opacity: 0;
+  font-family: "JetBrains Mono", monospace; font-size: 19px; color: rgba(205, 214, 244, 0.55);
+}

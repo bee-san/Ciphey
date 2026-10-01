@@ -1,0 +1,11 @@
+❯ ciphey -t '3139322e3136382e302e31'
+🕵️ I think the plaintext is Internet Protocol (IP) Address Version 4.
+Possible plaintext: '192.168.0.1' (y/N):
+y
+
+🥳 ciphey has decoded 64 times.
+
+The plaintext is:
+192.168.0.1
+the decoder used is Hexadecimal
+❯

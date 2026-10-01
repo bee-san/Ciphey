@@ -1,0 +1,37 @@
+[1m[38;2;166;227;161m❯[0m ciphey -t 'K5XXOIJAKRUGC5BAO5QXGIDBEBRW633MEBRW63TGNFTXK4TBORUW63RB'
+
+[37m🤠 Howdy! This is your first time running ciphey.[39m
+[37mLet me help you configure ciphey.[39m
+
+[33mDo you want a tutorial?[39m
+[33m(Y/n): [39mn
+
+[33mDo you want a custom colour scheme? Will be applied after we're done configuring[39m
+[33m(y/N): [39my
+
+[37mWhat colour scheme looks best to you?[39m
+1. Capptucin
+   [38;2;238;212;159mInformational[39m | [38;2;237;135;150mWarning[39m | [38;2;166;218;149mSuccess[39m | [38;2;202;211;245mQuestions[39m | [38;2;244;219;214mStatements[39m
+
+2. Darcula
+   [38;2;241;250;140mInformational[39m | [38;2;255;85;85mWarning[39m | [38;2;80;250;123mSuccess[39m | [38;2;139;233;253mQuestions[39m | [38;2;248;248;242mStatements[39m
+
+3. 💖✨💐 GirlyPop
+   [38;2;237;69;146mInformational[39m | [38;2;241;218;165mWarning[39m | [38;2;243;214;243mSuccess[39m | [38;2;255;128;177mQuestions[39m | [38;2;255;148;219mStatements[39m
+
+4. Default
+   [38;2;255;215;0mInformational[39m | [38;2;255;0;0mWarning[39m | [38;2;0;255;0mSuccess[39m | [38;2;255;215;0mQuestions[39m | [38;2;255;255;255mStatements[39m
+
+5. Custom
+   Format: r,g,b (e.g., 255,0,0 for red)
+   Values must be between 0 and 255
+   You'll be prompted to enter RGB values for each color.
+
+[33mEnter your choice (1-5):  (1-5): [39m3
+
+[33mWhat sounds better to you?[39m
+
+[37m1. ciphey will ask you every time it detects plaintext if it is plaintext.[39m
+[37m2. ciphey stores all possible plaintext in a list, and at the end of the program present
+s it to you.[39m
+[33mEnter your choice (1-2): [39m1

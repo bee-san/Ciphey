@@ -1,0 +1,20 @@
+[1m[38;2;166;227;161m❯[0m ciphey -t '3139322e3136382e302e31'
+🕵️ I think the plaintext is [1m[38;2;238;212;159mInternet Protocol (IP) Address Version 4[0m.
+Possible plaintext: '[1m[38;2;238;212;159m192.168.0.1[0m' (y/N):
+y
+
+🥳 ciphey has decoded [1m[38;2;244;219;214m64[0m times.
+
+The plaintext is:
+[1m[38;2;166;218;149m192.168.0.1[0m
+the decoder used is [1m[38;2;238;212;159mHexadecimal[0m
+[1m[38;2;166;227;161m❯[0m
+
+
+
+
+
+
+
+
+

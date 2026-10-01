@@ -1,0 +1,45 @@
+{
+ "demo": "fast",
+ "cols": 88,
+ "rows": 20,
+ "title": "Fast",
+ "frames": [
+  {
+   "index": 0,
+   "kind": "output",
+   "label": "shell prompt",
+   "file": "00.ansi",
+   "elapsed": 0.654,
+   "history": 0,
+   "cursor_x": 2,
+   "cursor_y": 0,
+   "cols": 88,
+   "rows": 20
+  },
+  {
+   "index": 1,
+   "kind": "type",
+   "label": "run ciphey, timed, human checker off",
+   "file": "01.ansi",
+   "elapsed": 0.989,
+   "history": 0,
+   "cursor_x": 74,
+   "cursor_y": 0,
+   "cols": 88,
+   "rows": 20,
+   "typed": "time ciphey -d -t 'NTA3NjYzNzU3MjZjMjA3NjY2MjA2OTcyNjU2YzIwNzM2ZTY2Njc='"
+  },
+  {
+   "index": 2,
+   "kind": "output",
+   "label": "run ciphey, timed, human checker off",
+   "file": "02.ansi",
+   "elapsed": 1.816,
+   "history": 0,
+   "cursor_x": 2,
+   "cursor_y": 11,
+   "cols": 88,
+   "rows": 20
+  }
+ ]
+}

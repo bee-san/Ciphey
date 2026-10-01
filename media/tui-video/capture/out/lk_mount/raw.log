@@ -1,0 +1,11 @@
+ciphey -t 'bW91bnQgLW8gdXNlcm5hbWU9YmVlLHBhc3N3b3JkPWh1bnRlcjI='
+[?2004l🕵️ I think the plaintext is [0m[1m[38;2;238;212;159mMount Command With Clear Credentials[0m.
+Possible plaintext: '[0m[1m[38;2;238;212;159mmount -o username=bee,password=hunter2[0m' (y/N): 
+y
+
+🥳 ciphey has decoded [0m[1m[38;2;244;219;214m64[0m times.
+
+The plaintext is:
+[0m[1m[38;2;166;218;149mmount -o username=bee,password=hunter2[0m
+the decoder used is [0m[1m[38;2;238;212;159mBase64[0m
+[?2004h[1;38;2;166;227;161m❯[0m 
