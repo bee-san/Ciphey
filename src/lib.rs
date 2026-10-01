@@ -1,4 +1,4 @@
-//! ciphey is an automatic decoding and cracking tool. https://github.com/bee-san/ciphey
+//! ciphey is an automatic decoding and cracking tool. <https://github.com/bee-san/ciphey>
 // Warns in case we forget to include documentation
 #![warn(
     missing_docs,
@@ -89,7 +89,7 @@ pub use error::CipheyError;
 /// assert!(result.unwrap().unwrap().text[0] == "The main function to call which performs the cracking.");
 /// ```
 /// The human checker defaults to off in the config, but it returns the first thing it finds currently.
-/// We have an issue for that here https://github.com/bee-san/ciphey/issues/129
+/// We have an issue for that here <https://github.com/bee-san/ciphey/issues/129>
 /// ```rust
 /// use ciphey::perform_cracking;
 /// use ciphey::config::Config;

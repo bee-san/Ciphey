@@ -1,6 +1,6 @@
 //! Run a brainfuck program and return its output
 //! Performs error handling and returns a string
-//! Call brainfuck_interpreter.crack to use. It returns Option<String> and check with
+//! Call brainfuck_interpreter.crack to use. It returns `Option<String>` and check with
 //! `result.is_some()` to see if it returned okay.
 use crate::checkers::CheckerTypes;
 
@@ -51,7 +51,7 @@ impl Crack for Decoder<BrainfuckInterpreter> {
     }
 
     /// This function does the actual decoding
-    /// It returns an Option<string> if it was successful
+    /// It returns an `Option<String>` if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying brainfuck with text {:?}", text);

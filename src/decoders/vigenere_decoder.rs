@@ -1,6 +1,6 @@
 //! Vigenère cipher decoder with automated key detection
 //! Uses Index of Coincidence (IoC) for key length detection and frequency analysis for key discovery
-//! Returns Option<String> with the decrypted text if successful
+//! Returns `Option<String>` with the decrypted text if successful
 //! Uses Medium sensitivity for gibberish detection as the default.
 
 use super::crack_results::CrackResult;

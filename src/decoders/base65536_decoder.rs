@@ -1,6 +1,6 @@
 //! Decode a base65536 string
 //! Performs error handling and returns a string
-//! Call base65536_decoder.crack to use. It returns option<String> and check with
+//! Call base65536_decoder.crack to use. It returns `Option<String>` and check with
 //! `result.is_some()` to see if it returned okay.
 
 use crate::checkers::CheckerTypes;
@@ -45,7 +45,7 @@ impl Crack for Decoder<Base65536Decoder> {
     }
 
     /// This function does the actual decoding
-    /// It returns an Option<string> if it was successful
+    /// It returns an `Option<String>` if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying base65536 with text {:?}", text);

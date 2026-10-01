@@ -1,7 +1,7 @@
 //! The search algorithm decides what encryptions to do next
 //! And also runs the decryption modules
 //! Click here to find out more:
-//! https://broadleaf-angora-7db.notion.site/Search-Nodes-Edges-What-should-they-look-like-b74c43ca7ac341a1a5cfdbeb84a7eef0
+//! <https://broadleaf-angora-7db.notion.site/Search-Nodes-Edges-What-should-they-look-like-b74c43ca7ac341a1a5cfdbeb84a7eef0>
 
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;

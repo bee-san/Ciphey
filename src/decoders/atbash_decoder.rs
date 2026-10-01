@@ -23,7 +23,7 @@ impl Crack for Decoder<AtbashDecoder> {
     }
 
     /// This function does the actual decoding
-    /// It returns an Option<string> if it was successful
+    /// It returns an `Option<String>` if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying atbash with text {:?}", text);

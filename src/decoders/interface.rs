@@ -68,7 +68,7 @@ impl Crack for Decoder<DefaultDecoder> {
 /// All decoders will share the same Crack trait
 /// Which let's us put them into a vector and iterate over them,
 /// Running `.crack()` on each of them.
-/// Relevant docs: https://docs.rs/crack/0.3.0/crack/trait.Crack.html
+/// Relevant docs: <https://docs.rs/crack/0.3.0/crack/trait.Crack.html>
 pub trait Crack {
     /// This function generates a new crack trait
     fn new() -> Self
@@ -80,7 +80,7 @@ pub trait Crack {
     fn get_tags(&self) -> &Vec<&str>;
     /// Get the name of the current decoder
     fn get_name(&self) -> &str;
-    /// Gets the description of the current deocder
+    /// Gets the description of the current decoder
     fn get_description(&self) -> &str;
     /// Gets the link for the current decoder
     fn get_link(&self) -> &str;
