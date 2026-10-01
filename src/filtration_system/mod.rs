@@ -34,6 +34,7 @@ use crate::decoders::crack_results::CrackResult;
 use crate::decoders::gzip_decoder::GzipDecoder;
 use crate::decoders::interface::{Crack, Decoder};
 use crate::decoders::jwt_decoder::JwtDecoder;
+use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
@@ -287,6 +288,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
 
     let brainfuck = Decoder::<BrainfuckInterpreter>::new();
     let xor_single_byte = Decoder::<XorSingleByteDecoder>::new();
+    let monoalphabetic_substitution = Decoder::<MonoalphabeticSubstitutionDecoder>::new();
 
     Decoders {
         components: vec![
@@ -340,6 +342,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(gzip),
             Box::new(brainfuck),
             Box::new(zlib),
+            Box::new(monoalphabetic_substitution),
         ],
     }
 }

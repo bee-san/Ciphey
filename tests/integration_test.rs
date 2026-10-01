@@ -205,6 +205,45 @@ fn test_search_cracks_base64_of_baconian() {
     );
 }
 
+#[test]
+#[parallel]
+fn test_cracks_monoalphabetic_substitution() {
+    // The example from https://github.com/bee-san/ciphey/issues/1005, a simple
+    // substitution with key QWERTYUIOPASDFGHJKLZXCVBNM (pycipher 0.5.2 SimpleSubstitution),
+    // without its spaces: with them, "OZ VQL ZIT ..." already passes the English check on
+    // the input ("oz" and "zit" are words), so the search never starts.
+    let result = perform_cracking(
+        "OZVQLZITWTLZGYZODTLOZVQLZITVGKLZGYZODTLOZVQLZITQUTGYVOLRGDOZVQLZITQUTGYYGGSOLIFTLLOZVQLZITTHGEIGYWTSOTYOZVQLZITTHGEIGYOFEKTRXSOZNOZVQLZITLTQLGFGYSOUIZOZVQLZITLTQLGFGYRQKAFTLL",
+        Config::default(),
+    )
+    .expect("the search should finish within the default timeout")
+    .expect("the search should find the plaintext");
+    assert_eq!(
+        result.text[0],
+        "ITWASTHEBESTOFTIMESITWASTHEWORSTOFTIMESITWASTHEAGEOFWISDOMITWASTHEAGEOFFOOLISHNESSITWASTHEEPOCHOFBELIEFITWASTHEEPOCHOFINCREDULITYITWASTHESEASONOFLIGHTITWASTHESEASONOFDARKNESS"
+    );
+    let path: Vec<&str> = result.path.iter().map(|step| step.decoder).collect();
+    assert_eq!(path, ["Monoalphabetic Substitution"]);
+}
+
+#[test]
+#[parallel]
+fn test_cracks_monoalphabetic_substitution_with_word_breaks() {
+    // Key PHQGIUMEAYLNOFDXJKRCVSTZWB, made with CyberChef 11.5 Substitute
+    let result = perform_cracking(
+        "Qaxeiw ar pf pvcdopcaq giqkwxcadf cddn. Wdv masi ac ifqkwxcig cizc pfg ac ckair cd tdkl dvc tepc tpr gdfi cd ac, ceif redtr wdv cei xnpafcizc. Ac lfdtr opfw ifqdgafmr pfg qnprraqpn qaxeikr, pfg ac liixr nipkfafm fit dfir.",
+        Config::default(),
+    )
+    .expect("the search should finish within the default timeout")
+    .expect("the search should find the plaintext");
+    assert_eq!(
+        result.text[0],
+        "Ciphey is an automatic decryption tool. You give it encrypted text and it tries to work out what was done to it, then shows you the plaintext. It knows many encodings and classical ciphers, and it keeps learning new ones."
+    );
+    let path: Vec<&str> = result.path.iter().map(|step| step.decoder).collect();
+    assert_eq!(path, ["Monoalphabetic Substitution"]);
+}
+
 /*
 #[test]
 fn test_program_parses_files_and_cracks() {

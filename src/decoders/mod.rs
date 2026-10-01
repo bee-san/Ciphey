@@ -111,6 +111,9 @@ pub mod xor_single_byte_decoder;
 /// The xor_repeating_key_decoder module cracks XOR with a repeating multi-byte key
 pub mod xor_repeating_key_decoder;
 
+/// The monoalphabetic_substitution_decoder module cracks simple substitution ciphers
+pub mod monoalphabetic_substitution_decoder;
+
 use atbash_decoder::AtbashDecoder;
 use baconian_decoder::BaconianDecoder;
 use base32_decoder::Base32Decoder;
@@ -135,6 +138,7 @@ use caesar_decoder::CaesarDecoder;
 use citrix_ctx1_decoder::CitrixCTX1Decoder;
 use gzip_decoder::GzipDecoder;
 use jwt_decoder::JwtDecoder;
+use monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use morse_code::MorseCodeDecoder;
 use octal_decoder::OctalDecoder;
 use quoted_printable_decoder::QuotedPrintableDecoder;
@@ -239,6 +243,10 @@ pub enum DecoderType {
     XorSingleByteDecoder(xor_single_byte_decoder::XorSingleByteDecoder),
     /// repeating-key XOR cracker
     XorRepeatingKeyDecoder(xor_repeating_key_decoder::XorRepeatingKeyDecoder),
+    /// monoalphabetic substitution cracker
+    MonoalphabeticSubstitutionDecoder(
+        monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder,
+    ),
 }
 
 /// Wrapper struct to hold Decoders for DECODER_MAP
@@ -361,6 +369,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Single-byte XOR",
             DecoderBox::new(Decoder::<XorSingleByteDecoder>::new()),
+        ),
+        (
+            "Monoalphabetic Substitution",
+            DecoderBox::new(Decoder::<MonoalphabeticSubstitutionDecoder>::new()),
         ),
     ])
 });
