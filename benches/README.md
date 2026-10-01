@@ -28,6 +28,18 @@ cargo bench -- --save-baseline before
 cargo bench -- --baseline before
 ```
 
+On a busy machine two full runs minutes apart can differ by more than the change you
+are measuring. To compare two versions fairly, build both bench binaries (for example
+from a `git worktree`, with a different `CARGO_TARGET_DIR`) and alternate between them
+one benchmark at a time, sending each side's results to its own `CRITERION_HOME`:
+
+```sh
+for id in $(target/release/deps/search-<hash> --bench --list | sed -n 's/: benchmark$//p'); do
+  CRITERION_HOME=/tmp/old /path/to/old/target/release/deps/search-<hash> --bench "^$id\$"
+  CRITERION_HOME=/tmp/new target/release/deps/search-<hash> --bench "^$id\$"
+done
+```
+
 ## Inputs
 
 All inputs are checked in under [`data/`](data) so runs are comparable:
