@@ -1,3 +1,5 @@
 [codespell]
 # "ue" appears in Caesar-cipher test vectors in caesar_decoder.rs
 ignore-words-list = ue
+# Encoded benchmark inputs are gibberish by design
+skip = ./benches/data/*,benches/data/*

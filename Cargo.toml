@@ -84,16 +84,25 @@ codegen-units = 1
 [profile.dist]
 inherits = "release"
 
+# Criterion benchmarks, see benches/README.md
 [[bench]]
-name = "benchmark_crackers"
+name = "decoders"
 harness = false
 
 [[bench]]
-name = "benchmark_decoders"
+name = "checkers"
 harness = false
 
 [[bench]]
-name = "benchmark_whole_program"
+name = "crib"
+harness = false
+
+[[bench]]
+name = "search"
+harness = false
+
+[[bench]]
+name = "startup"
 harness = false
 
 # Config for 'cargo dist'

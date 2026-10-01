@@ -29,6 +29,29 @@ jobs:
       - name: Run cargo check
         run: cargo check --all-targets
 
+  bench-build:
+    name: Benchmarks build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      # Builds the benchmarks without running them; they are too slow and noisy for CI.
+      # The bench profile inherits fat LTO and one codegen unit from the release profile,
+      # which only matters for timing, so this check builds them unoptimised instead.
+      - name: Build benchmarks
+        run: cargo bench --no-run
+        env:
+          CARGO_PROFILE_BENCH_OPT_LEVEL: "0"
+          CARGO_PROFILE_BENCH_LTO: "false"
+          CARGO_PROFILE_BENCH_CODEGEN_UNITS: "256"
+
   test:
     name: Test Suite (${{ matrix.os }})
     strategy:
