@@ -105,3 +105,13 @@ pub fn check_string_success(decoded_text: &str, original_text: &str) -> bool {
     }
     false
 }
+
+/// Turns decoded bytes into text.
+///
+/// The bytes are read as UTF-8 when they are valid UTF-8, as encoded text almost always
+/// is. Otherwise each byte becomes the Latin-1 character with that value, so every byte
+/// still maps to a character.
+pub(crate) fn bytes_to_string(bytes: Vec<u8>) -> String {
+    String::from_utf8(bytes)
+        .unwrap_or_else(|error| error.into_bytes().into_iter().map(char::from).collect())
+}
