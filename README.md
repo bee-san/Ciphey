@@ -242,6 +242,10 @@ let crib = DetectOptions::new().regex(r"^flag\{")?;
 
 ## MCP server (AI assistants)
 
+<a href="https://cdn.jsdelivr.net/gh/bee-san/Ciphey@5aa9760b2912611755d037c01b9d2ed14fd3bf81/media/mcp-video/out/ciphey-mcp.mp4"><img src="https://cdn.jsdelivr.net/gh/bee-san/Ciphey@5aa9760b2912611755d037c01b9d2ed14fd3bf81/media/mcp-video/out/ciphey-mcp.gif" alt="An AI assistant (Kiro CLI) is asked to decode a Base64 string from a CTF challenge. It calls ciphey's decode tool over MCP, which returns the plaintext flag{ciphey_speaks_mcp} and the decoders it used, Base64 → Hexadecimal → caesar with key 13. The assistant then answers with the flag. Click to watch the 30-second video."></a>
+
+<sub>▶ <a href="https://cdn.jsdelivr.net/gh/bee-san/Ciphey@5aa9760b2912611755d037c01b9d2ed14fd3bf81/media/mcp-video/out/ciphey-mcp.mp4">Watch the video</a> (29.5 s). The chat replays a real Kiro CLI session with ciphey-mcp.</sub>
+
 `ciphey-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server, so AI assistants such as Claude Desktop and Kiro can decode text with Ciphey. It's behind the `mcp` feature, so the normal `ciphey` build doesn't include it:
 
 ```sh
