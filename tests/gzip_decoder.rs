@@ -4,7 +4,7 @@
 //! The gzip data is Python 3's `gzip.compress(data, mtime=0)` unless noted otherwise.
 //!
 //! The tests run one at a time: every search uses all cores, and side by side on a slow
-//! CI runner they could run into the default 5 second timeout.
+//! CI runner they would slow each other down.
 
 use ciphey::config::Config;
 use ciphey::perform_cracking;
@@ -20,7 +20,19 @@ fn crack(text: &str) -> DecoderResult {
     // doesn't read the cache in ~/.ciphey (an answer cached by another build would stand
     // in for the search under test) and doesn't write to it.
     let _ = DB_PATH.set(None);
-    perform_cracking(text, Config::default())
+    // The decoder statistics the search uses in its edge costs live as long as the
+    // process. Clearing them makes every search explore like a fresh `ciphey` run, so
+    // the result doesn't depend on which tests ran before.
+    ciphey::reset_decoder_stats();
+    // The default config apart from the timeout. 5 seconds is plenty for a release
+    // build, but `cargo test` builds without optimisations, and on a 2-4 core CI runner
+    // the Binary -> Gzip search took just over 5 seconds. The config is global to the
+    // process, so every test here gets the same one.
+    let config = Config {
+        timeout: 30,
+        ..Config::default()
+    };
+    perform_cracking(text, config)
         .unwrap_or_else(|error| panic!("searching {text:?} failed: {error}"))
         .unwrap_or_else(|| panic!("the search found nothing for {text:?}"))
 }
