@@ -130,3 +130,39 @@ fn top_results_mode_exits_when_the_timer_expires() {
     );
     assert!(output.stdout.contains("Hello, World!"), "{output}");
 }
+
+#[test]
+fn cli_options_apply_with_enhanced_detection() {
+    // --enable-enhanced-detection prints a message before the config is set, which used
+    // to lock in the default config so every other CLI option was silently ignored.
+    let home = TempHome::new("api-mode-enhanced-detection");
+    let output = run(
+        &home,
+        &[
+            "-a",
+            "true",
+            "-d",
+            "--enable-enhanced-detection",
+            "-t",
+            "aGVsbG8gd29ybGQ=",
+        ],
+    );
+    assert_eq!(output.code, Some(0), "{output}");
+    assert_eq!(
+        output.stdout, "",
+        "API mode must not print to stdout\n{output}"
+    );
+}
+
+#[test]
+fn cli_options_apply_with_unknown_config_keys() {
+    // Same bug, triggered by the warning about an unknown key in config.toml
+    let home = TempHome::with_config("api-mode-unknown-key", "not_a_real_key = 1\n");
+    let output = run(&home, &["-a", "true", "-d", "-t", "aGVsbG8gd29ybGQ="]);
+    assert_eq!(output.code, Some(0), "{output}");
+    assert!(output.stderr.contains("not_a_real_key"), "{output}");
+    assert_eq!(
+        output.stdout, "",
+        "API mode must not print to stdout\n{output}"
+    );
+}

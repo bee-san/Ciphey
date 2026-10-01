@@ -1,7 +1,7 @@
 /// import general checker
 use lemmeknow::Identifier;
 use memmap2::Mmap;
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
@@ -74,15 +74,33 @@ pub struct Config {
 /// Cell for storing global Config
 static CONFIG: OnceCell<Config> = OnceCell::new();
 
+/// Returned by [`get_config`] until [`set_global_config`] is called
+static DEFAULT_CONFIG: Lazy<Config> = Lazy::new(Config::default);
+
 /// To initialize global config with custom values
 pub fn set_global_config(config: Config) {
     CONFIG.set(config).ok(); // ok() used to make compiler happy about using Result
 }
 
 /// Get the global config.
-/// This will return default config if the config wasn't already initialized
+///
+/// Until [`set_global_config`] is called this returns the default config, without
+/// stopping a later [`set_global_config`] call from taking effect:
+/// ```rust
+/// use ciphey::config::{get_config, set_global_config, Config};
+///
+/// assert_eq!(get_config().timeout, 5);
+///
+/// let mut config = Config::default();
+/// config.timeout = 42;
+/// set_global_config(config);
+/// assert_eq!(get_config().timeout, 42);
+/// ```
 pub fn get_config() -> &'static Config {
-    CONFIG.get_or_init(Config::default)
+    // Don't initialise CONFIG here: anything printed before the real config is set
+    // (e.g. a warning while parsing the config file) would otherwise lock in the
+    // defaults and silently discard every CLI option.
+    CONFIG.get().unwrap_or_else(|| &DEFAULT_CONFIG)
 }
 
 /// Creates a default lemmeknow config
