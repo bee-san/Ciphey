@@ -306,6 +306,7 @@ mod tests {
         },
         filtration_system::get_decoder_by_name,
     };
+    use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 
     /// The example token from jwt.io (and the issue): HS256 with the secret
     /// `your-256-bit-secret`. Its signature was checked with PyJWT and with HMAC-SHA256.
@@ -497,6 +498,17 @@ mod tests {
         assert_not_decoded("eyJ😀.eyJ5IjoyfQ.");
         assert_not_decoded("hello world");
         assert_not_decoded("hello my name is panicky mc panic face!");
+    }
+
+    #[test]
+    fn deeply_nested_payload_is_rejected_without_overflowing_the_stack() {
+        // serde_json gives up after 128 levels of nesting, so a hostile token can't make
+        // the decoder overflow the stack (which aborts the process in release builds)
+        let payload = format!("{{\"a\":{}{}}}", "[".repeat(100_000), "]".repeat(100_000));
+        assert_not_decoded(&format!(
+            "eyJhbGciOiJub25lIn0.{}.",
+            URL_SAFE_NO_PAD.encode(payload)
+        ));
     }
 
     #[test]
