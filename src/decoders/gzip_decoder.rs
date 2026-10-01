@@ -588,7 +588,8 @@ mod tests {
     fn rejects_bad_crc_and_truncated_streams() {
         // CyberChef Gunzip: "invalid CRC-32 checksum"
         let bad_crc = "1f8b08000000000002ff0bc94855282ccd4cce56482aca2fcf5348cbaf50c82acd2d2856c82f4b2d5228014ae72456552aa4e4a70300c6a34f412b000000";
-        // The same stream, missing its ISIZE
+        // The same stream without its last 6 bytes, so the trailer is cut off inside the
+        // CRC-32 (from the issue)
         let truncated = "1f8b08000000000002ff0bc94855282ccd4cce56482aca2fcf5348cbaf50c82acd2d2856c82f4b2d5228014ae72456552aa4e4a7030039a3";
         // A wrong ISIZE
         let bad_length = FOX_HEX.replace("2b000000", "2c000000");
