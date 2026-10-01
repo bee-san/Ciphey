@@ -39,7 +39,7 @@ impl Crack for Decoder<Base58BitcoinDecoder> {
             description: "Base58 is a group of binary-to-text encoding schemes that represent binary data (more specifically, a sequence of 8-bit bytes) in an ASCII string format by translating the data into a radix-32 representation.",
             link: "https://en.wikipedia.org/wiki/Base58",
             tags: vec!["base58_bitcoin", "base58", "bitcoin", "cryptocurrency", "decoder", "base"],
-            popularity: 0.8,
+            popularity: 0.5,
             phantom: std::marker::PhantomData,
         }
     }
@@ -80,6 +80,10 @@ impl Crack for Decoder<Base58BitcoinDecoder> {
     /// Gets the name for the current decoder
     fn get_name(&self) -> &str {
         self.name
+    }
+    /// Gets the popularity for the current decoder
+    fn get_popularity(&self) -> f32 {
+        self.popularity
     }
     /// Gets the description for the current decoder
     fn get_description(&self) -> &str {

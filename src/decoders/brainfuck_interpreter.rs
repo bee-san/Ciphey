@@ -45,7 +45,7 @@ impl Crack for Decoder<BrainfuckInterpreter> {
             description: "Brainfuck is an esoteric programming language created in 1993 by Swiss student Urban Müller. Designed to be extremely minimalistic, the language consists of only eight simple commands, a data pointer, and an instruction pointer.",
             link: "https://en.wikipedia.org/wiki/Brainfuck",
             tags: vec!["decoder", "brainfuck"],
-            popularity: 0.6,
+            popularity: 0.3,
             phantom: std::marker::PhantomData,
         }
     }
@@ -95,6 +95,10 @@ impl Crack for Decoder<BrainfuckInterpreter> {
     /// Gets the name for the current decoder
     fn get_name(&self) -> &str {
         self.name
+    }
+    /// Gets the popularity for the current decoder
+    fn get_popularity(&self) -> f32 {
+        self.popularity
     }
     /// Gets the description for the current decoder
     fn get_description(&self) -> &str {

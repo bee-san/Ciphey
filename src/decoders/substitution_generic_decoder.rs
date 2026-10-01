@@ -17,7 +17,7 @@ impl Crack for Decoder<SubstitutionGenericDecoder> {
             description: "Decodes substitution ciphers where symbols are replaced with Morse code or binary elements. Tries all possible mappings for inputs with up to 4 unique symbols.",
             link: "https://en.wikipedia.org/wiki/Substitution_cipher",
             tags: vec!["substitution", "binary", "morse"],
-            popularity: 0.7,
+            popularity: 0.4,
             phantom: std::marker::PhantomData,
         }
     }
@@ -90,6 +90,10 @@ impl Crack for Decoder<SubstitutionGenericDecoder> {
 
     fn get_name(&self) -> &str {
         self.name
+    }
+    /// Gets the popularity for the current decoder
+    fn get_popularity(&self) -> f32 {
+        self.popularity
     }
 
     /// Gets the description for the current decoder

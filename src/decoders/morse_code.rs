@@ -20,7 +20,7 @@ impl Crack for Decoder<MorseCodeDecoder> {
             description: "Morse code is a method used in telecommunication to encode text characters as standardized sequences of two different signal durations, called dots and dashes, or dits and dahs.",
             link: "https://en.wikipedia.org/wiki/Morse_code",
             tags: vec!["morseCode", "decoder", "signals"],
-            popularity: 0.8,
+            popularity: 0.7,
             phantom: std::marker::PhantomData,
         }
     }
@@ -69,6 +69,10 @@ impl Crack for Decoder<MorseCodeDecoder> {
     /// Gets the name for the current decoder
     fn get_name(&self) -> &str {
         self.name
+    }
+    /// Gets the popularity for the current decoder
+    fn get_popularity(&self) -> f32 {
+        self.popularity
     }
     /// Gets the description for the current decoder
     fn get_description(&self) -> &str {

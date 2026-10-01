@@ -91,6 +91,10 @@ impl Crack for Decoder<CaesarDecoder> {
     fn get_name(&self) -> &str {
         self.name
     }
+    /// Gets the popularity for the current decoder
+    fn get_popularity(&self) -> f32 {
+        self.popularity
+    }
     /// Gets the description for the current decoder
     fn get_description(&self) -> &str {
         self.description

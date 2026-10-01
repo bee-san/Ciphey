@@ -39,7 +39,7 @@ impl Crack for Decoder<Z85Decoder> {
             description: "Ascii85, also called Base85, is a form of binary-to-text encoding that uses five ASCII characters to represent four bytes of binary data. […] Other base-85 encodings like Z85 and RFC 1924 are designed to be safe in source code.",
             link: "https://en.wikipedia.org/wiki/Ascii85",
             tags: vec!["z85", "decoder", "base85"],
-            popularity: 0.6,
+            popularity: 0.3,
             phantom: std::marker::PhantomData,
         }
     }
@@ -80,6 +80,10 @@ impl Crack for Decoder<Z85Decoder> {
     /// Gets the name for the current decoder
     fn get_name(&self) -> &str {
         self.name
+    }
+    /// Gets the popularity for the current decoder
+    fn get_popularity(&self) -> f32 {
+        self.popularity
     }
     /// Gets the description for the current decoder
     fn get_description(&self) -> &str {

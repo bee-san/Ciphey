@@ -18,7 +18,7 @@ impl Crack for Decoder<A1Z26Decoder> {
             description: "A1Z26 is an encoding that maps each letter to its numeric position in the alphabet. This encoding cannot represent spaces or punctuation.",
             link: "https://dadstuffsite.com/a1z26-cipher-what-it-is-and-how-to-teach-your-kids/",
             tags: vec!["A1Z26", "substitution", "decoder"],
-            popularity: 0.5,
+            popularity: 0.6,
             phantom: std::marker::PhantomData,
         }
     }
@@ -78,6 +78,10 @@ impl Crack for Decoder<A1Z26Decoder> {
     /// Gets the name for the current decoder
     fn get_name(&self) -> &str {
         self.name
+    }
+    /// Gets the popularity for the current decoder
+    fn get_popularity(&self) -> f32 {
+        self.popularity
     }
 
     /// Gets the description for the current decoder

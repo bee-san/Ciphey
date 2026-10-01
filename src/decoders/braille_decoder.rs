@@ -16,7 +16,7 @@ impl Crack for Decoder<BrailleDecoder> {
             description: "Braille is a tactile writing system used by people who are visually impaired. It consists of raised dots arranged in cells of up to six dots in a 3×2 pattern.",
             link: "https://en.wikipedia.org/wiki/Braille",
             tags: vec!["braille", "substitution", "decoder"],
-            popularity: 0.8,
+            popularity: 0.4,
             phantom: std::marker::PhantomData,
         }
     }
@@ -54,6 +54,10 @@ impl Crack for Decoder<BrailleDecoder> {
 
     fn get_name(&self) -> &str {
         self.name
+    }
+    /// Gets the popularity for the current decoder
+    fn get_popularity(&self) -> f32 {
+        self.popularity
     }
 
     /// Gets the description for the current decoder

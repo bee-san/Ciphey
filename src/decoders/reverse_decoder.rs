@@ -36,7 +36,7 @@ impl Crack for Decoder<ReverseDecoder> {
             tags: vec!["reverse", "decoder", "reciprocal"],
             // I have never seen a reversed string in a CTF
             // or otherwise
-            popularity: 0.2,
+            popularity: 0.7,
             phantom: std::marker::PhantomData,
         }
     }
@@ -64,6 +64,10 @@ impl Crack for Decoder<ReverseDecoder> {
     /// Gets the name for the current decoder
     fn get_name(&self) -> &str {
         self.name
+    }
+    /// Gets the popularity for the current decoder
+    fn get_popularity(&self) -> f32 {
+        self.popularity
     }
     /// Gets the description for the current decoder
     fn get_description(&self) -> &str {

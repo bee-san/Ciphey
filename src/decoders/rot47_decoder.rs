@@ -23,7 +23,7 @@ impl Crack for Decoder<ROT47Decoder> {
             description: "ROT47 is a derivative of ROT13 which, in addition to scrambling the basic letters, treats numbers and common symbols. Instead of using the sequence A–Z as the alphabet, ROT47 uses a larger set of characters from the common character encoding known as ASCII. Specifically, the 7-bit printable characters, excluding space, from decimal 33 '!' through 126 '~', 94 in total.",
             link: "https://en.wikipedia.org/wiki/ROT13#Variants",
             tags: vec!["rot47", "substitution", "decoder", "reciprocal"],
-            popularity: 1.0,
+            popularity: 0.6,
             phantom: std::marker::PhantomData,
         }
     }
@@ -70,6 +70,10 @@ impl Crack for Decoder<ROT47Decoder> {
     /// Gets the name for the current decoder
     fn get_name(&self) -> &str {
         self.name
+    }
+    /// Gets the popularity for the current decoder
+    fn get_popularity(&self) -> f32 {
+        self.popularity
     }
     /// Gets the description for the current decoder
     fn get_description(&self) -> &str {

@@ -24,7 +24,7 @@ impl Crack for Decoder<RailfenceDecoder> {
             description: "The rail fence cipher (also called a zigzag cipher) is a classical type of transposition cipher. It derives its name from the manner in which encryption is performed, in analogy to a fence built with horizontal rails.",
             link: "https://en.wikipedia.org/wiki/Rail_fence_cipher",
             tags: vec!["railfence", "cipher", "classic", "transposition"],
-            popularity: 5.0,
+            popularity: 0.5,
             phantom: std::marker::PhantomData,
         }
     }
@@ -76,6 +76,10 @@ impl Crack for Decoder<RailfenceDecoder> {
     /// Gets the name for the current decoder
     fn get_name(&self) -> &str {
         self.name
+    }
+    /// Gets the popularity for the current decoder
+    fn get_popularity(&self) -> f32 {
+        self.popularity
     }
     /// Gets the description for the current decoder
     fn get_description(&self) -> &str {

@@ -17,7 +17,7 @@ impl Crack for Decoder<BinaryDecoder> {
             description: "A binary code represents text, computer processor instructions, or any other data using a two-symbol system. The two-symbol system used is often \"0\" and \"1\" from the binary number system. The binary code assigns a pattern of binary digits, also known as bits, to each character, instruction, etc.",
             link: "https://en.wikipedia.org/wiki/Binary_code",
             tags: vec!["binary", "base", "decoder"],
-            popularity: 1.0,
+            popularity: 0.8,
             phantom: std::marker::PhantomData,
         }
     }
@@ -61,6 +61,10 @@ impl Crack for Decoder<BinaryDecoder> {
     /// Gets the name for the current decoder
     fn get_name(&self) -> &str {
         self.name
+    }
+    /// Gets the popularity for the current decoder
+    fn get_popularity(&self) -> f32 {
+        self.popularity
     }
     /// Gets the description for the current decoder
     fn get_description(&self) -> &str {
