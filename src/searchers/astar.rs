@@ -208,9 +208,10 @@ fn expand_node(
             }
 
             let checker = CheckerTypes::CheckAthena(Checker::<Athena>::new());
-            let result = decoder.crack(text, &checker);
+            let mut result = decoder.crack(text, &checker);
 
-            let Some(candidates) = result.unencrypted_text.as_ref() else {
+            // Taken out so the per-candidate clones below don't copy every candidate.
+            let Some(candidates) = result.unencrypted_text.take() else {
                 update_decoder_stats(decoder.get_name(), false);
                 return children;
             };
@@ -218,8 +219,9 @@ fn expand_node(
             if result.success {
                 let plaintext = candidates.first().cloned().unwrap_or_default();
                 if !plaintext.is_empty() {
+                    result.unencrypted_text = Some(candidates);
                     let mut path = current_node.state.path.clone();
-                    path.push(result.clone());
+                    path.push(result);
                     children.push(AStarNode {
                         state: DecoderResult {
                             text: vec![plaintext],
@@ -238,10 +240,10 @@ fn expand_node(
             let step_cost = edge_cost(decoder.as_ref(), candidates.len());
             let mut produced_any = false;
             for candidate in candidates {
-                if candidate.is_empty() || !calculate_string_worth(candidate) {
+                if candidate.is_empty() || !calculate_string_worth(&candidate) {
                     continue;
                 }
-                if !seen_strings.insert(calculate_hash(candidate)) {
+                if !seen_strings.insert(calculate_hash(&candidate)) {
                     continue;
                 }
                 produced_any = true;
@@ -252,10 +254,10 @@ fn expand_node(
                 path.push(step);
 
                 let cost = current_node.cost + step_cost;
-                let heuristic = generate_heuristic(candidate, &path, Some(decoder.as_ref()));
+                let heuristic = generate_heuristic(&candidate, &path, Some(decoder.as_ref()));
                 children.push(AStarNode {
                     state: DecoderResult {
-                        text: vec![candidate.clone()],
+                        text: vec![candidate],
                         path,
                     },
                     depth: current_node.depth + 1,
