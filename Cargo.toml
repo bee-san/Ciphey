@@ -65,6 +65,10 @@ z85 = "3.0.7"
 brainfuck-exe = { version = "0.2.4", default-features = false }
 dashmap = "6.2.1"
 
+# Used to turn on ANSI colour support in the Windows console
+[target.'cfg(windows)'.dependencies]
+winapi-util = "0.1.9"
+
 # Dev dependencies
 [dev-dependencies]
 cargo-nextest = "0.9.117"

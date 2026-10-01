@@ -4,13 +4,14 @@
 //! and user preferences. It provides functionality for creating and managing color schemes,
 //! handling user input, and converting between different color formats.
 
+use crate::cli_pretty_printing::{color_enabled, colorize};
 use gibberish_or_not::download_model_with_progress_bar;
 use rpassword;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::io::{self, Write};
 use std::path::Path;
-use termcolor::{Buffer, Color, ColorSpec, WriteColor};
+use termcolor::{Color, ColorSpec};
 
 /// Represents a color scheme with RGB values for different message types and roles.
 /// Each color is stored as a comma-separated RGB string in the format "r,g,b"
@@ -110,17 +111,12 @@ fn print_rgb(text: &str, rgb: &str) -> String {
 /// * `color` - The color to apply
 ///
 /// # Returns
-/// * `String` - The text with ANSI color codes applied
+/// * `String` - The text with ANSI color codes applied, or the plain text if colours are disabled
 fn apply_color(text: &str, color: Color) -> String {
-    let mut buffer = Buffer::ansi();
     let mut color_spec = ColorSpec::new();
     color_spec.set_fg(Some(color));
 
-    buffer.set_color(&color_spec).unwrap_or(());
-    write!(&mut buffer, "{}", text).unwrap_or(());
-    buffer.reset().unwrap_or(());
-
-    String::from_utf8_lossy(buffer.as_slice()).to_string()
+    colorize(text, &color_spec, color_enabled())
 }
 
 /// Helper function to apply RGB color to text using termcolor.
@@ -132,17 +128,12 @@ fn apply_color(text: &str, color: Color) -> String {
 /// * `b` - Blue value (0-255)
 ///
 /// # Returns
-/// * `String` - The text with ANSI color codes applied
+/// * `String` - The text with ANSI color codes applied, or the plain text if colours are disabled
 fn apply_color_with_rgb(text: &str, r: u8, g: u8, b: u8) -> String {
-    let mut buffer = Buffer::ansi();
     let mut color_spec = ColorSpec::new();
     color_spec.set_fg(Some(Color::Rgb(r, g, b)));
 
-    buffer.set_color(&color_spec).unwrap_or(());
-    write!(&mut buffer, "{}", text).unwrap_or(());
-    buffer.reset().unwrap_or(());
-
-    String::from_utf8_lossy(buffer.as_slice()).to_string()
+    colorize(text, &color_spec, color_enabled())
 }
 
 /// Returns the Capptucin color scheme with warm, muted colors.
@@ -326,7 +317,7 @@ pub fn run_first_time_setup() -> HashMap<String, String> {
     println!("\n{}", print_question("What sounds better to you?"));
     println!(
         "\n{}",
-        print_statement("1. ciphey will ask you everytime it detects plaintext if it is plaintext.\n2. ciphey stores all possible plaintext in a list, and at the end of the program presents it to you.")
+        print_statement("1. ciphey will ask you every time it detects plaintext if it is plaintext.\n2. ciphey stores all possible plaintext in a list, and at the end of the program presents it to you.")
     );
     let wait_athena_choice = get_user_input_range("Enter your choice", 1, 2);
 
