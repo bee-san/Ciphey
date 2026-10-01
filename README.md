@@ -20,6 +20,7 @@
   <a href="#quick-start">Quick start</a> ·
   <a href="#features">Features</a> ·
   <a href="#use-it-as-a-library">Library</a> ·
+  <a href="#mcp-server-ai-assistants">MCP</a> ·
   <a href="#documentation">Docs</a> ·
   <a href="http://discord.skerritt.blog">Discord</a>
   <br><sub>▶ <a href="https://cdn.jsdelivr.net/gh/bee-san/Ciphey@d41d19946234477346fede14dadf8c351cc469e6/media/tui-video/out/ciphey-tui-promo.mp4">Watch the one-minute tour</a> (MP4, 61 s)</sub>
@@ -238,6 +239,74 @@ let crib = DetectOptions::new().regex(r"^flag\{")?;
 - `perform_cracking` returns `Result<Option<DecoderResult>, CipheyError>` on `master` ([#915](https://github.com/bee-san/Ciphey/pull/915)), and the single-decoder and detection functions are only on `master` so far. The last release on crates.io (0.12.0) still returns `Option<DecoderResult>`, so until the next release use the git version: `ciphey = { git = "https://github.com/bee-san/Ciphey" }`.
 - The config is global to the process. The first call's `Config` is used for every later call, and the single decoders follow it too (a `regex` crib, a wordlist). They never prompt.
 - The API is documented on [docs.rs](https://docs.rs/ciphey).
+
+## MCP server (AI assistants)
+
+`ciphey-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server, so AI assistants such as Claude Desktop and Kiro can decode text with Ciphey. It's behind the `mcp` feature, so the normal `ciphey` build doesn't include it:
+
+```sh
+cargo install ciphey --features mcp --bin ciphey-mcp
+# or, from a clone of this repository:
+cargo install --path . --features mcp --bin ciphey-mcp
+```
+
+The `mcp` feature isn't in a crates.io release yet (0.12.0 is the latest), so until the next one, install from git: `cargo install --git https://github.com/bee-san/Ciphey ciphey --features mcp --bin ciphey-mcp`.
+
+It provides two tools:
+
+- `decode` decodes `text` and returns the `plaintext` and the `path` of decoders used, with keys such as the Caesar shift. Optional arguments: `timeout_secs` (1 to 30, default 10) and `regex`, a crib the plaintext must match, such as `flag\{`.
+- `list_decoders` lists the encodings and ciphers Ciphey supports.
+
+A `decode` result looks like this. `status` is `decoded`, `not_found` or `timed_out`.
+
+```json
+{
+  "status": "decoded",
+  "plaintext": "hello there general",
+  "path": [{ "decoder": "Base64", "key": null }],
+  "checker": "English Checker",
+  "timeout_secs": 10
+}
+```
+
+Each decode runs in its own short-lived process. Input is limited to 65,536 characters, the search to 30 seconds and memory to 1 GiB, and at most two decodes run at once. The server doesn't read or write `~/.ciphey`, so there's no config file and no cache.
+
+### Claude Desktop
+
+Open Settings → Developer → Edit Config, add the server to `claude_desktop_config.json`, then restart Claude Desktop. Use the full path printed by `which ciphey-mcp` (`where ciphey-mcp` on Windows, for example `C:\\Users\\you\\.cargo\\bin\\ciphey-mcp.exe`), because Claude Desktop may not see your shell's `PATH`.
+
+```json
+{
+  "mcpServers": {
+    "ciphey": {
+      "command": "/Users/you/.cargo/bin/ciphey-mcp"
+    }
+  }
+}
+```
+
+### Kiro
+
+```sh
+kiro-cli mcp add --name ciphey --command ciphey-mcp
+```
+
+Or add the entry below to `~/.kiro/settings/mcp.json` (all projects) or `.kiro/settings/mcp.json` (one project).
+
+### Other clients
+
+Most MCP clients take the same `mcpServers` entry: a stdio server started by `ciphey-mcp` with no arguments.
+
+```json
+{
+  "mcpServers": {
+    "ciphey": {
+      "command": "ciphey-mcp",
+      "args": []
+    }
+  }
+}
+```
 
 ## Good to know
 
