@@ -90,7 +90,7 @@ fn main() {
     let result = perform_cracking("SGVsbG8sIFdvcmxkIQ==", config);
     
     match result {
-        Some(decoder_result) => {
+        Ok(Some(decoder_result)) => {
             println!("Decoded text: {}", decoder_result.text[0]);
             println!("Decoders used: {}", 
                 decoder_result.path
@@ -100,7 +100,8 @@ fn main() {
                     .join(" → ")
             );
         },
-        None => println!("Failed to decode the text"),
+        Ok(None) => println!("Failed to decode the text"),
+        Err(e) => eprintln!("Error: {e}"),
     }
 }
 ```
@@ -328,7 +329,7 @@ fn main() {
     let config = Config::default();
     let result = perform_cracking("SGVsbG8sIFdvcmxkIQ==", config);
     
-    if let Some(decoder_result) = result {
+    if let Ok(Some(decoder_result)) = result {
         println!("Decoded: {}", decoder_result.text[0]);
     } else {
         println!("Failed to decode");

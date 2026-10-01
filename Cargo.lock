@@ -619,6 +619,7 @@ dependencies = [
  "serial_test",
  "termcolor",
  "text_io",
+ "thiserror 2.0.17",
  "toml 1.1.6+spec-1.1.0",
  "urlencoding",
  "uuid",

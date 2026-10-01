@@ -7,14 +7,14 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread;
 
-use crossbeam::channel::bounded;
+use crossbeam::channel::{bounded, Receiver};
 
 use crate::checkers::athena::Athena;
 use crate::checkers::checker_type::{Check, Checker};
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
 use crate::filtration_system::{filter_and_get_decoders, MyResults};
-use crate::{timer, DecoderResult};
+use crate::{timer, CipheyError, DecoderResult};
 /// This module provides access to the A* search algorithm
 /// which uses a heuristic to prioritize decoders.
 mod astar;
@@ -38,10 +38,10 @@ mod helper_functions;
 /// 1. Did we reach our exit condition?
 /// 2. If not, create new nodes out of them and add them to the queue.
 ///
-///    We can return an Option? An Enum? And then match on that
-///    So if we return CrackSuccess we return
-///    Else if we return an array, we add it to the children and go again.
-pub fn search_for_plaintext(input: String) -> Option<DecoderResult> {
+/// Returns `Ok(None)` if the search space is exhausted, or
+/// [`CipheyError::Timeout`] if the timer expires first. In `top_results` mode
+/// the search always runs until the timer and returns the first result, if any.
+pub fn search_for_plaintext(input: String) -> Result<Option<DecoderResult>, CipheyError> {
     let config = get_config();
     let timeout = config.timeout;
     let timer = timer::start(timeout);
@@ -53,10 +53,29 @@ pub fn search_for_plaintext(input: String) -> Option<DecoderResult> {
     // Use A* search algorithm instead of BFS
     let handle = thread::spawn(move || astar::astar(input, result_sender, s));
 
+    wait_for_search_result(
+        result_recv,
+        timer,
+        stop,
+        handle,
+        config.top_results,
+        timeout,
+    )
+}
+
+/// Waits for the search thread to send a result or for the timer to expire.
+///
+/// Split out of [`search_for_plaintext`] so it can be tested with hand-built channels.
+fn wait_for_search_result(
+    result_recv: Receiver<Option<DecoderResult>>,
+    timer: Receiver<()>,
+    stop: Arc<AtomicBool>,
+    handle: thread::JoinHandle<()>,
     // In top_results mode, we don't need to return a result immediately
     // as the timer will display all results when it expires
-    let top_results_mode = config.top_results;
-
+    top_results_mode: bool,
+    timeout: u32,
+) -> Result<Option<DecoderResult>, CipheyError> {
     // If we're in top_results mode, we'll store the first result to return
     // at the end of the timer
     let mut first_result = None;
@@ -77,7 +96,7 @@ pub fn search_for_plaintext(input: String) -> Option<DecoderResult> {
                 stop.store(true, std::sync::atomic::Ordering::Relaxed);
                 // Wait for the thread to finish
                 handle.join().unwrap();
-                return res;
+                return Ok(res);
             }
         }
 
@@ -89,10 +108,10 @@ pub fn search_for_plaintext(input: String) -> Option<DecoderResult> {
 
             // In top_results mode, return the first result we found (if any)
             if top_results_mode {
-                return first_result;
+                return Ok(first_result);
             }
 
-            return None;
+            return Err(CipheyError::Timeout { secs: timeout });
         }
 
         // Small sleep to prevent CPU spinning
@@ -154,5 +173,62 @@ mod tests {
         let dc = DecoderResult::_new("");
         let result = perform_decoding(&dc);
         assert!(result._break_value().is_none());
+    }
+
+    #[test]
+    fn timer_expiry_is_a_timeout_error() {
+        let (_result_tx, result_rx) = bounded(1);
+        let (timer_tx, timer_rx) = bounded(1);
+        timer_tx.send(()).unwrap();
+        let stop = Arc::new(AtomicBool::new(false));
+
+        let result = wait_for_search_result(
+            result_rx,
+            timer_rx,
+            Arc::clone(&stop),
+            thread::spawn(|| {}),
+            false,
+            7,
+        );
+
+        assert!(matches!(result, Err(CipheyError::Timeout { secs: 7 })));
+        assert!(stop.load(std::sync::atomic::Ordering::Relaxed));
+    }
+
+    #[test]
+    fn exhausted_search_is_ok_none() {
+        let (result_tx, result_rx) = bounded(1);
+        let (_timer_tx, timer_rx) = bounded(1);
+        result_tx.send(None).unwrap();
+
+        let result = wait_for_search_result(
+            result_rx,
+            timer_rx,
+            Arc::default(),
+            thread::spawn(|| {}),
+            false,
+            7,
+        );
+
+        assert!(matches!(result, Ok(None)));
+    }
+
+    #[test]
+    fn top_results_mode_returns_first_result_when_timer_expires() {
+        let (result_tx, result_rx) = bounded(1);
+        let (timer_tx, timer_rx) = bounded(1);
+        result_tx.send(Some(DecoderResult::_new("first"))).unwrap();
+        timer_tx.send(()).unwrap();
+
+        let result = wait_for_search_result(
+            result_rx,
+            timer_rx,
+            Arc::default(),
+            thread::spawn(|| {}),
+            true,
+            7,
+        );
+
+        assert_eq!(result.unwrap().unwrap().text[0], "first");
     }
 }

@@ -36,6 +36,8 @@ pub mod cli_pretty_printing;
 pub mod config;
 /// Decoders are the functions that actually perform the decodings.
 pub mod decoders;
+/// The error type returned by the library API.
+mod error;
 /// The filtration system builds what decoders to use at runtime
 /// By default it will use them all.
 mod filtration_system;
@@ -62,6 +64,7 @@ use crate::{
 };
 
 use self::decoders::crack_results::CrackResult;
+pub use error::CipheyError;
 
 /// The main function to call which performs the cracking.
 /// ```rust
@@ -77,13 +80,13 @@ use self::decoders::crack_results::CrackResult;
 /// config.verbose = 0;
 /// let result = perform_cracking("VGhlIG1haW4gZnVuY3Rpb24gdG8gY2FsbCB3aGljaCBwZXJmb3JtcyB0aGUgY3JhY2tpbmcu", config);
 /// assert!(true);
-/// // The result is an Option<DecoderResult> so we need to unwrap it
+/// // The result is a Result<Option<DecoderResult>, CipheyError> so we need to unwrap it twice
 /// // The DecoderResult contains the text and the path
 /// // The path is a vector of CrackResults which contains the decoder used and the keys used
 /// // The text is a vector of strings because some decoders return more than 1 text (Caesar)
-/// // Becuase the program has returned True, the first result is the plaintext (and it will only have 1 result).
+/// // Because the program has returned True, the first result is the plaintext (and it will only have 1 result).
 /// // This is some tech debt we need to clean up https://github.com/bee-san/ciphey/issues/130
-/// assert!(result.unwrap().text[0] == "The main function to call which performs the cracking.");
+/// assert!(result.unwrap().unwrap().text[0] == "The main function to call which performs the cracking.");
 /// ```
 /// The human checker defaults to off in the config, but it returns the first thing it finds currently.
 /// We have an issue for that here https://github.com/bee-san/ciphey/issues/129
@@ -93,13 +96,35 @@ use self::decoders::crack_results::CrackResult;
 /// let mut config = Config::default();
 /// # let _test_db = ciphey::TestDatabase::default();
 /// # ciphey::set_test_db_path();
-/// // If the program cannot decode the text it will return None.
+/// // If the search finishes without finding plaintext it will return Ok(None).
 /// let result = perform_cracking("", config);
 /// assert!(true);
-/// assert!(result.is_none());
+/// assert!(result.unwrap().is_none());
 /// ```
-pub fn perform_cracking(text: &str, config: Config) -> Option<DecoderResult> {
+/// An invalid regex is an error rather than a panic:
+/// ```rust
+/// use ciphey::{perform_cracking, CipheyError};
+/// use ciphey::config::Config;
+/// let mut config = Config::default();
+/// # let _test_db = ciphey::TestDatabase::default();
+/// # ciphey::set_test_db_path();
+/// config.regex = Some("(unclosed".to_string());
+/// let result = perform_cracking("aGVsbG8=", config);
+/// assert!(matches!(result, Err(CipheyError::InvalidRegex(_))));
+/// ```
+///
+/// # Errors
+///
+/// * [`CipheyError::InvalidRegex`] if `config.regex` does not compile.
+/// * [`CipheyError::Timeout`] if `config.timeout` expires before the search finishes.
+///   Never returned in `top_results` mode, which always runs until the timeout.
+pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResult>, CipheyError> {
     let start_time = SystemTime::now();
+
+    // Reject a bad regex here instead of panicking in the regex checker later.
+    if let Some(pattern) = &config.regex {
+        regex::Regex::new(pattern).map_err(CipheyError::InvalidRegex)?;
+    }
 
     // If top_results is enabled, ensure human_checker_on is disabled
     let mut modified_config = config;
@@ -154,10 +179,10 @@ pub fn perform_cracking(text: &str, config: Config) -> Option<DecoderResult> {
                     })
                     .collect();
                 if let Ok(path) = path_result {
-                    return Some(DecoderResult {
+                    return Ok(Some(DecoderResult {
                         text: vec![row.decoded_text],
                         path,
-                    });
+                    }));
                 }
             }
             None => {
@@ -202,7 +227,7 @@ pub fn perform_cracking(text: &str, config: Config) -> Option<DecoderResult> {
             }
         };
 
-        return Some(output);
+        return Ok(Some(output));
     }
 
     // Build a new search tree
@@ -214,7 +239,7 @@ pub fn perform_cracking(text: &str, config: Config) -> Option<DecoderResult> {
     ));
     // Perform the search algorithm
     // It will either return a failure or success.
-    let result = searchers::search_for_plaintext(text.clone());
+    let result = searchers::search_for_plaintext(text.clone())?;
     cli_pretty_printing::success(&format!(
         "DEBUG: lib.rs - Result from search_for_plaintext: {:?}",
         result.is_some()
@@ -239,7 +264,7 @@ pub fn perform_cracking(text: &str, config: Config) -> Option<DecoderResult> {
         };
     }
 
-    result
+    Ok(result)
 }
 
 /// Checks if the given input is plaintext or not
@@ -375,7 +400,7 @@ mod tests {
         set_test_db_path();
 
         let config = Config::default();
-        perform_cracking("SGVscCBJIG5lZWQgc29tZWJvZHkh", config);
+        perform_cracking("SGVscCBJIG5lZWQgc29tZWJvZHkh", config).unwrap();
     }
 
     #[test]
@@ -384,7 +409,7 @@ mod tests {
         set_test_db_path();
 
         let config = Config::default();
-        let result = perform_cracking("", config);
+        let result = perform_cracking("", config).unwrap();
         assert!(result.is_none());
     }
 
@@ -394,7 +419,7 @@ mod tests {
         set_test_db_path();
 
         let config = Config::default();
-        let result = perform_cracking("aGVsbG8gdGhlcmUgZ2VuZXJhbA==", config);
+        let result = perform_cracking("aGVsbG8gdGhlcmUgZ2VuZXJhbA==", config).unwrap();
         assert!(result.is_some());
         assert!(result.unwrap().text[0] == "hello there general")
     }
@@ -405,7 +430,7 @@ mod tests {
         set_test_db_path();
 
         let config = Config::default();
-        let result = perform_cracking("192.168.0.1", config);
+        let result = perform_cracking("192.168.0.1", config).unwrap();
         // Since we are exiting early the path should be of length 1, which is 1 check (the Athena check)
         assert!(result.unwrap().path.len() == 1);
     }
@@ -420,7 +445,7 @@ mod tests {
         set_test_db_path();
 
         let config = Config::default();
-        let result = perform_cracking("Ebgngr zr 13 cynprf!", config);
+        let result = perform_cracking("Ebgngr zr 13 cynprf!", config).unwrap();
         // We return None since the input is the plaintext
         assert!(result.unwrap().text[0] == "Rotate me 13 places!");
     }
@@ -431,7 +456,7 @@ mod tests {
         set_test_db_path();
 
         let config = Config::default();
-        let result = perform_cracking("Hello, World!", config);
+        let result = perform_cracking("Hello, World!", config).unwrap();
         // We return None since the input is the plaintext
         let res_unwrapped = result.unwrap();
         assert!(&res_unwrapped.text[0] == "Hello, World!");

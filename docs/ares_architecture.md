@@ -9,12 +9,13 @@ ciphey is built with a modular architecture that separates concerns and enables 
 The core of ciphey is a Rust library that provides the main functionality through a clean API. The entry point is the `perform_cracking` function in `src/lib.rs`:
 
 ```rust
-pub fn perform_cracking(text: &str, config: Config) -> Option<DecoderResult>
+pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResult>, CipheyError>
 ```
 
 This function takes the text to decode and a configuration object, then returns either:
-- `Some(DecoderResult)` containing the decoded plaintext and the path of decoders used
-- `None` if decoding failed or timed out
+- `Ok(Some(DecoderResult))` containing the decoded plaintext and the path of decoders used
+- `Ok(None)` if the search finished without finding plaintext
+- `Err(CipheyError)` if the search timed out or `config.regex` is invalid
 
 ### 2. Decoders
 
