@@ -2,7 +2,8 @@
 //! the whole search, as the CLI runs it, has to find the plaintext through Base92.
 //!
 //! Every input was made with `base92.encode` from the `base92` 2.0.0 package on PyPI.
-//! Without the Base92 decoder the search returns a wrong answer for each of them.
+//! Without the Base92 decoder the search returns a wrong answer for each of them
+//! (Vigenere, railfence → rot47 or rot47 → Vigenere false positives).
 
 use ciphey::config::Config;
 use ciphey::perform_cracking;
@@ -15,7 +16,13 @@ fn crack(text: &str) -> DecoderResult {
     // doesn't read the cache in ~/.ciphey (an answer cached by another build would stand
     // in for the search under test) and doesn't write to it.
     let _ = DB_PATH.set(None);
-    perform_cracking(text, Config::default())
+    // Each search takes 0.5-1.2 s in a debug build; the longer timeout is headroom for
+    // slow CI runners. The config is process-wide, so every test uses the same one.
+    let config = Config {
+        timeout: 20,
+        ..Config::default()
+    };
+    perform_cracking(text, config)
         .unwrap_or_else(|error| panic!("searching {text:?} failed: {error}"))
         .unwrap_or_else(|| panic!("the search found nothing for {text:?}"))
 }
@@ -50,9 +57,21 @@ fn bench_medium_text_is_cracked() {
 
 #[test]
 fn base92_inside_base64_is_cracked() {
-    // Python 3: base64.b64encode(base92.encode(MEDIUM)). Base92 is stackable, so the
-    // search tries it on the Base64 decoder's output.
+    // Python 3: base64.b64encode(base92.encode(MEDIUM))
     let result = crack("PTVeZGw/NTc+b2dTJHBbR0VVJnRhSidiaG5rZSw3OWVLPUg0T1NiJDplczorWjxISG4xa1p1J2IqJmlIKl1Va0htczNsZDNqJEZnUiVzIztGY1thXyVlPiQucFwkcCUxSnh2a1NsKio=");
     assert_eq!(result.text[0], MEDIUM);
     assert_eq!(path(&result), ["Base64", "Base92"]);
+}
+
+#[test]
+fn base92_twice_is_cracked() {
+    // base92.encode(base92.encode(b"The quick brown fox jumps over the lazy dog")). The
+    // search only runs a decoder twice in a row if it is in `STACKABLE`
+    // (src/searchers/helper_functions.rs).
+    let result = crack("8<.x0O_):T^jB4%;Bm_820b4Py=c<U-zK9ta)Pc&UhmsoiOY<o/_rC)J@RX;>XXf;_");
+    assert_eq!(
+        result.text[0],
+        "The quick brown fox jumps over the lazy dog"
+    );
+    assert_eq!(path(&result), ["Base92", "Base92"]);
 }
