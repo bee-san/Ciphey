@@ -10,12 +10,14 @@ use crate::decoders::affine_decoder::AffineDecoder;
 use crate::decoders::ascii85_decoder::Ascii85Decoder;
 use crate::decoders::atbash_decoder::AtbashDecoder;
 use crate::decoders::baconian_decoder::BaconianDecoder;
+use crate::decoders::base100_decoder::Base100Decoder;
 use crate::decoders::base32_decoder::Base32Decoder;
 use crate::decoders::base36_decoder::Base36Decoder;
 use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
 use crate::decoders::base58_flickr_decoder::Base58FlickrDecoder;
 use crate::decoders::base58_monero_decoder::Base58MoneroDecoder;
 use crate::decoders::base58_ripple_decoder::Base58RippleDecoder;
+use crate::decoders::base64_alt_decoder::Base64AltDecoder;
 use crate::decoders::base64_decoder::Base64Decoder;
 use crate::decoders::base65536_decoder::Base65536Decoder;
 use crate::decoders::base85_decoder::Base85Decoder;
@@ -124,6 +126,14 @@ decoder_functions! {
     /// ```
     baconian: BaconianDecoder, aliases ["bacon"], key None;
 
+    /// Decodes Base100, which writes every byte as one emoji.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::base100("👟👜👣👣👦🐗👮👦👩👣👛");
+    /// assert_eq!(decoded.candidates[0].text, "hello world");
+    /// ```
+    base100: Base100Decoder, aliases ["emoji"], key None;
+
     /// Decodes Base32.
     ///
     /// ```
@@ -180,6 +190,20 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "hello world");
     /// ```
     base64: Base64Decoder, aliases ["b64"], key None;
+
+    /// Decodes Base64 written with a non-standard alphabet, such as crypt(3)'s itoa64,
+    /// bcrypt's or CyberChef's Atom128, trying each one. The key names the alphabet.
+    /// Standard and URL-safe Base64 are [`base64`](fn@base64).
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::base64_alt(
+    ///     "J4VZ653pOKBf647mPrRi64NjS0/eRKpkQm/jRaJm65FcNG/gMLdt64FjNk==",
+    /// );
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(plaintext.text, "The quick brown fox jumps over the lazy dog");
+    /// assert_eq!(plaintext.key.as_deref(), Some("itoa64 / crypt(3)"));
+    /// ```
+    base64_alt: Base64AltDecoder, aliases [], key None;
 
     /// Decodes Base65536, which writes two bytes as one Unicode character.
     ///

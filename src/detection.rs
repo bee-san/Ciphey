@@ -453,7 +453,8 @@ pub(crate) fn from_check_result(result: CheckResult, text: &str) -> Option<Detec
         return None;
     }
     let Some(checker) = CheckerKind::from_name(result.checker_name) else {
-        log::warn!("No CheckerKind for the checker {:?}", result.checker_name);
+        // Nothing from the result is logged: it can be a password the checker matched
+        log::warn!("A checker without a CheckerKind accepted a text");
         return None;
     };
     Some(Detection::new(checker, result.description, text))
@@ -472,7 +473,7 @@ pub(crate) fn for_accepted_decoding(
     text: &str,
 ) -> Option<Detection> {
     let Some(checker) = CheckerKind::from_name(checker_name) else {
-        log::warn!("No CheckerKind for the checker {checker_name:?}");
+        log::warn!("A checker without a CheckerKind accepted a decoding");
         return None;
     };
     let again = match checker {

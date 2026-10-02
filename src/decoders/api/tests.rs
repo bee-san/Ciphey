@@ -82,6 +82,15 @@ fn every_decoder_in_the_search_has_a_function() {
         .iter()
         .map(|info| info.name.to_string())
         .collect();
+    let mut missing: Vec<&String> = searched
+        .union(&mapped)
+        .filter(|n| !listed.contains(*n))
+        .collect();
+    missing.sort();
+    assert!(
+        missing.is_empty(),
+        "give {missing:?} a function in src/decoders/api/functions.rs (decoder_functions!)"
+    );
     assert_eq!(listed, searched, "list_decoders and the search differ");
     assert_eq!(listed, mapped, "list_decoders and DECODER_MAP differ");
     assert_eq!(
@@ -186,6 +195,11 @@ fn baconian_decodes() {
 }
 
 #[test]
+fn base100_decodes() {
+    assert_plaintext(&base100("👟👜👣👣👦🐗👮👦👩👣👛"), "hello world");
+}
+
+#[test]
 fn base32_decodes() {
     assert_plaintext(
         &base32("KRUGKIDROVUWG2ZAMJZG653OEBTG66BANJ2W24DTEBXXMZLSEB2GQZJANRQXU6JAMRXWO==="),
@@ -227,6 +241,13 @@ fn base64_decodes() {
         &base64("SXMgdGhpcyBVUkwtc2FmZT8gWWVzOiB-fn4-Pj4"),
         "Is this URL-safe? Yes: ~~~>>>",
     );
+}
+
+#[test]
+fn base64_alt_decodes() {
+    let decoded = base64_alt("J4VZ653pOKBf647mPrRi64NjS0/eRKpkQm/jRaJm65FcNG/gMLdt64FjNk==");
+    assert_plaintext(&decoded, "The quick brown fox jumps over the lazy dog");
+    assert_eq!(plaintext_key(&decoded), "itoa64 / crypt(3)");
 }
 
 #[test]
