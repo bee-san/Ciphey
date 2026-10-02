@@ -80,6 +80,16 @@ input = "77 101 101 116 32 109 101 32 97 116 32 116 104 101 32 111 108 100 32 10
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# DTMF frequency pairs, low-high, for the keys 18005551234, which LemmeKnow identifies
+# as a phone number. There is no multi case: DTMF can't write letters, and chains that can
+# (DTMF of Decimal) are over 20 times longer than the plaintext, which the search rejects.
+kind = "single"
+name = "dtmf"
+layers = ["DTMF"]
+input = "697-1209 852-1336 941-1336 941-1336 770-1336 770-1336 770-1336 697-1209 697-1336 697-1477 770-1209"
+expected = "18005551234"
+
+[[case]]
 kind = "single"
 name = "big_integer"
 layers = ["Big integer to bytes"]

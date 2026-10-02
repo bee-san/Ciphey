@@ -99,6 +99,8 @@ pub mod big_integer_decoder;
 pub mod binary_decoder;
 /// The decimal_decoder module decodes decimal character codes
 pub mod decimal_decoder;
+/// The dtmf_decoder module decodes DTMF (touch-tone) frequency pairs
+pub mod dtmf_decoder;
 /// The hexadecimal_decoder module decodes hexadecimal
 pub mod hexadecimal_decoder;
 /// The hexdump_decoder module decodes the output of xxd, hexdump and od
@@ -217,6 +219,7 @@ use baudot_decoder::BaudotDecoder;
 use big_integer_decoder::BigIntegerDecoder;
 use binary_decoder::BinaryDecoder;
 use decimal_decoder::DecimalDecoder;
+use dtmf_decoder::DtmfDecoder;
 use hexadecimal_decoder::HexadecimalDecoder;
 use hexdump_decoder::HexdumpDecoder;
 use html_entity_decoder::HtmlEntityDecoder;
@@ -293,6 +296,8 @@ pub enum DecoderType {
     BinaryDecoder(binary_decoder::BinaryDecoder),
     /// decimal decoder
     DecimalDecoder(decimal_decoder::DecimalDecoder),
+    /// DTMF decoder
+    DtmfDecoder(dtmf_decoder::DtmfDecoder),
     /// hexadecimal decoder
     HexadecimalDecoder(hexadecimal_decoder::HexadecimalDecoder),
     /// hexdump decoder
@@ -413,6 +418,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ),
         ("Binary", DecoderBox::new(Decoder::<BinaryDecoder>::new())),
         ("Decimal", DecoderBox::new(Decoder::<DecimalDecoder>::new())),
+        ("DTMF", DecoderBox::new(Decoder::<DtmfDecoder>::new())),
         (
             "Big integer to bytes",
             DecoderBox::new(Decoder::<BigIntegerDecoder>::new()),
