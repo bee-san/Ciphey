@@ -23,10 +23,10 @@ pub mod binary_decoder;
 pub mod decimal_decoder;
 /// The hexadecimal_decoder module decodes hexadecimal
 pub mod hexadecimal_decoder;
-/// The octal_decoder module decodes octal
-pub mod octal_decoder;
 /// The html_entity_decoder module decodes HTML entities
 pub mod html_entity_decoder;
+/// The octal_decoder module decodes octal
+pub mod octal_decoder;
 
 /// The base58_ripple_decoder module decodes base58 ripple
 pub mod base58_ripple_decoder;

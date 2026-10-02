@@ -13,8 +13,8 @@ use crate::decoders::base58_monero_decoder::Base58MoneroDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::decimal_decoder::DecimalDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
-use crate::decoders::octal_decoder::OctalDecoder;
 use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
+use crate::decoders::octal_decoder::OctalDecoder;
 use crate::DecoderResult;
 
 use crate::decoders::base58_flickr_decoder::Base58FlickrDecoder;
