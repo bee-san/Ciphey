@@ -5,7 +5,7 @@
 //! Uses Low sensitivity for gibberish detection.
 
 use crate::checkers::CheckerTypes;
-use crate::decoders::interface::check_string_success;
+use crate::decoders::interface::candidates_until_unchanged;
 use gibberish_or_not::Sensitivity;
 
 use super::crack_results::CrackResult;
@@ -35,36 +35,38 @@ impl Crack for Decoder<RailfenceDecoder> {
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying railfence with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
-        let mut decoded_strings = Vec::new();
 
         // Use the checker with Low sensitivity for Railfence cipher
         let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
 
-        for rails in 2..10 {
-            // Should be less than (rail * 2 - 3). This is the max offset
-            for offset in 0..=(rails * 2 - 3) {
-                let decoded_text = railfence_decoder(text, rails, offset);
-                decoded_strings.push(decoded_text);
-                let borrowed_decoded_text = &decoded_strings[decoded_strings.len() - 1];
-                if !check_string_success(borrowed_decoded_text, text) {
-                    info!(
-                    "Failed to decode railfence because check_string_success returned false on string {}. This means the string is 'funny' as it wasn't modified.",
-                    borrowed_decoded_text
-                );
-                    return results;
-                }
-                let checker_result = checker_with_sensitivity.check(borrowed_decoded_text);
-                if checker_result.is_identified {
-                    trace!(
-                        "Found a match with railfence {} rails and {} offset",
-                        rails,
-                        offset
-                    );
-                    results.unencrypted_text = Some(vec![borrowed_decoded_text.to_string()]);
-                    results.update_checker(&checker_result);
-                    return results;
-                }
-            }
+        // 2 to 9 rails, each with every offset below (rails * 2 - 3), tried in order. A
+        // key that leaves the text unchanged ends the search without results, after the
+        // keys before it.
+        let keys: Vec<(usize, usize)> = (2..10)
+            .flat_map(|rails| (0..=(rails * 2 - 3)).map(move |offset| (rails, offset)))
+            .collect();
+        let (decoded_strings, unchanged) = candidates_until_unchanged(
+            text,
+            keys.iter()
+                .map(|&(rails, offset)| railfence_decoder(text, rails, offset)),
+        );
+        let tried = &decoded_strings[..unchanged.unwrap_or(decoded_strings.len())];
+        if let Some((i, checker_result)) = checker_with_sensitivity.first_identified(tried) {
+            trace!(
+                "Found a match with railfence {} rails and {} offset",
+                keys[i].0,
+                keys[i].1
+            );
+            results.unencrypted_text = Some(vec![decoded_strings[i].clone()]);
+            results.update_checker(&checker_result);
+            return results;
+        }
+        if let Some(i) = unchanged {
+            info!(
+                "Failed to decode railfence because check_string_success returned false on string {}. This means the string is 'funny' as it wasn't modified.",
+                decoded_strings[i]
+            );
+            return results;
         }
         results.unencrypted_text = Some(decoded_strings);
         results
