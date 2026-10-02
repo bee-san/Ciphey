@@ -69,19 +69,28 @@ struct TimerState {
 }
 
 /// The newest timer started by [`start`], which [`elapsed`] and [`expire_now`] are
-/// about. A timer whose search already finished keeps running until its duration is
-/// up, but nobody looks at it any more.
+/// about.
 static CURRENT: Mutex<Option<Arc<TimerState>>> = Mutex::new(None);
+
+/// Stops its timer when dropped. Hold it for as long as the search runs: a timer
+/// left running would wake every tick until its whole duration was up.
+pub struct StopOnDrop(Arc<TimerState>);
+
+impl Drop for StopOnDrop {
+    fn drop(&mut self) {
+        self.0.expired.store(true, Ordering::SeqCst);
+    }
+}
 
 /// Start the timer with duration in seconds.
 ///
 /// The returned channel receives a message once `duration` seconds of search time have
 /// passed, or soon after [`expire_now`] is called. Time while the timer is paused (see
-/// [`pause`]) doesn't count.
-pub fn start(duration: u32) -> Receiver<()> {
+/// [`pause`]) doesn't count. The timer stops when the returned guard is dropped.
+pub fn start(duration: u32) -> (Receiver<()>, StopOnDrop) {
     let state = Arc::new(TimerState::default());
     *CURRENT.lock().unwrap_or_else(|e| e.into_inner()) = Some(Arc::clone(&state));
-    run(duration, state)
+    (run(duration, Arc::clone(&state)), StopOnDrop(state))
 }
 
 /// Runs a timer for `duration` seconds on its own thread, reporting through `state`
@@ -218,6 +227,20 @@ mod tests {
         timer
             .recv_timeout(Duration::from_secs(10))
             .expect("the timer should fire early");
+        assert!(started.elapsed() < Duration::from_secs(5));
+    }
+
+    #[test]
+    fn dropping_the_guard_stops_the_timer() {
+        // A finished search must not leave its timer waking every tick until the
+        // whole time limit is up
+        let state = Arc::new(TimerState::default());
+        let started = Instant::now();
+        let timer = run(30, Arc::clone(&state));
+        drop(StopOnDrop(Arc::clone(&state)));
+        timer
+            .recv_timeout(Duration::from_secs(10))
+            .expect("the timer thread should end at once");
         assert!(started.elapsed() < Duration::from_secs(5));
     }
 }
