@@ -96,7 +96,7 @@ impl Crack for Decoder<RailfenceDecoder> {
 /// Position `p` of the plaintext is on rail `zigzag[p]`, and the ciphertext lists the
 /// rails one after another. So the ciphertext fills rail 0's positions left to right,
 /// then rail 1's, and so on: a stable counting sort of the positions by rail.
-fn railfence_decoder(text: &str, rails: usize, offset: usize) -> String {
+pub(crate) fn railfence_decoder(text: &str, rails: usize, offset: usize) -> String {
     // Positions run over the byte length, not the character count, as they always
     // have: for non-ASCII text some positions stay empty and are skipped.
     let len = text.len();

@@ -1,9 +1,75 @@
-//! This module contains all the code for decoders
-//! Think of a decoder as a decryption method that doesn't require a key
+//! The decoders, and functions to run one of them on a text.
+//!
+//! # Running one decoder
+//!
+//! Every decoder has a function here named after it: [`base64`](crate::decoders::base64),
+//! [`hexadecimal`](crate::decoders::hexadecimal), [`caesar`](crate::decoders::caesar),
+//! [`vigenere`](crate::decoders::vigenere), [`xor_single_byte`](crate::decoders::xor_single_byte) and so on. Encodings are decoded, and
+//! ciphers are cracked; the ones that take a key can also decrypt with a key you know,
+//! with `*_with_key` functions such as [`caesar_with_key`](crate::decoders::caesar_with_key) and
+//! [`vigenere_with_key`](crate::decoders::vigenere_with_key).
+//! [`decode_with`](crate::decoders::decode_with) runs a decoder chosen by name at run time, and [`list_decoders`](crate::decoders::list_decoders) lists
+//! them all with their aliases, tags and key formats.
+//!
+//! ```
+//! use ciphey::decoders::{self, DecodeOptions};
+//!
+//! // An encoding comes back decoded
+//! let decoded = decoders::base64("aGVsbG8gd29ybGQ=");
+//! assert_eq!(decoded.candidates[0].text, "hello world");
+//!
+//! // A cipher without its key is cracked
+//! let cracked = decoders::caesar("Uryyb jbeyq");
+//! let plaintext = cracked.plaintext().unwrap();
+//! assert_eq!(plaintext.text, "Hello world");
+//! assert_eq!(plaintext.key.as_deref(), Some("13"));
+//!
+//! // With the key it is decrypted
+//! let decrypted = decoders::vigenere_with_key("Rijvs uyvjn", "KEY")?;
+//! assert_eq!(decrypted.candidates[0].text, "Hello world");
+//!
+//! // The same, by name
+//! let decrypted = decoders::decode_with("vigenere", "Rijvs uyvjn", &DecodeOptions::with_key("KEY"))?;
+//! assert!(decrypted.candidates[0].is_plaintext());
+//! # Ok::<(), ciphey::CipheyError>(())
+//! ```
+//!
+//! # What comes back
+//!
+//! A [`Decoded`](crate::decoders::Decoded): the decoder's [`Candidate`](crate::decoders::Candidate)s. Each has the decoded text, the key that
+//! gave it if the decoder reports one, and a
+//! [`Detection`](crate::detection::Detection) if Ciphey's plaintext checks accepted it.
+//!
+//! Without a key the decoder runs as it does in a search, and nothing is filtered out
+//! of what it returns: it checks its decodings and stops at the first one the checks
+//! accept, which comes back alone and marked as plaintext
+//! ([`Decoded::plaintext`](crate::decoders::Decoded::plaintext)). If they accept none,
+//! you get, unmarked, the decodings it would hand on to the search for you to judge: all
+//! 25 Caesar shifts, say, or a Base64 decoding that isn't English. Crackers with many keys
+//! hand on only their best few, or none. Only empty and repeated decodings are dropped.
+//! Text that isn't in the decoder's format gives no candidates.
+//!
+//! With a key there is nothing to crack: the text is decrypted with it, and the result is
+//! checked and marked if the checks accept it.
+//!
+//! The checks are Athena's, the checker the search uses: at the sensitivity each cracker
+//! picks when cracking, and at Athena's default with a key. Like the search, they follow
+//! the process-wide [`Config`](crate::config::Config): with `Config::regex` set only text
+//! that the crib matches counts, and `Config::wordlist` adds the wordlist. The default
+//! config needs no setting up. The human checker is never asked, so these functions
+//! never read from stdin. To check a text yourself, with your own choice of checkers,
+//! use [`detect_plaintext`](crate::detection::detect_plaintext).
+//!
+//! # Adding a decoder
+//!
+//! Think of a decoder as a decryption method that doesn't require a key.
 //! The `interface.rs` defines what each decoder looks like.
 //! Once you have made a decoder you need to add it to the filtration system's
-//! mod.rs file
+//! mod.rs file and give it a function in `api/functions.rs`;
 //! you will also need to make it a public module in this file.
+
+mod api;
+pub use api::*;
 
 /// The a1z26_decoder module decodes A1Z26
 pub mod a1z26_decoder;

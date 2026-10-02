@@ -151,6 +151,8 @@ The `ciphey` binary is a thin wrapper around the `ciphey` crate. The [Discord bo
 
 ## Use it as a library
 
+`perform_cracking` runs the whole search, as the `ciphey` binary does:
+
 ```rust
 use ciphey::config::Config;
 use ciphey::{perform_cracking, CipheyError};
@@ -176,8 +178,65 @@ fn main() {
 
 This prints `hello there general (via Base64)`.
 
-- `perform_cracking` returns `Result<Option<DecoderResult>, CipheyError>` on `master` ([#915](https://github.com/bee-san/Ciphey/pull/915)). The last release on crates.io (0.12.0) still returns `Option<DecoderResult>`, so until the next release use the git version: `ciphey = { git = "https://github.com/bee-san/Ciphey" }`.
-- The config is global to the process. The first call's `Config` is used for every later call.
+### One decoder
+
+If you know what you're looking at, call that decoder. Each one is a function in `ciphey::decoders`: encodings come back decoded, ciphers are cracked, and the ones that take a key can decrypt with yours.
+
+```rust
+use ciphey::decoders;
+
+let decoded = decoders::base64("aGVsbG8gd29ybGQ=");
+assert_eq!(decoded.candidates[0].text, "hello world");
+
+// No key: Ciphey tries every shift and marks the one its checks accept
+let cracked = decoders::caesar("Uryyb jbeyq");
+let plaintext = cracked.plaintext().expect("a shift reads as English");
+assert_eq!(plaintext.text, "Hello world");
+assert_eq!(plaintext.key.as_deref(), Some("13"));
+
+// With the key
+let decrypted = decoders::vigenere_with_key("Rijvs uyvjn", "KEY")?;
+assert_eq!(decrypted.candidates[0].text, "Hello world");
+```
+
+To choose the decoder at run time, `decode_with` takes its name or an alias, and `list_decoders` lists them all with their aliases, tags and the key they take:
+
+```rust
+use ciphey::{decode_with, list_decoders, DecodeOptions};
+
+let cracked = decode_with("rot13", "Uryyb jbeyq", &DecodeOptions::default())?;
+let decrypted = decode_with("affine", "IHHWVC SWFRCP", &DecodeOptions::with_key("a=5, b=8"))?;
+
+for decoder in list_decoders() {
+    println!("{}: {}", decoder.name, decoder.key_format.unwrap_or("no key"));
+}
+```
+
+Nothing is filtered out: you get what the decoder hands on to the search. The candidate Ciphey's plaintext checks accept comes first and carries a `detection`; if they accept none, you get the decodings unmarked, for you to judge (all 25 Caesar shifts, say, though crackers with many keys hand on only their best few).
+
+### Is it plaintext?
+
+`detect_plaintext` runs the checks the search uses (a regex crib, a wordlist, LemmeKnow, common passwords and English) and says which one accepted the text and what it took it for:
+
+```rust
+use ciphey::detection::{detect_plaintext, CheckerKind, DetectOptions, Sensitivity};
+
+let found = detect_plaintext("192.168.0.1", &DetectOptions::default()).unwrap();
+assert_eq!(found.checker, CheckerKind::LemmeKnow);
+assert_eq!(found.description, "Internet Protocol (IP) Address Version 4");
+assert_eq!(found.confidence, Some(0.7)); // the format's rarity in pyWhat
+
+// Pick the checkers and how strict the English checker is, or give a crib
+let english_only = DetectOptions::new()
+    .checkers([CheckerKind::English])
+    .sensitivity(Sensitivity::Low);
+let crib = DetectOptions::new().regex(r"^flag\{")?;
+```
+
+`cargo run --example decode` tours all of this, and `cargo run --example decode -- list` lists the decoders.
+
+- `perform_cracking` returns `Result<Option<DecoderResult>, CipheyError>` on `master` ([#915](https://github.com/bee-san/Ciphey/pull/915)), and the single-decoder and detection functions are only on `master` so far. The last release on crates.io (0.12.0) still returns `Option<DecoderResult>`, so until the next release use the git version: `ciphey = { git = "https://github.com/bee-san/Ciphey" }`.
+- The config is global to the process. The first call's `Config` is used for every later call, and the single decoders follow it too (a `regex` crib, a wordlist). They never prompt.
 - The API is documented on [docs.rs](https://docs.rs/ciphey).
 
 ## Good to know

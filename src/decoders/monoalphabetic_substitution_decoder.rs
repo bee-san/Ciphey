@@ -881,7 +881,7 @@ fn used_part(key: &[u8; 26], present: &[bool; 26]) -> [u8; 26] {
 
 /// Decrypts `text` with `key`, keeping case and everything that isn't an ASCII letter.
 /// Every letter of `text` has a plaintext letter in `key`.
-fn decrypt(text: &str, key: &[u8; 26]) -> String {
+pub(crate) fn decrypt(text: &str, key: &[u8; 26]) -> String {
     text.chars()
         .map(|c| {
             if c.is_ascii_uppercase() {

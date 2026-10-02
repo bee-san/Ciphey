@@ -250,7 +250,7 @@ fn counts(result: &CheckResult) -> bool {
 }
 
 /// The result for a well-formed token that no checker identified
-fn structure_result(payload: &str) -> CheckResult {
+pub(crate) fn structure_result(payload: &str) -> CheckResult {
     let mut result = CheckResult::new(&jwt_structure_checker());
     result.is_identified = true;
     result.text = payload.to_string();

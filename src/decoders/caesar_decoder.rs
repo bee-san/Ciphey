@@ -106,7 +106,7 @@ impl Crack for Decoder<CaesarDecoder> {
 }
 
 /// Caesar cipher to rotate cipher text by shift and return an owned String.
-fn caesar(cipher: &str, shift: u8) -> String {
+pub(crate) fn caesar(cipher: &str, shift: u8) -> String {
     cipher
         .chars()
         .map(|c| {

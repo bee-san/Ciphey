@@ -1,4 +1,23 @@
 //! ciphey is an automatic decoding and cracking tool. <https://github.com/bee-san/ciphey>
+//!
+//! The library has three parts:
+//!
+//! * [`perform_cracking`] runs the whole search: give it text and it works out which
+//!   decoders, in which order, turn it into plaintext.
+//! * [`decoders`] runs one decoder: a function per decoder such as
+//!   [`decoders::base64`] or [`decoders::caesar`], [`decode_with`] to pick one by name,
+//!   and [`list_decoders`].
+//! * [`detection`] says whether a text is plaintext and what it is:
+//!   [`detect_plaintext`] and [`is_plaintext`].
+//!
+//! ```
+//! let decoded = ciphey::decoders::hexadecimal("3139322e3136382e302e31");
+//! let plaintext = decoded.plaintext().unwrap();
+//! assert_eq!(plaintext.text, "192.168.0.1");
+//!
+//! let detection = plaintext.detection.as_ref().unwrap();
+//! assert_eq!(detection.description, "Internet Protocol (IP) Address Version 4");
+//! ```
 // Warns in case we forget to include documentation
 #![warn(
     missing_docs,
@@ -36,6 +55,8 @@ pub mod cli_pretty_printing;
 pub mod config;
 /// Decoders are the functions that actually perform the decodings.
 pub mod decoders;
+/// Plaintext detection: run Ciphey's plaintext checkers on a text.
+pub mod detection;
 /// The error type returned by the library API.
 mod error;
 /// The filtration system builds what decoders to use at runtime
@@ -64,6 +85,10 @@ use crate::{
 };
 
 use self::decoders::crack_results::CrackResult;
+pub use decoders::{
+    decode_with, decoder_info, list_decoders, Candidate, DecodeOptions, Decoded, DecoderInfo,
+};
+pub use detection::{detect_plaintext, is_plaintext, DetectOptions, Detection};
 pub use error::CipheyError;
 
 /// The main function to call which performs the cracking.

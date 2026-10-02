@@ -86,7 +86,7 @@ impl Crack for Decoder<ROT47Decoder> {
 }
 
 /// Maps rot47 to the alphabet (up to ROT94 with the ROT47 alphabet)
-fn rot47_to_alphabet(text: &str, shift: u8) -> String {
+pub(crate) fn rot47_to_alphabet(text: &str, shift: u8) -> String {
     let mut result = String::new();
     for c in text.chars() {
         let mut c = c as u8;

@@ -269,7 +269,7 @@ fn break_vigenere_letters(cipher_text: &[usize], key_length: usize) -> String {
 }
 
 /// Decrypt text using the found key
-fn decrypt(text: &str, key: &str) -> String {
+pub(crate) fn decrypt(text: &str, key: &str) -> String {
     let key_bytes: Vec<u8> = key.bytes().collect();
     let mut result = String::with_capacity(text.len());
     let mut key_idx = 0;

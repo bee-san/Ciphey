@@ -533,7 +533,7 @@ fn letter_index(byte: u8) -> Option<usize> {
 }
 
 /// `bytes` XORed with `key` repeated.
-fn xor_with_key(bytes: &[u8], key: &[u8]) -> Vec<u8> {
+pub(crate) fn xor_with_key(bytes: &[u8], key: &[u8]) -> Vec<u8> {
     bytes
         .iter()
         .zip(key.iter().cycle())
@@ -556,7 +556,7 @@ fn shortest_period(key: &[u8]) -> &[u8] {
 }
 
 /// The key as text if every byte is printable ASCII (`ICE`), else as hex (`0x1337beef`).
-fn format_key(key: &[u8]) -> String {
+pub(crate) fn format_key(key: &[u8]) -> String {
     if key.iter().all(|byte| (0x20..=0x7e).contains(byte)) {
         return key.iter().map(|&byte| char::from(byte)).collect();
     }
