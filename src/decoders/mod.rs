@@ -17,6 +17,8 @@ pub mod atbash_decoder;
 pub mod baconian_decoder;
 /// The base32_decoder module decodes base32
 pub mod base32_decoder;
+/// The base36_decoder module decodes Base36 (bytes as one big-endian radix-36 integer)
+pub mod base36_decoder;
 /// The base58_bitcoin_decoder module decodes base58 bitcoin
 pub mod base58_bitcoin_decoder;
 /// The base58_monero_decoder module decodes base58 monero
@@ -119,6 +121,7 @@ pub mod monoalphabetic_substitution_decoder;
 use atbash_decoder::AtbashDecoder;
 use baconian_decoder::BaconianDecoder;
 use base32_decoder::Base32Decoder;
+use base36_decoder::Base36Decoder;
 use base58_bitcoin_decoder::Base58BitcoinDecoder;
 use base58_flickr_decoder::Base58FlickrDecoder;
 use base58_monero_decoder::Base58MoneroDecoder;
@@ -180,6 +183,8 @@ pub enum DecoderType {
     BaconianDecoder(baconian_decoder::BaconianDecoder),
     /// base32 decoder
     Base32Decoder(base32_decoder::Base32Decoder),
+    /// base36 decoder
+    Base36Decoder(base36_decoder::Base36Decoder),
     /// base58 bitcoin decoder
     Base58BitcoinDecoder(base58_bitcoin_decoder::Base58BitcoinDecoder),
     /// base58 monero decoder
@@ -345,6 +350,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ),
         ("UTF-16", DecoderBox::new(Decoder::<Utf16Decoder>::new())),
         ("Base32", DecoderBox::new(Decoder::<Base32Decoder>::new())),
+        ("Base36", DecoderBox::new(Decoder::<Base36Decoder>::new())),
         ("Reverse", DecoderBox::new(Decoder::<ReverseDecoder>::new())),
         (
             "Morse Code",

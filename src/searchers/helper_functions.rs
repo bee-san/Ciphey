@@ -74,6 +74,7 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
     const STACKABLE: &[&str] = &[
         "Base64",
         "Base32",
+        "Base36",
         "Base58 Bitcoin",
         "Base58 Ripple",
         "Base58 Monero",

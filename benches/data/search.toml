@@ -64,6 +64,13 @@ expected = "Meet me at the old lighthouse after midnight and bring the map, the 
 
 [[case]]
 kind = "single"
+name = "base36"
+layers = ["Base36"]
+input = "a822v1oz8f1g6201c07e8y94rud6he0289o4d0fxi2pthhv60m2s9nfnu6qul2zwxpn8wdgzfebbb7rml6tb0hl2ze8kye5p1355vfz8nh9otnrvkqdmkecd8s6ratdg6m"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
 name = "base58_bitcoin"
 layers = ["Base58 Bitcoin"]
 input = "6X6FW9Fv3pE3p6JtGkbStCFRnzXNxB2FpZzj3qrCm9DJAyJXHm7eixRZfy9rkN8nTwk8SRHWUDmeoc7qJTrURpjgfxQqR3oSt9wR67mGcrjWXhrx2Zb"
@@ -303,6 +310,13 @@ kind = "multi"
 name = "base64_xor_base64"
 layers = ["Base64", "Single-byte XOR", "Base64"]
 input = "FhUULiYBADYYEQAqJgEAciMFFyUgcDopCwU6MhhwKnIjBXtzIXAXJRsVGHIYGgslIBUuKSAvLiwjChMlGxV3KQsFCDsjFXcsCwoQLRgRADYbGgMxCwoQLRgRADAYGiklGxV3KQsFByUmBXs7G3AlNw=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "base36_base64"
+layers = ["Base36", "Base64"]
+input = "YTgyMnYxb3o4ZjFnNjIwMWMwN2U4eTk0cnVkNmhlMDI4OW80ZDBmeGkycHRoaHY2MG0yczluZm51NnF1bDJ6d3hwbjh3ZGd6ZmViYmI3cm1sNnRiMGhsMnplOGt5ZTVwMTM1NXZmejhuaDlvdG5ydmtxZG1rZWNkOHM2cmF0ZGc2bQ=="
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

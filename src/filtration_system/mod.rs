@@ -9,6 +9,7 @@ use crate::decoders::ascii85_decoder::Ascii85Decoder;
 use crate::decoders::atbash_decoder::AtbashDecoder;
 use crate::decoders::baconian_decoder::BaconianDecoder;
 use crate::decoders::base32_decoder::Base32Decoder;
+use crate::decoders::base36_decoder::Base36Decoder;
 use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
 use crate::decoders::base58_monero_decoder::Base58MoneroDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
@@ -272,6 +273,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let quoted_printable = Decoder::<QuotedPrintableDecoder>::new();
     let utf16 = Decoder::<Utf16Decoder>::new();
     let base32 = Decoder::<Base32Decoder>::new();
+    let base36 = Decoder::<Base36Decoder>::new();
     let reversedecoder = Decoder::<ReverseDecoder>::new();
     let morsecodedecoder = Decoder::<MorseCodeDecoder>::new();
     let atbashdecoder = Decoder::<AtbashDecoder>::new();
@@ -317,6 +319,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(octal),
             Box::new(html_entity),
             Box::new(base32),
+            Box::new(base36),
             // Before rot47: when two decoders find plaintext in the same step the search
             // reports the one listed first, and LemmeKnow takes rot47 of `104,101,108,...`
             // for a Bitcoin Cash address.
