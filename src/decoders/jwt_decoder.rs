@@ -218,7 +218,14 @@ fn decode_object(part: &str) -> Option<(String, Map<String, Value>)> {
 ///
 /// The payload is returned either way, so the search can carry on from it.
 fn identify(results: &mut CrackResult, token: Jwt, checker: &CheckerTypes, crib: bool) {
-    let payload_result = checker.check(&token.payload);
+    // Without a crib the payload is judged on the token's structure. It is a JSON object,
+    // so Athena's JSON checker would always take it first, under a less fitting name, and
+    // with the human checker on that would be a second prompt about the same text.
+    let payload_result = if crib {
+        checker.check(&token.payload)
+    } else {
+        CheckResult::new(&jwt_structure_checker())
+    };
     if counts(&payload_result) {
         results.update_checker(&payload_result);
     } else if crib {

@@ -1,3 +1,4 @@
+use crate::checkers::json_checker::is_json_object_or_array;
 use crate::checkers::lemmeknow_checker::is_unmarked_ctf_flag;
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
@@ -42,9 +43,11 @@ impl Crack for Decoder<AtbashDecoder> {
             return results;
         }
 
-        // Atbash keeps a flag's shape, so `SEKAI{...}` from `HVPZR{...}` says nothing,
-        // unless a crib says what the flag looks like
-        if is_unmarked_ctf_flag(&decoded_text) && get_config().regex.is_none() {
+        // Atbash keeps the shape of a flag (`SEKAI{...}` from `HVPZR{...}` says nothing)
+        // and of JSON, unless a crib says what to look for
+        if get_config().regex.is_none()
+            && (is_unmarked_ctf_flag(&decoded_text) || is_json_object_or_array(text))
+        {
             results.unencrypted_text = Some(vec![decoded_text]);
             return results;
         }

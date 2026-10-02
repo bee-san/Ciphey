@@ -305,6 +305,22 @@ fn result_confidence(node: &AStarNode) -> (u8, f32) {
     (class, node.cost)
 }
 
+/// Keeps only the first result for each text, in the order the decoders are listed.
+///
+/// When two decoders find the same plaintext in one step, the list order says which one
+/// describes it (Quoted-Printable before Hexadecimal for `=48=65`). Results are then
+/// sorted by path cost, which depends on the decoder, so a duplicate from a cheaper
+/// decoder must not get the chance to come first.
+fn keep_first_of_each_text(results: &mut Vec<AStarNode>) {
+    let mut seen = std::collections::HashSet::new();
+    results.retain(|node| {
+        node.state
+            .text
+            .first()
+            .is_none_or(|text| seen.insert(calculate_hash(text)))
+    });
+}
+
 /// Search for a decoder sequence that turns `input` into plaintext. Sends `Some(result)`
 /// on success (repeatedly in `top_results` mode), `None` if the space is exhausted.
 pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Arc<AtomicBool>) {
@@ -355,6 +371,7 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
             new_nodes.into_iter().partition(|n| n.is_result);
 
         if results.len() > 1 {
+            keep_first_of_each_text(&mut results);
             results.sort_by(|a, b| {
                 result_confidence(a)
                     .partial_cmp(&result_confidence(b))
@@ -539,6 +556,32 @@ mod tests {
             is_result: true,
         };
         assert!(result_passes_sanity(&node, 16, false));
+    }
+
+    #[test]
+    fn the_first_decoder_to_find_a_text_describes_it() {
+        let result = |decoder: &'static str, text: &str, cost: f32| {
+            let mut step = crate::CrackResult::new(&crate::Decoder::default(), String::new());
+            step.decoder = decoder;
+            AStarNode {
+                state: DecoderResult {
+                    text: vec![text.to_string()],
+                    path: vec![step],
+                },
+                depth: 1,
+                cost,
+                total_cost: f32::NEG_INFINITY,
+                is_result: true,
+            }
+        };
+        let mut results = vec![
+            result("Quoted-Printable", "Hello World", 2.0),
+            result("Hexadecimal", "Hello World", 1.5),
+            result("Base64", "something else", 1.0),
+        ];
+        keep_first_of_each_text(&mut results);
+        let decoders: Vec<&str> = results.iter().map(|n| n.state.path[0].decoder).collect();
+        assert_eq!(decoders, ["Quoted-Printable", "Base64"]);
     }
 
     #[test]

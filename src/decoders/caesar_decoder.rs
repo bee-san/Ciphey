@@ -5,6 +5,7 @@
 //! Ranks all 25 shifts by English letter-pair fitness and only asks the checker (at Low
 //! sensitivity) about the best one. With a `--regex` crib every shift is checked.
 
+use crate::checkers::json_checker::is_json_object_or_array;
 use crate::checkers::lemmeknow_checker::{is_marked_ctf_flag, is_unmarked_ctf_flag};
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
@@ -77,6 +78,9 @@ impl Crack for Decoder<CaesarDecoder> {
         // rank best, then the best-ranked shift.
         let to_check: Vec<usize> = if get_config().regex.is_some() {
             (0..decoded_strings.len()).collect()
+        } else if is_json_object_or_array(text) {
+            // A shift keeps JSON's shape, so every shift would pass as JSON
+            Vec::new()
         } else {
             let flag = decoded_strings
                 .iter()

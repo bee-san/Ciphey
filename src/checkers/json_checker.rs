@@ -47,7 +47,11 @@ impl Check for Checker<JsonChecker> {
 }
 
 /// Whether `text` is a non-empty JSON object or array.
-fn is_json_object_or_array(text: &str) -> bool {
+///
+/// Caesar, Atbash and Vigenère keep this true (they only change letters), so they don't
+/// ask the checkers about their candidates when their input is JSON: every candidate would
+/// pass as JSON.
+pub(crate) fn is_json_object_or_array(text: &str) -> bool {
     let trimmed = text.trim();
     // Skips the parser for almost every candidate
     let bracketed = matches!(

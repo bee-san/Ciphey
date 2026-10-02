@@ -8,6 +8,7 @@
 use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
 use crate::checkers::english::has_mostly_words;
+use crate::checkers::json_checker::is_json_object_or_array;
 use crate::checkers::lemmeknow_checker::{is_marked_ctf_flag, is_unmarked_ctf_flag};
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
@@ -141,6 +142,10 @@ impl Crack for Decoder<VigenereDecoder> {
         let mut checker_result = checker_with_sensitivity.check(text);
 
         let crib = get_config().regex.is_some();
+        if !crib && is_json_object_or_array(text) {
+            // Vigenère keeps JSON's shape, so every key would pass as JSON
+            return results;
+        }
         let letters = cipher_letters(text);
         for key_length in 3..30 {
             let key = break_vigenere_letters(&letters, key_length);
