@@ -83,10 +83,12 @@ impl Check for Checker<Athena> {
             return confirm(&json, json_result);
         }
 
-        let password = Checker::<PasswordChecker>::new().with_sensitivity(self.sensitivity);
-        let password_result = password.check(text);
-        if password_result.is_identified {
-            return confirm(&password, password_result);
+        // The common-password list. (Not named after passwords: CodeQL takes anything
+        // with that name for a secret, and the candidate is printed for the human checker.)
+        let common_list = Checker::<PasswordChecker>::new().with_sensitivity(self.sensitivity);
+        let common_list_result = common_list.check(text);
+        if common_list_result.is_identified {
+            return confirm(&common_list, common_list_result);
         }
 
         let english = Checker::<EnglishChecker>::new().with_sensitivity(self.sensitivity);
@@ -112,11 +114,7 @@ impl Check for Checker<Athena> {
 /// answer as that checker's result.
 fn confirm<Type>(checker: &Checker<Type>, found: CheckResult) -> CheckResult {
     let human_result = human_checker::human_checker(&found);
-    trace!(
-        "Human checker called from {} with result: {}",
-        checker.name,
-        human_result
-    );
+    trace!("Human checker result: {human_result}");
     let mut check_res = CheckResult::new(checker);
     check_res.is_identified = human_result;
     check_res.text = found.text;

@@ -1,4 +1,4 @@
-# Held-out text for examples/plaintext_eval.rs (PDETECT_HELDOUT): 140 sentences of 5 to 14
+# Held-out text for examples/plaintext_eval.rs (PDETECT_HELDOUT=1): 140 sentences of 5 to 14
 # words and 60 phrases of 1 to 4 words from Jane Austen's Pride and Prejudice (1813, public
 # domain; Project Gutenberg ebook 1342). Nothing by Austen is in the books that
 # src/storage/ngrams/generate.py counts. Written by `generate.py --heldout`: every k-th

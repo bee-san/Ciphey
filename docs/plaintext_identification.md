@@ -89,7 +89,7 @@ The process works as follows:
    - **Other space-less text** (digits or symbols mixed in, like `ThI2THAtThE2THe0`): only a single dictionary word passes.
    - **Everything else** goes to gibberish-or-not's `is_gibberish` at the checker's sensitivity, unless no word at all is an English word, or the quadgram score is below -6.5 (-7.5 at High), far from any natural language.
 
-The thresholds were picked with `examples/plaintext_eval.rs` (the harness from [#1031](https://github.com/bee-san/Ciphey/issues/1031)) and checked on held-out text from Pride and Prejudice: `PDETECT_HELDOUT=examples/data/heldout_pride_and_prejudice.txt cargo run --release --example plaintext_eval`.
+The thresholds were picked with `examples/plaintext_eval.rs` (the harness from [#1031](https://github.com/bee-san/Ciphey/issues/1031)) and checked on held-out text from Pride and Prejudice: `PDETECT_HELDOUT=1 cargo run --release --example plaintext_eval`.
 
 #### Sensitivity Levels
 

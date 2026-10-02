@@ -5,14 +5,13 @@
 //! Rerun it whenever a checker, threshold or decoder sensitivity changes.
 //!
 //! Run:   cargo run --release --example plaintext_eval
-//! Modes: PDETECT_HELDOUT=examples/data/heldout_pride_and_prejudice.txt
-//!                              -> build the corpus from that file's lines instead (held-out
-//!                                 text the thresholds were not tuned on)
-//!        PDETECT_EXAMPLES=1    -> print misclassified examples per category
-//!        PDETECT_DUMP=1        -> print every sample as TSV (category, positive, quadgram
-//!                                 score, Athena at Low/Medium/High), for tuning thresholds
-//!        PDETECT_CHECK_FILE=path -> classify each line of `path`
-//!        PDETECT_REGEX='pat'   -> config.regex = Some(pat); only times the Regex checker
+//! Modes: PDETECT_HELDOUT=1   -> build the corpus from examples/data/heldout_pride_and_prejudice.txt
+//!                               instead (held-out text the thresholds were not tuned on)
+//!        PDETECT_EXAMPLES=1  -> print misclassified examples per category
+//!        PDETECT_DUMP=1      -> print every sample as TSV (category, positive, quadgram score,
+//!                               Athena at Low/Medium/High), for tuning thresholds
+//!        PDETECT_CHECK=1     -> classify each line of stdin
+//! The `--regex` crib checker is timed by the criterion `crib` suite (benches/crib.rs).
 //! Deterministic: fixed corpus + xorshift PRNG with a fixed seed.
 
 use std::collections::BTreeMap;
@@ -27,7 +26,6 @@ use ciphey::checkers::{
     json_checker::JsonChecker,
     lemmeknow_checker::LemmeKnow,
     password::PasswordChecker,
-    regex_checker::RegexChecker,
     CheckerTypes,
 };
 use ciphey::config::{set_global_config, Config};
@@ -210,6 +208,10 @@ const HASHES: [&str; 24] = [
 
 const VIG_KEYS: [&str; 4] = ["LEMON", "KEY", "CIPHEY", "SECRETKEY"];
 
+/// Held-out text: sentences and short phrases from Pride and Prejudice, which the
+/// thresholds were not tuned on (written by `src/storage/ngrams/generate.py --heldout`).
+const HELDOUT: &str = include_str!("data/heldout_pride_and_prejudice.txt");
+
 // ------------------------------------------------------------- utilities --
 
 /// xorshift64* so the corpus does not depend on the `rand` crate version.
@@ -367,10 +369,9 @@ impl Texts {
         }
     }
 
-    /// Lines of `path`; `#` starts a comment. Lines of up to 4 words are phrases.
-    fn from_file(path: &str) -> Self {
-        let content = std::fs::read_to_string(path).expect("held-out file");
-        let lines: Vec<String> = content
+    /// The held-out file's lines; `#` starts a comment. Lines of up to 4 words are phrases.
+    fn heldout() -> Self {
+        let lines: Vec<String> = HELDOUT
             .lines()
             .map(str::trim)
             .filter(|l| !l.is_empty() && !l.starts_with('#'))
@@ -884,24 +885,6 @@ fn bench(label: &str, iters: u32, mut f: impl FnMut()) {
     println!("| {label} | {} |", fmt_ns(ns));
 }
 
-fn regex_mode(pat: &str) {
-    println!("## Regex mode (config.regex = {pat:?})\n");
-    println!("| operation | time / call |\n|---|---|");
-    let text = "The quick brown fox jumps over the lazy dog";
-    let rc = Checker::<RegexChecker>::new();
-    bench("RegexChecker::check", 20_000, || {
-        black_box(rc.check(black_box(text)));
-    });
-    let re = regex::Regex::new(pat).unwrap();
-    bench("prebuilt Regex::is_match", 20_000, || {
-        black_box(re.is_match(black_box(text)));
-    });
-    let a = Checker::<Athena>::new();
-    bench("Athena::check (regex path)", 20_000, || {
-        black_box(a.check(black_box(text)));
-    });
-}
-
 fn micro_benchmarks() {
     println!("\n## Micro-benchmarks\n");
     println!("| operation | time / call |\n|---|---|");
@@ -968,49 +951,46 @@ fn micro_benchmarks() {
 
 // ------------------------------------------------------------------ main --
 
+/// Whether the environment variable `name` is set to `1`.
+fn mode(name: &str) -> bool {
+    std::env::var(name).is_ok_and(|v| v == "1")
+}
+
 fn main() {
-    let regex = std::env::var("PDETECT_REGEX").ok();
-    let show_examples = std::env::var("PDETECT_EXAMPLES")
-        .map(|v| v == "1")
-        .unwrap_or(false);
-    let dump = std::env::var("PDETECT_DUMP")
-        .map(|v| v == "1")
-        .unwrap_or(false);
+    let show_examples = mode("PDETECT_EXAMPLES");
+    let dump = mode("PDETECT_DUMP");
 
     let cfg = Config {
         api_mode: true,
         human_checker_on: false,
-        regex: regex.clone(),
         ..Config::default()
     };
     set_global_config(cfg);
 
-    if let Some(p) = regex {
-        regex_mode(&p);
-        return;
-    }
-
-    if let Ok(path) = std::env::var("PDETECT_CHECK_FILE") {
+    if mode("PDETECT_CHECK") {
         let configs = checker_configs();
-        let content = std::fs::read_to_string(path).expect("check file");
-        for line in content.lines().filter(|l| !l.is_empty()) {
-            println!("`{}`", short(line));
+        for line in std::io::stdin()
+            .lines()
+            .map_while(Result::ok)
+            .filter(|l| !l.is_empty())
+        {
+            println!("`{}`", short(&line));
             for (n, f) in configs
                 .iter()
                 .filter(|(n, _)| n.starts_with("Athena") || n == "LemmeKnow")
             {
-                let (hit, why) = f(line);
+                let (hit, why) = f(&line);
                 println!("  {n}: {hit} {}", if hit { why } else { String::new() });
             }
         }
         return;
     }
 
-    let heldout = std::env::var("PDETECT_HELDOUT").ok();
-    let builtin = heldout.is_none();
-    let texts = match &heldout {
-        Some(path) => Texts::from_file(path),
-        None => Texts::builtin(),
+    let builtin = !mode("PDETECT_HELDOUT");
+    let texts = if builtin {
+        Texts::builtin()
+    } else {
+        Texts::heldout()
     };
     let mut rng = Rng(0x00C1_FE7E_5EED_2026);
     let corpus = build_corpus(&texts, builtin, &mut rng);
@@ -1061,7 +1041,11 @@ fn main() {
 
     println!(
         "# ciphey plaintext-detection eval ({})\n",
-        heldout.as_deref().unwrap_or("issue #1031 corpus")
+        if builtin {
+            "issue #1031 corpus"
+        } else {
+            "held-out Pride and Prejudice set"
+        }
     );
     println!(
         "corpus: {n_pos} positives, {n_neg} negatives, {} categories\n",

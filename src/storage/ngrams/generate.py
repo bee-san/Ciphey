@@ -198,7 +198,7 @@ def write_heldout(cache):
     os.makedirs(os.path.dirname(HELDOUT), exist_ok=True)
     with open(HELDOUT, "w", newline="\n") as f:
         f.write(
-            "# Held-out text for examples/plaintext_eval.rs (PDETECT_HELDOUT): 140 sentences of 5 to 14\n"
+            "# Held-out text for examples/plaintext_eval.rs (PDETECT_HELDOUT=1): 140 sentences of 5 to 14\n"
             "# words and 60 phrases of 1 to 4 words from Jane Austen's Pride and Prejudice (1813, public\n"
             "# domain; Project Gutenberg ebook 1342). Nothing by Austen is in the books that\n"
             "# src/storage/ngrams/generate.py counts. Written by `generate.py --heldout`: every k-th\n"
