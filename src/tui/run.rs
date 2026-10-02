@@ -19,7 +19,9 @@ use crate::{perform_cracking, CipheyError};
 use crossterm::terminal;
 use ratatui::text::{Line, Span};
 use std::env;
+use std::fs::OpenOptions;
 use std::io::{self, IsTerminal, Write};
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 /// Searches for the plaintext of `text` and prints what was found, the way the
@@ -183,24 +185,46 @@ fn ask_yes_no(question: &str, theme: &Theme) -> bool {
     read_line().to_ascii_lowercase().starts_with('y')
 }
 
-/// Asks where to save something, defaulting to `~/ciphey_text.txt`
-fn ask_file_name(theme: &Theme) -> String {
-    let default = format!("{}/ciphey_text.txt", env::var("HOME").unwrap_or_default());
-    let line = Line::from(vec![
-        Span::styled(format!("{} File name", theme.glyphs.ask), theme.question),
-        Span::styled(
-            format!(" (default {}): ", text::sanitize(&default)),
-            theme.muted,
-        ),
-    ]);
-    print!("{}", live::to_ansi(&line));
-    let _ = io::stdout().flush();
-    let name = read_line();
-    if name.is_empty() {
-        default
-    } else {
-        name
+/// Writes `contents` to a new file in the home directory, `ciphey_text.txt` or, if
+/// that exists, `ciphey_text-2.txt` and so on: nothing is overwritten. Returns where
+/// it went.
+fn save_to_new_file(contents: &str) -> io::Result<PathBuf> {
+    save_in(
+        &dirs::home_dir().unwrap_or_else(|| PathBuf::from(".")),
+        contents,
+    )
+}
+
+/// [`save_to_new_file`] in `dir`
+fn save_in(dir: &Path, contents: &str) -> io::Result<PathBuf> {
+    for n in 1..=1000 {
+        let name = if n == 1 {
+            "ciphey_text.txt".to_string()
+        } else {
+            format!("ciphey_text-{n}.txt")
+        };
+        let path = dir.join(name);
+        match OpenOptions::new().write(true).create_new(true).open(&path) {
+            Ok(mut file) => {
+                file.write_all(contents.as_bytes())?;
+                return Ok(path);
+            }
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e),
+        }
     }
+    Err(io::Error::new(
+        io::ErrorKind::AlreadyExists,
+        "ciphey_text.txt to ciphey_text-1000.txt all exist",
+    ))
+}
+
+/// The line saying a file couldn't be written
+fn write_failed(error: &io::Error, theme: &Theme) -> Line<'static> {
+    Line::from(Span::styled(
+        format!("{} Couldn't save the file: {error}", theme.glyphs.failed),
+        theme.failure,
+    ))
 }
 
 /// One line from stdin without the newline, or nothing at the end of input
@@ -233,17 +257,9 @@ fn show_success(view: SuccessView<'_>, theme: &Theme, width: usize) {
             invisible * 100.0
         );
         if ask_yes_no(&question, theme) {
-            let path = ask_file_name(theme);
-            match std::fs::write(&path, &plaintext) {
-                Ok(()) => saved_to = Some(path),
-                Err(e) => print(&[Line::from(Span::styled(
-                    format!(
-                        "{} Couldn't write {}: {e}",
-                        theme.glyphs.failed,
-                        text::sanitize(&path)
-                    ),
-                    theme.failure,
-                ))]),
+            match save_to_new_file(&plaintext) {
+                Ok(path) => saved_to = Some(path.display().to_string()),
+                Err(e) => print(&[write_failed(&e, theme)]),
             }
         }
     }
@@ -266,29 +282,43 @@ fn show_top_results(elapsed: Duration, theme: &Theme, width: usize) {
             text::thousands(results.len() as u64)
         );
         if ask_yes_no(&question, theme) {
-            let path = ask_file_name(theme);
-            let saved = match std::fs::write(&path, top_results_file(&results)) {
-                Ok(()) => Span::styled(
+            let saved = match save_to_new_file(&top_results_file(&results)) {
+                Ok(path) => Line::from(Span::styled(
                     format!(
                         "{} Saved {} possible plaintexts to {}",
                         theme.glyphs.found,
                         text::thousands(results.len() as u64),
-                        text::sanitize(&path)
+                        text::sanitize(&path.display().to_string())
                     ),
                     theme.success,
-                ),
-                Err(e) => Span::styled(
-                    format!(
-                        "{} Couldn't write {}: {e}",
-                        theme.glyphs.failed,
-                        text::sanitize(&path)
-                    ),
-                    theme.failure,
-                ),
+                )),
+                Err(e) => write_failed(&e, theme),
             };
-            print(&[Line::from(saved)]);
+            print(&[saved]);
             return;
         }
     }
     print(&screens::top_results(&results, elapsed, theme, width));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::save_in;
+    use std::fs;
+
+    #[test]
+    fn saving_never_overwrites_a_file() {
+        let dir = std::env::temp_dir().join(format!("ciphey-save-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+
+        let first = save_in(&dir, "first").unwrap();
+        let second = save_in(&dir, "second").unwrap();
+        assert_eq!(first, dir.join("ciphey_text.txt"));
+        assert_eq!(second, dir.join("ciphey_text-2.txt"));
+        assert_eq!(fs::read_to_string(&first).unwrap(), "first");
+        assert_eq!(fs::read_to_string(&second).unwrap(), "second");
+
+        let _ = fs::remove_dir_all(&dir);
+    }
 }

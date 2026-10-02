@@ -157,7 +157,7 @@ If you know part of the answer (the flag format, a word that has to be in there,
 
 ### 🎨 Made for your terminal
 
-<img src="media/tui/ciphey-tui.gif" width="800" alt="A terminal runs ciphey -t on a long Base64 string. Ciphey shows a live line, Searching 1.5 s of 5 s with a time bar, the decoders it is trying and how many texts it has explored. It asks Is this the plaintext? about 'Ciphey peels back every layer of encoding', the answer is y, and it prints Plaintext found in 2.0 s, 4 layers: Base64, Base32, Base64 and Hexadecimal, each with the text it produced, found by the English checker.">
+<img src="media/tui/ciphey-tui.gif" width="800" alt="A terminal runs ciphey -t on a long Base64 string. A live line counts the search time against the 5 s limit with a time bar, and shows the decoders being tried and how many texts have been explored. Ciphey asks Is this the plaintext? about 'Ciphey peels back every layer of encoding'. The answer is y, and it prints Plaintext found in 1.7 s, 5 layers: Base64 three times, Hexadecimal and Caesar (ROT13), each with the text it produced, found by the English checker.">
 
 While it searches, Ciphey shows how long it has been going against the time limit, the decoders it is trying and how far it has got. It asks about a candidate with one key press (`y` yes, `n` no), `q` stops the search and shows what it found, and `?` lists the keys. The result shows every layer it peeled off, with the text each one produced, and the checker that recognised the plaintext. It works in 80×24 and narrower terminals, and with [`NO_COLOR`](https://no-color.org/) every status still has a symbol and words. When the output goes to a pipe or a file, or with `--plain`, Ciphey prints plain lines as it always has.
 

@@ -695,7 +695,8 @@ pub fn display_top_results(results: &[PlaintextResult]) {
                 file_path = format!("{}/ciphey_text.txt", env::var("HOME").unwrap_or_default());
             }
 
-            match write(&file_path, top_results_file(results)) {
+            let file_content = top_results_file(results);
+            match write(&file_path, file_content) {
                 Ok(_) => println!("{}", success(&format!("Results written to {}", file_path))),
                 Err(e) => println!("{}", warning(&format!("Failed to write to file: {}", e))),
             }

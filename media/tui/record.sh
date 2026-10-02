@@ -10,8 +10,8 @@
 # seconds, answers y and waits for the result. Nothing is drawn by hand: the GIF is
 # what ciphey printed, with its real timing.
 #
-# The input is the README's sentence under four layers, innermost first:
-# hex, Base64, Base32, Base64. It was picked because ciphey's first question about
+# The input is the README's sentence under five layers, innermost first: ROT13,
+# hex, then Base64 three times. It was picked because ciphey's first question about
 # it is the right answer, after a search long enough to watch.
 #
 # Needs Linux on x86_64, tmux, curl, unzip, sha256sum and python3. The pinned tools
@@ -34,7 +34,7 @@ THEME=1e1e2e,cdd6f4,45475a,f38ba8,a6e3a1,f9e2af,89b4fa,f5c2e7,94e2d5,bac2de,585b
 COLS=80
 ROWS=18
 PLAINTEXT='Ciphey peels back every layer of encoding'
-SECRET='SlpDRTJNU1BLUlJYT1RUS000WkU0VkRER1ZHV1VRSlRKVkNGU01LT05KS1RFV0wyTU41RTIyU0JHSkdXVVdMWUpaVkUyTVNaTkpFWE9UVEtLVVpVNDJTWkdGSEhVU0pUSjVLRVM1Mk9OVkdURVRLVU1NMlU0MlNWR05HV1VTTFhKWldWU01TT05KRVhPVFRLS1VaRlVWQ1pQSkhHMldKU0paQ0ZTTktPTlZLVEVUVFhIVTZRPT09PQ=='
+SECRET='VGxSQk0wNXFXWHBPZWxVelRXcGFhazFxUVRKTmVtTjVUbnBKTTA5VVdUSk5ha0V5V21wYWJFNTZRVE5QUkVsM1RucEpNazlVWTNsT2FsVXlXWHBKZDA1NmF6SmFWRnBxVG5wSk1rNVVTWGRPYWtrelRYcEpkMDU2U1RKTlZHTjNUbXBKTTAxVVl6Sk9ha1V6VGtFOVBRPT0='
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 repo=$(cd "$here/../.." && pwd)
@@ -65,14 +65,14 @@ if [ "${1:-}" != "--render" ]; then
   fetch "$ASCIINEMA_URL" "$tools/asciinema" "$ASCIINEMA_SHA256"
   chmod +x "$tools/asciinema"
 
-  # The input really is the sentence under those four layers
+  # The input really is the sentence under those five layers
   python3 - "$SECRET" "$PLAINTEXT" <<'EOF'
-import base64, sys
+import base64, codecs, sys
 secret, plaintext = sys.argv[1:]
-layer = plaintext.encode().hex()
-for encode in (base64.b64encode, base64.b32encode, base64.b64encode):
-    layer = encode(layer.encode()).decode()
-assert layer == secret, "SECRET is not hex -> Base64 -> Base32 -> Base64 of PLAINTEXT"
+layer = codecs.encode(plaintext, "rot13").encode().hex()
+for _ in range(3):
+    layer = base64.b64encode(layer.encode()).decode()
+assert layer == secret, "SECRET is not ROT13 -> hex -> Base64 x3 of PLAINTEXT"
 EOF
 
   (cd "$repo" && cargo build --release --quiet)
@@ -87,25 +87,29 @@ EOF
       kill -KILL "$child" 2>/dev/null || true
     done
   }
-  # Whatever happens, nothing started for the recording is left running
-  cleanup() {
+  # Ends the recording pane and everything running in it
+  close_pane() {
     local pane_pid
     pane_pid=$(tmux -S "$sock" display-message -p -t rec '#{pane_pid}' 2>/dev/null || true)
     if [ -n "$pane_pid" ]; then
       kill_tree "$pane_pid"
     fi
     tmux -S "$sock" kill-server 2>/dev/null || true
+  }
+  # Whatever happens, nothing started for the recording is left running
+  cleanup() {
+    close_pane
     rm -rf "$work"
   }
   trap cleanup EXIT
 
-  # A fresh home: an empty config (the default colour scheme) and no cache
-  mkdir -p "$work/home/.ciphey" "$work/bin"
-  : > "$work/home/.ciphey/config.toml"
   # `ciphey` on the recorded shell's PATH, so no run can outlive the recording
+  mkdir -p "$work/bin"
   printf '#!/bin/sh\nexec timeout --foreground -k 5 120 %q "$@"\n' "$repo/target/release/ciphey" \
     > "$work/bin/ciphey"
   chmod +x "$work/bin/ciphey"
+  # asciinema drops PS1 from the environment, so the prompt comes from an rc file
+  printf "PS1='\$ '\n" > "$work/.bashrc"
 
   pane() { tmux -S "$sock" "$@"; }
   # Types $1 one key at a time
@@ -129,40 +133,58 @@ EOF
     done
   }
 
-  rm -f "$cast"
-  # asciinema drops PS1 from the environment, so the prompt comes from an rc file
-  printf "PS1='\$ '\n" > "$work/.bashrc"
-  pane -f /dev/null new-session -d -s rec -x "$COLS" -y "$ROWS" -c "$work" \
-    env -i HOME="$work/home" PATH="$work/bin:/usr/bin:/bin" TERM=xterm-256color \
-    LANG=C.UTF-8 \
-    "$tools/asciinema" rec --quiet --capture-env TERM --window-size "${COLS}x${ROWS}" \
-    --command 'bash --noprofile --rcfile .bashrc' "$cast"
-  pane set-option -t rec status off > /dev/null
-  wait_for '$'
-  sleep 1
+  # Records one run into $work/take.cast. Fails if ciphey's first question isn't
+  # about the plaintext: the search runs on many threads, so now and then a false
+  # positive comes up first.
+  record_take() {
+    # A fresh home each time: an empty config (the default colour scheme), no cache
+    rm -rf "$work/home" "$work/take.cast"
+    mkdir -p "$work/home/.ciphey"
+    : > "$work/home/.ciphey/config.toml"
+    pane -f /dev/null new-session -d -s rec -x "$COLS" -y "$ROWS" -c "$work" \
+      env -i HOME="$work/home" PATH="$work/bin:/usr/bin:/bin" TERM=xterm-256color \
+      LANG=C.UTF-8 \
+      "$tools/asciinema" rec --quiet --capture-env TERM --window-size "${COLS}x${ROWS}" \
+      --command 'bash --noprofile --rcfile .bashrc' "$work/take.cast"
+    pane set-option -t rec status off > /dev/null
+    wait_for '$'
+    sleep 1
 
-  type_keys "ciphey -t '"
-  sleep 0.3
-  pane send-keys -t rec -l -- "$SECRET"
-  sleep 0.5
-  type_keys "'"
-  sleep 0.6
-  pane send-keys -t rec Enter
+    type_keys "ciphey -t '"
+    sleep 0.3
+    pane send-keys -t rec -l -- "$SECRET"
+    sleep 0.5
+    type_keys "'"
+    sleep 0.6
+    pane send-keys -t rec Enter
 
-  wait_for 'Is this the plaintext?'
-  if ! pane capture-pane -p -t rec | grep -qF -- "$PLAINTEXT"; then
-    echo "ciphey asked about a different candidate first; run the script again" >&2
-    pane capture-pane -p -t rec >&2
-    exit 1
-  fi
-  # Long enough to read the question
-  sleep 3
-  pane send-keys -t rec -l y
-  wait_for 'Searched'
-  sleep 1
-  # ciphey has exited; closing the pane ends the recording (asciinema writes every
-  # event as it happens, so nothing is lost)
-  pane kill-server
+    # The key hints are the question's last line, so the whole question is on screen
+    wait_for 'y yes'
+    if ! pane capture-pane -p -t rec | grep -qF -- "$PLAINTEXT"; then
+      close_pane
+      return 1
+    fi
+    # Long enough to read the question
+    sleep 3
+    pane send-keys -t rec -l y
+    wait_for 'Searched'
+    sleep 1
+    # ciphey has exited; closing the pane ends the recording (asciinema writes every
+    # event as it happens, so nothing is lost)
+    close_pane
+  }
+
+  for take in 1 2 3 4 5; do
+    if record_take; then
+      mv "$work/take.cast" "$cast"
+      break
+    fi
+    echo "take $take: ciphey asked about a different candidate first, recording again" >&2
+    if [ "$take" = 5 ]; then
+      echo "giving up after 5 takes" >&2
+      exit 1
+    fi
+  done
 fi
 
 # The last frame stays up for 6 seconds before the GIF loops
