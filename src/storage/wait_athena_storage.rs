@@ -66,6 +66,14 @@ pub fn get_plaintext_results() -> Vec<PlaintextResult> {
     results.clone()
 }
 
+/// Number of plaintext results stored so far, without copying them
+pub fn plaintext_result_count() -> usize {
+    match PLAINTEXT_RESULTS.lock() {
+        Ok(guard) => guard.len(),
+        Err(poisoned) => poisoned.into_inner().len(),
+    }
+}
+
 /// Clears all plaintext results from the storage
 pub fn clear_plaintext_results() {
     let mut results = match PLAINTEXT_RESULTS.lock() {

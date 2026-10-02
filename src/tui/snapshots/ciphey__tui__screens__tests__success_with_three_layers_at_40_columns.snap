@@ -1,0 +1,15 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 40)"
+---
+"✓ Plaintext found in 0.41 s · 3 layers  "
+"                                        "
+"  Ciphey is very fast                   "
+"                                        "
+"  Decoded   1  Base64                   "
+"            2  Hexadecimal              "
+"            3  Caesar (ROT13)           "
+"  Found by  English checker · looks     "
+"            like English                "
+"  Searched  1,204 texts, up to 3 layers "
+"            deep                        "

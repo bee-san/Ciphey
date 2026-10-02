@@ -1,0 +1,10 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 80)"
+---
+"✓ 3 possible plaintexts · collected for 2.0 s                                   "
+"                                                                                "
+"  1  Hello, World!                                     Base64 · English checker "
+"  2  Uryyb, Jbeyq!                                     ROT47 · English checker  "
+"  3  a very long candidate that will not fit in the …  Vigenère · LemmeKnow     "
+"                                                                                "

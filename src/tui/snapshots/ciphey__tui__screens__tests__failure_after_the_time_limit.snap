@@ -1,0 +1,14 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 80)"
+---
+"✗ No plaintext found · the 5 s time limit ran out                               "
+"                                                                                "
+"  Ciphey explored 12,408 texts, up to 7 layers deep, and nothing it found looks "
+"  like plaintext. You said no to 3 candidates.                                  "
+"                                                                                "
+"  Things to try                                                                 "
+"  • -c 15            search for longer                                          "
+"  • -r 'REGEX'       if you know part of the plaintext, such as flag\{          "
+"  • --wordlist FILE  accept exact matches from a wordlist                       "
+"  • ask in #coded-messages on Discord: http://discord.skerritt.blog             "

@@ -1,0 +1,13 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 80)"
+---
+"x No plaintext found | there was nothing left to try                            "
+"                                                                                "
+"  Ciphey explored 1 text, up to 2 layers deep, and nothing it found looks like  "
+"  plaintext. You said no to 1 candidate.                                        "
+"                                                                                "
+"  Things to try                                                                 "
+"  * -r 'REGEX'       if you know part of the plaintext, such as flag\{          "
+"  * --wordlist FILE  accept exact matches from a wordlist                       "
+"  * ask in #coded-messages on Discord: http://discord.skerritt.blog             "

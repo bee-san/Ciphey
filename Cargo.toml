@@ -26,6 +26,8 @@ cipher_identifier = "0.2.0"
 clap = {version = "4.6.1", features = ["derive"]}
 termcolor = "1.4"
 crossbeam = "0.8"
+# Raw mode, key presses and terminal size for the interactive display (src/tui)
+crossterm = { version = "0.29.0", default-features = false, features = ["events", "windows"] }
 dirs = "7.0.0"
 env_logger = "0.11.10"
 gibberish-or-not = "5.0.7"
@@ -39,6 +41,9 @@ memmap2 = "0.9.10"
 num = "0.4"
 once_cell = "1.21.4"
 proc-macro2 = "1.0.106" # Required due to https://github.com/rust-lang/rust/issues/113152
+# Layout and widgets for the interactive display (src/tui). Only the core is used:
+# drawing goes through src/tui/live.rs, not a ratatui backend.
+ratatui = { version = "0.30.2", default-features = false, features = ["std"] }
 rayon = "1.12.0"
 regex = "1.12.4"
 rpassword = "7.5.4"
@@ -50,6 +55,8 @@ serial_test = "4.0.1"
 text_io = "0.1.13"
 thiserror = "2.0.17"
 toml = "1.1.2"
+# Column widths of text for the interactive display (already used by ratatui)
+unicode-width = "0.2.2"
 uuid = "1.23.3"
 rand = "0.8"  # Required for candle-core compatibility
 half = "=2.3.1"  # Required for candle-core compatibility
@@ -71,10 +78,19 @@ dashmap = "6.2.1"
 [target.'cfg(windows)'.dependencies]
 winapi-util = "0.1.9"
 
+# Restores the terminal if ciphey gets SIGTERM during the interactive display
+# (already used by crossterm), and stops the process group on Ctrl-Z (libc, already
+# in the tree)
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.178"
+signal-hook = "0.3.18"
+
 # Dev dependencies
 [dev-dependencies]
 cargo-nextest = "0.9.117"
 criterion = "0.8.2"
+# Snapshot tests for the interactive display's screens (src/tui/snapshots)
+insta = "1.48.0"
 
 [profile.release]
 lto = "fat"

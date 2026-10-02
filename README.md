@@ -47,15 +47,25 @@ Or skip installing: join the [Discord server](http://discord.skerritt.blog), go 
 
 ```console
 $ ciphey -t 'aGVsbG8gdGhlcmUgZ2VuZXJhbA=='
-🕵️ I think the plaintext is Words.
-Possible plaintext: 'hello there general' (y/N):
-y
+? Is this the plaintext? · timer paused
 
-🥳 ciphey has decoded 64 times.
+  hello there general
 
-The plaintext is:
-hello there general
-the decoder used is Base64
+  Found by  English checker · looks like English
+  y yes · n no, keep looking · q stop
+```
+
+Press `y` and Ciphey prints the plaintext, the decoders it peeled off and what recognised it:
+
+```console
+$ ciphey -t 'aGVsbG8gdGhlcmUgZ2VuZXJhbA=='
+✓ Plaintext found in 0.11 s
+
+  hello there general
+
+  Decoded   Base64
+  Found by  English checker · looks like English · you said yes
+  Searched  1 text, up to 1 layer deep
 ```
 
 The first time you run it, a short setup asks for a colour theme, how you want results shown and whether to use a wordlist, and saves your answers to `~/.ciphey/config.toml`.
@@ -104,7 +114,7 @@ Where both get the right answer, Ciphey is 1.9 to 8.6 times faster. Where does t
 
 Ciphey doesn't need to be told what it's looking at. It searches chains of decoders (Base64 inside hex inside ROT13, four layers of Base64, and so on) and stops at the first candidate that looks like plaintext. By default it shows you that candidate and asks before accepting it (`-d` turns this off). The clip at the top of this page shows a four-layer decode.
 
-There is also a timer: if Ciphey hasn't found anything after 5 seconds, it stops and says so (`-c` changes the limit).
+There is also a timer: if Ciphey hasn't found anything after 5 seconds, it stops and says so (`-c` changes the limit). Time spent answering its questions doesn't count.
 
 It knows 24 decoders and crackers:
 
@@ -127,8 +137,12 @@ Every candidate plaintext also goes through [LemmeKnow](https://github.com/swana
 
 ```console
 $ ciphey -t '3139322e3136382e302e31'
-🕵️ I think the plaintext is Internet Protocol (IP) Address Version 4.
-Possible plaintext: '192.168.0.1' (y/N):
+? Is this the plaintext? · timer paused
+
+  192.168.0.1
+
+  Found by  LemmeKnow · recognised as Internet Protocol (IP) Address Version 4
+  y yes · n no, keep looking · q stop
 ```
 
 ### 🎯 Crib and regex mode
@@ -143,7 +157,11 @@ If you know part of the answer (the flag format, a word that has to be in there,
 
 ### 🎨 Made for your terminal
 
-The first-run setup lets you pick a colour theme (Capptucin, Darcula, GirlyPop, the default, or your own RGB values) and choose between being asked about each plaintext or getting a list of candidates at the end. You can see it [in the tour](https://cdn.jsdelivr.net/gh/bee-san/Ciphey@d41d19946234477346fede14dadf8c351cc469e6/media/tui-video/out/ciphey-tui-promo.mp4) from 0:32. Everything is saved to `~/.ciphey/config.toml`, which you can edit later.
+<img src="media/tui/ciphey-tui.gif" width="800" alt="A terminal runs ciphey -t on a long Base64 string. A live line counts the search time against the 5 s limit with a time bar, and shows the decoders being tried and how many texts have been explored. Ciphey asks Is this the plaintext? about 'Ciphey peels back every layer of encoding'. The answer is y, and it prints Plaintext found in 1.1 s, 5 layers: Base64 three times, Hexadecimal and Caesar (ROT13), each with the text it produced, found by the English checker.">
+
+While it searches, Ciphey shows how long it has been going against the time limit, the decoders it is trying and how far it has got. It asks about a candidate with one key press (`y` yes, `n` no), `q` stops the search and shows what it found, and `?` lists the keys. The result shows every layer it peeled off, with the text each one produced, and the checker that recognised the plaintext. It works in 80×24 and narrower terminals, and with [`NO_COLOR`](https://no-color.org/) every status still has a symbol and words. When the output goes to a pipe or a file, or with `--plain`, Ciphey prints plain lines as it always has.
+
+The first-run setup lets you pick a colour theme (Capptucin, Darcula, GirlyPop, the default, or your own RGB values) and choose between being asked about each plaintext or getting a list of candidates at the end. The default theme uses your terminal's own colours, so it suits light and dark backgrounds. You can see the setup [in the tour](https://cdn.jsdelivr.net/gh/bee-san/Ciphey@d41d19946234477346fede14dadf8c351cc469e6/media/tui-video/out/ciphey-tui-promo.mp4) from 0:32. Everything is saved to `~/.ciphey/config.toml`, which you can edit later.
 
 ### 📚 Library first
 
@@ -205,6 +223,7 @@ Bug reports, ideas and pull requests are welcome in [issues](https://github.com/
 - [Rayon](https://github.com/rayon-rs/rayon) runs the decoders in parallel.
 - Ciphey started as a Python project; Python Ciphey 5.x is still on [PyPI](https://pypi.org/project/ciphey/). Thank you to everyone who worked on it.
 - The videos are made with [HyperFrames](https://hyperframes.heygen.com/) from real terminal recordings. The source, recordings and build script are in [`media/tui-video`](https://github.com/bee-san/Ciphey/tree/media/readme-videos/media/tui-video) on the `media/readme-videos` branch.
+- The terminal UI GIF is recorded with [asciinema](https://asciinema.org/) and rendered with [agg](https://github.com/asciinema/agg). [`media/tui/record.sh`](media/tui/record.sh) records it again.
 
 ## AI use
 

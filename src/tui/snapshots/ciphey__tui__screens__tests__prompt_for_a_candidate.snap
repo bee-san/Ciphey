@@ -1,0 +1,10 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 80)"
+---
+"? Is this the plaintext? · timer paused                                         "
+"                                                                                "
+"  Ciphey is very fast                                                           "
+"                                                                                "
+"  Found by  English checker · looks like English                                "
+"  y yes · n no, keep looking · q stop                                           "

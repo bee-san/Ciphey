@@ -1,0 +1,9 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 80)"
+---
+"✓ Your input is already plaintext                                               "
+"                                                                                "
+"  Hello, World!                                                                 "
+"                                                                                "
+"  Found by  English checker · looks like English · you said yes                 "

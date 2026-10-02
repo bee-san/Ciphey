@@ -114,6 +114,16 @@ pub fn parse_rgb(rgb: &str) -> Option<(u8, u8, u8)> {
     Some((r, g, b))
 }
 
+/// Like [`parse_rgb`], but returns None for an invalid colour without printing anything.
+/// The live display builds its theme with it, where an error line would get in the way.
+pub(crate) fn parse_rgb_quiet(rgb: &str) -> Option<(u8, u8, u8)> {
+    let mut parts = rgb.split(',').map(|part| part.trim().parse::<u8>());
+    match (parts.next(), parts.next(), parts.next(), parts.next()) {
+        (Some(Ok(r)), Some(Ok(g)), Some(Ok(b)), None) => Some((r, g, b)),
+        _ => None,
+    }
+}
+
 /// Colors a string based on its role using RGB values from the config.
 ///
 /// This function is the core color formatting function that all other color
@@ -210,8 +220,23 @@ pub(crate) fn color_enabled() -> bool {
     static COLOR_ENABLED: OnceLock<bool> = OnceLock::new();
     *COLOR_ENABLED.get_or_init(|| {
         // Check NO_COLOR first so we don't touch the console when colours aren't wanted
-        !no_color_requested(env::var_os("NO_COLOR").as_deref()) && enable_ansi_support()
+        !no_color_requested(env::var_os("NO_COLOR").as_deref()) && ansi_supported()
     })
+}
+
+/// Returns whether the terminal understands ANSI escape codes, turning them on in the
+/// Windows console the first time it is called (see [`enable_ansi_support`]).
+///
+/// The live display needs them for moving the cursor even when `NO_COLOR` is set.
+pub(crate) fn ansi_supported() -> bool {
+    /// Cached result so the console is only configured once
+    static ANSI_SUPPORTED: OnceLock<bool> = OnceLock::new();
+    *ANSI_SUPPORTED.get_or_init(enable_ansi_support)
+}
+
+/// Whether the user set `NO_COLOR` (see [`no_color_requested`])
+pub(crate) fn no_color_env() -> bool {
+    no_color_requested(env::var_os("NO_COLOR").as_deref())
 }
 
 /// Checks the value of the `NO_COLOR` environment variable.
@@ -383,15 +408,11 @@ pub fn program_exiting_successful_decoding(result: DecoderResult) {
     } else {
         format!("the decoders used are {decoded_path_coloured}")
     };
-    /// If 30% of the characters are invisible characters, then prompt the
-    /// user to save the resulting plaintext into a file
-    const INVIS_CHARS_DETECTION_PERCENTAGE: f64 = 0.3;
-
     // If the percentage of invisible characters in the plaintext exceeds
     // the detection percentage, prompt the user asking if they want to
     // save the plaintext into a file
     let invis_char_percentage = invisible_char_ratio(&plaintext[0]);
-    if invis_char_percentage > INVIS_CHARS_DETECTION_PERCENTAGE {
+    if invis_char_percentage > INVISIBLE_CHARS_DETECTION_RATIO {
         let invis_char_percentage_string = format!("{:2.0}%", invis_char_percentage * 100.0);
         println!(
             "{}",
@@ -429,11 +450,15 @@ pub fn program_exiting_successful_decoding(result: DecoderResult) {
     );
 }
 
+/// If more than 30% of the plaintext's characters are invisible, the user is asked
+/// whether to save it to a file instead of printing it
+pub(crate) const INVISIBLE_CHARS_DETECTION_RATIO: f64 = 0.3;
+
 /// Fraction of the characters in `text` that are invisible, between 0.0 and 1.0.
 ///
 /// Counts characters rather than bytes: zero-width characters take 3 bytes in UTF-8,
 /// so dividing by the byte length made text that is entirely invisible look 33% invisible.
-fn invisible_char_ratio(text: &str) -> f64 {
+pub(crate) fn invisible_char_ratio(text: &str) -> f64 {
     let total = text.chars().count();
     if total == 0 {
         return 0.0;
@@ -518,6 +543,10 @@ pub fn countdown_until_program_ends(seconds_spent_running: u32, duration: u32) {
     if config.api_mode {
         return;
     }
+    // The live display shows the time itself, and a line printed here would break it
+    if crate::tui::live_display_started() {
+        return;
+    }
     if seconds_spent_running.is_multiple_of(5) && seconds_spent_running != 0 {
         let time_left = duration - seconds_spent_running;
         if time_left == 0 {
@@ -538,6 +567,10 @@ pub fn countdown_until_program_ends(seconds_spent_running: u32, duration: u32) {
 pub fn return_early_because_input_text_is_plaintext() {
     let config = crate::config::get_config();
     if config.api_mode {
+        return;
+    }
+    // The live display says so in its result screen
+    if crate::tui::is_live() {
         return;
     }
     println!("{}", success("Your input text is the plaintext 🥳"));
@@ -590,6 +623,21 @@ pub fn warning_unknown_config_key(key: &str) {
     );
 }
 
+/// What `--top-results` writes when the user saves the list to a file
+pub(crate) fn top_results_file(results: &[PlaintextResult]) -> String {
+    let mut file_content = String::new();
+    for (i, result) in results.iter().enumerate() {
+        file_content.push_str(&format!("Result #{}: {}\n", i + 1, result.text));
+        file_content.push_str(&format!("Decoder: {}\n", result.decoder_name));
+        file_content.push_str(&format!("Checker: {}\n", result.checker_name));
+        file_content.push_str(&format!("Description: {}\n", result.description));
+        if results.len() > 1 {
+            file_content.push_str("---\n");
+        }
+    }
+    file_content
+}
+
 /// Display all plaintext results collected by WaitAthena
 ///
 /// # Panics
@@ -597,6 +645,10 @@ pub fn warning_unknown_config_key(key: &str) {
 pub fn display_top_results(results: &[PlaintextResult]) {
     let config = crate::config::get_config();
     if config.api_mode {
+        return;
+    }
+    // The live display lists them itself once it has given the terminal back
+    if crate::tui::is_live() {
         return;
     }
 
@@ -643,17 +695,7 @@ pub fn display_top_results(results: &[PlaintextResult]) {
                 file_path = format!("{}/ciphey_text.txt", env::var("HOME").unwrap_or_default());
             }
 
-            let mut file_content = String::new();
-            for (i, result) in results.iter().enumerate() {
-                file_content.push_str(&format!("Result #{}: {}\n", i + 1, result.text));
-                file_content.push_str(&format!("Decoder: {}\n", result.decoder_name));
-                file_content.push_str(&format!("Checker: {}\n", result.checker_name));
-                file_content.push_str(&format!("Description: {}\n", result.description));
-                if results.len() > 1 {
-                    file_content.push_str("---\n");
-                }
-            }
-
+            let file_content = top_results_file(results);
             match write(&file_path, file_content) {
                 Ok(_) => println!("{}", success(&format!("Results written to {}", file_path))),
                 Err(e) => println!("{}", warning(&format!("Failed to write to file: {}", e))),

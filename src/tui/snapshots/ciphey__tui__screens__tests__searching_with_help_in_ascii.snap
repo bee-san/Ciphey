@@ -1,0 +1,17 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 80)"
+---
+"\ Searching  1.3 s of 5 s  ########------------------------                     "
+"  Trying    Base64 -> Hexadecimal                                               "
+"  Explored  1,204 texts | 3 layers deep                                         "
+"  q stop | ? help                                                               "
+"                                                                                "
+"  While searching                                                               "
+"  q, Esc    stop and show what was found                                        "
+"  ?         show or hide these keys                                             "
+"  Ctrl-C    quit straight away                                                  "
+"  Ctrl-Z    pause ciphey; fg carries on                                         "
+"  When asked about a plaintext                                                  "
+"  y         yes, that's the plaintext                                           "
+"  n, Enter  no, keep searching                                                  "

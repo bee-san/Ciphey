@@ -1,0 +1,10 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 80)"
+---
+"▄ Collecting plaintexts  1.3 s of 5 s  ━━━━━━━━────────────────────────         "
+"  Trying    all 24 decoders on your input                                       "
+"  Explored  nothing yet                                                         "
+"  Found     12 possible plaintexts                                              "
+"  Regex     picoCTF\{                                                           "
+"  q stop · ? help                                                               "

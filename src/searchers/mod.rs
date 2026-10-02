@@ -23,6 +23,8 @@ mod astar;
 mod bfs;
 /// This module contains helper functions used by the A* search algorithm.
 mod helper_functions;
+/// Progress of the running search, read by the live display.
+pub(crate) mod progress;
 
 pub(crate) use helper_functions::reset_decoder_stats;
 
@@ -46,7 +48,8 @@ pub(crate) use helper_functions::reset_decoder_stats;
 pub fn search_for_plaintext(input: String) -> Result<Option<DecoderResult>, CipheyError> {
     let config = get_config();
     let timeout = config.timeout;
-    let timer = timer::start(timeout);
+    // The timer stops when `_timer_guard` goes out of scope, as the search returns
+    let (timer, _timer_guard) = timer::start(timeout);
 
     let (result_sender, result_recv) = bounded::<Option<DecoderResult>>(1);
     // For stopping the thread
