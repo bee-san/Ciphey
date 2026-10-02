@@ -42,6 +42,27 @@ const PRUNE_THRESHOLD: usize = 200_000;
 /// Number of nodes to expand in parallel per iteration of the main loop.
 const PARALLEL_BATCH_SIZE: usize = 10;
 
+/// A search that ends with at least this many queued nodes frees them on another
+/// thread, see [`free_leftovers`].
+const FREE_IN_BACKGROUND_MIN_NODES: usize = 1_000;
+
+/// Frees what a finished search leaves behind (`queued_nodes` nodes and the seen-sets).
+///
+/// The caller gets its answer, or its timeout, only once the search thread has finished,
+/// and a search can end with hundreds of thousands of queued nodes, each holding its
+/// text and decoder path: freeing them took up to a quarter of a second. Big leftovers
+/// are therefore freed on a new thread. Small ones are freed here, which is cheaper than
+/// starting a thread, and so are big ones if the thread can't be started.
+fn free_leftovers<T: Send + 'static>(leftovers: T, queued_nodes: usize) {
+    if queued_nodes < FREE_IN_BACKGROUND_MIN_NODES {
+        return;
+    }
+    // If the thread can't be started the closure, and with it `leftovers`, is dropped here.
+    let _ = std::thread::Builder::new()
+        .name("ciphey-free-search".to_string())
+        .spawn(move || drop(leftovers));
+}
+
 /// Hash for the seen-set.
 fn calculate_hash(text: &str) -> u64 {
     use std::collections::hash_map::DefaultHasher;
@@ -404,6 +425,11 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
 
             if !get_config().top_results {
                 stop.store(true, AtomicOrdering::Relaxed);
+                let queued_nodes = open_set.len() + children.len();
+                free_leftovers(
+                    (open_set, children, seen_strings, seen_results),
+                    queued_nodes,
+                );
                 return;
             }
         }
@@ -423,6 +449,8 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
             .send(None)
             .expect("Should successfully send the result");
     }
+    let queued_nodes = open_set.len();
+    free_leftovers((open_set, seen_strings, seen_results), queued_nodes);
 }
 
 #[cfg(test)]
@@ -500,6 +528,28 @@ mod tests {
         let mut last = crate::CrackResult::new(&crate::Decoder::default(), String::new());
         last.decoder = "Quoted-Printable";
         assert!(should_try_decoder(quoted_printable.as_ref(), Some(&last)));
+    }
+
+    /// Reports the thread it is dropped on.
+    struct DropProbe(crossbeam::channel::Sender<std::thread::ThreadId>);
+
+    impl Drop for DropProbe {
+        fn drop(&mut self) {
+            let _ = self.0.send(std::thread::current().id());
+        }
+    }
+
+    #[test]
+    fn big_leftovers_are_freed_on_another_thread() {
+        let (sender, receiver) = bounded(2);
+        free_leftovers(DropProbe(sender.clone()), FREE_IN_BACKGROUND_MIN_NODES - 1);
+        assert_eq!(receiver.recv().unwrap(), std::thread::current().id());
+
+        free_leftovers(DropProbe(sender), FREE_IN_BACKGROUND_MIN_NODES);
+        let dropped_on = receiver
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("the leftovers should be freed");
+        assert_ne!(dropped_on, std::thread::current().id());
     }
 
     #[test]
