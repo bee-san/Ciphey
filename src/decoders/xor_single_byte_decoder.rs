@@ -253,8 +253,8 @@ fn unconfirmed(candidates: &[Candidate]) -> Vec<&Candidate> {
 }
 
 /// Tries every key on `bytes` and returns the candidates, best first, as
-/// `(key, score, plaintext)`. Views under [`MIN_BYTES`] bytes or with fewer than
-/// [`MIN_DISTINCT_BYTES`] distinct byte values have none.
+/// `(key, score, plaintext)`. Views under [`MIN_BYTES`] bytes, with fewer than
+/// [`MIN_DISTINCT_BYTES`] distinct byte values, or that are [`numeric_text`] have none.
 ///
 /// Keys are scored on the first [`RANK_BYTES`] bytes, from a byte histogram, and only keys
 /// that pass the score checks are applied to the whole view. A key is a candidate if its
@@ -264,7 +264,7 @@ fn unconfirmed(candidates: &[Candidate]) -> Vec<&Candidate> {
 /// * scores higher than `bytes` itself when `bytes` is already printable text. This stops
 ///   XOR from "improving" text that was fine to begin with, such as Base64 of English.
 fn crack_bytes(bytes: &[u8]) -> Vec<(u8, f32, String)> {
-    if bytes.len() < MIN_BYTES {
+    if bytes.len() < MIN_BYTES || numeric_text(bytes) {
         return Vec::new();
     }
     let histogram = Histogram::new(&bytes[..bytes.len().min(RANK_BYTES)]);
@@ -346,6 +346,17 @@ fn is_printable(text: &str) -> bool {
     !text
         .chars()
         .any(|c| c.is_control() && !matches!(c, '\t' | '\n' | '\r'))
+}
+
+/// Whether `bytes` is text made only of hex digits (which include the decimal and octal
+/// ones), whitespace and the separators `,;:.-`: decimal, octal, hex or binary codes that
+/// another decoder takes off, such as Base64 of `150 145 154 154 157`. XOR turns such text
+/// into letter soup like `ptqaputaptua…` that can pass the English checker, and no key
+/// turns English into it: no byte maps a space, `e`, `t` and `a` all into this set.
+fn numeric_text(bytes: &[u8]) -> bool {
+    bytes.iter().all(|&byte| {
+        byte.is_ascii_hexdigit() || byte.is_ascii_whitespace() || b",;:.-".contains(&byte)
+    })
 }
 
 /// Whether `bytes` is UTF-8 without control characters other than tab, CR and LF.
@@ -505,6 +516,8 @@ mod tests {
     /// Base64 of the hex of "Meet me at the old lighthouse"
     const BASE64_OF_HEX: &str =
         "NGQ2NTY1NzQyMDZkNjUyMDYxNzQyMDc0Njg2NTIwNmY2YzY0MjA2YzY5Njc2ODc0Njg2Zjc1NzM2NQ==";
+    /// A few accented letters repeated, which XOR (as Latin-1 bytes) to letter soup
+    const ACCENTED_SOUP: &str = "éèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüç";
 
     /// The checker the search uses
     fn get_athena_checker() -> CheckerTypes {
@@ -722,22 +735,19 @@ mod tests {
 
     #[test]
     fn at_most_five_candidates_are_checked() {
-        // Base64 of hex digits XORs to dozens of strings of common letters
-        let base64_of_hex = BASE64_OF_HEX;
-        assert!(crack_bytes(&base64_view(base64_of_hex).unwrap()).len() > MAX_CHECKED);
+        // Repeated accented letters, read as Latin-1, XOR to dozens of strings of common
+        // letters
+        let soup = ACCENTED_SOUP;
+        let latin1: Vec<u8> = soup.chars().map(|c| u32::from(c) as u8).collect();
+        assert!(crack_bytes(&latin1).len() > MAX_CHECKED);
 
         let decoder = Decoder::<XorSingleByteDecoder>::new();
         let rejecting = Checker::<Athena>::new();
         let mut checked = Vec::new();
-        let result = check_candidates(
-            &decoder,
-            base64_of_hex,
-            &best_candidates(base64_of_hex),
-            |candidate| {
-                checked.push(candidate.to_string());
-                CheckResult::new(&rejecting)
-            },
-        );
+        let result = check_candidates(&decoder, soup, &best_candidates(soup), |candidate| {
+            checked.push(candidate.to_string());
+            CheckResult::new(&rejecting)
+        });
         assert_eq!(checked.len(), MAX_CHECKED);
         assert!(!result.success);
     }
@@ -822,18 +832,44 @@ mod tests {
 
     #[test]
     fn letter_soup_is_not_handed_to_the_search() {
-        // These XOR to strings of common letters that score like English but have no
-        // spaces and aren't Base64 or hex of anything. They are checked, and rejected,
-        // but none may become a search node.
+        // Repeated accented letters, read as Latin-1 bytes, XOR to strings of common
+        // letters that score like English but have no spaces and aren't Base64 or hex of
+        // anything. They are checked, and rejected, but none may become a search node.
+        assert!(!best_candidates(ACCENTED_SOUP).is_empty());
+        let result = crack(ACCENTED_SOUP);
+        assert!(!result.success, "{result:?}");
+        assert!(result.unencrypted_text.is_none(), "{result:?}");
+    }
+
+    #[test]
+    fn numeric_views_are_not_cracked() {
+        // Base64 of decimal, octal or hex codes is another decoder's next layer. XOR turns
+        // the digits into letter soup, and the English checker accepted
+        // "ptqaputaptuaptua…" (the octal below XORed with 0x41)
         for text in [
-            // Accented letters, read as Latin-1 bytes
-            "éèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüç",
+            // Base64 of the octal codes of "hello world"
+            "MTUwIDE0NSAxNTQgMTU0IDE1NyA0MCAxNjcgMTU3IDE2MiAxNTQgMTQ0",
+            // Base64 of the decimal codes of "hello world"
+            "MTA0IDEwMSAxMDggMTA4IDExMSAzMiAxMTkgMTExIDExNCAxMDggMTAw",
             BASE64_OF_HEX,
         ] {
-            assert!(!best_candidates(text).is_empty(), "{text:?}");
-            let result = crack(text);
-            assert!(!result.success, "{text:?}: {result:?}");
-            assert!(result.unencrypted_text.is_none(), "{text:?}: {result:?}");
+            let views = byte_views(text);
+            assert!(!views.is_empty(), "{text:?}");
+            assert!(views.iter().all(|view| numeric_text(view)), "{text:?}");
+            assert!(best_candidates(text).is_empty(), "{text:?}");
+            assert!(crack(text).unencrypted_text.is_none(), "{text:?}");
+        }
+        assert!(numeric_text(b"150 145 154, 4d:65-65.74\n"));
+        assert!(!numeric_text(b"150 145 154 lots of letters"));
+        // A space, `e`, `t` and `a` never all XOR into numeric text, so English can't
+        // become numeric text under any key
+        for key in 1..=u8::MAX {
+            assert!(!numeric_text(&[
+                b' ' ^ key,
+                b'e' ^ key,
+                b't' ^ key,
+                b'a' ^ key
+            ]));
         }
     }
 
