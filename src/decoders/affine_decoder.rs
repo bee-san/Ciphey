@@ -78,7 +78,7 @@ const MIN_MEAN_PAIR_LOG_PROB: f32 = -6.6;
 /// `ln P(first, second)` for every pair of English letters, from
 /// `src/storage/ngrams/english_bigrams.txt`. The file is embedded in the binary, so an
 /// installed `ciphey` doesn't need the source tree to find it.
-static BIGRAM_LOG_PROBS: Lazy<[[f32; 26]; 26]> =
+pub(crate) static BIGRAM_LOG_PROBS: Lazy<[[f32; 26]; 26]> =
     Lazy::new(|| parse_bigram_log_probs(include_str!("../storage/ngrams/english_bigrams.txt")));
 
 /// The Affine cracker, call:

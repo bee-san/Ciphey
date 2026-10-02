@@ -50,6 +50,15 @@ const MIN_LETTERS: usize = 60;
 /// below 0.050 (and 10.6% below 0.055). Vigenère averages 0.044 and random letters 0.038.
 const MIN_IOC: f64 = 0.050;
 
+/// The lowest mean `ln P` per pair of consecutive letters that the best Caesar, Atbash or
+/// Affine key may give, from the letter-pair table the Affine decoder uses, before a text
+/// is left to those decoders without loading the quadgram table. Caesar, Atbash and Affine
+/// encryptions of 3,585 windows of 60 to 250 letters from Project Gutenberg books and
+/// Ciphey's docs scored -5.50 (median) under their own key; random substitutions of the same
+/// windows never scored above -5.77 under any of the 312 keys. Texts in between go on to
+/// the quadgram check, which decides as before.
+const AFFINE_PAIR_LOG_PROB: f32 = -5.6;
+
 /// Minimum [`frequency_gap`]. Below it the letters already have English frequencies.
 /// Plain English paragraphs of 60 or more letters stay under 0.15 (99% under 0.11), and
 /// substitutions of them start at 0.13 (99% above 0.2).
@@ -293,6 +302,8 @@ enum Reason {
     Cached,
     /// The search found nothing that reads like English.
     NotFound,
+    /// Fewer different letters than English uses (see [`min_distinct_letters`]).
+    FewDistinctLetters,
 }
 
 /// How a decryption is checked.
@@ -439,6 +450,9 @@ fn search<T>(
     confirm: &mut dyn FnMut(&str, Layout) -> Option<T>,
 ) -> Result<Found<T>, Reason> {
     let letters = &ciphertext.letters;
+    if let Some(reason) = affine_by_letter_pairs(&letters[..letters.len().min(SEARCH_LETTERS)]) {
+        return Err(reason);
+    }
     let scorer = Scorer::new(&letters[..letters.len().min(SEARCH_LETTERS)]);
 
     stats.scored += 1;
@@ -606,6 +620,9 @@ impl Ciphertext {
         }
         if letters.len() < MIN_LETTERS {
             return Err(Reason::TooShort);
+        }
+        if usize::from(distinct) < min_distinct_letters(letters.len()) {
+            return Err(Reason::FewDistinctLetters);
         }
 
         let mut counts = [0usize; 26];
@@ -792,6 +809,56 @@ fn affine_keys() -> impl Iterator<Item = [u8; 26]> {
                 *plain = (a * (c + 26 - b) % 26) as u8;
             }
             key
+        })
+    })
+}
+
+/// The fewest different letters a substitution of English with `letters` letters has.
+/// A key maps distinct letters to distinct letters, and in more than 13,000 windows of
+/// Project Gutenberg books and Ciphey's docs, English never used fewer than 10 different
+/// letters in 60, 15 in 150 or 17 in 300. Text with fewer is in a smaller alphabet, such as
+/// Baconian (2 letters) or Citrix CTX1 (16), and an annealing run on it is wasted.
+fn min_distinct_letters(letters: usize) -> usize {
+    match letters {
+        300.. => 17,
+        150.. => 14,
+        _ => 9,
+    }
+}
+
+/// [`Reason::Affine`] (or [`Reason::AlreadyEnglish`] for the identity) if a Caesar, Atbash or
+/// Affine key turns the pairs of consecutive `letters` into English ones, scored with the
+/// Affine decoder's letter-pair table (see [`AFFINE_PAIR_LOG_PROB`]). This catches most of
+/// what the quadgram check in [`search`] would, without parsing the 60,000-line quadgram
+/// table, which is most of the time a fresh process spends on a ROT13 input.
+fn affine_by_letter_pairs(letters: &[u8]) -> Option<Reason> {
+    let mut counts = [[0u32; 26]; 26];
+    for pair in letters.windows(2) {
+        counts[usize::from(pair[0])][usize::from(pair[1])] += 1;
+    }
+    let pairs: Vec<(usize, usize, f32)> = counts
+        .iter()
+        .enumerate()
+        .flat_map(|(first, row)| {
+            row.iter()
+                .enumerate()
+                .filter(|(_, &count)| count > 0)
+                .map(move |(second, &count)| (first, second, count as f32))
+        })
+        .collect();
+    let total = letters.len().saturating_sub(1).max(1) as f32;
+    let log_probs = &*crate::decoders::affine_decoder::BIGRAM_LOG_PROBS;
+    affine_keys().enumerate().find_map(|(index, key)| {
+        let score: f32 = pairs
+            .iter()
+            .map(|&(first, second, count)| {
+                count * log_probs[usize::from(key[first])][usize::from(key[second])]
+            })
+            .sum();
+        (score / total >= AFFINE_PAIR_LOG_PROB).then_some(if index == 0 {
+            Reason::AlreadyEnglish
+        } else {
+            Reason::Affine
         })
     })
 }
@@ -1740,6 +1807,55 @@ mod tests {
             let stats = assert_fails_fast(&text, Reason::Affine);
             assert!(stats.scored <= 312);
         }
+    }
+
+    #[test]
+    fn letter_pairs_leave_most_affine_texts_without_quadgrams() {
+        // The cheap letter-pair check catches these before any quadgram is scored
+        for text in [caesar(DICKENS, 13), caesar(DICKENS_UNSPACED, 3)] {
+            let letters = Ciphertext::parse(&text).unwrap().letters;
+            assert_eq!(affine_by_letter_pairs(&letters), Some(Reason::Affine));
+            let stats = assert_fails_fast(&text, Reason::Affine);
+            assert_eq!(stats.scored, 0, "{text:?}");
+        }
+        // ... and lets every genuine substitution through to the search
+        for text in [
+            DICKENS_CIPHERTEXT,
+            DICKENS_PATRISTOCRAT,
+            ZEBRAS_CIPHERTEXT,
+            CIPHEY_CIPHERTEXT,
+        ] {
+            let letters = Ciphertext::parse(text).unwrap().letters;
+            assert_eq!(affine_by_letter_pairs(&letters), None, "{text:?}");
+        }
+    }
+
+    #[test]
+    fn rejects_small_alphabets_without_searching() {
+        // The Baconian input of benches/data/search.toml: two letters
+        let baconian = "ABABBAABAAAABAABAABA ABABBAABAA AAAAABAABA BAABAAABBBAABAA ABBABABABAAAABB ABABAABAAAAABBAAABBBBAABAAABBBABBABBAABBBAAABAABAA AAAAAAABABBAABAAABAABAAAA ABABBABAAAAAABBABBAAABAAAAABBAAABBBBAABA AAAAAABBAAAAABB AAAABBAAAAABAAAABBAAAABBA BAABAAABBBAABAA ABABBAAAAAABBBA BAABAAABBBAABAA ABAABAABAABABBA AAAAAABBAAAAABB AAAAA BAABAABBABBAAAAAAABAAABBB";
+        // Its Citrix CTX1 input: 336 letters from A to P
+        let citrix = "OIENINCIOIENJMDJLMBJNBHELEBBJEDBPFFAIBCEKBAENFHALNBINIHNPIFNJHDCPLFOJPDKLPBKNDHGLKBPNNHILFBAMBGEKJAMMGGDLDBGMAGFKFAAIFCAOEEBICCHPGFDJDDGOBEEMBGEKMAJMFGAKBAEMPGKKGADMBGEKJAMNNHIPNFIJMDJPCFHJGDDLGBDNEHBKGADMPGKKBAEMGGDOGEDJCDHPKFPJPDKLPBKNCHHLDBGMDGGOPEKMPGKLLBONDHGLGBDJGDDPNFIJIDNOBEEMBGEKAAFMOGLKKAPIKCPOLEOMLGOLPBKNAHFKCAHMBGEKJAMIHCC";
+        for text in [baconian, citrix] {
+            let stats = assert_fails_fast(text, Reason::FewDistinctLetters);
+            assert_eq!(stats.scored, 0);
+        }
+        // English has more: the test texts from 60 letters up
+        for text in [
+            &DICKENS_CIPHERTEXT[..80],
+            DICKENS_CIPHERTEXT,
+            ZEBRAS_CIPHERTEXT,
+            CIPHEY_CIPHERTEXT,
+        ] {
+            let ciphertext = Ciphertext::parse(text);
+            assert!(
+                !matches!(ciphertext, Err(Reason::FewDistinctLetters)),
+                "{text:?}"
+            );
+        }
+        assert_eq!(min_distinct_letters(60), 9);
+        assert_eq!(min_distinct_letters(150), 14);
+        assert_eq!(min_distinct_letters(336), 17);
     }
 
     #[test]
