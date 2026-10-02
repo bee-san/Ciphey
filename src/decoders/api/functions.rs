@@ -11,6 +11,7 @@ use crate::decoders::ascii85_decoder::Ascii85Decoder;
 use crate::decoders::atbash_decoder::AtbashDecoder;
 use crate::decoders::baconian_decoder::BaconianDecoder;
 use crate::decoders::base32_decoder::Base32Decoder;
+use crate::decoders::base36_decoder::Base36Decoder;
 use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
 use crate::decoders::base58_flickr_decoder::Base58FlickrDecoder;
 use crate::decoders::base58_monero_decoder::Base58MoneroDecoder;
@@ -32,6 +33,7 @@ use crate::decoders::jwt_decoder::JwtDecoder;
 use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
+use crate::decoders::punycode_decoder::PunycodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
 use crate::decoders::reverse_decoder::ReverseDecoder;
@@ -129,6 +131,15 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "hello world");
     /// ```
     base32: Base32Decoder, aliases ["b32"], key None;
+
+    /// Decodes Base36, text written as one number in base 36 (digits `0` to `9`, then `a` to
+    /// `z`, in either case).
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::base36("fuvrsivvnfrbjwajo");
+    /// assert_eq!(decoded.candidates[0].text, "hello world");
+    /// ```
+    base36: Base36Decoder, aliases [], key None;
 
     /// Decodes Base58 with the Bitcoin alphabet, the usual one.
     ///
@@ -334,6 +345,15 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "hello world");
     /// ```
     octal: OctalDecoder, aliases ["oct"], key None;
+
+    /// Decodes Punycode (RFC 3492), and the `xn--` labels of internationalised domain names
+    /// wherever they are in the text.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::punycode("https://xn--bcher-kva.example.com/");
+    /// assert_eq!(decoded.candidates[0].text, "https://bücher.example.com/");
+    /// ```
+    punycode: PunycodeDecoder, aliases ["idna"], key None;
 
     /// Decodes Quoted-Printable (RFC 2045), the encoding of email bodies.
     ///

@@ -194,6 +194,12 @@ fn base32_decodes() {
 }
 
 #[test]
+fn base36_decodes() {
+    assert_plaintext(&base36("fuvrsivvnfrbjwajo"), "hello world");
+    assert_plaintext(&base36("FUVRSIVVNFRBJWAJO"), "hello world");
+}
+
+#[test]
 fn base58_bitcoin_decodes() {
     assert_plaintext(&base58_bitcoin("StV1DL6CwTryKyV"), "hello world");
 }
@@ -354,6 +360,15 @@ fn octal_decodes() {
     assert_plaintext(
         &octal("124 150 145 40 161 165 151 143 153 40 142 162 157 167 156 40 146 157 170 40 152 165 155 160 163 40 157 166 145 162 40 164 150 145 40 154 141 172 171 40 144 157 147"),
         "The quick brown fox jumps over the lazy dog",
+    );
+}
+
+#[test]
+fn punycode_decodes() {
+    assert_first(&punycode("xn--bcher-kva"), "bücher");
+    assert_first(
+        &punycode("Schne Gre aus Mnchen-iwb41ctei"),
+        "Schöne Grüße aus München",
     );
 }
 
