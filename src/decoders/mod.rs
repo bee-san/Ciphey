@@ -93,6 +93,8 @@ pub mod base58_bitcoin_decoder;
 pub mod base58_monero_decoder;
 /// The baudot_decoder module decodes Baudot code (ITA2 and US-TTY, 5-bit teleprinter code)
 pub mod baudot_decoder;
+/// The big_integer_decoder module decodes a big decimal integer to its bytes (long_to_bytes)
+pub mod big_integer_decoder;
 /// The binary_decoder module decodes binary
 pub mod binary_decoder;
 /// The decimal_decoder module decodes decimal character codes
@@ -212,6 +214,7 @@ use base58_flickr_decoder::Base58FlickrDecoder;
 use base58_monero_decoder::Base58MoneroDecoder;
 use base58_ripple_decoder::Base58RippleDecoder;
 use baudot_decoder::BaudotDecoder;
+use big_integer_decoder::BigIntegerDecoder;
 use binary_decoder::BinaryDecoder;
 use decimal_decoder::DecimalDecoder;
 use hexadecimal_decoder::HexadecimalDecoder;
@@ -284,6 +287,8 @@ pub enum DecoderType {
     Base58BitcoinDecoder(base58_bitcoin_decoder::Base58BitcoinDecoder),
     /// base58 monero decoder
     Base58MoneroDecoder(base58_monero_decoder::Base58MoneroDecoder),
+    /// big integer to bytes decoder
+    BigIntegerDecoder(big_integer_decoder::BigIntegerDecoder),
     /// binary decoder
     BinaryDecoder(binary_decoder::BinaryDecoder),
     /// decimal decoder
@@ -408,6 +413,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ),
         ("Binary", DecoderBox::new(Decoder::<BinaryDecoder>::new())),
         ("Decimal", DecoderBox::new(Decoder::<DecimalDecoder>::new())),
+        (
+            "Big integer to bytes",
+            DecoderBox::new(Decoder::<BigIntegerDecoder>::new()),
+        ),
         (
             "Hexadecimal",
             DecoderBox::new(Decoder::<HexadecimalDecoder>::new()),

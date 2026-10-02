@@ -81,6 +81,13 @@ expected = "Meet me at the old lighthouse after midnight and bring the map, the 
 
 [[case]]
 kind = "single"
+name = "big_integer"
+layers = ["Big integer to bytes"]
+input = "5924286894360222175456110753752027428824911406952436191673549997864792617447030598048630620176057525265340209895115724741248167312932204479423391834119139432169971560672548040885900086328159414572509230"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
 name = "base32"
 layers = ["Base32"]
 input = "JVSWK5BANVSSAYLUEB2GQZJAN5WGIIDMNFTWQ5DIN52XGZJAMFTHIZLSEBWWSZDONFTWQ5BAMFXGIIDCOJUW4ZZAORUGKIDNMFYCYIDUNBSSA23FPEQGC3TEEBQSA5DPOJRWQLQ="
@@ -394,6 +401,14 @@ kind = "multi"
 name = "backslash_escapes_base64"
 layers = ["Backslash Escapes", "Base64"]
 input = "XHg0ZFx4NjVceDY1XHg3NFwwNDBceDZkXHg2NVwwNDBceDYxXHg3NFwwNDBceDc0XHg2OFx4NjVcMDQwXHg2Zlx4NmNceDY0XDA0MFx4NmNceDY5XHg2N1x4NjhceDc0XHg2OFx4NmZceDc1XHg3M1x4NjVcMDQwXHg2MVx4NjZceDc0XHg2NVx4NzJcMDQwXHg2ZFx4NjlceDY0XHg2ZVx4NjlceDY3XHg2OFx4NzRcMDQwXHg2MVx4NmVceDY0XDA0MFx4NjJceDcyXHg2OVx4NmVceDY3XDA0MFx4NzRceDY4XHg2NVwwNDBceDZkXHg2MVx4NzBcMDU0XDA0MFx4NzRceDY4XHg2NVwwNDBceDZiXHg2NVx4NzlcMDQwXHg2MVx4NmVceDY0XDA0MFx4NjFcMDQwXHg3NFx4NmZceDcyXHg2M1x4NjhcMDU2"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# GNU coreutils base64 of the big integer
+kind = "multi"
+name = "big_integer_base64"
+layers = ["Big integer to bytes", "Base64"]
+input = "NTkyNDI4Njg5NDM2MDIyMjE3NTQ1NjExMDc1Mzc1MjAyNzQyODgyNDkxMTQwNjk1MjQzNjE5MTY3MzU0OTk5Nzg2NDc5MjYxNzQ0NzAzMDU5ODA0ODYzMDYyMDE3NjA1NzUyNTI2NTM0MDIwOTg5NTExNTcyNDc0MTI0ODE2NzMxMjkzMjIwNDQ3OTQyMzM5MTgzNDExOTEzOTQzMjE2OTk3MTU2MDY3MjU0ODA0MDg4NTkwMDA4NjMyODE1OTQxNDU3MjUwOTIzMA=="
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

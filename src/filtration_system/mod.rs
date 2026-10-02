@@ -14,6 +14,7 @@ use crate::decoders::base36_decoder::Base36Decoder;
 use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
 use crate::decoders::base58_monero_decoder::Base58MoneroDecoder;
 use crate::decoders::baudot_decoder::BaudotDecoder;
+use crate::decoders::big_integer_decoder::BigIntegerDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::decimal_decoder::DecimalDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
@@ -265,6 +266,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let binary = Decoder::<BinaryDecoder>::new();
     let decimal = Decoder::<DecimalDecoder>::new();
     let multi_tap = Decoder::<MultiTapDecoder>::new();
+    let big_integer = Decoder::<BigIntegerDecoder>::new();
     let hexadecimal = Decoder::<HexadecimalDecoder>::new();
     let hexdump = Decoder::<HexdumpDecoder>::new();
     let octal = Decoder::<OctalDecoder>::new();
@@ -357,6 +359,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // Before rot47 for the same reason: rot47 turns `222-666-3-33` (CODE) into
             // `555099906066`, which LemmeKnow takes for a phone number.
             Box::new(multi_tap),
+            // Before rot47 too, which turns digits into `_`, `` ` `` and `a`-`h`. Decimal also
+            // reads a run of digits, but where one of the two finds text the other almost
+            // never does.
+            Box::new(big_integer),
             // Before the classical ciphers: when several decoders find plaintext in one
             // search batch, the first in this list wins a tie, and rot47 turns Base64
             // into strings LemmeKnow takes for URLs.

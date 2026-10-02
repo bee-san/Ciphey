@@ -330,6 +330,22 @@ success = true
 input = "9c23Zme>$>s{*UIfD:_Deca/:eiH*n10I1S\\d:Td:yqC&'!|I3[aYIdn>om1$p1;D{=og03n95qDQq1;Dzv2VX'c:ewd$p&$E5&[l?6M/UjAiC[N-Gv^ivTcy{t_,O9VJo'8Q&Tc:yp\\;B[N-F2Ba(6}W3lJpoZZLbvvOW3.F(p\\iC[N-FHYehTd:kj-+J1F-FvjOUdn@T8n+20HDz23Zmd)rMU^$pXUD:<rZmd9$TlKXl^5FZ&lQ$7=$LqDp^<FH,[aU3aNyXm/X+Wx-EHAVWbu3Wj=A88qDy2+U5a^*2j-,7LTJV^cO^bC@alHBS#0Jo&hedbu3Wo8Ay0H:Gk'aLd=OdqDQqG\\JwHAV_Tc(@nTXldv-G&;lj3o/_8mpo+W-E2>OScD$6owAiD,D8SHisd>3p8iB5-YJXSug/TdK_j@Qq<X-Ek/d968$RqCAH[GG(k&O]4B*28mWw%vJN&h\\9ak$Lo6AiJ^Ea'+cs/Yywt_+k37Jx&JO]4RnC8n+2<W-GS<_%d9$DjAp\\#;Fc2*OSTd5+hwp6-f-GvB\\5b?$FgPoIWlG)PIZkcH;18jXlT}Dy23ljd->otr*t#-H,1jOTbC*!o7B56lJOPIg0eS\\\\j-+2^<JyE2Q$3Y$8qDQq&$LbvZV66}QK8mpg^;DYSLjv3-5EqDp\\#(-GHriqcHKY8mpgUkHms3\\;'b(@o9oW#-G(SKP"
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+# Big integer inputs are Python's int.from_bytes(text.encode(), "big") in decimal
+# (PyCryptodome's bytes_to_long), which long_to_bytes decodes back.
+[[case]]
+decoder = "Big integer to bytes"
+size = "medium"
+success = true
+input = "5924286894360222175456110753752027428824911406952436191673549997864792617447030598048630620176057525265340209895115724741248167312932204479423391834119139432169971560672548040885900086328159414572509230"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "Big integer to bytes"
+size = "long"
+success = true
+input = "3687367625251368244499181675087148919532362862307301551705081364777717211798394876232923994771409877031107864238750404693410442466857471030470667831213285650849390535353869661867680827743625001790066489951088818273303369599010919967957946226676566662347954342741540948929967321969103964150963826015580590801898642200157766085431372278955169069182770335696224500308330843729497871353208232845982198301342098643485481994963969547506152627033605068721690141870851196599888375860308238170218581481983492796655751710165708551395755521270312975504883009912998007452685972442115169470229690956917597563341695679501521524381426270929579575092623013588434149463733531933152647801036618128150658077414097533965874705649882082974008478852561072091712278094457814819924589128248844965425388650420263006068974733178692478492093826089955521824411711300597738118769262754261868322079550588842532738511784967407658703734926877314933715909664822254387953474603738463847560616757101663832411897653397118460565240926316422607108230097062209907325331854624354525129532394366270045834395219011958911099346894739097703998413779528243268838856472703876500658438982032005782824657157318077155799048874207345457776153520277834496595312818560580405487045798816333945431683735025291345989866831560727854368130489335152522775999673588990832982441822130671920235239920972307786452623381445409657775703617045384684846"
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
 [[case]]
 decoder = "Binary"
 size = "medium"

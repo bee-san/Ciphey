@@ -91,6 +91,7 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         "Hexadecimal",
         "Hexdump",
         "Decimal",
+        "Big integer to bytes",
         "Binary",
         "Octal",
         "HTML Entities",
