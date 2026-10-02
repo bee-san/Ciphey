@@ -144,6 +144,14 @@ input = "-- . . - / -- . / .- - / - .... . / --- .-.. -.. / .-.. .. --. .... - .
 expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP, THE KEY AND A TORCH."
 
 [[case]]
+# Key presses separated by spaces, 0 for a space, of the upper-cased text without punctuation
+kind = "single"
+name = "multi_tap"
+layers = ["Multi-tap"]
+input = "6 33 33 8 0 6 33 0 2 8 0 8 44 33 0 666 555 3 0 555 444 4 44 8 44 666 88 7777 33 0 2 333 8 33 777 0 6 444 3 66 444 4 44 8 0 2 66 3 0 22 777 444 66 4 0 8 44 33 0 6 2 7 0 8 44 33 0 55 33 999 0 2 66 3 0 2 0 8 666 777 222 44"
+expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP THE KEY AND A TORCH"
+
+[[case]]
 kind = "single"
 name = "url"
 layers = ["URL"]
@@ -373,6 +381,13 @@ name = "octal_base64"
 layers = ["Octal", "Base64"]
 input = "MTE1IDE0NSAxNDUgMTY0IDQwIDE1NSAxNDUgNDAgMTQxIDE2NCA0MCAxNjQgMTUwIDE0NSA0MCAxNTcgMTU0IDE0NCA0MCAxNTQgMTUxIDE0NyAxNTAgMTY0IDE1MCAxNTcgMTY1IDE2MyAxNDUgNDAgMTQxIDE0NiAxNjQgMTQ1IDE2MiA0MCAxNTUgMTUxIDE0NCAxNTYgMTUxIDE0NyAxNTAgMTY0IDQwIDE0MSAxNTYgMTQ0IDQwIDE0MiAxNjIgMTUxIDE1NiAxNDcgNDAgMTY0IDE1MCAxNDUgNDAgMTU1IDE0MSAxNjAgNTQgNDAgMTY0IDE1MCAxNDUgNDAgMTUzIDE0NSAxNzEgNDAgMTQxIDE1NiAxNDQgNDAgMTQxIDQwIDE2NCAxNTcgMTYyIDE0MyAxNTAgNTY="
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "multi_tap_base64"
+layers = ["Multi-tap", "Base64"]
+input = "NiAzMyAzMyA4IDAgNiAzMyAwIDIgOCAwIDggNDQgMzMgMCA2NjYgNTU1IDMgMCA1NTUgNDQ0IDQgNDQgOCA0NCA2NjYgODggNzc3NyAzMyAwIDIgMzMzIDggMzMgNzc3IDAgNiA0NDQgMyA2NiA0NDQgNCA0NCA4IDAgMiA2NiAzIDAgMjIgNzc3IDQ0NCA2NiA0IDAgOCA0NCAzMyAwIDYgMiA3IDAgOCA0NCAzMyAwIDU1IDMzIDk5OSAwIDIgNjYgMyAwIDIgMCA4IDY2NiA3NzcgMjIyIDQ0"
+expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP THE KEY AND A TORCH"
 
 [[case]]
 kind = "multi"

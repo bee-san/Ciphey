@@ -72,6 +72,8 @@ pub mod gzip_decoder;
 pub mod jwt_decoder;
 /// The mime_encoded_word_decoder module decodes MIME encoded-words (RFC 2047)
 pub mod mime_encoded_word_decoder;
+/// The multi_tap_decoder module decodes Multi-tap phone keypad text like `44 33 555`
+pub mod multi_tap_decoder;
 /// The punycode_decoder module decodes Punycode and IDNA `xn--` labels
 pub mod punycode_decoder;
 /// The quoted_printable_decoder module decodes Quoted-Printable (RFC 2045)
@@ -168,6 +170,7 @@ use jwt_decoder::JwtDecoder;
 use mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use morse_code::MorseCodeDecoder;
+use multi_tap_decoder::MultiTapDecoder;
 use octal_decoder::OctalDecoder;
 use punycode_decoder::PunycodeDecoder;
 use quoted_printable_decoder::QuotedPrintableDecoder;
@@ -271,6 +274,8 @@ pub enum DecoderType {
     ReverseDecoder(reverse_decoder::ReverseDecoder),
     /// morse decoder
     MorseCode(morse_code::MorseCodeDecoder),
+    /// multi-tap decoder
+    MultiTapDecoder(multi_tap_decoder::MultiTapDecoder),
     /// caesar decoder
     CaesarDecoder(caesar_decoder::CaesarDecoder),
     /// railfence decoder
@@ -414,6 +419,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Morse Code",
             DecoderBox::new(Decoder::<MorseCodeDecoder>::new()),
+        ),
+        (
+            "Multi-tap",
+            DecoderBox::new(Decoder::<MultiTapDecoder>::new()),
         ),
         ("atbash", DecoderBox::new(Decoder::<AtbashDecoder>::new())),
         (

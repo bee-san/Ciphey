@@ -44,6 +44,7 @@ use crate::decoders::jwt_decoder::JwtDecoder;
 use crate::decoders::mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
+use crate::decoders::multi_tap_decoder::MultiTapDecoder;
 use crate::decoders::punycode_decoder::PunycodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
@@ -263,6 +264,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let xor_repeating_key = Decoder::<XorRepeatingKeyDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
     let decimal = Decoder::<DecimalDecoder>::new();
+    let multi_tap = Decoder::<MultiTapDecoder>::new();
     let hexadecimal = Decoder::<HexadecimalDecoder>::new();
     let hexdump = Decoder::<HexdumpDecoder>::new();
     let octal = Decoder::<OctalDecoder>::new();
@@ -352,6 +354,9 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // reports the one listed first, and LemmeKnow takes rot47 of `104,101,108,...`
             // for a Bitcoin Cash address.
             Box::new(decimal),
+            // Before rot47 for the same reason: rot47 turns `222-666-3-33` (CODE) into
+            // `555099906066`, which LemmeKnow takes for a phone number.
+            Box::new(multi_tap),
             // Before the classical ciphers: when several decoders find plaintext in one
             // search batch, the first in this list wins a tie, and rot47 turns Base64
             // into strings LemmeKnow takes for URLs.
