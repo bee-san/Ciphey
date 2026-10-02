@@ -12,6 +12,7 @@ use self::{
 
 use gibberish_or_not::Sensitivity;
 use once_cell::sync::Lazy;
+use rayon::prelude::*;
 use std::collections::HashMap;
 
 /// The default checker we use which simply calls all other checkers in order.
@@ -37,6 +38,11 @@ pub mod wait_athena;
 /// The Wordlist checker checks if the text exactly matches any word in a user-provided wordlist
 pub mod wordlist;
 
+/// [`CheckerTypes::first_identified`] checks candidates in parallel when they add up to
+/// at least this many bytes. Below that the checks are cheap (an 84 character text's 93
+/// ROT47 candidates are 8 KB), and a decoder's loop isn't what a search step waits for.
+const PARALLEL_CHECK_MIN_BYTES: usize = 16 * 1024;
+
 /// CheckerTypes is a wrapper enum for Checker
 pub enum CheckerTypes {
     /// Wrapper for LemmeKnow Checker
@@ -56,6 +62,43 @@ pub enum CheckerTypes {
 }
 
 impl CheckerTypes {
+    /// The index of the first of `texts` this checker identifies, and the result, exactly
+    /// as checking them one at a time and stopping at the first hit would give.
+    ///
+    /// Brute-force decoders (Caesar, ROT47, railfence) produce 25 to 93 candidates. A
+    /// search step runs every decoder at once, but checking one decoder's candidates
+    /// one after another made the step take as long as that loop, which on long text is
+    /// the slowest part of the step. When the candidates add up to at least
+    /// [`PARALLEL_CHECK_MIN_BYTES`], Athena's automatic checkers, which have no side
+    /// effects, run on them in parallel, looking for the first one they identify in order;
+    /// rayon stops starting new candidates once one is found. The human checker is then
+    /// asked about it, as the loop asked, and if the human says no the search goes on
+    /// after it. Smaller candidate lists, and other checkers, are checked one at a time.
+    pub(crate) fn first_identified(&self, texts: &[String]) -> Option<(usize, CheckResult)> {
+        let total_bytes: usize = texts.iter().map(String::len).sum();
+        match self {
+            CheckerTypes::CheckAthena(athena) if total_bytes >= PARALLEL_CHECK_MIN_BYTES => {
+                let mut start = 0;
+                while start < texts.len() {
+                    let (i, hit) = texts[start..]
+                        .par_iter()
+                        .enumerate()
+                        .find_map_first(|(i, text)| athena.find(text).map(|hit| (i, hit)))?;
+                    let result = athena.confirm(hit);
+                    if result.is_identified {
+                        return Some((start + i, result));
+                    }
+                    start += i + 1;
+                }
+                None
+            }
+            _ => texts.iter().enumerate().find_map(|(i, text)| {
+                let result = self.check(text);
+                result.is_identified.then_some((i, result))
+            }),
+        }
+    }
+
     /// This functions calls appropriate check function of Checker
     pub fn check(&self, text: &str) -> CheckResult {
         match self {
@@ -191,13 +234,55 @@ mod tests {
     use crate::checkers::{
         athena::Athena,
         checker_type::{Check, Checker},
-        CheckerTypes,
+        lemmeknow_checker::LemmeKnow,
+        CheckerTypes, PARALLEL_CHECK_MIN_BYTES,
     };
 
     #[test]
     fn test_check_ip_address() {
         let athena = CheckerTypes::CheckAthena(Checker::<Athena>::new());
         assert!(athena.check("test valid english sentence").is_identified);
+    }
+
+    #[test]
+    fn first_identified_returns_the_first_hit_in_order() {
+        let short: Vec<String> = [
+            "vjkrerkdnxhrfjekfdjexk",
+            "qwfpgjluyarstdhneiozxcvbkm",
+            "hello there general kenobi",
+            "https://google.com",
+        ]
+        .iter()
+        .map(|text| text.to_string())
+        .collect();
+        // Long enough to be checked in parallel: gibberish stays gibberish and the
+        // English sentence stays English when repeated.
+        let gibberish = "vjkrerkdnxhrfjekfdjexk qwfpgjluyarstdhneiozxcvbkm ".repeat(100);
+        let english = "hello there general kenobi, how are you today? ".repeat(100);
+        let long = vec![gibberish.clone(), gibberish.clone(), english, gibberish];
+        assert!(long.iter().map(String::len).sum::<usize>() >= PARALLEL_CHECK_MIN_BYTES);
+
+        let athena = CheckerTypes::CheckAthena(Checker::<Athena>::new());
+        for texts in [&short, &long] {
+            let (index, result) = athena.first_identified(texts).expect("a hit");
+            assert_eq!(index, 2);
+            assert!(result.is_identified);
+            assert_eq!(result.text, texts[2]);
+            assert_eq!(result.checker_name, "English Checker");
+            // The same as checking one at a time
+            let one_by_one = texts
+                .iter()
+                .position(|text| athena.check(text).is_identified);
+            assert_eq!(one_by_one, Some(index));
+            assert!(athena.first_identified(&texts[..2]).is_none());
+        }
+        assert!(athena.first_identified(&[]).is_none());
+
+        // Other checkers check one at a time
+        let lemmeknow = CheckerTypes::CheckLemmeKnow(Checker::<LemmeKnow>::new());
+        let (index, result) = lemmeknow.first_identified(&short).expect("a hit");
+        assert_eq!(index, 3);
+        assert_eq!(result.checker_name, "LemmeKnow Checker");
     }
 
     #[test]

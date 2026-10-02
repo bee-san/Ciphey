@@ -106,6 +106,25 @@ pub fn check_string_success(decoded_text: &str, original_text: &str) -> bool {
     false
 }
 
+/// Collects `candidates` up to and including the first one [`check_string_success`]
+/// rejects for `original_text` (empty, or unchanged), and returns them with that one's
+/// index. Brute-force decoders stop trying keys there.
+pub(crate) fn candidates_until_unchanged(
+    original_text: &str,
+    candidates: impl Iterator<Item = String>,
+) -> (Vec<String>, Option<usize>) {
+    let mut collected = Vec::new();
+    for candidate in candidates {
+        let unchanged = !check_string_success(&candidate, original_text);
+        collected.push(candidate);
+        if unchanged {
+            let index = collected.len() - 1;
+            return (collected, Some(index));
+        }
+    }
+    (collected, None)
+}
+
 /// Turns decoded bytes into text.
 ///
 /// The bytes are read as UTF-8 when they are valid UTF-8, as encoded text almost always
