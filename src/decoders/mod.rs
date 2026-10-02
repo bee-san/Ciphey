@@ -25,6 +25,8 @@ pub mod base36_decoder;
 pub mod base58_bitcoin_decoder;
 /// The base58_monero_decoder module decodes base58 monero
 pub mod base58_monero_decoder;
+/// The baudot_decoder module decodes Baudot code (ITA2 and US-TTY, 5-bit teleprinter code)
+pub mod baudot_decoder;
 /// The binary_decoder module decodes binary
 pub mod binary_decoder;
 /// The decimal_decoder module decodes decimal character codes
@@ -137,6 +139,7 @@ use base58_bitcoin_decoder::Base58BitcoinDecoder;
 use base58_flickr_decoder::Base58FlickrDecoder;
 use base58_monero_decoder::Base58MoneroDecoder;
 use base58_ripple_decoder::Base58RippleDecoder;
+use baudot_decoder::BaudotDecoder;
 use binary_decoder::BinaryDecoder;
 use decimal_decoder::DecimalDecoder;
 use hexadecimal_decoder::HexadecimalDecoder;
@@ -196,6 +199,8 @@ pub enum DecoderType {
     AtbashDecoder(atbash_decoder::AtbashDecoder),
     /// baconian decoder
     BaconianDecoder(baconian_decoder::BaconianDecoder),
+    /// baudot (ITA2) decoder
+    BaudotDecoder(baudot_decoder::BaudotDecoder),
     /// base32 decoder
     Base32Decoder(base32_decoder::Base32Decoder),
     /// base36 decoder
@@ -400,6 +405,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             "Baconian",
             DecoderBox::new(Decoder::<BaconianDecoder>::new()),
         ),
+        ("Baudot", DecoderBox::new(Decoder::<BaudotDecoder>::new())),
         ("caesar", DecoderBox::new(Decoder::<CaesarDecoder>::new())),
         ("Affine", DecoderBox::new(Decoder::<AffineDecoder>::new())),
         (

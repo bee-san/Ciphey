@@ -13,6 +13,7 @@ use crate::decoders::base32_decoder::Base32Decoder;
 use crate::decoders::base36_decoder::Base36Decoder;
 use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
 use crate::decoders::base58_monero_decoder::Base58MoneroDecoder;
+use crate::decoders::baudot_decoder::BaudotDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::decimal_decoder::DecimalDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
@@ -288,6 +289,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let morsecodedecoder = Decoder::<MorseCodeDecoder>::new();
     let atbashdecoder = Decoder::<AtbashDecoder>::new();
     let baconian = Decoder::<BaconianDecoder>::new();
+    let baudot = Decoder::<BaudotDecoder>::new();
     let caesardecoder = Decoder::<CaesarDecoder>::new();
     let affine = Decoder::<AffineDecoder>::new();
     let railfencedecoder = Decoder::<RailfenceDecoder>::new();
@@ -350,6 +352,9 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(morsecodedecoder),
             Box::new(atbashdecoder),
             Box::new(baconian),
+            // After Baconian: both read groups of five 0s and 1s, and when two decoders
+            // find plaintext in the same step the search reports the one listed first.
+            Box::new(baudot),
             Box::new(caesardecoder),
             Box::new(affine),
             Box::new(railfencedecoder),
