@@ -8,7 +8,9 @@
 use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
 use crate::checkers::english::has_mostly_words;
+use crate::checkers::lemmeknow_checker::is_unmarked_ctf_flag;
 use crate::checkers::CheckerTypes;
+use crate::config::get_config;
 use gibberish_or_not::Sensitivity;
 use log::{debug, trace};
 use once_cell::sync::Lazy;
@@ -137,6 +139,7 @@ impl Crack for Decoder<VigenereDecoder> {
         let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
         let mut checker_result = checker_with_sensitivity.check(text);
 
+        let crib = get_config().regex.is_some();
         let letters = cipher_letters(text);
         for key_length in 3..30 {
             let key = break_vigenere_letters(&letters, key_length);
@@ -147,8 +150,12 @@ impl Crack for Decoder<VigenereDecoder> {
             let decode_attempt = decrypt(text, key_str);
             // The key search maximises letter-pair fitness, so even wrong keys give text
             // the statistical checks accept; only words tell them apart. Skipping these
-            // before the checker also keeps them away from the human checker.
-            if !has_mostly_words(&decode_attempt, MIN_WORD_RATIO) {
+            // before the checker also keeps them away from the human checker. With a
+            // crib, the crib decides.
+            if !crib
+                && (!has_mostly_words(&decode_attempt, MIN_WORD_RATIO)
+                    || is_unmarked_ctf_flag(&decode_attempt))
+            {
                 continue;
             }
             checker_result = checker_with_sensitivity.check(&decode_attempt);

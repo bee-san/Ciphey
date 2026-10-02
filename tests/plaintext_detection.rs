@@ -1,6 +1,7 @@
 //! The 20 end-to-end cases from <https://github.com/bee-san/Ciphey/issues/1031>, run the way
 //! the issue ran them: `ciphey -t <ciphertext> -d` with a fresh home directory, so the
-//! cache can't answer. Before the fixes from that issue only 6 came back right.
+//! cache can't answer. Before the fixes from that issue only 6 came back right. Some CTF
+//! flags under ciphers that keep a flag's shape follow.
 //!
 //! The two inputs that still fail are `#[ignore]`d with the reason; run them with
 //! `cargo test --test plaintext_detection -- --ignored`.
@@ -15,6 +16,18 @@ use std::process::{Command, Stdio};
 /// Runs `ciphey -d -t <input>` in a fresh home directory and returns the plaintext it
 /// printed, or what it printed instead.
 fn decode(name: &str, input: &str) -> String {
+    // Generous for unoptimised builds; every case finishes in well under a second in a
+    // release build
+    decode_within(name, input, 20)
+}
+
+/// [`decode`] with a search timeout of `seconds`.
+fn decode_within(name: &str, input: &str, seconds: u32) -> String {
+    decode_with(name, input, &["-c", &seconds.to_string()])
+}
+
+/// Runs `ciphey -d <extra args> -t <input>` in a fresh home directory.
+fn decode_with(name: &str, input: &str, extra: &[&str]) -> String {
     let home = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!(
         "ciphey-pdetect-{}-{}",
         name,
@@ -25,9 +38,9 @@ fn decode(name: &str, input: &str) -> String {
     fs::write(home.join(".ciphey").join("config.toml"), "").expect("Could not write config");
 
     let output = Command::new(env!("CARGO_BIN_EXE_ciphey"))
-        // Generous for unoptimised builds; every case finishes in well under a second
-        // in a release build
-        .args(["-d", "-c", "20", "-t", input])
+        .arg("-d")
+        .args(extra)
+        .args(["-t", input])
         .env("HOME", &home)
         .env("NO_COLOR", "1")
         .stdin(Stdio::null())
@@ -96,4 +109,37 @@ cases! {
     base64_french: "SmUgbmUgc2FpcyBwYXMgY2UgcXVlIHR1IHZldXggZGlyZQ==" => "Je ne sais pas ce que tu veux dire";
     #[ignore = "German isn't recognised as plaintext, so the search goes on and may settle on junk"]
     base64_german: "V2lyIHRyZWZmZW4gdW5zIG1vcmdlbiBhbSBCYWhuaG9m" => "Wir treffen uns morgen am Bahnhof";
+
+    // CTF flags. A Caesar shift or Atbash keeps a flag's shape, so these check that the
+    // generic flag pattern doesn't take the ciphertext for the flag.
+    rot13_flag: "synt{guvf_vf_gur_synt}" => "flag{this_is_the_flag}";
+    atbash_flag: "uozt{gsrh_rh_gsv_uozt}" => "flag{this_is_the_flag}";
+    // Hex contents: the right shift doesn't rank best by letter pairs
+    rot13_pico_ctf_flag_with_hex: "cvpbPGS{7r1o9r3n2s4q}" => "picoCTF{7e1b9e3a2f4d}";
+    caesar_ductf_flag: "GXFWI{g0zq_xqg3u}" => "DUCTF{d0wn_und3r}";
+    // The ciphertext happens to be shaped like a flag too
+    railfence_pico_ctf_flag: "pCb_1uioT{436_sfncFs4_}" => "picoCTF{b4s3_64_1s_fun}";
+    rot47_htb_flag: "w%qLD_>b07=c809bCbN" => "HTB{s0m3_fl4g_h3r3}";
+}
+
+/// A flag whose prefix has no flag word (`SEKAI`, not `...CTF` or `flag`) can't be told
+/// apart from its own Caesar shifts, so ROT13 of one isn't decoded: it would only be a
+/// guess. A crib finds it.
+#[test]
+fn rot13_of_a_flag_without_a_flag_word_needs_a_crib() {
+    assert!(decode_within("sekai_rot13", "FRXNV{l0h_s0haq_z3}", 2).starts_with("<no plaintext>"));
+}
+
+#[test]
+fn a_crib_finds_a_flag_without_a_flag_word() {
+    // With a crib, ciphers with few keys check every key again, so the crib picks the
+    // right one
+    assert_eq!(
+        decode_with(
+            "sekai_crib",
+            "FRXNV{l0h_s0haq_z3}",
+            &["-c", "20", "--regex", "SEKAI\\{"]
+        ),
+        "SEKAI{y0u_f0und_m3}"
+    );
 }

@@ -5,7 +5,9 @@
 //! Ranks every rails/offset candidate by English letter-pair fitness and only asks the
 //! checker (at Low sensitivity) about the best one.
 
+use crate::checkers::lemmeknow_checker::{is_ctf_flag_shaped, is_marked_ctf_flag};
 use crate::checkers::CheckerTypes;
+use crate::config::get_config;
 use crate::decoders::interface::check_string_success;
 use crate::storage::ngrams::bigram_fitness;
 use gibberish_or_not::Sensitivity;
@@ -70,9 +72,28 @@ impl Crack for Decoder<RailfenceDecoder> {
             }
         }
 
+        // With a crib every candidate is checked, in key order: the crib says which is right
+        if get_config().regex.is_some() {
+            let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
+            for (index, candidate) in decoded_strings.iter().enumerate() {
+                let checker_result = checker_with_sensitivity.check(candidate);
+                if checker_result.is_identified {
+                    trace!("Found a match with railfence candidate {}", index);
+                    results.unencrypted_text = Some(vec![candidate.clone()]);
+                    results.update_checker(&checker_result);
+                    return results;
+                }
+            }
+            results.unencrypted_text = Some(decoded_strings);
+            return results;
+        }
+
         if let Some((index, rails, offset, fitness)) = best {
             let mut to_check = vec![index];
-            // The same number of rails at offset 0 goes first if it is nearly as good
+            // The same number of rails at offset 0 goes first if it is nearly as good. The
+            // best-ranked candidate is only checked after it on longer texts: on short ones
+            // the ranking is mostly noise, and the best-ranked is usually just a wrong key
+            // that happens to pass.
             if offset != 0 {
                 let (zero_index, zero_fitness) = offset_zero[rails - 2];
                 let letters = decoded_strings[index]
@@ -80,8 +101,29 @@ impl Crack for Decoder<RailfenceDecoder> {
                     .filter(u8::is_ascii_alphabetic)
                     .count();
                 if (fitness - zero_fitness) * (letters as f64) < NEAR_TIE {
+                    if letters < MIN_LETTERS_FOR_RANKED_FALLBACK {
+                        to_check.clear();
+                    }
                     to_check.insert(0, zero_index);
                 }
+            }
+            // A candidate that is a CTF flag (`picoCTF{...}`) goes first: only the right
+            // key puts the prefix and braces back together. A flag without a flag word in
+            // its prefix (`SEKAI{...}`) only counts if no other key gives a flag shape and
+            // the input didn't have one: otherwise the braces may just have landed there.
+            let flag_shaped: Vec<usize> = (0..decoded_strings.len())
+                .filter(|&i| is_ctf_flag_shaped(&decoded_strings[i]))
+                .collect();
+            let trusted_flag = flag_shaped
+                .iter()
+                .copied()
+                .find(|&i| is_marked_ctf_flag(&decoded_strings[i]))
+                .or_else(|| {
+                    (flag_shaped.len() == 1 && !is_ctf_flag_shaped(text)).then(|| flag_shaped[0])
+                });
+            to_check.retain(|index| !flag_shaped.contains(index));
+            if let Some(flag) = trusted_flag {
+                to_check.insert(0, flag);
             }
             let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
             for index in to_check {
@@ -123,6 +165,9 @@ impl Crack for Decoder<RailfenceDecoder> {
 /// a better candidate with the same number of rails and still be preferred. A rotation of
 /// the plaintext only differs in the letter pairs around the wrap.
 const NEAR_TIE: f64 = 4.0;
+
+/// See `crack`: below this many letters only the offset-0 candidate is checked on a near-tie.
+const MIN_LETTERS_FOR_RANKED_FALLBACK: usize = 20;
 
 /// Decodes a text encoded with the Rail Fence Cipher with the specified number of rails and offset
 ///
@@ -251,6 +296,20 @@ mod tests {
             result.unencrypted_text.unwrap()[0],
             "Sphinx of black quartz, judge my vow"
         );
+    }
+
+    #[test]
+    fn railfence_finds_flags_with_random_contents() {
+        let railfence_decoder_instance = Decoder::<RailfenceDecoder>::new();
+        // picoCTF{7e1b9e3a2f4d} on 3 rails
+        let flag = "picoCTF{7e1b9e3a2f4d}";
+        let chars: Vec<char> = flag.chars().collect();
+        let mut by_rail: Vec<(usize, usize)> = zigzag(3, 0).zip(0..).take(chars.len()).collect();
+        by_rail.sort();
+        let encoded: String = by_rail.iter().map(|&(_, i)| chars[i]).collect();
+        let result = railfence_decoder_instance.crack(&encoded, &get_athena_checker());
+        assert!(result.success, "{encoded}");
+        assert_eq!(result.unencrypted_text.unwrap()[0], flag);
     }
 
     #[test]

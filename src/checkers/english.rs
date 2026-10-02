@@ -13,7 +13,11 @@ use crate::checkers::checker_type::{Check, Checker};
 /// 1. **Space-less letters** (no whitespace, at least `SPACELESS_MIN_LETTERS` (8) letters,
 ///    at least 90% letters), the usual output of Caesar, railfence and other classical
 ///    ciphers: the mean [quadgram score](crate::storage::ngrams::quadgram_score) must
-///    reach the sensitivity's threshold, or the text must be one dictionary word.
+///    reach the sensitivity's threshold, or the text must be one dictionary word. Up to
+///    12 letters it must also split into known words (`HELLOWORLD`, not the railfence
+///    shuffle `HWORLDELLO`), unless its quadgram score is very high: a long single word
+///    like `experience` can't be looked up, since the dictionary only answers for 4 to
+///    9 letters.
 /// 2. **Mostly known words**: two or more words, at least one of three or more letters, of
 ///    which more than 80% are English words, counting the common one to three letter
 ///    words gibberish-or-not's dictionary lacks (`a`, `is`, `me` ...). This is
@@ -31,6 +35,14 @@ pub struct EnglishChecker;
 /// Space-less text needs at least this many letters for its quadgram score to mean
 /// anything. Shorter words are looked up in the dictionary instead.
 const SPACELESS_MIN_LETTERS: usize = 8;
+
+/// Space-less text up to this many letters must split into known words: a few quadgrams
+/// can't tell English from a shuffle of it, like railfence's wrong keys.
+const SPLIT_MAX_LETTERS: usize = 12;
+
+/// ...unless its quadgram score is at least this. Most real words of 10 to 12 letters
+/// that can't be split score above it, and the shuffles in the #1031 corpora below.
+const SPLIT_EXEMPT_SCORE: f64 = -4.4;
 
 /// Text with at least [`QUADGRAM_VETO_MIN_LETTERS`] letters that scores below this is not
 /// English, whatever gibberish-or-not says. English, even ALL CAPS, names and code,
@@ -107,9 +119,23 @@ fn is_english(text: &str, sensitivity: Sensitivity) -> bool {
     let spaceless = !trimmed.contains(char::is_whitespace);
 
     if spaceless && is_mostly_letters(trimmed) {
-        return quadgram_score(trimmed)
-            .is_some_and(|score| score >= quadgram_threshold(sensitivity))
-            || is_dictionary_word(&normalised);
+        if is_dictionary_word(&normalised) {
+            return true;
+        }
+        let Some(score) = quadgram_score(trimmed) else {
+            return false;
+        };
+        if score < quadgram_threshold(sensitivity) {
+            return false;
+        }
+        let letters: String = trimmed
+            .chars()
+            .filter(char::is_ascii_alphabetic)
+            .map(|c| c.to_ascii_lowercase())
+            .collect();
+        return letters.len() > SPLIT_MAX_LETTERS
+            || score >= SPLIT_EXEMPT_SCORE
+            || splits_into_words(&letters);
     }
 
     let words: Vec<&str> = normalised.split(' ').collect();
@@ -157,6 +183,26 @@ pub(crate) fn has_mostly_words(text: &str, min_ratio: f64) -> bool {
     let words: Vec<&str> = normalised.split(' ').collect();
     let known = words.iter().filter(|word| is_known_word(word)).count();
     known as f64 >= min_ratio * words.len() as f64
+}
+
+/// Whether `letters` (lower case ASCII letters) is a run of English words, such as
+/// `meetmeatnoon`.
+fn splits_into_words(letters: &str) -> bool {
+    // reachable[i]: letters[..i] splits into words
+    let mut reachable = vec![false; letters.len() + 1];
+    reachable[0] = true;
+    for start in 0..letters.len() {
+        if !reachable[start] {
+            continue;
+        }
+        // The dictionary only answers for words of up to 9 letters
+        for end in start + 1..=(start + 9).min(letters.len()) {
+            if !reachable[end] && is_known_word(&letters[start..end]) {
+                reachable[end] = true;
+            }
+        }
+    }
+    reachable[letters.len()]
 }
 
 /// Whether more than 80% of `words` (lower case) are English words.
@@ -393,9 +439,23 @@ mod tests {
             "WECRLTEERDSOEEFEAOCAIVDEN",           // railfence, 3 rails
             "BYFFIQILFX",                          // a wrong Caesar shift of HELLOWORLD
             "TISUYYOQVTHERBMEITHAATNMONOERETOHTH",
+            // Wrong railfence keys: English letters and quadgrams, but no words
+            "HWORLDELLO",
+            "KATWANTATCAD",
+            "MORGINGOOND",
         ] {
             assert!(!english(junk, Sensitivity::Medium), "{junk}");
         }
+    }
+
+    #[test]
+    fn short_spaceless_text_must_split_into_words() {
+        assert!(splits_into_words("meetmeatnoon"));
+        assert!(splits_into_words("goodmorning"));
+        assert!(!splits_into_words("katwantatcad"));
+        // A long word the dictionary can't be asked about passes on its quadgram score
+        assert!(english("EXPERIENCE", Sensitivity::Low));
+        assert!(english("MEETMEATNOON", Sensitivity::Low));
     }
 
     #[test]

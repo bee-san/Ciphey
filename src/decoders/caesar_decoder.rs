@@ -3,9 +3,11 @@
 //! Call caesar_decoder.crack to use. It returns `Option<String>` and check with
 //! `result.is_some()` to see if it returned okay.
 //! Ranks all 25 shifts by English letter-pair fitness and only asks the checker (at Low
-//! sensitivity) about the best one.
+//! sensitivity) about the best one. With a `--regex` crib every shift is checked.
 
+use crate::checkers::lemmeknow_checker::{is_marked_ctf_flag, is_unmarked_ctf_flag};
 use crate::checkers::CheckerTypes;
+use crate::config::get_config;
 use crate::decoders::interface::{best_ranked, check_string_success};
 use gibberish_or_not::Sensitivity;
 
@@ -69,14 +71,31 @@ impl Crack for Decoder<CaesarDecoder> {
             return results;
         }
 
-        if let Some(best) = best_ranked(decoded_strings.iter().map(String::as_str)) {
-            let checker_result = checker
-                .with_sensitivity(Sensitivity::Low)
-                .check(&decoded_strings[best]);
+        // With a crib every shift is checked: the crib says which one is right.
+        // Otherwise a shift that gives a CTF flag (`picoCTF{...}`) goes first, since a
+        // flag's contents are often hex or random letters and the right shift needn't
+        // rank best, then the best-ranked shift.
+        let to_check: Vec<usize> = if get_config().regex.is_some() {
+            (0..decoded_strings.len()).collect()
+        } else {
+            let flag = decoded_strings
+                .iter()
+                .position(|text| is_marked_ctf_flag(text));
+            let best = best_ranked(decoded_strings.iter().map(String::as_str));
+            let mut to_check: Vec<usize> = flag.into_iter().chain(best).collect();
+            to_check.dedup();
+            // A shift keeps a flag's shape, so only a flag word in the prefix says this
+            // shift is the right one
+            to_check.retain(|&index| !is_unmarked_ctf_flag(&decoded_strings[index]));
+            to_check
+        };
+        let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
+        for index in to_check {
+            let checker_result = checker_with_sensitivity.check(&decoded_strings[index]);
             if checker_result.is_identified {
-                let shift = best + 1;
+                let shift = index + 1;
                 trace!("Found a match with caesar shift {}", shift);
-                results.unencrypted_text = Some(vec![decoded_strings[best].clone()]);
+                results.unencrypted_text = Some(vec![decoded_strings[index].clone()]);
                 results.update_checker(&checker_result);
                 results.key = Some(shift.to_string());
                 return results;
@@ -301,6 +320,21 @@ mod tests {
 
         let result = caesar_decoder.crack("dwwdfn dw gdzq", &get_athena_checker());
         assert_eq!(result.unencrypted_text.unwrap()[0], "attack at dawn");
+    }
+
+    #[test]
+    fn flags_are_found_even_if_their_shift_does_not_rank_best() {
+        // The hex contents make other shifts rank better by letter pairs
+        let caesar_decoder = Decoder::<CaesarDecoder>::new();
+        for (encoded, flag) in [
+            ("synt{q41p3o8n9r2s5n6p}", "flag{d41c3b8a9e2f5a6c}"),
+            ("cvpbPGS{7r1o9r3n2s4q}", "picoCTF{7e1b9e3a2f4d}"),
+            ("synt{guvf_vf_gur_synt}", "flag{this_is_the_flag}"),
+        ] {
+            let result = caesar_decoder.crack(encoded, &get_athena_checker());
+            assert!(result.success, "{encoded}");
+            assert_eq!(result.unencrypted_text.unwrap()[0], flag);
+        }
     }
 
     #[test]

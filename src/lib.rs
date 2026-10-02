@@ -260,7 +260,7 @@ fn cached_result(row: storage::database::CacheRow) -> Option<DecoderResult> {
         .collect::<Result<_, _>>()
         .map_err(|e| log::warn!("Error deserializing cache result: {e}"))
         .ok()?;
-    if !check_if_input_text_is_plaintext(&row.decoded_text).is_identified {
+    if !check_plaintext(&row.decoded_text).is_identified {
         log::debug!(
             "Cached plaintext {:?} is not accepted any more",
             row.decoded_text
@@ -275,7 +275,20 @@ fn cached_result(row: storage::database::CacheRow) -> Option<DecoderResult> {
 
 /// Checks if the given input is plaintext or not
 /// Used at the start of the program to not waste CPU cycles
+///
+/// A CTF flag whose prefix has no flag word (`SEKAI{...}`) isn't taken as plaintext here:
+/// input shaped like that is far more likely a Caesar shift or Atbash of a flag
+/// (`FRXNV{...}`), which keeps the shape, than a flag someone wants decoded.
 fn check_if_input_text_is_plaintext(text: &str) -> CheckResult {
+    if get_config().regex.is_none() && checkers::lemmeknow_checker::is_unmarked_ctf_flag(text) {
+        return CheckResult::new(&Checker::<Athena>::new());
+    }
+    check_plaintext(text)
+}
+
+/// Runs the checkers on `text` the way the search does: Athena, or WaitAthena in
+/// `top_results` mode.
+fn check_plaintext(text: &str) -> CheckResult {
     let config = get_config();
 
     if config.top_results {

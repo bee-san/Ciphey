@@ -50,6 +50,89 @@ static CTF_FLAG_PATTERN: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^[A-Za-z][A-Za-z0-9_]{1,19}\{[^{}\n]{1,200}\}$").expect("valid flag regex")
 });
 
+/// Flag prefixes that are a flag word on their own (lower case).
+const FLAG_PREFIXES: [&str; 5] = ["htb", "thm", "hackthebox", "tryhackme", "flag"];
+
+/// Whether `text` is shaped like a CTF flag, `prefix{...}`, whatever its prefix.
+pub fn is_ctf_flag_shaped(text: &str) -> bool {
+    CTF_FLAG_PATTERN.is_match(text.trim())
+}
+
+/// Whether `text` is shaped like a CTF flag, `prefix{...}`, and its prefix has a flag word,
+/// like `picoCTF{...}`, `HTB{...}` or `flag{...}`. Decoders with few keys check such a
+/// candidate first.
+pub(crate) fn is_marked_ctf_flag(text: &str) -> bool {
+    let text = text.trim();
+    CTF_FLAG_PATTERN.is_match(text) && flag_prefix_has_marker(&flag_prefix(text))
+}
+
+/// Whether `text` is shaped like a CTF flag but its prefix has no flag word (see
+/// `flag_prefix_has_marker`), like `SEKAI{...}`.
+///
+/// Such a flag can't be told apart from a Caesar shift, Atbash or Vigenère encryption of
+/// one (`FRXNV{...}` is ROT13 of `SEKAI{...}`), since those keep a flag's shape. So the
+/// input itself, and the output of those ciphers, isn't taken as a flag on its shape
+/// alone; a crib (`--regex 'SEKAI\{'`) finds these.
+pub fn is_unmarked_ctf_flag(text: &str) -> bool {
+    let text = text.trim();
+    CTF_FLAG_PATTERN.is_match(text) && !flag_prefix_has_marker(&flag_prefix(text))
+}
+
+/// Whether `text` is a CTF flag in any format.
+///
+/// A Caesar shift or Atbash keeps the shape of a flag, so `synt{guvf_vf_gur_synt}` (ROT13
+/// of `flag{this_is_the_flag}`) matches the pattern too. A prefix that is a shift, an
+/// Atbash, or a shift of an Atbash of a flag word is taken as an encoded flag and
+/// rejected, so the search goes on and the decoder finds the real one.
+fn is_ctf_flag(text: &str) -> bool {
+    let text = text.trim();
+    if !CTF_FLAG_PATTERN.is_match(text) {
+        return false;
+    }
+    let prefix = flag_prefix(text);
+    if flag_prefix_has_marker(&prefix) {
+        return true;
+    }
+    let atbash: String = prefix.chars().map(|c| map_letter(c, |l| 25 - l)).collect();
+    ![prefix, atbash].iter().any(|prefix| {
+        (1..26).any(|shift| {
+            let rotated: String = prefix
+                .chars()
+                .map(|c| map_letter(c, |l| (l + shift) % 26))
+                .collect();
+            flag_prefix_has_marker(&rotated)
+        }) || flag_prefix_has_marker(prefix)
+    })
+}
+
+/// The lower-cased part of a flag before its `{`.
+fn flag_prefix(flag: &str) -> String {
+    flag.split('{')
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase()
+}
+
+/// Whether a lower-case flag prefix has a flag word: it ends in `ctf` (`picoctf`,
+/// `ductf`, `ctf2024`) or `flag`, starts with `flag`, or is one of [`FLAG_PREFIXES`].
+/// Only whole prefixes and their ends count: `htb` inside `ohtbj00m3` is chance.
+fn flag_prefix_has_marker(prefix: &str) -> bool {
+    let word = prefix.trim_end_matches(|c: char| c.is_ascii_digit() || c == '_');
+    word.ends_with("ctf")
+        || word.ends_with("flag")
+        || word.starts_with("flag")
+        || FLAG_PREFIXES.contains(&word)
+}
+
+/// Applies `f` to the alphabet position (0 to 25) of a lower-case ASCII letter.
+fn map_letter(c: char, f: impl Fn(u8) -> u8) -> char {
+    if c.is_ascii_lowercase() {
+        (b'a' + f(c as u8 - b'a')) as char
+    } else {
+        c
+    }
+}
+
 impl Check for Checker<LemmeKnow> {
     fn new() -> Self {
         Checker {
@@ -73,11 +156,7 @@ impl Check for Checker<LemmeKnow> {
             .map(|found| &found.data)
             .find(|data| is_trusted_match(data, text))
             .map(format_data_result)
-            .or_else(|| {
-                CTF_FLAG_PATTERN
-                    .is_match(text.trim())
-                    .then(|| CTF_FLAG.to_string())
-            });
+            .or_else(|| is_ctf_flag(text).then(|| CTF_FLAG.to_string()));
 
         CheckResult {
             is_identified: description.is_some(),
@@ -255,6 +334,42 @@ mod tests {
             Some(CTF_FLAG),
             "LemmeKnow's own flag pattern"
         );
+    }
+
+    #[test]
+    fn caesar_shifted_and_atbashed_flags_are_not_flags() {
+        // Shifts and Atbash keep a flag's shape. Accepting these stopped the search at the
+        // ciphertext instead of letting Caesar or Atbash find the flag.
+        for encoded in [
+            "synt{guvf_vf_gur_synt}",  // ROT13 of flag{this_is_the_flag}
+            "cvpbPGS{o4f3_64_1f_sha}", // ROT13 of picoCTF{...}
+            "UGO{f0z3_sy4t_u3e3}",     // ROT13 of HTB{...}
+            "GSN{gibs4xpn3_i0xph}",    // ROT13 of THM{...}
+            "krxlXGU{y4h3_64_1h_ufm}", // Atbash of picoCTF{...}
+            "uozt{gsrh_rh_gsv_uozt}",  // Atbash of flag{...}
+            "galf{sedt_dt_seh_galf}",  // a Caesar shift of that Atbash
+        ] {
+            assert_eq!(identify(encoded), None, "{encoded}");
+        }
+        // Prefixes without a flag word are kept unless they are an encoded one
+        assert_eq!(identify("SEKAI{y0u_f0und_m3}").as_deref(), Some(CTF_FLAG));
+        assert_eq!(identify("dice{sp4rkl3s}").as_deref(), Some(CTF_FLAG));
+    }
+
+    #[test]
+    fn marked_and_unmarked_flags() {
+        assert!(is_marked_ctf_flag("picoCTF{b4s3_64_1s_fun}"));
+        assert!(is_marked_ctf_flag("flag{x}"));
+        assert!(!is_marked_ctf_flag("SEKAI{x}"));
+        assert!(!is_marked_ctf_flag("synt{x}"));
+        assert!(is_unmarked_ctf_flag("SEKAI{x}"));
+        assert!(is_unmarked_ctf_flag("pCb_1uioT{436_sfncFs4_}"));
+        assert!(!is_unmarked_ctf_flag("DUCTF{x}"));
+        assert!(!is_unmarked_ctf_flag("hello"));
+        // A flag word by chance inside a prefix doesn't count
+        assert!(is_unmarked_ctf_flag("ohTBJ00m3_ddRN{_wv}"));
+        assert!(is_marked_ctf_flag("ctf2024{x}"));
+        assert!(is_marked_ctf_flag("TryHackMe{x}"));
     }
 
     #[test]

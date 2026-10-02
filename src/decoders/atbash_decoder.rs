@@ -1,4 +1,6 @@
+use crate::checkers::lemmeknow_checker::is_unmarked_ctf_flag;
 use crate::checkers::CheckerTypes;
+use crate::config::get_config;
 use crate::decoders::interface::check_string_success;
 
 use super::crack_results::CrackResult;
@@ -40,6 +42,12 @@ impl Crack for Decoder<AtbashDecoder> {
             return results;
         }
 
+        // Atbash keeps a flag's shape, so `SEKAI{...}` from `HVPZR{...}` says nothing,
+        // unless a crib says what the flag looks like
+        if is_unmarked_ctf_flag(&decoded_text) && get_config().regex.is_none() {
+            results.unencrypted_text = Some(vec![decoded_text]);
+            return results;
+        }
         let checker_result = checker.check(&decoded_text);
         results.unencrypted_text = Some(vec![decoded_text]);
 

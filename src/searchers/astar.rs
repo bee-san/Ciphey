@@ -26,6 +26,7 @@ use rayon::prelude::*;
 use crate::checkers::athena::Athena;
 use crate::checkers::checker_type::{Check, Checker};
 use crate::checkers::english::EnglishChecker;
+use crate::checkers::lemmeknow_checker::{is_ctf_flag_shaped, is_unmarked_ctf_flag};
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
 use crate::searchers::helper_functions::{
@@ -153,13 +154,19 @@ fn should_try_decoder(decoder: &(dyn Crack + Sync), last: Option<&crate::CrackRe
 }
 
 /// Reject results no correct answer could look like: under 3 chars, mostly non-printable,
-/// under 5% of the input length (no decoder shrinks text that much), or an English-checker
-/// hit that is more than a third punctuation.
-fn result_passes_sanity(node: &AStarNode, original_input_len: usize) -> bool {
+/// under 5% of the input length (no decoder shrinks text that much), an English-checker
+/// hit that is more than a third punctuation, or a CTF flag without a flag word in its
+/// prefix (`SEKAI{...}`) when the input was already shaped like a flag: Caesar, Atbash,
+/// Vigenère and their combinations with Reverse keep that shape, so such a result is just
+/// the input with its letters changed.
+fn result_passes_sanity(node: &AStarNode, original_input_len: usize, input_is_flag: bool) -> bool {
     let Some(text) = node.state.text.first() else {
         return false;
     };
     if check_if_string_cant_be_decoded(text) {
+        return false;
+    }
+    if input_is_flag && is_unmarked_ctf_flag(text) {
         return false;
     }
     if original_input_len >= 40 && text.chars().count() * 20 < original_input_len {
@@ -302,6 +309,8 @@ fn result_confidence(node: &AStarNode) -> (u8, f32) {
 /// on success (repeatedly in `top_results` mode), `None` if the space is exhausted.
 pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Arc<AtomicBool>) {
     let original_input_len = input.chars().count();
+    // With a crib the crib decides what the flag looks like
+    let input_is_flag = is_ctf_flag_shaped(&input) && get_config().regex.is_none();
     let initial = DecoderResult {
         text: vec![input],
         path: vec![],
@@ -361,7 +370,7 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
                 debug!("Skipping duplicate result: {:?}", text);
                 continue;
             }
-            if !result_passes_sanity(&node, original_input_len) {
+            if !result_passes_sanity(&node, original_input_len, input_is_flag) {
                 debug!(
                     "Rejected implausible result {:?} from path {:?}; continuing search",
                     text,
@@ -517,7 +526,7 @@ mod tests {
             total_cost: 0.0,
             is_result: true,
         };
-        assert!(!result_passes_sanity(&node, 800));
+        assert!(!result_passes_sanity(&node, 800, false));
 
         let node = AStarNode {
             state: DecoderResult {
@@ -529,6 +538,38 @@ mod tests {
             total_cost: 0.0,
             is_result: true,
         };
-        assert!(result_passes_sanity(&node, 16));
+        assert!(result_passes_sanity(&node, 16, false));
+    }
+
+    #[test]
+    fn sanity_rejects_unmarked_flags_from_flag_shaped_input() {
+        let flag = |text: &str| AStarNode {
+            state: DecoderResult {
+                text: vec![text.to_string()],
+                path: vec![],
+            },
+            depth: 3,
+            cost: 3.0,
+            total_cost: 0.0,
+            is_result: true,
+        };
+        // e.g. Reverse -> Atbash -> Reverse of FRXNV{l0h_s0haq_z3}
+        assert!(!result_passes_sanity(
+            &flag("UICME{o0s_h0szj_a3}"),
+            19,
+            true
+        ));
+        // From input that wasn't a flag (Base64, hex ...) it may be the answer
+        assert!(result_passes_sanity(
+            &flag("SEKAI{y0u_f0und_m3}"),
+            28,
+            false
+        ));
+        // A flag word in the prefix is always fine
+        assert!(result_passes_sanity(
+            &flag("flag{this_is_the_flag}"),
+            22,
+            true
+        ));
     }
 }
