@@ -373,10 +373,14 @@ fn byte_views(text: &str) -> Vec<Vec<u8>> {
     views
 }
 
-/// Hex digits, ignoring whitespace, `:` and `0x` prefixes, as bytes.
+/// Hex digits, ignoring whitespace, `:` and `0x` prefixes, as bytes. Every group of digits
+/// between separators must be whole bytes (an even number of digits): space-separated
+/// decimal or octal codes such as `115 145 145` are made of hex digits too, but they're
+/// another decoder's layer, not hex.
 fn hex_view(text: &str) -> Option<Vec<u8>> {
     let text = text.as_bytes();
     let mut digits = Vec::with_capacity(text.len());
+    let mut group_start = 0;
     let mut index = 0;
     while index < text.len() {
         let byte = text[index];
@@ -386,7 +390,12 @@ fn hex_view(text: &str) -> Option<Vec<u8>> {
         }
         if byte.is_ascii_hexdigit() {
             digits.push(byte);
-        } else if !byte.is_ascii_whitespace() && byte != b':' {
+        } else if byte.is_ascii_whitespace() || byte == b':' {
+            if !(digits.len() - group_start).is_multiple_of(2) {
+                return None;
+            }
+            group_start = digits.len();
+        } else {
             return None;
         }
         index += 1;
@@ -418,7 +427,10 @@ fn hex_value(digit: u8) -> u8 {
 }
 
 /// Standard or URL-safe Base64 (`[A-Za-z0-9+/_-]+={0,2}`, possibly split into lines),
-/// decoded with the engines the Base64 decoder uses.
+/// decoded with the engines the Base64 decoder uses. The text must have both uppercase and
+/// lowercase letters: Base64 of 16 or more random-looking bytes practically always does,
+/// while single-case text that fits the alphabet (Base32, a1z26 or Citrix output, words
+/// run together) is something else.
 fn base64_view(text: &str) -> Option<Vec<u8>> {
     let is_base64 =
         |byte: u8| byte.is_ascii_alphanumeric() || matches!(byte, b'+' | b'/' | b'-' | b'_');
@@ -429,6 +441,8 @@ fn base64_view(text: &str) -> Option<Vec<u8>> {
         || !body
             .bytes()
             .all(|byte| is_base64(byte) || matches!(byte, b'\r' | b'\n'))
+        || !body.bytes().any(|byte| byte.is_ascii_uppercase())
+        || !body.bytes().any(|byte| byte.is_ascii_lowercase())
     {
         return None;
     }
@@ -1080,6 +1094,46 @@ mod tests {
         assert_cracks(&format!("0x{OAK_HEX}"), "key", OAK_PLAINTEXT);
         let prefixed: Vec<String> = bytes.iter().map(|byte| format!("0x{byte:02x}")).collect();
         assert_cracks(&prefixed.join(" "), "key", OAK_PLAINTEXT);
+    }
+
+    #[test]
+    fn decimal_and_octal_codes_are_not_hex() {
+        // Space-separated codes are hex digits too, but groups of 3 digits aren't bytes.
+        // These are what the Octal and Decimal decoders take off; reading them as hex
+        // made every such node pay for a full analysis.
+        for codes in [
+            // Octal of "Meet me at the old lighthouse"
+            "115 145 145 164 40 155 145 40 141 164 40 164 150 145 40 157 154 144 40 154 151 147 150 164 150 157 165 163 145",
+            // Decimal of the same
+            "77 101 101 116 32 109 101 32 97 116 32 116 104 101 32 111 108 100 32 108 105 103 104 116 104 111 117 115 101",
+        ] {
+            assert_eq!(hex_view(codes), None, "{codes:?}");
+            assert!(byte_views(codes).is_empty(), "{codes:?}");
+        }
+        // Whole bytes per group are still hex
+        assert_eq!(
+            hex_view("4d 65 65 74 20 6d 65 20 61 74 20 74 68 65 20 6f"),
+            Some(b"Meet me at the o".to_vec())
+        );
+        assert_eq!(
+            hex_view("4d65 6574 206d 6520 6174 2074 6865 206f"),
+            Some(b"Meet me at the o".to_vec())
+        );
+    }
+
+    #[test]
+    fn single_case_text_is_not_base64() {
+        for text in [
+            // Base32 of "The quick brown fox jumps over the lazy dog"
+            "KRUGKIDROVUWG2ZAMJZG653OEBTG66BANJ2W24DTEBXXMZLSEB2GQZJANRQXU6JAMRXWO===",
+            // Upper-case letters only, like Citrix CTX1 or a1z26 output
+            "CCHIMAJKEGBMHACKFHANKBPLOGLMOELOPCKIPAKKLGOMFAAKEGBMEEBONDIJIFNPDDGJDB",
+            "itwasthebestoftimesitwastheworstoftimes",
+        ] {
+            assert_eq!(base64_view(text), None, "{text:?}");
+            assert!(byte_views(text).is_empty(), "{text:?}");
+        }
+        assert!(base64_view(HELLO_BASE64).is_some());
     }
 
     #[test]
