@@ -80,6 +80,8 @@ pub mod unicode_escape_decoder;
 pub mod url_decoder;
 /// The utf16_decoder module decodes UTF-16 (LE/BE) text
 pub mod utf16_decoder;
+/// The uuencode_decoder module decodes Uuencode (Unix-to-Unix encoding)
+pub mod uuencode_decoder;
 
 /// The interface module defines the interface for decoders
 /// Each and every decoder has the same struct & traits
@@ -173,6 +175,7 @@ use substitution_generic_decoder::SubstitutionGenericDecoder;
 use unicode_escape_decoder::UnicodeEscapeDecoder;
 use url_decoder::URLDecoder;
 use utf16_decoder::Utf16Decoder;
+use uuencode_decoder::UuencodeDecoder;
 use vigenere_decoder::VigenereDecoder;
 use xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use xor_single_byte_decoder::XorSingleByteDecoder;
@@ -257,6 +260,8 @@ pub enum DecoderType {
     MimeEncodedWordDecoder(mime_encoded_word_decoder::MimeEncodedWordDecoder),
     /// UTF-16 decoder
     Utf16Decoder(utf16_decoder::Utf16Decoder),
+    /// uuencode decoder
+    UuencodeDecoder(uuencode_decoder::UuencodeDecoder),
     /// reverse decoder
     ReverseDecoder(reverse_decoder::ReverseDecoder),
     /// morse decoder
@@ -395,6 +400,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ("UTF-16", DecoderBox::new(Decoder::<Utf16Decoder>::new())),
         ("Base32", DecoderBox::new(Decoder::<Base32Decoder>::new())),
         ("Base36", DecoderBox::new(Decoder::<Base36Decoder>::new())),
+        (
+            "Uuencode",
+            DecoderBox::new(Decoder::<UuencodeDecoder>::new()),
+        ),
         ("Reverse", DecoderBox::new(Decoder::<ReverseDecoder>::new())),
         (
             "Morse Code",

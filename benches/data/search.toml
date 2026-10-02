@@ -237,6 +237,20 @@ input = "<~9k@mX+Dk[4@<<W6BOr<)Ch+Z)BkM+$BQ&$7AKYDnFCfJ8D/!NuBkM+$+CT.u+C]A*DJ()
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# Python's uu.encode(text, name="data.txt", mode=0o644, backtick=True), with the framing
+kind = "single"
+name = "uuencode"
+layers = ["Uuencode"]
+input = '''
+begin 644 data.txt
+M365E="!M92!A="!T:&4@;VQD(&QI9VAT:&]U<V4@869T97(@;6ED;FEG:'0@
+G86YD(&)R:6YG('1H92!M87`L('1H92!K97D@86YD(&$@=&]R8V@N
+`
+end
+'''
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "affine"
 layers = ["Affine"]
@@ -407,6 +421,14 @@ kind = "multi"
 name = "base92_base64"
 layers = ["Base92", "Base64"]
 input = "PTVeZGw/NTc+b2dTJHBbR0VVJnRhSidiaG5rZSw3OWVLPUg0T1NiJDplczorWjxISG4xa1p1J2IqJmlIKl1Va0htczNsZDNqJEZnUiVzIztGY1thXyVlPiQucFwkcCUxSnh2a1NsKio="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Base64 of the two uuencode data lines of search/single/uuencode, each with its line break
+kind = "multi"
+name = "uuencode_base64"
+layers = ["Uuencode", "Base64"]
+input = "TTM2NUU9IiFNOTIhQT0iIVQ6JjRAO1ZRRCgmUUk5VkFUOiZdVTxWNEA4NjlUOTcoQDs2RUQ7RkVHOicwQApHODZZRCgmKVI6NllHKCcxSDkyIU04N2BMKCcxSDkyIUs5N0RAODZZRCgmJEA9Jl1SOFZATgo="
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
