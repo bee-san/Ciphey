@@ -291,7 +291,7 @@
   },
   {
     "id": "angstromctf-2016-spqr",
-    "event": "angstromCTF 2016",
+    "event": "ångstromCTF 2016",
     "year": 2016,
     "challenge": "SPQR",
     "category": "Crypto",
@@ -306,7 +306,7 @@
   },
   {
     "id": "angstromctf-2016-what-the-hex",
-    "event": "angstromCTF 2016",
+    "event": "ångstromCTF 2016",
     "year": 2016,
     "challenge": "What the Hex",
     "category": "Crypto",
@@ -463,7 +463,7 @@
   },
   {
     "id": "angstromctf-2018-back-to-base-ics",
-    "event": "angstromCTF 2018",
+    "event": "ångstromCTF 2018",
     "year": 2018,
     "challenge": "Back to Base-ics",
     "category": "Crypto",
@@ -478,7 +478,7 @@
   },
   {
     "id": "angstromctf-2018-back-to-base-ics-2",
-    "event": "angstromCTF 2018",
+    "event": "ångstromCTF 2018",
     "year": 2018,
     "challenge": "Back to Base-ics",
     "category": "Crypto",
@@ -493,7 +493,7 @@
   },
   {
     "id": "angstromctf-2018-back-to-base-ics-3",
-    "event": "angstromCTF 2018",
+    "event": "ångstromCTF 2018",
     "year": 2018,
     "challenge": "Back to Base-ics",
     "category": "Crypto",
@@ -508,7 +508,7 @@
   },
   {
     "id": "angstromctf-2018-warmup",
-    "event": "angstromCTF 2018",
+    "event": "ångstromCTF 2018",
     "year": 2018,
     "challenge": "Warmup",
     "category": "Crypto",
@@ -523,7 +523,7 @@
   },
   {
     "id": "angstromctf-2018-xor",
-    "event": "angstromCTF 2018",
+    "event": "ångstromCTF 2018",
     "year": 2018,
     "challenge": "XOR",
     "category": "Crypto",
@@ -663,7 +663,7 @@
   },
   {
     "id": "angstromctf-2019-classy-cipher",
-    "event": "angstromCTF 2019",
+    "event": "ångstromCTF 2019",
     "year": 2019,
     "challenge": "Classy Cipher",
     "category": "Crypto",
