@@ -960,7 +960,7 @@
     "plaintext": "Sj lseee ,jat;ee whak; jappenglu to mdeee lo no no, why ME.. why NOW..... But what's this.. there is a note in my hand: Fear not dear child, this is only a dream.. A dream that has been caused by COVID-19. Many questions you have, while you've been asleep. Herein this note lies the answer you seek: DawgCTF{P4thf1nd3r}",
     "flag": "DawgCTF{P4thf1nd3r}",
     "chain": [
-      "Keyboard shift"
+      "Keyboard layout swap (Dvorak to QWERTY)"
     ],
     "notes": "Keyboard-layout substitution: the text was typed on a QWERTY keyboard while the layout was set to Dvorak; map each character from its Dvorak position back to the QWERTY key (Dvorak->QWERTY). The first few words ('Oh no... what's happening to me') were apparently typed before the layout switch and come out garbled, the rest decodes cleanly. Also on https://ctftime.org/writeup/19876"
   },
@@ -1449,7 +1449,7 @@
     "plaintext": "CTF{Star_._Wars_._For_._Life}",
     "flag": "CTF{Star_._Wars_._For_._Life}",
     "chain": [
-      "Keyboard shift",
+      "Shifted digit symbols",
       "Decimal"
     ],
     "notes": "Shifted-number-row symbols !@#$%^&*() stand for digits 1234567890; result is comma-separated decimal ASCII codes. CTFlearn is an undated wargame; year is that of the writeup used as source."
@@ -1973,7 +1973,7 @@
     "flag": "DSC{V17_QU4L17Y}",
     "chain": [
       "ROT13",
-      "Keyboard shift"
+      "Keyboard shift (Dvorak)"
     ],
     "notes": "ROT13 gives H_R}Z28AJI5?28F~; then keyboard shift on the US Dvorak layout, one key to the right (decode = take the key to the left, wrapping within the row, shifted/unshifted rows kept). Challenge file KEY.txt: https://raw.githubusercontent.com/D13David/ctf-writeups/main/deconstructf23/crypto/move/KEY.txt"
   },

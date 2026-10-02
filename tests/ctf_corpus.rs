@@ -57,6 +57,7 @@ const SCYTALE: &str = "needs Scytale (#997)";
 const MULTITAP: &str = "needs multi-tap phone keypad (#960)";
 const KEYBOARD_SHIFT: &str = "needs keyboard shift (#976)";
 const KEYBOARD_LAYOUT: &str = "needs keyboard layout swap, Dvorak to QWERTY (#977)";
+const SHIFTED_DIGITS: &str = "needs !@#$%^&*() read as the digits under them";
 const NATO: &str = "needs NATO phonetic alphabet (#964)";
 const LEET: &str = "needs leetspeak (#969)";
 const PERIODIC: &str = "needs periodic table atomic numbers (#975)";
@@ -179,11 +180,11 @@ const KNOWN_FAILURES: &[(&str, &str)] = &[
     ("ibteam-blackvalentine-2015-crypto2", MULTITAP),
     ("htb-challenge-bank-heist", MULTITAP),
     ("ctflearn-modern-gaius-julius-caesar", KEYBOARD_SHIFT),
-    ("ctflearn-symbolic-decimals", KEYBOARD_SHIFT),
     ("tjctf-2022-flimsy-fingered-latin-teacher", KEYBOARD_SHIFT),
+    ("deconstructf-2023-move", KEYBOARD_SHIFT),
     ("hackvent-2016-day02-free-giveaway", KEYBOARD_LAYOUT),
     ("dawgctf-2020-qwerky-qwerty", KEYBOARD_LAYOUT),
-    ("deconstructf-2023-move", KEYBOARD_LAYOUT),
+    ("ctflearn-symbolic-decimals", SHIFTED_DIGITS),
     ("tfcctf-2023-mayday", NATO),
     ("thm-c4ptur3-th3-fl4g-leet", LEET),
     ("nullcon-hackim-2015-crypto-1", PERIODIC),
