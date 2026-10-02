@@ -39,6 +39,7 @@ use crate::decoders::crack_results::CrackResult;
 use crate::decoders::gzip_decoder::GzipDecoder;
 use crate::decoders::interface::{Crack, Decoder};
 use crate::decoders::jwt_decoder::JwtDecoder;
+use crate::decoders::mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
 use crate::decoders::punycode_decoder::PunycodeDecoder;
@@ -279,6 +280,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let unicode_escape = Decoder::<UnicodeEscapeDecoder>::new();
     let backslash_escape = Decoder::<BackslashEscapeDecoder>::new();
     let quoted_printable = Decoder::<QuotedPrintableDecoder>::new();
+    let mime_encoded_word = Decoder::<MimeEncodedWordDecoder>::new();
     let utf16 = Decoder::<Utf16Decoder>::new();
     let base32 = Decoder::<Base32Decoder>::new();
     let base36 = Decoder::<Base36Decoder>::new();
@@ -331,6 +333,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // Before Hexadecimal, which skips the `=` in `=48=65` and decodes it too: when
             // two decoders find the same plaintext the search reports the first one.
             Box::new(quoted_printable),
+            Box::new(mime_encoded_word),
             Box::new(hexadecimal),
             Box::new(octal),
             Box::new(html_entity),

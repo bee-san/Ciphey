@@ -595,6 +595,7 @@ dependencies = [
  "dashmap",
  "data-encoding",
  "dirs 7.0.0",
+ "encoding_rs",
  "env_logger 0.11.11",
  "flate2",
  "gibberish-or-not",

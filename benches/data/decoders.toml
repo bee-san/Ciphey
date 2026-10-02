@@ -485,6 +485,23 @@ success = true
 input = "Ciphey=20is=20an=20automated=20decoding=20tool.=20You=20give=20it=20encrypt=\ned=20or=20encoded=20text=20and=20it=20tries=20to=20work=20out=20what=20was=\n=20done=20to=20it,=20without=20you=20having=20to=20know=20the=20key=20or=20=\neven=20the=20cipher.=20It=20searches=20through=20many=20possible=20decoding=\ns,=20checks=20each=20candidate=20to=20see=20whether=20it=20looks=20like=20E=\nnglish=20or=20matches=20a=20known=20pattern=20such=20as=20an=20email=20addr=\ness,=20and=20stops=20when=20it=20finds=20something=20that=20reads=20like=20=\nplaintext.=20Most=20of=20the=20time=20this=20takes=20less=20than=20a=20seco=\nnd,=20which=20makes=20it=20handy=20for=20capture=20the=20flag=20challenges,=\n=20puzzle=20hunts=20and=20for=20anyone=20who=20stumbles=20across=20a=20stra=\nnge=20string=20in=20a=20log=20file."
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+# MIME Encoded-Word: medium is the RFC 2047 B encoding of the text. long is Python's
+# email.header.Header(text, "utf-8").encode(): ten Q-encoded words of at most 76
+# characters, folded with "\n ", whose whitespace the decoder drops (RFC 2047 §6.2).
+[[case]]
+decoder = "MIME Encoded-Word"
+size = "medium"
+success = true
+input = "=?utf-8?B?TWVldCBtZSBhdCB0aGUgb2xkIGxpZ2h0aG91c2UgYWZ0ZXIgbWlkbmlnaHQgYW5kIGJyaW5nIHRoZSBtYXAsIHRoZSBrZXkgYW5kIGEgdG9yY2gu?="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "MIME Encoded-Word"
+size = "long"
+success = true
+input = "=?utf-8?q?Ciphey_is_an_automated_decoding_tool=2E_You_give_it_encrypted_or_e?=\n =?utf-8?q?ncoded_text_and_it_tries_to_work_out_what_was_done_to_it=2C_witho?=\n =?utf-8?q?ut_you_having_to_know_the_key_or_even_the_cipher=2E_It_searches_t?=\n =?utf-8?q?hrough_many_possible_decodings=2C_checks_each_candidate_to_see_wh?=\n =?utf-8?q?ether_it_looks_like_English_or_matches_a_known_pattern_such_as_an?=\n =?utf-8?q?_email_address=2C_and_stops_when_it_finds_something_that_reads_li?=\n =?utf-8?q?ke_plaintext=2E_Most_of_the_time_this_takes_less_than_a_second=2C?=\n =?utf-8?q?_which_makes_it_handy_for_capture_the_flag_challenges=2C_puzzle_h?=\n =?utf-8?q?unts_and_for_anyone_who_stumbles_across_a_strange_string_in_a_log?=\n =?utf-8?q?_file=2E?="
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
 [[case]]
 decoder = "Octal"
 size = "medium"

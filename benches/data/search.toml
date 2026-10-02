@@ -166,6 +166,13 @@ expected = "Meet me at the old lighthouse after midnight and bring the map, the 
 
 [[case]]
 kind = "single"
+name = "mime_encoded_word"
+layers = ["MIME Encoded-Word"]
+input = "=?utf-8?Q?Meet_me_at_the_old_lighthouse_after_midnight_and_bring_the_map,_the_key_and_a_torch.?="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
 name = "citrix_ctx1"
 layers = ["Citrix Ctx1"]
 input = "OIENINCIOIENJMDJLMBJNBHELEBBJEDBPFFAIBCEKBAENFHALNBINIHNPIFNJHDCPLFOJPDKLPBKNDHGLKBPNNHILFBAMBGEKJAMMGGDLDBGMAGFKFAAIFCAOEEBICCHPGFDJDDGOBEEMBGEKMAJMFGAKBAEMPGKKGADMBGEKJAMNNHIPNFIJMDJPCFHJGDDLGBDNEHBKGADMPGKKBAEMGGDOGEDJCDHPKFPJPDKLPBKNCHHLDBGMDGGOPEKMPGKLLBONDHGLGBDJGDDPNFIJIDNOBEEMBGEKAAFMOGLKKAPIKCPOLEOMLGOLPBKNAHFKCAHMBGEKJAMIHCC"
@@ -349,6 +356,14 @@ name = "utf16le_base64"
 layers = ["UTF-16", "Base64"]
 input = "TQBlAGUAdAAgAG0AZQAgAGEAdAAgAHQAaABlACAAbwBsAGQAIABsAGkAZwBoAHQAaABvAHUAcwBlACAAYQBmAHQAZQByACAAbQBpAGQAbgBpAGcAaAB0ACAAYQBuAGQAIABiAHIAaQBuAGcAIAB0AGgAZQAgAG0AYQBwACwAIAB0AGgAZQAgAGsAZQB5ACAAYQBuAGQAIABhACAAdABvAHIAYwBoAC4A"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Base64 of =?utf-8?Q?The_quick_brown_fox_jumps_over_the_lazy_dog?=
+kind = "multi"
+name = "mime_encoded_word_base64"
+layers = ["MIME Encoded-Word", "Base64"]
+input = "PT91dGYtOD9RP1RoZV9xdWlja19icm93bl9mb3hfanVtcHNfb3Zlcl90aGVfbGF6eV9kb2c/PQ=="
+expected = "The quick brown fox jumps over the lazy dog"
 
 [[case]]
 kind = "multi"

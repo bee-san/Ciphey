@@ -66,6 +66,8 @@ pub mod crack_results;
 pub mod gzip_decoder;
 /// The jwt_decoder module decodes JSON Web Tokens (JWT)
 pub mod jwt_decoder;
+/// The mime_encoded_word_decoder module decodes MIME encoded-words (RFC 2047)
+pub mod mime_encoded_word_decoder;
 /// The punycode_decoder module decodes Punycode and IDNA `xn--` labels
 pub mod punycode_decoder;
 /// The quoted_printable_decoder module decodes Quoted-Printable (RFC 2045)
@@ -155,6 +157,7 @@ use caesar_decoder::CaesarDecoder;
 use citrix_ctx1_decoder::CitrixCTX1Decoder;
 use gzip_decoder::GzipDecoder;
 use jwt_decoder::JwtDecoder;
+use mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use morse_code::MorseCodeDecoder;
 use octal_decoder::OctalDecoder;
@@ -245,6 +248,8 @@ pub enum DecoderType {
     BackslashEscapeDecoder(backslash_escape_decoder::BackslashEscapeDecoder),
     /// quoted-printable decoder
     QuotedPrintableDecoder(quoted_printable_decoder::QuotedPrintableDecoder),
+    /// MIME encoded-word decoder
+    MimeEncodedWordDecoder(mime_encoded_word_decoder::MimeEncodedWordDecoder),
     /// UTF-16 decoder
     Utf16Decoder(utf16_decoder::Utf16Decoder),
     /// reverse decoder
@@ -377,6 +382,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Quoted-Printable",
             DecoderBox::new(Decoder::<QuotedPrintableDecoder>::new()),
+        ),
+        (
+            "MIME Encoded-Word",
+            DecoderBox::new(Decoder::<MimeEncodedWordDecoder>::new()),
         ),
         ("UTF-16", DecoderBox::new(Decoder::<Utf16Decoder>::new())),
         ("Base32", DecoderBox::new(Decoder::<Base32Decoder>::new())),

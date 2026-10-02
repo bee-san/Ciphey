@@ -60,6 +60,7 @@ base65536 = "1.0.1"
 base91 = "0.1.0"
 bs58 = "0.5.0"
 data-encoding = "2.11.0"
+encoding_rs = "0.8.35"
 html-escape = "0.2.15"
 flate2 = "1.1.10"
 # Only idna::punycode is used. 1.0.3 is the version gibberish-or-not already pulls in.
