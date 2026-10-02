@@ -2,7 +2,8 @@
 //! the whole search, as the CLI runs it, has to find the plaintext through Multi-tap.
 //!
 //! Without the Multi-tap decoder the search returns a wrong answer for each of these inputs
-//! (rot47 → Reverse, railfence → rot47 or railfence → Vigenere gibberish).
+//! (gibberish via rot47 → Reverse, Hexadecimal → Affine → Vigenere or railfence → Vigenere,
+//! rot47's `555099906066`), or none before the timeout.
 
 use ciphey::config::Config;
 use ciphey::perform_cracking;
@@ -44,6 +45,16 @@ fn dcode_hyphenated_form_is_cracked() {
     // dCode joins the letters of a word with hyphens and separates words with spaces
     let result = crack("44-33-555-555-666 9-666-777-555-3");
     assert_eq!(result.text[0], "HELLO WORLD");
+    assert_eq!(path(&result), ["Multi-tap"]);
+}
+
+#[test]
+fn dcode_example_beats_rot47() {
+    // dCode's example. In the same search step rot47 turns it into `555099906066`, which
+    // LemmeKnow takes for a phone number; Multi-tap wins because it is listed first in
+    // `filter_and_get_decoders`.
+    let result = crack("222-666-3-33");
+    assert_eq!(result.text[0], "CODE");
     assert_eq!(path(&result), ["Multi-tap"]);
 }
 
