@@ -92,6 +92,14 @@ input = "O=V?tAZ=wJVRRsLXk{R8Y-Av8X=iA3Xm53MWguZ@bY*fNZE0j~X=iA3AYpD~AYyW9Zf78LX
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# base92.encode from the base92 2.0.0 package on PyPI
+kind = "single"
+name = "base92"
+layers = ["Base92"]
+input = "=5^dl?57>ogS$p[GEU&taJ'bhnke,79eK=H4OSb$:es:+Z<HHn1kZu'b*&iH*]UkHms3ld3j$FgR%s#;Fc[a_%e>$.p\\$p%1JxvkSl**"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "base100"
 layers = ["Base100"]
@@ -347,6 +355,14 @@ kind = "multi"
 name = "base36_base64"
 layers = ["Base36", "Base64"]
 input = "YTgyMnYxb3o4ZjFnNjIwMWMwN2U4eTk0cnVkNmhlMDI4OW80ZDBmeGkycHRoaHY2MG0yczluZm51NnF1bDJ6d3hwbjh3ZGd6ZmViYmI3cm1sNnRiMGhsMnplOGt5ZTVwMTM1NXZmejhuaDlvdG5ydmtxZG1rZWNkOHM2cmF0ZGc2bQ=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# base64.b64encode(base92.encode(plaintext)), base92 2.0.0 from PyPI
+kind = "multi"
+name = "base92_base64"
+layers = ["Base92", "Base64"]
+input = "PTVeZGw/NTc+b2dTJHBbR0VVJnRhSidiaG5rZSw3OWVLPUg0T1NiJDplczorWjxISG4xa1p1J2IqJmlIKl1Va0htczNsZDNqJEZnUiVzIztGY1thXyVlPiQucFwkcCUxSnh2a1NsKio="
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

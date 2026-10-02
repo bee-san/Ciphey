@@ -30,6 +30,7 @@ use crate::decoders::base64_decoder::Base64Decoder;
 use crate::decoders::base65536_decoder::Base65536Decoder;
 use crate::decoders::base85_decoder::Base85Decoder;
 use crate::decoders::base91_decoder::Base91Decoder;
+use crate::decoders::base92_decoder::Base92Decoder;
 use crate::decoders::braille_decoder::BrailleDecoder;
 use crate::decoders::caesar_decoder::CaesarDecoder;
 use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
@@ -268,6 +269,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let base64_alt = Decoder::<Base64AltDecoder>::new();
     let base85 = Decoder::<Base85Decoder>::new();
     let base91 = Decoder::<Base91Decoder>::new();
+    let base92 = Decoder::<Base92Decoder>::new();
     let base65536 = Decoder::<Base65536Decoder>::new();
     let base100 = Decoder::<Base100Decoder>::new();
     let citrix_ctx1 = Decoder::<CitrixCTX1Decoder>::new();
@@ -317,6 +319,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(base58_ripple),
             Box::new(base58_flickr),
             Box::new(base91),
+            Box::new(base92),
             Box::new(base85),
             Box::new(base65536),
             // Before rot47, which reads each emoji as its low byte and so turns Base100 of

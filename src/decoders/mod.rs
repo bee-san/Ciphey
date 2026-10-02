@@ -53,6 +53,8 @@ pub mod base65536_decoder;
 pub mod base85_decoder;
 /// The base91_decoder module decodes base91
 pub mod base91_decoder;
+/// The base92_decoder module decodes Base92 (thenoviceoof)
+pub mod base92_decoder;
 /// The citrix_ctx1_decoder module decodes citrix ctx1
 pub mod citrix_ctx1_decoder;
 /// The crack_results module defines the CrackResult
@@ -144,6 +146,7 @@ use base64_decoder::Base64Decoder;
 use base65536_decoder::Base65536Decoder;
 use base85_decoder::Base85Decoder;
 use base91_decoder::Base91Decoder;
+use base92_decoder::Base92Decoder;
 use braille_decoder::BrailleDecoder;
 use caesar_decoder::CaesarDecoder;
 use citrix_ctx1_decoder::CitrixCTX1Decoder;
@@ -221,6 +224,8 @@ pub enum DecoderType {
     Base85Decoder(base85_decoder::Base85Decoder),
     /// base91 decoder
     Base91Decoder(base91_decoder::Base91Decoder),
+    /// base92 decoder
+    Base92Decoder(base92_decoder::Base92Decoder),
     /// citrix ctx1 decoder
     CitrixCtx1Decoder(citrix_ctx1_decoder::CitrixCTX1Decoder),
     /// jwt decoder
@@ -339,6 +344,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ),
         ("Base85", DecoderBox::new(Decoder::<Base85Decoder>::new())),
         ("Base91", DecoderBox::new(Decoder::<Base91Decoder>::new())),
+        ("Base92", DecoderBox::new(Decoder::<Base92Decoder>::new())),
         ("Base100", DecoderBox::new(Decoder::<Base100Decoder>::new())),
         (
             "Base65536",

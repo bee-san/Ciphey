@@ -276,6 +276,22 @@ success = true
 input = "Fa@Jd,8Ct#6t,,kLN8)=|<6Y<Rzt88{irMZ2(.TX3$t!DCffb8h+L:&e$y%/!5:m&z9K[[&Y$y`+!5:maref3+TX<R//9M:mJBWJ;W/Ny#a.nuRnF%/2z;J`6U7tVFXiZB~gN[TX1T70nuRn9ZVK5WX1qU!&PylLwrdKV/[jxSq3nuRnbfU=\"^TXi#zt}8!qyqFKL,&elTd/=8jLla@Jd,Z[8yx/Qj9j$z(Id,wCmU]+O9ikNBJg5=8C&$f.dQ3iXP=Cc,0{8!Z%bm5P.I!f]*VT%y}uhEkL]D$JL:;Hr%zt?^kLeP^I,^meqU40CF}kZBC=h>VT$FY6~8jLNoIJN:xv$y`+!5Xi%J!fO[eG$ya%8^<mhtzI][rNmT^,^m$kPDNKc)mC.!Bv6xkLdM<1f,lT:H2u>xjLw5.JR[Ioi#X%9M`oVRZ25+wCX%]#qx&kxoIJ9[^HqUu+$PbjYBBgx;UC%TBvN.`o5)W35WI{aU7tk.jL,X^I9[p;;Rd/<P1o44H<d,wCC$a.GF<o|D$Jc)1R=!7&>x3PF%!f^*aCS$B9TmlLm5=Cu)_YfV51kblL]D@J3]6e#F]4pE^jAEIJ%*^HFT604^7jCj;C2]{6H$zt<8<m&2gZ5=SC}!`+9M:mwrTg,W5v1T^,i9sm<in<:WBTL%f.GFOi/1W3w)/p;R^,4bHl]UgZ7=eG#F$&xE^j^i_1L"
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+# Base92 has no crate, so its inputs come from base92.encode in the base92 2.0.0
+# package on PyPI (thenoviceoof's reference implementation).
+[[case]]
+decoder = "Base92"
+size = "medium"
+success = true
+input = "=5^dl?57>ogS$p[GEU&taJ'bhnke,79eK=H4OSb$:es:+Z<HHn1kZu'b*&iH*]UkHms3ld3j$FgR%s#;Fc[a_%e>$.p\\$p%1JxvkSl**"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "Base92"
+size = "long"
+success = true
+input = "9c23Zme>$>s{*UIfD:_Deca/:eiH*n10I1S\\d:Td:yqC&'!|I3[aYIdn>om1$p1;D{=og03n95qDQq1;Dzv2VX'c:ewd$p&$E5&[l?6M/UjAiC[N-Gv^ivTcy{t_,O9VJo'8Q&Tc:yp\\;B[N-F2Ba(6}W3lJpoZZLbvvOW3.F(p\\iC[N-FHYehTd:kj-+J1F-FvjOUdn@T8n+20HDz23Zmd)rMU^$pXUD:<rZmd9$TlKXl^5FZ&lQ$7=$LqDp^<FH,[aU3aNyXm/X+Wx-EHAVWbu3Wj=A88qDy2+U5a^*2j-,7LTJV^cO^bC@alHBS#0Jo&hedbu3Wo8Ay0H:Gk'aLd=OdqDQqG\\JwHAV_Tc(@nTXldv-G&;lj3o/_8mpo+W-E2>OScD$6owAiD,D8SHisd>3p8iB5-YJXSug/TdK_j@Qq<X-Ek/d968$RqCAH[GG(k&O]4B*28mWw%vJN&h\\9ak$Lo6AiJ^Ea'+cs/Yywt_+k37Jx&JO]4RnC8n+2<W-GS<_%d9$DjAp\\#;Fc2*OSTd5+hwp6-f-GvB\\5b?$FgPoIWlG)PIZkcH;18jXlT}Dy23ljd->otr*t#-H,1jOTbC*!o7B56lJOPIg0eS\\\\j-+2^<JyE2Q$3Y$8qDQq&$LbvZV66}QK8mpg^;DYSLjv3-5EqDp\\#(-GHriqcHKY8mpgUkHms3\\;'b(@o9oW#-G(SKP"
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
 [[case]]
 decoder = "Binary"
 size = "medium"
