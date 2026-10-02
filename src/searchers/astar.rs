@@ -43,6 +43,11 @@ const PRUNE_THRESHOLD: usize = 200_000;
 /// Number of nodes to expand in parallel per iteration of the main loop.
 const PARALLEL_BATCH_SIZE: usize = 10;
 
+/// An open set larger than this is freed on another thread when the search ends. A search
+/// that runs until the timeout can queue over half a million nodes, and freeing them took
+/// up to 0.9 s, which the caller waited for before it got its answer.
+const BACKGROUND_FREE_NODES: usize = 10_000;
+
 /// Hash for the seen-set.
 fn calculate_hash(text: &str) -> u64 {
     use std::collections::hash_map::DefaultHasher;
@@ -97,6 +102,19 @@ impl Eq for AStarNode {}
 struct ThreadSafePriorityQueue {
     /// Backing heap.
     queue: Mutex<BinaryHeap<AStarNode>>,
+}
+
+impl Drop for ThreadSafePriorityQueue {
+    fn drop(&mut self) {
+        let queue = self
+            .queue
+            .get_mut()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if queue.len() > BACKGROUND_FREE_NODES {
+            let nodes = std::mem::take(queue);
+            std::thread::spawn(move || drop(nodes));
+        }
+    }
 }
 
 impl ThreadSafePriorityQueue {
@@ -556,6 +574,23 @@ mod tests {
             is_result: true,
         };
         assert!(result_passes_sanity(&node, 16, false));
+    }
+
+    #[test]
+    fn a_large_open_set_is_freed_without_waiting() {
+        let queue = ThreadSafePriorityQueue::new();
+        for i in 0..=BACKGROUND_FREE_NODES {
+            queue.push(AStarNode {
+                state: DecoderResult::_new(&i.to_string()),
+                depth: 1,
+                cost: 1.0,
+                total_cost: 1.0,
+                is_result: false,
+            });
+        }
+        let started = std::time::Instant::now();
+        drop(queue);
+        assert!(started.elapsed() < std::time::Duration::from_secs(1));
     }
 
     #[test]
