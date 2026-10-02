@@ -488,10 +488,29 @@ mod tests {
 
     #[test]
     fn astar_prevents_cycles() {
+        // `AAAA` is a fixpoint of several decoders and has no plaintext. The search used to
+        // end on a false positive (`pppp` via ROT47); now nothing is accepted, and without
+        // the timer `perform_cracking` sets, it would search until memory runs out. So
+        // stop it after a second, as the timer would.
         let (sender, receiver) = bounded::<Option<DecoderResult>>(1);
         let stop = Arc::new(AtomicBool::new(false));
+        let stopper = {
+            let stop = Arc::clone(&stop);
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                stop.store(true, AtomicOrdering::Relaxed);
+            })
+        };
+        let started = std::time::Instant::now();
         astar("AAAA".to_string(), sender, stop);
-        let _ = receiver.recv().unwrap();
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(60),
+            "the search didn't stop"
+        );
+        if let Ok(Some(result)) = receiver.try_recv() {
+            panic!("junk accepted as the plaintext of AAAA: {:?}", result.text);
+        }
+        stopper.join().unwrap();
     }
 
     #[test]
