@@ -34,13 +34,16 @@ In ciphey, different decoders use different sensitivity levels based on their ch
 
 3. **Other Decoders**: Use Medium sensitivity by default, which provides a balanced approach for most types of encoded text. So does the check of the input itself.
 
-Besides gibberish-or-not's thresholds, the sensitivity picks the English checker's quadgram threshold for space-less text such as `THEQUICKBROWNFOX`:
+Besides gibberish-or-not's thresholds, the sensitivity picks the English checker's own
+thresholds (see [plaintext-detection.md](plaintext-detection.md) for all the rules):
 
-| Sensitivity | Minimum mean log10 quadgram probability (space-less text) | Rejected below (other text) |
-|---|---|---|
-| Low | -5.1 | -6.5 |
-| Medium | -5.3 | -6.5 |
-| High | -5.6 | -7.5 |
+| Sensitivity | Minimum mean log10 quadgram probability (space-less text) | Rejected below (other text) | Share of English words needed (3+ words) | Letters in a single word |
+|---|---|---|---|---|
+| Low | -5.1 | -6.5 | 50% | 5+ |
+| Medium | -5.3 | -6.5 | 50% | 4+ |
+| High | -5.6 | -7.5 | 35% | 4+ |
+
+Vigenère also only tries keys up to a fifth of the text's letters long.
 
 ## Customizing Sensitivity
 
