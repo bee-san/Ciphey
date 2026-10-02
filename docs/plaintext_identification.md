@@ -59,6 +59,12 @@ The checker works by:
 4. If no match is left, checking for a CTF flag in any format, `^[A-Za-z][A-Za-z0-9_]{1,19}\{[^{}\n]{1,200}\}$` (`picoCTF{...}`, `DUCTF{...}`); LemmeKnow itself only knows `flag{}`, `ctf{}`, `htb{}` and `thm{}`
 5. If anything is left, marking the text as identified plaintext
 
+Caesar shifts, Atbash and Vigenère keep a flag's shape: ROT13 of `flag{this_is_the_flag}` is `synt{guvf_vf_gur_synt}`, which the pattern matches too. So:
+
+- A flag whose prefix is a shift or Atbash of a flag word (`synt`, `uozt`, `cvpbPGS`) is not a flag; the search goes on and finds the real one. A flag word is a prefix ending in `ctf` or `flag` (digits after it allowed), starting with `flag`, or one of `htb`, `thm`, `hackthebox`, `tryhackme`.
+- A flag without a flag word in its prefix (`SEKAI{...}`) can't be told apart from its own shifts. It is not taken as plaintext when it is the input itself, when Caesar, Atbash or Vigenère produced it, or when the input was already shaped like a flag; it is when another decoder produced it (Base64, hex, a railfence key that is the only one giving a flag shape). Use a crib (`-r 'SEKAI\{'`) for those.
+- Caesar and railfence check a candidate that is a flag with a flag word first, since a flag's hex or random contents needn't make the right key rank best.
+
 This checker is particularly useful for identifying structured data that might not be natural language but is still valid plaintext.
 
 A fork of LemmeKnow would let these rules live in its data instead: generating it from pyWhat's `regex.json` in CI (it is behind pyWhat and silently drops patterns Rust's `regex` can't compile), a per-pattern "charset only" flag, and checksum validators (Luhn for cards, base58check/bech32 for wallets) so those patterns could stay on.
@@ -76,7 +82,7 @@ The process works as follows:
 1. **Normalization**: The text is lowercased, ASCII punctuation becomes a space (so `Hello,world!How` is three words, not `helloworldhow`) except for apostrophes inside words (`don't`, `o'clock`), and runs of spaces are collapsed. The result is only used for detection: `CheckResult.text` is the text as given, which is what the human checker shows.
 
 2. **Classification by shape**:
-   - **Space-less letters** (no whitespace, at least 8 letters, at least 90% letters), the usual output of classical ciphers: the mean log10 probability of its letter quadgrams must be at least -5.1 (Low), -5.3 (Medium) or -5.6 (High), or the text must be one dictionary word. The quadgram table (`src/storage/ngrams`) is counted from 85 public-domain books.
+   - **Space-less letters** (no whitespace, at least 8 letters, at least 90% letters), the usual output of classical ciphers: the text must be one dictionary word, or the mean log10 probability of its letter quadgrams must be at least -5.1 (Low), -5.3 (Medium) or -5.6 (High). Up to 12 letters it must also split into known words (`HELLOWORLD`, but not the railfence shuffle `HWORLDELLO`) unless its quadgram score is at least -4.4, because the dictionary can't be asked about single words of 10 or more letters. The quadgram table (`src/storage/ngrams`) is counted from 85 public-domain books.
    - **Mostly known words**: two or more words, at least one of three or more letters, of which more than 80% are English words. Words of one to three letters (`a`, `is`, `me`), which gibberish-or-not's dictionary lacks, come from a list built from the same books.
    - **Other space-less text** (digits or symbols mixed in, like `ThI2THAtThE2THe0`): only a single dictionary word passes.
    - **Everything else** goes to gibberish-or-not's `is_gibberish` at the checker's sensitivity, unless no word at all is an English word, or the quadgram score is below -6.5 (-7.5 at High), far from any natural language.

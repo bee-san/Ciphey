@@ -183,6 +183,7 @@ This prints `hello there general (via Base64)`.
 ## Good to know
 
 - Plaintext detection isn't perfect. Text that isn't English is often missed, and a near-miss key (Vigenère in particular) can still produce text that passes for English. [#1031](https://github.com/bee-san/Ciphey/issues/1031) has the evaluation. If you know anything about the answer, a crib (`-r`) or a wordlist helps a lot.
+- A flag whose prefix isn't a flag word (`SEKAI{…}` rather than `…CTF{…}` or `flag{…}`) looks the same as its own Caesar shifts, so under Caesar, ROT13 or Atbash Ciphey can't tell which one is right. Give it the format as a crib: `-r 'SEKAI\{'`.
 - If a cached answer is wrong, delete `~/.ciphey/database.sqlite` to clear the cache.
 - If you're stuck, ask in `#coded-messages` on [Discord](http://discord.skerritt.blog).
 
