@@ -1,0 +1,8 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 40)"
+---
+"▄ Searching  1.3 s of 5 s  ━━━───────── "
+"  Trying    Base64 → Hexadecimal        "
+"  Explored  1,204 texts · 3 layers deep "
+"  q stop · ? help                       "

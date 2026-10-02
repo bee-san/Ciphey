@@ -98,14 +98,26 @@ fn ask_once(input: &CheckResult, ask: impl FnOnce(&CheckResult) -> bool) -> bool
     result
 }
 
-/// Shows the prompt for `input` and reads the answer from stdin.
+/// Shows the prompt for `input` and reads the answer: from a key press in the live
+/// display when it is running, otherwise from a line on stdin.
 /// Rejections are recorded in the database.
 fn prompt_user(input: &CheckResult) -> bool {
-    human_checker_check(&input.description, &input.text);
+    let result = match crate::tui::ask_about_candidate(input) {
+        Some(crate::tui::Answer::Yes) => true,
+        Some(crate::tui::Answer::No) => false,
+        // The user stopped the search; that isn't a verdict on this candidate
+        Some(crate::tui::Answer::Stop) => return false,
+        None => {
+            human_checker_check(&input.description, &input.text);
 
-    let reply: String = read!("{}\n");
-    cli_pretty_printing::success(&format!("DEBUG: Human checker received reply: '{}'", reply));
-    let result = reply.to_ascii_lowercase().starts_with('y');
+            let reply: String = read!("{}\n");
+            cli_pretty_printing::success(&format!(
+                "DEBUG: Human checker received reply: '{}'",
+                reply
+            ));
+            reply.to_ascii_lowercase().starts_with('y')
+        }
+    };
 
     if !result {
         let fd_result = database::insert_human_rejection(uuid::Uuid::new_v4(), &input.text, input);

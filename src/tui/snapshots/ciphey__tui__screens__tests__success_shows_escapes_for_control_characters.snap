@@ -1,0 +1,12 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 80)"
+---
+"✓ Plaintext found in 0.11 s                                                     "
+"                                                                                "
+"  flag{\x1b[2J}                                                                 "
+"  second line                                                                   "
+"                                                                                "
+"  Decoded   Base64                                                              "
+"  Found by  Regex · matches flag\{                                              "
+"  Searched  1,204 texts, up to 3 layers deep                                    "

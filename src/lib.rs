@@ -48,6 +48,9 @@ mod searchers;
 pub mod storage;
 /// Timer for internal use
 mod timer;
+/// The live terminal display the `ciphey` binary shows while it searches, and the
+/// screens it prints at the end. Library users don't need it.
+pub mod tui;
 
 use checkers::{
     athena::Athena,
@@ -190,6 +193,7 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
                     })
                     .collect();
                 if let Ok(path) = path_result {
+                    searchers::progress::record_cache_hit();
                     return Ok(Some(DecoderResult {
                         text: vec![row.decoded_text],
                         path,
@@ -257,6 +261,13 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
         "DEBUG: lib.rs - Result from search_for_plaintext: {:?}",
         result.is_some()
     ));
+    if get_config().top_results {
+        // The search has stopped by now, so asking whether to save the list to a
+        // file no longer races with it
+        cli_pretty_printing::display_top_results(
+            &storage::wait_athena_storage::get_plaintext_results(),
+        );
+    }
     if let Some(ref res) = result {
         cli_pretty_printing::success(&format!(
             "DEBUG: lib.rs - Result has {} decoders in path",

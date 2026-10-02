@@ -1,0 +1,11 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 80)"
+---
+"✓ Plaintext found · from the cache                                              "
+"                                                                                "
+"  192.168.0.1                                                                   "
+"                                                                                "
+"  Decoded   Hexadecimal                                                         "
+"  Found by  LemmeKnow · recognised as Internet Protocol (IP) Address Version 4  "
+"  Cached    from an earlier run; delete ~/.ciphey/database.sqlite to forget it  "

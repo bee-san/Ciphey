@@ -9,9 +9,9 @@
 //! nodes are expanded concurrently per iteration, and within a node all decoders run
 //! concurrently.
 
-use crate::cli_pretty_printing::decoded_how_many_times;
 use crate::decoders::interface::Crack;
 use crate::filtration_system::get_all_decoders;
+use crate::searchers::progress;
 use crossbeam::channel::Sender;
 
 use log::{debug, trace};
@@ -325,6 +325,10 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
             curr_depth = curr_depth.max(deepest);
         }
         expanded_nodes += batch.len();
+        // The batch comes off the heap best first
+        progress::record_batch(batch.len(), curr_depth, || {
+            batch.first().map(|node| node.state.path.as_slice())
+        });
         trace!(
             "Expanding batch of {} nodes (depth {}, open set {}, seen {}, expanded {})",
             batch.len(),
@@ -383,7 +387,6 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
                 "Found result after expanding {} nodes: {:?}",
                 expanded_nodes, node.state.text
             );
-            decoded_how_many_times(node.depth);
 
             if get_config().top_results {
                 if let Some(last) = node.state.path.last() {

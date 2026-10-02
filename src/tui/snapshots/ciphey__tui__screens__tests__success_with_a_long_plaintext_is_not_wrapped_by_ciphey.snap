@@ -1,0 +1,12 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 60)"
+---
+"✓ Plaintext found in 0.11 s                                 "
+"                                                            "
+"The main function to call which performs the cracking. It is"
+" longer than the terminal is wide, so the terminal wraps it."
+"                                                            "
+"  Decoded   Base64                                          "
+"  Found by  English checker · looks like English            "
+"  Searched  1,204 texts, up to 3 layers deep                "

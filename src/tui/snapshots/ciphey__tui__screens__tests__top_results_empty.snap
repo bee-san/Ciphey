@@ -1,0 +1,6 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&empty, 80)"
+---
+"✗ No possible plaintexts found · collected for 2.0 s                            "
+"                                                                                "

@@ -14,6 +14,7 @@ use log::trace;
 /// The struct for Clap CLI arguments
 #[derive(Parser)]
 #[command(author = "Bee <bee@skerritt.blog>", about, long_about = None)]
+#[command(after_help = AFTER_HELP)]
 // Exactly one of --text and --file is required
 #[command(group(ArgGroup::new("input").required(true).args(["text", "file"])))]
 pub struct Opts {
@@ -63,7 +64,23 @@ pub struct Opts {
     /// Enables enhanced plaintext detection with BERT model.
     #[arg(long)]
     enable_enhanced_detection: bool,
+    /// Print plain lines instead of the live display. Use it with screen readers, or
+    /// when the live display misbehaves in your terminal
+    #[arg(long)]
+    plain: bool,
 }
+
+/// Shown at the end of `--help`
+const AFTER_HELP: &str = "\
+Examples:
+  ciphey -t 'aGVsbG8gdGhlcmUgZ2VuZXJhbA=='   decode some text
+  ciphey -f secret.txt                       decode a file
+  ciphey -c 15 -t '...'                      search for up to 15 seconds
+  ciphey -r 'flag\\{' -t '...'                only accept plaintext matching a regex
+  ciphey -d -t '...'                         don't ask, take the first plaintext found
+
+While it searches in a terminal: q stops, ? shows the keys, Ctrl-C quits.
+When it asks about a plaintext: y accepts it, n or Enter keeps searching.";
 
 /// Parse CLI Arguments turns a Clap Opts struct, seen above
 /// Into a library Struct for use within the program
@@ -157,6 +174,11 @@ fn cli_args_into_config_struct(opts: Opts, text: String) -> (String, Config) {
     // --top-results turns top results mode on; without it the config file decides
     if opts.top_results {
         config.top_results = true;
+    }
+
+    // --plain turns the live display off; without it the config file decides
+    if opts.plain {
+        config.plain_output = true;
     }
 
     // If top_results is enabled, automatically disable the human checker

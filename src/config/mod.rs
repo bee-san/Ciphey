@@ -69,6 +69,9 @@ pub struct Config {
     pub enhanced_detection: bool,
     /// Path to the enhanced detection model. If None, will use the default path.
     pub model_path: Option<String>,
+    /// Print plain lines instead of the live display, even in a terminal.
+    /// Useful with screen readers and for logs. `--plain` turns it on for one run.
+    pub plain_output: bool,
 }
 
 /// Cell for storing global Config
@@ -149,6 +152,7 @@ impl Default for Config {
             wordlist: None,
             enhanced_detection: false,
             model_path: None,
+            plain_output: false,
             colourscheme: HashMap::new(),
         };
 
@@ -241,6 +245,7 @@ fn parse_toml_with_unknown_keys(contents: &str) -> Result<Config, toml::de::Erro
             "api_mode",
             "regex",
             "wordlist_path",
+            "plain_output",
             "question",
             "colourscheme",
         ];

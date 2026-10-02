@@ -1,17 +1,21 @@
 use crossbeam::channel::{bounded, Receiver};
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use std::{
     thread::{self, sleep},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
-use crate::cli_pretty_printing::{countdown_until_program_ends, display_top_results};
-use crate::config::get_config;
-use crate::storage::wait_athena_storage;
+use crate::cli_pretty_printing::countdown_until_program_ends;
 
-/// How often a paused timer checks whether it has been resumed
-const PAUSED_POLL_INTERVAL: Duration = Duration::from_millis(50);
+/// How often the timer wakes up to count time, check for [`pause`] and [`expire_now`],
+/// and publish [`elapsed`] for the live display
+const TICK: Duration = Duration::from_millis(50);
+/// The most one tick counts. Generous for a loaded machine, short enough that a
+/// process stopped with Ctrl-Z resumes with nearly the time it had left.
+const MAX_TICK: Duration = Duration::from_millis(500);
 
 /// Counts calls to [`pause`] that haven't been matched by [`resume`] yet.
 ///
@@ -55,43 +59,76 @@ impl PauseCount {
 /// Indicate whether timer is paused
 static PAUSED: PauseCount = PauseCount::new();
 
-/// Start the timer with duration in seconds
+/// What one timer shares with the rest of the program
+#[derive(Default)]
+struct TimerState {
+    /// Search time counted so far, in milliseconds. Time spent paused doesn't count.
+    elapsed_ms: AtomicU64,
+    /// Fire now instead of waiting for the duration to pass
+    expired: AtomicBool,
+}
+
+/// The newest timer started by [`start`], which [`elapsed`] and [`expire_now`] are
+/// about. A timer whose search already finished keeps running until its duration is
+/// up, but nobody looks at it any more.
+static CURRENT: Mutex<Option<Arc<TimerState>>> = Mutex::new(None);
+
+/// Start the timer with duration in seconds.
+///
+/// The returned channel receives a message once `duration` seconds of search time have
+/// passed, or soon after [`expire_now`] is called. Time while the timer is paused (see
+/// [`pause`]) doesn't count.
 pub fn start(duration: u32) -> Receiver<()> {
+    let state = Arc::new(TimerState::default());
+    *CURRENT.lock().unwrap_or_else(|e| e.into_inner()) = Some(Arc::clone(&state));
+    run(duration, state)
+}
+
+/// Runs a timer for `duration` seconds on its own thread, reporting through `state`
+fn run(duration: u32, state: Arc<TimerState>) -> Receiver<()> {
     let (sender, recv) = bounded(1);
+    let limit = Duration::from_secs(u64::from(duration));
+
     thread::spawn(move || {
-        let mut time_spent = 0;
+        let mut elapsed = Duration::ZERO;
+        let mut whole_seconds = 0;
+        let mut last_tick = Instant::now();
 
-        while time_spent < duration {
-            if PAUSED.is_paused() {
-                // Waiting for the human checker. Sleep rather than spin on a CPU core.
-                sleep(PAUSED_POLL_INTERVAL);
-                continue;
+        while elapsed < limit {
+            if state.expired.load(Ordering::SeqCst) {
+                log::info!("Timer stopped early");
+                break;
             }
-            sleep(Duration::from_secs(1));
-            time_spent += 1;
-            // Some pretty printing support
-            countdown_until_program_ends(time_spent, duration);
+            // The last tick is shortened so the timer fires on time
+            sleep(TICK.min(limit - elapsed));
+            let now = Instant::now();
+            if !PAUSED.is_paused() {
+                // A tick takes a few milliseconds longer than it slept. Much longer
+                // means the process was stopped (Ctrl-Z), and that isn't search time.
+                elapsed += (now - last_tick).min(MAX_TICK);
+            }
+            last_tick = now;
+            state
+                .elapsed_ms
+                .store(elapsed.as_millis() as u64, Ordering::Relaxed);
+
+            // Some pretty printing support, once per whole second
+            let seconds = elapsed.as_secs().min(u64::from(duration)) as u32;
+            if seconds > whole_seconds {
+                whole_seconds = seconds;
+                countdown_until_program_ends(seconds, duration);
+            }
         }
 
-        // When the timer expires, display all collected plaintext results
-        // Only if we're in top_results mode
-        let config = get_config();
-        log::trace!("Timer expired. top_results mode: {}", config.top_results);
-
-        if config.top_results {
-            log::info!("Displaying all collected plaintext results");
-            filter_and_display_results();
-        } else {
-            log::info!("Not in top_results mode, skipping display_wait_athena_results()");
-        }
-
-        // Replace the existing expect with a match that logs errors in case of send failure
+        // In top_results mode the results are listed once the search has stopped,
+        // see `perform_cracking`. Listing them here used to ask questions on stdin
+        // while the search kept running.
         match sender.send(()) {
             Ok(_) => log::debug!("Timer signal sent successfully"),
             Err(e) => {
                 // Just log the error instead of panicking
-                log::warn!(
-                    "Failed to send timer signal: {:?}. This is expected in benchmarks.",
+                log::debug!(
+                    "Failed to send timer signal: {:?}. The search finished first.",
                     e
                 );
             }
@@ -101,17 +138,20 @@ pub fn start(duration: u32) -> Receiver<()> {
     recv
 }
 
-/// Filter and display all plaintext results collected by WaitAthena
-fn filter_and_display_results() {
-    let results = wait_athena_storage::get_plaintext_results();
+/// Search time counted by the newest timer, excluding time spent paused
+pub fn elapsed() -> Duration {
+    let current = CURRENT.lock().unwrap_or_else(|e| e.into_inner());
+    current.as_ref().map_or(Duration::ZERO, |state| {
+        Duration::from_millis(state.elapsed_ms.load(Ordering::Relaxed))
+    })
+}
 
-    log::trace!(
-        "Retrieved {} results from wait_athena_storage",
-        results.len()
-    );
-
-    // Use the cli_pretty_printing function to display the results
-    display_top_results(&results);
+/// Makes the newest timer fire within one tick, even while it is paused.
+/// Used when the user asks the live display to stop searching.
+pub fn expire_now() {
+    if let Some(state) = CURRENT.lock().unwrap_or_else(|e| e.into_inner()).as_ref() {
+        state.expired.store(true, Ordering::SeqCst);
+    }
 }
 
 /// Pause timer
@@ -126,7 +166,7 @@ pub fn resume() {
 
 #[cfg(test)]
 mod tests {
-    use super::PauseCount;
+    use super::*;
 
     #[test]
     fn timer_stays_paused_until_every_pause_is_resumed() {
@@ -150,5 +190,34 @@ mod tests {
         assert!(paused.is_paused());
         paused.resume();
         assert!(!paused.is_paused());
+    }
+
+    #[test]
+    fn timer_fires_after_its_duration_and_counts_elapsed_time() {
+        // Its own state rather than `start`, which other tests' searches replace
+        let state = Arc::new(TimerState::default());
+        let started = Instant::now();
+        let timer = run(1, Arc::clone(&state));
+        timer
+            .recv_timeout(Duration::from_secs(30))
+            .expect("the timer should fire");
+        let took = started.elapsed();
+        // Other tests running at the same time can pause it, which only makes it later
+        assert!(took >= Duration::from_millis(990), "fired after {took:?}");
+        let counted = Duration::from_millis(state.elapsed_ms.load(Ordering::Relaxed));
+        assert!(counted >= Duration::from_millis(990), "{counted:?}");
+        assert!(counted < Duration::from_millis(1500), "{counted:?}");
+    }
+
+    #[test]
+    fn expired_timer_fires_early() {
+        let state = Arc::new(TimerState::default());
+        let started = Instant::now();
+        let timer = run(30, Arc::clone(&state));
+        state.expired.store(true, Ordering::SeqCst);
+        timer
+            .recv_timeout(Duration::from_secs(10))
+            .expect("the timer should fire early");
+        assert!(started.elapsed() < Duration::from_secs(5));
     }
 }

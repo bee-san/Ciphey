@@ -1,0 +1,14 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 40)"
+---
+"? Is this the plaintext? · candidate 3  "
+"                                        "
+"  the quick brown fox jumps over the    "
+"  lazy dog \x1b[31m the quick brown fox "
+"  jumps over the lazy dog \x1b[31m the  "
+"  quick brown fox jumps over the lazy…  "
+"                                        "
+"  Found by  LemmeKnow · recognised as   "
+"            Internet Protocol (IP)…     "
+"  y yes · n no, keep looking · q stop   "

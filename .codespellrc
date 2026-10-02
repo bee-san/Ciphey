@@ -1,5 +1,6 @@
 [codespell]
 # "ue" appears in Caesar-cipher test vectors in caesar_decoder.rs
-ignore-words-list = ue
+# "ratatui" is the terminal UI crate the live display uses
+ignore-words-list = ue,ratatui
 # Encoded benchmark inputs are gibberish by design
 skip = ./benches/data/*,benches/data/*

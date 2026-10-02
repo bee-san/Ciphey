@@ -1,0 +1,19 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 40)"
+---
+"✗ No plaintext found                    "
+"  You stopped it after 1.4 s            "
+"                                        "
+"  Ciphey explored 96 texts, up to 3     "
+"  layers deep, and nothing it found     "
+"  matches your regex ^xyz.              "
+"                                        "
+"  Things to try                         "
+"  • -r               loosen the regex,  "
+"                     or try without it  "
+"  • --wordlist FILE  accept exact       "
+"                     matches from a     "
+"                     wordlist           "
+"  • ask in #coded-messages on Discord:  "
+"    http://discord.skerritt.blog        "
