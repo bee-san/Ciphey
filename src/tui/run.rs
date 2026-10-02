@@ -21,7 +21,7 @@ use ratatui::text::{Line, Span};
 use std::env;
 use std::fs::OpenOptions;
 use std::io::{self, IsTerminal, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 /// Searches for the plaintext of `text` and prints what was found, the way the
@@ -189,14 +189,7 @@ fn ask_yes_no(question: &str, theme: &Theme) -> bool {
 /// that exists, `ciphey_text-2.txt` and so on: nothing is overwritten. Returns where
 /// it went.
 fn save_to_new_file(contents: &str) -> io::Result<PathBuf> {
-    save_in(
-        &dirs::home_dir().unwrap_or_else(|| PathBuf::from(".")),
-        contents,
-    )
-}
-
-/// [`save_to_new_file`] in `dir`
-fn save_in(dir: &Path, contents: &str) -> io::Result<PathBuf> {
+    let dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
     for n in 1..=1000 {
         let name = if n == 1 {
             "ciphey_text.txt".to_string()
@@ -299,26 +292,4 @@ fn show_top_results(elapsed: Duration, theme: &Theme, width: usize) {
         }
     }
     print(&screens::top_results(&results, elapsed, theme, width));
-}
-
-#[cfg(test)]
-mod tests {
-    use super::save_in;
-    use std::fs;
-
-    #[test]
-    fn saving_never_overwrites_a_file() {
-        let dir = std::env::temp_dir().join(format!("ciphey-save-test-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).unwrap();
-
-        let first = save_in(&dir, "first").unwrap();
-        let second = save_in(&dir, "second").unwrap();
-        assert_eq!(first, dir.join("ciphey_text.txt"));
-        assert_eq!(second, dir.join("ciphey_text-2.txt"));
-        assert_eq!(fs::read_to_string(&first).unwrap(), "first");
-        assert_eq!(fs::read_to_string(&second).unwrap(), "second");
-
-        let _ = fs::remove_dir_all(&dir);
-    }
 }

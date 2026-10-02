@@ -60,8 +60,8 @@ struct Terminal {
     keys: ChildStdin,
     /// Everything ciphey has written so far, escape codes included
     screen: Arc<Mutex<Vec<u8>>>,
-    /// Keeps the home directory until the run is over
-    _home: TempHome,
+    /// The home directory ciphey runs with, kept until the run is over
+    home: TempHome,
 }
 
 impl Terminal {
@@ -120,7 +120,7 @@ impl Terminal {
             exited: false,
             keys,
             screen,
-            _home: home,
+            home,
         })
     }
 
@@ -480,4 +480,36 @@ fn background_job_prints_plain_lines() {
     assert!(screen.contains("exit=0"), "{screen}");
     assert!(screen.contains("The plaintext is:"), "{screen}");
     assert!(!screen.contains(HIDE_CURSOR), "{screen}");
+}
+
+#[test]
+fn mostly_invisible_plaintext_is_saved_to_a_new_file() {
+    // "hello    world    this    is    a    test": spaces count as invisible, so
+    // ciphey offers to save it to a file instead of printing it
+    let plaintext = "hello    world    this    is    a    test";
+    let Some(mut terminal) = Terminal::start(
+        "save",
+        &[
+            "-d",
+            "-t",
+            "aGVsbG8gICAgd29ybGQgICAgdGhpcyAgICBpcyAgICBhICAgIHRlc3Q=",
+        ],
+    ) else {
+        return;
+    };
+    // A file from before must not be overwritten
+    let existing = terminal.home.path.join("ciphey_text.txt");
+    fs::write(&existing, "keep me").unwrap();
+
+    terminal.wait_for("invisible characters");
+    terminal.press("y\r");
+    // Printed once the file has been written
+    terminal.wait_for("Saved to");
+    let saved = terminal.home.path.join("ciphey_text-2.txt");
+    assert_eq!(fs::read_to_string(&saved).unwrap(), plaintext);
+    assert_eq!(fs::read_to_string(&existing).unwrap(), "keep me");
+
+    let (code, screen) = terminal.finish();
+    assert_eq!(code, Some(0), "{screen}");
+    assert!(screen.contains("ciphey_text-2.txt"), "{screen}");
 }

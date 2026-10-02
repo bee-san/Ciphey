@@ -1,0 +1,14 @@
+---
+source: src/tui/screens.rs
+expression: "screen(&lines, 40)"
+---
+"✓ Plaintext found in 0.11 s             "
+"                                        "
+"  Saved to  /home/someone/a/rather/long/"
+"home/directory/ciphey_text-2.txt        "
+"                                        "
+"  Decoded   Base64                      "
+"  Found by  English checker · looks     "
+"            like English                "
+"  Searched  1,204 texts, up to 3 layers "
+"            deep                        "

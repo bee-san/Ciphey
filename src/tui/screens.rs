@@ -633,7 +633,9 @@ pub fn success(view: &SuccessView<'_>, theme: &Theme, width: usize) -> Vec<Line<
     }
 
     let mut lines = vec![fit(Line::from(heading), width, glyphs.ellipsis), blank()];
-    let plaintext_rows = match view.saved_to {
+    // Rows left as they are, however wide: the plaintext, or where it was saved.
+    // The terminal wraps them, so they can be copied whole.
+    let kept_rows = match view.saved_to {
         Some(path) => {
             lines.push(labelled(
                 "Saved to",
@@ -643,7 +645,7 @@ pub fn success(view: &SuccessView<'_>, theme: &Theme, width: usize) -> Vec<Line<
                 )],
                 theme,
             ));
-            0..0
+            lines.len() - 1..lines.len()
         }
         None => {
             let block = plaintext_block(plaintext, theme, width);
@@ -716,7 +718,7 @@ pub fn success(view: &SuccessView<'_>, theme: &Theme, width: usize) -> Vec<Line<
         .into_iter()
         .enumerate()
         .map(|(i, line)| {
-            if plaintext_rows.contains(&i) {
+            if kept_rows.contains(&i) {
                 line
             } else {
                 fit(line, width, glyphs.ellipsis)
@@ -1240,6 +1242,35 @@ mod tests {
             .collect();
         assert!(!printed.contains('\x1b'), "{printed:?}");
         insta::assert_snapshot!(screen(&lines, 80));
+    }
+
+    #[test]
+    fn saved_to_a_file_shows_the_whole_path() {
+        let mut only = step("Base64", "hello    world", None);
+        only.checker_name = "English Checker";
+        let result = DecoderResult {
+            text: vec!["hello    world".to_string()],
+            path: vec![only],
+        };
+        let progress = progress();
+        let path = "/home/someone/a/rather/long/home/directory/ciphey_text-2.txt";
+        let view = SuccessView {
+            result: &result,
+            elapsed: Duration::from_millis(110),
+            progress: &progress,
+            confirmed: false,
+            recognised_as: None,
+            regex: None,
+            saved_to: Some(path),
+        };
+        let lines = success(&view, &theme(Glyphs::UNICODE), 39);
+        let printed: String = lines
+            .iter()
+            .flat_map(|l| l.spans.iter().map(|s| s.content.to_string()))
+            .collect();
+        assert!(printed.contains(path), "{printed:?}");
+        assert!(!printed.contains("hello"), "the plaintext went to the file");
+        insta::assert_snapshot!(screen(&lines, 40));
     }
 
     #[test]
