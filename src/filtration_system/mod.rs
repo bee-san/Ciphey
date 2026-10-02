@@ -44,8 +44,8 @@ use crate::decoders::unicode_escape_decoder::UnicodeEscapeDecoder;
 use crate::decoders::url_decoder::URLDecoder;
 use crate::decoders::utf16_decoder::Utf16Decoder;
 use crate::decoders::vigenere_decoder::VigenereDecoder;
-use crate::decoders::xor_single_byte_decoder::XorSingleByteDecoder;
 use crate::decoders::xor_repeating_key_decoder::XorRepeatingKeyDecoder;
+use crate::decoders::xor_single_byte_decoder::XorSingleByteDecoder;
 use crate::decoders::z85_decoder::Z85Decoder;
 use crate::decoders::zlib_decoder::ZlibDecoder;
 

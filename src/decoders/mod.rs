@@ -146,8 +146,8 @@ use unicode_escape_decoder::UnicodeEscapeDecoder;
 use url_decoder::URLDecoder;
 use utf16_decoder::Utf16Decoder;
 use vigenere_decoder::VigenereDecoder;
-use xor_single_byte_decoder::XorSingleByteDecoder;
 use xor_repeating_key_decoder::XorRepeatingKeyDecoder;
+use xor_single_byte_decoder::XorSingleByteDecoder;
 use z85_decoder::Z85Decoder;
 use zlib_decoder::ZlibDecoder;
 
