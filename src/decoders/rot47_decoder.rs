@@ -2,10 +2,12 @@
 //! Performs error handling and returns a string
 //! Call rot47_decoder.crack to use. It returns `Option<String>` and check with
 //! `result.is_some()` to see if it returned okay.
-//! Uses Low sensitivity for gibberish detection.
+//! Checks ROT47 itself (a shift of 47) first, then only the other shift whose output looks
+//! most like English, at Low sensitivity.
 
 use crate::checkers::CheckerTypes;
-use crate::decoders::interface::check_string_success;
+use crate::config::get_config;
+use crate::decoders::interface::{best_ranked, check_string_success};
 use gibberish_or_not::Sensitivity;
 
 use super::crack_results::CrackResult;
@@ -31,31 +33,45 @@ impl Crack for Decoder<ROT47Decoder> {
     /// This function does the actual decoding
     /// It returns an `Option<String>` if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
+    ///
+    /// Shifts are no longer checked in order: shift 15 turns ROT47 text into the plaintext
+    /// in capitals with a few symbols swapped (`4HE QUICK BROWN FOX`), and it used to win
+    /// over shift 47, ROT47 itself. Now 47 is checked first, then only the best-ranked of
+    /// the other shifts.
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying rot47 with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
-        let mut decoded_strings = Vec::new();
+
+        // All possible shifts up to 94; index `shift - 1`
+        let decoded_strings: Vec<String> = (1..94)
+            .map(|shift| rot47_to_alphabet(text, shift))
+            .collect();
+        if !check_string_success(&decoded_strings[0], text) {
+            info!(
+                "Failed to decode rot47 because check_string_success returned false on string {}. This means the string is 'funny' as it wasn't modified.",
+                decoded_strings[0]
+            );
+            return results;
+        }
 
         // Use the checker with Low sensitivity for ROT47 cipher
         let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
-
-        // loops through all possible shifts up to 94
-        for shift in 1..94 {
-            let decoded_text = rot47_to_alphabet(text, shift);
-            decoded_strings.push(decoded_text);
-            let borrowed_decoded_text = &decoded_strings[decoded_strings.len() - 1];
-            if !check_string_success(borrowed_decoded_text, text) {
-                info!(
-                    "Failed to decode rot47 because check_string_success returned false on string {}. This means the string is 'funny' as it wasn't modified.",
-                    borrowed_decoded_text
-                );
-                return results;
-            }
-            let checker_result = checker_with_sensitivity.check(borrowed_decoded_text);
+        let rot47 = ROT47_SHIFT as usize - 1;
+        let others: Vec<usize> = (0..decoded_strings.len()).filter(|&i| i != rot47).collect();
+        // With a crib every shift is checked: the crib says which one is right
+        let to_check: Vec<usize> = if get_config().regex.is_some() {
+            std::iter::once(rot47).chain(others).collect()
+        } else {
+            let ranked_other =
+                best_ranked(others.iter().map(|&i| decoded_strings[i].as_str())).map(|i| others[i]);
+            std::iter::once(rot47).chain(ranked_other).collect()
+        };
+        for index in to_check {
+            let checker_result = checker_with_sensitivity.check(&decoded_strings[index]);
             // If checkers return true, exit early with the correct result
             if checker_result.is_identified {
-                trace!("Found a match with rot47 shift {}", shift);
-                results.unencrypted_text = Some(vec![borrowed_decoded_text.to_string()]);
+                trace!("Found a match with rot47 shift {}", index + 1);
+                results.unencrypted_text = Some(vec![decoded_strings[index].clone()]);
                 results.update_checker(&checker_result);
                 return results;
             }
@@ -85,6 +101,9 @@ impl Crack for Decoder<ROT47Decoder> {
     }
 }
 
+/// The shift that is ROT47 itself; the decoder also tries the other 92.
+const ROT47_SHIFT: u8 = 47;
+
 /// Maps rot47 to the alphabet (up to ROT94 with the ROT47 alphabet)
 fn rot47_to_alphabet(text: &str, shift: u8) -> String {
     let mut result = String::new();
@@ -102,6 +121,7 @@ fn rot47_to_alphabet(text: &str, shift: u8) -> String {
 mod tests {
     use super::rot47_to_alphabet;
     use super::ROT47Decoder;
+    use super::ROT47_SHIFT;
     use crate::{
         checkers::{
             athena::Athena,
@@ -119,40 +139,34 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn rot47_decodes_successfully() {
-        // This tests if ROT47 can decode ROT47 successfully
-        // Shift is 47, but due to shift 15 resulting in plaintext too
-        // we check for shift 15's result instead
+        // This tests if ROT47 can decode ROT47 successfully. Shift 15 gives the plaintext
+        // in capitals with symbols swapped ("3PHINX OF BLACK QUARTZj JUDGE MY VOW"), which
+        // used to be returned because it comes first.
         let rot47_decoder = Decoder::<ROT47Decoder>::new();
         let input = "$A9:?I @7 3=24< BF2CEK[ ;F586 >J G@H";
-        let expected = "3PHINX OF BLACK QUARTZj JUDGE MY VOW";
-
-        println!("Input text: {:?}", input);
-
-        // Try decoding with specific shifts to debug
-        for shift in 1..94 {
-            let decoded = rot47_to_alphabet(input, shift);
-            println!("Shift: {}, Result: {:?}", shift, decoded);
-        }
-
         let result = rot47_decoder.crack(input, &get_athena_checker());
+        assert!(result.success);
+        assert_eq!(
+            result.unencrypted_text.unwrap()[0],
+            "Sphinx of black quartz, judge my vow"
+        );
+    }
 
-        if let Some(decoded_texts) = &result.unencrypted_text {
-            println!("Number of decoded texts: {}", decoded_texts.len());
-            for (i, text) in decoded_texts.iter().enumerate() {
-                println!("Decoded text {}: {:?}", i, text);
-            }
+    #[test]
+    fn rot47_is_its_own_inverse() {
+        let text = "The quick brown fox jumps over the lazy dog";
+        let encoded = rot47_to_alphabet(text, ROT47_SHIFT);
+        assert_eq!(encoded, "%96 BF:4< 3C@H? 7@I ;F>AD @G6C E96 =2KJ 5@8");
+        assert_eq!(rot47_to_alphabet(&encoded, ROT47_SHIFT), text);
+    }
 
-            if !decoded_texts.is_empty() {
-                println!("First decoded text: {:?}", decoded_texts[0]);
-                println!("Expected text: {:?}", expected);
-            }
-        } else {
-            println!("No decoded texts found");
-        }
-
-        assert_eq!(result.unencrypted_text.unwrap()[0], expected);
+    #[test]
+    fn all_shifts_are_returned_when_none_is_plaintext() {
+        let rot47_decoder = Decoder::<ROT47Decoder>::new();
+        let result = rot47_decoder.crack("T00 l3= ox+#G WKyV pajU6j qxH@", &get_athena_checker());
+        assert!(!result.success);
+        assert_eq!(result.unencrypted_text.unwrap().len(), 93);
     }
 
     #[test]

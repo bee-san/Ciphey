@@ -156,59 +156,27 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
         }
     };
 
-    /*  Checks to see if the encoded text already exists in the cache
-     *  returns cached result if so
-     */
+    // A cached plaintext is checked again before it is returned, like a new candidate
+    // would be: the checkers that accepted it may have been wrong (and are stricter now),
+    // and with the human checker on, the user gets asked. A cached answer that fails is
+    // forgotten and the input is searched again.
     let cache_result = if use_cache {
         storage::database::read_cache(&text)
     } else {
         Ok(None)
     };
     match cache_result {
-        Ok(cache_row) => match cache_row {
-            Some(row) => {
-                log::debug!("Cache hit for text: {}", text);
-                cli_pretty_printing::success(&format!(
-                    "DEBUG: lib.rs - Cache hit for text: {}",
-                    text
-                ));
-                let path_result: Result<Vec<CrackResult>, serde_json::Error> = row
-                    .path
-                    .iter()
-                    .map(|crack_json| {
-                        let json_result = serde_json::from_str(crack_json);
-                        match json_result {
-                            Ok(crack_result) => Ok(crack_result),
-                            Err(e) => {
-                                cli_pretty_printing::warning(&format!(
-                                    "Error deserializing cache result: {}",
-                                    e
-                                ));
-                                Err(e)
-                            }
-                        }
-                    })
-                    .collect();
-                if let Ok(path) = path_result {
-                    return Ok(Some(DecoderResult {
-                        text: vec![row.decoded_text],
-                        path,
-                    }));
-                }
+        Ok(Some(row)) => {
+            log::debug!("Cache hit for text: {}", text);
+            if let Some(result) = cached_result(row) {
+                return Ok(Some(result));
             }
-            None => {
-                cli_pretty_printing::success(&format!(
-                    "DEBUG: lib.rs - Did not find text \"{}\" in cache",
-                    text.clone()
-                ));
+            if let Err(e) = storage::database::delete_cache(&text) {
+                log::warn!("Could not remove a rejected plaintext from the cache: {e}");
             }
-        },
-        Err(e) => {
-            cli_pretty_printing::warning(&format!(
-                "DEBUG: lib.rs - Error trying to read from cache: {}",
-                e
-            ));
         }
+        Ok(None) => log::debug!("Did not find text {:?} in cache", text),
+        Err(e) => log::warn!("Could not read the cache: {e}"),
     }
 
     let initial_check_for_plaintext = check_if_input_text_is_plaintext(&text);
@@ -282,9 +250,45 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
     Ok(result)
 }
 
+/// The result stored in a cache row, if its plaintext still passes the checkers (and the
+/// human checker, if it is on).
+fn cached_result(row: storage::database::CacheRow) -> Option<DecoderResult> {
+    let path: Vec<CrackResult> = row
+        .path
+        .iter()
+        .map(|crack_json| serde_json::from_str(crack_json))
+        .collect::<Result<_, _>>()
+        .map_err(|e| log::warn!("Error deserializing cache result: {e}"))
+        .ok()?;
+    if !check_plaintext(&row.decoded_text).is_identified {
+        log::debug!(
+            "Cached plaintext {:?} is not accepted any more",
+            row.decoded_text
+        );
+        return None;
+    }
+    Some(DecoderResult {
+        text: vec![row.decoded_text],
+        path,
+    })
+}
+
 /// Checks if the given input is plaintext or not
 /// Used at the start of the program to not waste CPU cycles
+///
+/// A CTF flag whose prefix has no flag word (`SEKAI{...}`) isn't taken as plaintext here:
+/// input shaped like that is far more likely a Caesar shift or Atbash of a flag
+/// (`FRXNV{...}`), which keeps the shape, than a flag someone wants decoded.
 fn check_if_input_text_is_plaintext(text: &str) -> CheckResult {
+    if get_config().regex.is_none() && checkers::lemmeknow_checker::is_unmarked_ctf_flag(text) {
+        return CheckResult::new(&Checker::<Athena>::new());
+    }
+    check_plaintext(text)
+}
+
+/// Runs the checkers on `text` the way the search does: Athena, or WaitAthena in
+/// `top_results` mode.
+fn check_plaintext(text: &str) -> CheckResult {
     let config = get_config();
 
     if config.top_results {
@@ -458,11 +462,9 @@ mod tests {
         assert!(result.unwrap().path.len() == 1);
     }
 
-    #[ignore]
     #[test]
-    // Previously this would decode to `Fchohs as 13 dzoqsg!` because the English checker wasn't that good
-    // This test makes sure we can decode it okay
-    // TODO: Skipping this test because the English checker still isn't good.
+    // Previously this would decode to `Fchohs as 13 dzoqsg!` because the English checker
+    // wasn't that good, and Caesar returned the first shift it accepted
     fn test_perform_cracking_successfully_decode_caesar() {
         let _test_db = TestDatabase::default();
         set_test_db_path();

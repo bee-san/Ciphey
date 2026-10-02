@@ -65,9 +65,17 @@ pub struct Config {
     pub wordlist: Option<HashSet<String>>,
     /// Colourscheme hashmap
     pub colourscheme: HashMap<String, String>,
-    /// Enables enhanced plaintext detection using a BERT model.
+    /// Ignored. "Enhanced detection" never loaded a model: it only switched the English
+    /// checker to its most lenient sensitivity, which more than quadrupled false
+    /// positives, so it was removed (<https://github.com/bee-san/Ciphey/issues/1031>).
+    /// Still read from `config.toml` so existing config files keep working without a
+    /// warning, but no longer written. It will be removed in a later release.
+    #[deprecated(note = "ignored: enhanced detection was removed, see issue #1031")]
+    #[serde(skip_serializing)]
     pub enhanced_detection: bool,
-    /// Path to the enhanced detection model. If None, will use the default path.
+    /// Ignored, like [`Config::enhanced_detection`].
+    #[deprecated(note = "ignored: enhanced detection was removed, see issue #1031")]
+    #[serde(skip_serializing)]
     pub model_path: Option<String>,
 }
 
@@ -132,6 +140,7 @@ fn update_identifier_in_config(config: &mut Config) {
 
 impl Default for Config {
     fn default() -> Self {
+        #[allow(deprecated)]
         let mut config = Config {
             verbose: 0,
             lemmeknow_config: LEMMEKNOW_DEFAULT_CONFIG,
@@ -229,6 +238,8 @@ fn parse_toml_with_unknown_keys(contents: &str) -> Result<Config, toml::de::Erro
         let known_keys = [
             "verbose",
             "lemmeknow_min_rarity",
+            // Ignored since enhanced detection was removed, but configs written by older
+            // versions have them
             "enhanced_detection",
             "model_path",
             "lemmeknow_max_rarity",
@@ -404,10 +415,6 @@ fn config_from_first_run(mut answers: HashMap<String, String>) -> Config {
     if let Some(top_results) = answers.remove("top_results") {
         config.top_results = top_results == "true";
     }
-    if let Some(enhanced_detection) = answers.remove("enhanced_detection") {
-        config.enhanced_detection = enhanced_detection == "true";
-    }
-    config.model_path = answers.remove("model_path");
     config.wordlist_path = answers.remove("wordlist_path");
     config.colourscheme = answers;
     config
@@ -443,7 +450,7 @@ mod tests {
     #[test]
     fn first_run_answers_become_settings() {
         // These answers used to be saved as entries in the colour scheme, so choosing
-        // top results mode or enhanced detection during the first run did nothing.
+        // top results mode during the first run did nothing.
         let answers: HashMap<String, String> = [
             ("informational", "255,215,0"),
             ("warning", "255,0,0"),
@@ -452,8 +459,6 @@ mod tests {
             ("statement", "255,255,255"),
             ("top_results", "true"),
             ("timeout", "3"),
-            ("enhanced_detection", "true"),
-            ("model_path", "/models/model.bin"),
             ("wordlist_path", "/wordlists/words.txt"),
         ]
         .into_iter()
@@ -464,8 +469,6 @@ mod tests {
 
         assert!(config.top_results);
         assert_eq!(config.timeout, 3);
-        assert!(config.enhanced_detection);
-        assert_eq!(config.model_path.as_deref(), Some("/models/model.bin"));
         assert_eq!(
             config.wordlist_path.as_deref(),
             Some("/wordlists/words.txt")
@@ -482,6 +485,21 @@ mod tests {
                 "warning"
             ]
         );
+    }
+
+    #[test]
+    fn enhanced_detection_keys_are_read_but_not_written() {
+        // Config files written before enhanced detection was removed still parse,
+        // without an unknown-key warning, and the keys aren't written back
+        let config = parse_toml_with_unknown_keys(
+            "enhanced_detection = true\nmodel_path = \"/home/me/.ciphey/models/model.bin\"\ntimeout = 7\n",
+        )
+        .unwrap();
+        assert_eq!(config.timeout, 7);
+        let written = toml::to_string_pretty(&config).unwrap();
+        assert!(!written.contains("enhanced_detection"), "{written}");
+        assert!(!written.contains("model_path"), "{written}");
+        assert!(written.contains("timeout = 7"), "{written}");
     }
 
     #[test]

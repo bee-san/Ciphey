@@ -19,7 +19,6 @@ impl Check for Checker<PasswordChecker> {
             popularity: 1.0,
             lemmeknow_config: Identifier::default(),
             sensitivity: Sensitivity::Medium,
-            enhanced_detector: None,
             _phantom: std::marker::PhantomData,
         }
     }

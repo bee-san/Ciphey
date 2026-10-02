@@ -478,3 +478,37 @@ fn test_jwt_inside_base64_is_decoded() {
     let decoders: Vec<&str> = result.path.iter().map(|step| step.decoder).collect();
     assert_eq!(decoders, ["Base64", "JWT"]);
 }
+
+#[test]
+#[serial]
+fn test_cached_plaintext_that_fails_the_checkers_is_searched_again() {
+    // https://github.com/bee-san/Ciphey/issues/1031: older versions cached BYFFIQILFX (a
+    // wrong Caesar shift LemmeKnow called an "ASIN") for KHOORZRUOG, and every later run
+    // returned it from the cache without checking it.
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
+    database::setup_database().unwrap();
+
+    let encoded = String::from("KHOORZRUOG");
+    let caesar = Decoder::<ciphey::decoders::caesar_decoder::CaesarDecoder>::new();
+    let mut stale = CrackResult::new(&caesar, encoded.clone());
+    stale.unencrypted_text = Some(vec!["BYFFIQILFX".to_string()]);
+    stale.success = true;
+    database::insert_cache(&database::CacheEntry {
+        uuid: Uuid::new_v4(),
+        encoded_text: encoded.clone(),
+        decoded_text: "BYFFIQILFX".to_string(),
+        path: vec![stale],
+        execution_time_ms: 10,
+    })
+    .unwrap();
+
+    let result = perform_cracking(&encoded, Config::default())
+        .unwrap()
+        .unwrap();
+    assert_eq!(result.text[0], "HELLOWORLD");
+
+    // The stale row is gone and the new answer is cached instead
+    let row = database::read_cache(&encoded).unwrap().unwrap();
+    assert_eq!(row.decoded_text, "HELLOWORLD");
+}

@@ -54,8 +54,7 @@ Issues that are especially relevant for this project include:
 
 - crashes, hangs, or resource-exhaustion bugs triggered by untrusted input
 - unsafe handling of local files passed through the CLI
-- data exposure involving `~/.ciphey/config.toml`, `~/.ciphey/database.sqlite`, or model files under `~/.ciphey/models/`
-- problems in the optional enhanced-detection setup flow, including token handling during model download
+- data exposure involving `~/.ciphey/config.toml` or `~/.ciphey/database.sqlite`
 - supply-chain issues in release artifacts or dependencies that materially affect users of `ciphey`
 
 ## User Data And Secrets
@@ -64,6 +63,6 @@ Current repository behavior that matters for security review:
 
 - `ciphey` stores cache and human-review data in a local SQLite database at `~/.ciphey/database.sqlite`.
 - Configuration is stored locally at `~/.ciphey/config.toml`.
-- The first-run enhanced-detection flow prompts for a Hugging Face token and states that the token is used for model download and not stored on disk.
+- `ciphey` asks for no tokens or credentials and downloads nothing. (The first-run "enhanced detection" prompt, which asked for a Hugging Face token to download a model that was never used, was removed; see [#1031](https://github.com/bee-san/Ciphey/issues/1031).)
 
 If you report an issue, avoid sending real secrets or private datasets unless they are necessary to reproduce the problem.

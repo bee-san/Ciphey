@@ -26,6 +26,7 @@ use rayon::prelude::*;
 use crate::checkers::athena::Athena;
 use crate::checkers::checker_type::{Check, Checker};
 use crate::checkers::english::EnglishChecker;
+use crate::checkers::lemmeknow_checker::{is_ctf_flag_shaped, is_unmarked_ctf_flag};
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
 use crate::searchers::helper_functions::{
@@ -41,6 +42,11 @@ const PRUNE_THRESHOLD: usize = 200_000;
 
 /// Number of nodes to expand in parallel per iteration of the main loop.
 const PARALLEL_BATCH_SIZE: usize = 10;
+
+/// An open set larger than this is freed on another thread when the search ends. A search
+/// that runs until the timeout can queue over half a million nodes, and freeing them took
+/// up to 0.9 s, which the caller waited for before it got its answer.
+const BACKGROUND_FREE_NODES: usize = 10_000;
 
 /// Hash for the seen-set.
 fn calculate_hash(text: &str) -> u64 {
@@ -98,6 +104,19 @@ struct ThreadSafePriorityQueue {
     queue: Mutex<BinaryHeap<AStarNode>>,
 }
 
+impl Drop for ThreadSafePriorityQueue {
+    fn drop(&mut self) {
+        let queue = self
+            .queue
+            .get_mut()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if queue.len() > BACKGROUND_FREE_NODES {
+            let nodes = std::mem::take(queue);
+            std::thread::spawn(move || drop(nodes));
+        }
+    }
+}
+
 impl ThreadSafePriorityQueue {
     /// Empty queue.
     fn new() -> Self {
@@ -153,13 +172,19 @@ fn should_try_decoder(decoder: &(dyn Crack + Sync), last: Option<&crate::CrackRe
 }
 
 /// Reject results no correct answer could look like: under 3 chars, mostly non-printable,
-/// under 5% of the input length (no decoder shrinks text that much), or an English-checker
-/// hit that is more than a third punctuation.
-fn result_passes_sanity(node: &AStarNode, original_input_len: usize) -> bool {
+/// under 5% of the input length (no decoder shrinks text that much), an English-checker
+/// hit that is more than a third punctuation, or a CTF flag without a flag word in its
+/// prefix (`SEKAI{...}`) when the input was already shaped like a flag: Caesar, Atbash,
+/// Vigenère and their combinations with Reverse keep that shape, so such a result is just
+/// the input with its letters changed.
+fn result_passes_sanity(node: &AStarNode, original_input_len: usize, input_is_flag: bool) -> bool {
     let Some(text) = node.state.text.first() else {
         return false;
     };
     if check_if_string_cant_be_decoded(text) {
+        return false;
+    }
+    if input_is_flag && is_unmarked_ctf_flag(text) {
         return false;
     }
     if original_input_len >= 40 && text.chars().count() * 20 < original_input_len {
@@ -228,7 +253,10 @@ fn expand_node(
                             path,
                         },
                         depth: current_node.depth + 1,
-                        cost: current_node.cost + 1.0,
+                        // Results that tie on confidence go to the cheaper path, so this
+                        // has to depend on the decoder: with a flat cost the tie fell back
+                        // to decoder order, and Vigenere is first.
+                        cost: current_node.cost + edge_cost(decoder.as_ref(), 1),
                         total_cost: f32::NEG_INFINITY,
                         is_result: true,
                     });
@@ -295,10 +323,28 @@ fn result_confidence(node: &AStarNode) -> (u8, f32) {
     (class, node.cost)
 }
 
+/// Keeps only the first result for each text, in the order the decoders are listed.
+///
+/// When two decoders find the same plaintext in one step, the list order says which one
+/// describes it (Quoted-Printable before Hexadecimal for `=48=65`). Results are then
+/// sorted by path cost, which depends on the decoder, so a duplicate from a cheaper
+/// decoder must not get the chance to come first.
+fn keep_first_of_each_text(results: &mut Vec<AStarNode>) {
+    let mut seen = std::collections::HashSet::new();
+    results.retain(|node| {
+        node.state
+            .text
+            .first()
+            .is_none_or(|text| seen.insert(calculate_hash(text)))
+    });
+}
+
 /// Search for a decoder sequence that turns `input` into plaintext. Sends `Some(result)`
 /// on success (repeatedly in `top_results` mode), `None` if the space is exhausted.
 pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Arc<AtomicBool>) {
     let original_input_len = input.chars().count();
+    // With a crib the crib decides what the flag looks like
+    let input_is_flag = is_ctf_flag_shaped(&input) && get_config().regex.is_none();
     let initial = DecoderResult {
         text: vec![input],
         path: vec![],
@@ -343,6 +389,7 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
             new_nodes.into_iter().partition(|n| n.is_result);
 
         if results.len() > 1 {
+            keep_first_of_each_text(&mut results);
             results.sort_by(|a, b| {
                 result_confidence(a)
                     .partial_cmp(&result_confidence(b))
@@ -358,7 +405,7 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
                 debug!("Skipping duplicate result: {:?}", text);
                 continue;
             }
-            if !result_passes_sanity(&node, original_input_len) {
+            if !result_passes_sanity(&node, original_input_len, input_is_flag) {
                 debug!(
                     "Rejected implausible result {:?} from path {:?}; continuing search",
                     text,
@@ -514,7 +561,7 @@ mod tests {
             total_cost: 0.0,
             is_result: true,
         };
-        assert!(!result_passes_sanity(&node, 800));
+        assert!(!result_passes_sanity(&node, 800, false));
 
         let node = AStarNode {
             state: DecoderResult {
@@ -526,6 +573,81 @@ mod tests {
             total_cost: 0.0,
             is_result: true,
         };
-        assert!(result_passes_sanity(&node, 16));
+        assert!(result_passes_sanity(&node, 16, false));
+    }
+
+    #[test]
+    fn a_large_open_set_is_freed_without_waiting() {
+        let queue = ThreadSafePriorityQueue::new();
+        for i in 0..=BACKGROUND_FREE_NODES {
+            queue.push(AStarNode {
+                state: DecoderResult::_new(&i.to_string()),
+                depth: 1,
+                cost: 1.0,
+                total_cost: 1.0,
+                is_result: false,
+            });
+        }
+        let started = std::time::Instant::now();
+        drop(queue);
+        assert!(started.elapsed() < std::time::Duration::from_secs(1));
+    }
+
+    #[test]
+    fn the_first_decoder_to_find_a_text_describes_it() {
+        let result = |decoder: &'static str, text: &str, cost: f32| {
+            let mut step = crate::CrackResult::new(&crate::Decoder::default(), String::new());
+            step.decoder = decoder;
+            AStarNode {
+                state: DecoderResult {
+                    text: vec![text.to_string()],
+                    path: vec![step],
+                },
+                depth: 1,
+                cost,
+                total_cost: f32::NEG_INFINITY,
+                is_result: true,
+            }
+        };
+        let mut results = vec![
+            result("Quoted-Printable", "Hello World", 2.0),
+            result("Hexadecimal", "Hello World", 1.5),
+            result("Base64", "something else", 1.0),
+        ];
+        keep_first_of_each_text(&mut results);
+        let decoders: Vec<&str> = results.iter().map(|n| n.state.path[0].decoder).collect();
+        assert_eq!(decoders, ["Quoted-Printable", "Base64"]);
+    }
+
+    #[test]
+    fn sanity_rejects_unmarked_flags_from_flag_shaped_input() {
+        let flag = |text: &str| AStarNode {
+            state: DecoderResult {
+                text: vec![text.to_string()],
+                path: vec![],
+            },
+            depth: 3,
+            cost: 3.0,
+            total_cost: 0.0,
+            is_result: true,
+        };
+        // e.g. Reverse -> Atbash -> Reverse of FRXNV{l0h_s0haq_z3}
+        assert!(!result_passes_sanity(
+            &flag("UICME{o0s_h0szj_a3}"),
+            19,
+            true
+        ));
+        // From input that wasn't a flag (Base64, hex ...) it may be the answer
+        assert!(result_passes_sanity(
+            &flag("SEKAI{y0u_f0und_m3}"),
+            28,
+            false
+        ));
+        // A flag word in the prefix is always fine
+        assert!(result_passes_sanity(
+            &flag("flag{this_is_the_flag}"),
+            22,
+            true
+        ));
     }
 }

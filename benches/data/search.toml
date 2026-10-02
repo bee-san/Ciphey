@@ -7,7 +7,8 @@
 #   expected = the text perform_cracking returns today, checked before measuring.
 #   outcome  = no_solution only. How the search ends today:
 #                exhausted       Ok(None): every decoder rejects the input
-#                false_positive  Ok(Some(..)): it settles on gibberish (usually rot47 -> Vigenere)
+#                false_positive  Ok(Some(..)): it settles on gibberish (before #1031 the two
+#                                gibberish cases ended as rot47 -> Vigenere this way)
 #                timeout         Err(Timeout): still searching when the 1 s timer fires
 #              Only "exhausted" and "timeout" are checked; where a false positive is
 #              found depends on search order, and a slower machine may time out first.
@@ -270,7 +271,7 @@ expected = "Meet me at the old lighthouse after midnight and bring the map, the 
 [[case]]
 kind = "no_solution"
 name = "gibberish"
-outcome = "false_positive"
+outcome = "timeout"
 layers = []
 input = "T00 l3= ox+#G WKyV pajU6j qxH@ %B4+a 5Pn^ 7p_v1q 9sLvu *+36i R5rL&3 mVJZI iO0 Ut8_m COTV"
 expected = ""
@@ -278,7 +279,7 @@ expected = ""
 [[case]]
 kind = "no_solution"
 name = "gibberish_long"
-outcome = "false_positive"
+outcome = "timeout"
 layers = []
 input = "9HJJw TR!V H=cH Z&I2 X3J_@ Snyh _IP ~EoSLoS GYs XrRp0 t0Kx Ee~ qCAT O?7Hw 6mz# E9hEZ ?UM Tga% ZhL &&L7X 7Dzu E0i TTUr W%joc kGgj8 LVP=n 1?e Jb4Hz%c BXR5H KCH 8XbG #i!1 G?^i kh1_ b%NX BEaSR Fg!mt 79Fbf LA81ShT ZX8w EMB *@91 ccm# Qpso zOzEM 0ng KV986 lUHo O9uoR GrlpY iQ9R8+ 5uOZ6hf bQT# ^Kc j%^ KoiZYc9 m@_ EjBIi pCUT %pz xggxk7@ bk+ uU7u* T1*tc? zHd2rH fSA EzXfl 2jsl U0oso ^PV +nMqA 4v+j %4^_ !rBi H"
 expected = ""

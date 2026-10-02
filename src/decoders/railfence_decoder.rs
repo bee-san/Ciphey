@@ -2,10 +2,14 @@
 //! Performs error handling and returns a string
 //! Call railfence_decoder.crack to use. It returns `Option<String>` and check with
 //! `result.is_some()` to see if it returned okay.
-//! Uses Low sensitivity for gibberish detection.
+//! Ranks every rails/offset candidate by English letter-pair fitness and only asks the
+//! checker (at Low sensitivity) about the best one.
 
+use crate::checkers::lemmeknow_checker::{is_ctf_flag_shaped, is_marked_ctf_flag};
 use crate::checkers::CheckerTypes;
+use crate::config::get_config;
 use crate::decoders::interface::check_string_success;
+use crate::storage::ngrams::bigram_fitness;
 use gibberish_or_not::Sensitivity;
 
 use super::crack_results::CrackResult;
@@ -32,35 +36,101 @@ impl Crack for Decoder<RailfenceDecoder> {
     /// This function does the actual decoding
     /// It returns an `Option<String>` if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
+    ///
+    /// Only the candidate that looks most like English is checked, instead of every
+    /// candidate in key order. Other offsets with the right number of rails give nearly
+    /// the plaintext, rotated (`godThe quick brown fox jumps over the lazy `), so on a
+    /// near-tie offset 0 is checked first.
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying railfence with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
         let mut decoded_strings = Vec::new();
-
-        // Use the checker with Low sensitivity for Railfence cipher
-        let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
+        // (index into decoded_strings, rails, offset, mean bigram fitness)
+        let mut best: Option<(usize, usize, usize, f64)> = None;
+        let mut offset_zero: Vec<(usize, f64)> = Vec::new();
 
         for rails in 2..10 {
             // Should be less than (rail * 2 - 3). This is the max offset
             for offset in 0..=(rails * 2 - 3) {
                 let decoded_text = railfence_decoder(text, rails, offset);
-                decoded_strings.push(decoded_text);
-                let borrowed_decoded_text = &decoded_strings[decoded_strings.len() - 1];
-                if !check_string_success(borrowed_decoded_text, text) {
+                if !check_string_success(&decoded_text, text) {
                     info!(
-                    "Failed to decode railfence because check_string_success returned false on string {}. This means the string is 'funny' as it wasn't modified.",
-                    borrowed_decoded_text
-                );
+                        "Failed to decode railfence because check_string_success returned false on string {}. This means the string is 'funny' as it wasn't modified.",
+                        decoded_text
+                    );
                     return results;
                 }
-                let checker_result = checker_with_sensitivity.check(borrowed_decoded_text);
+                if let Some(fitness) = bigram_fitness(&decoded_text) {
+                    if offset == 0 {
+                        offset_zero.push((decoded_strings.len(), fitness));
+                    }
+                    if best.is_none_or(|(.., best_fitness)| fitness > best_fitness) {
+                        best = Some((decoded_strings.len(), rails, offset, fitness));
+                    }
+                }
+                decoded_strings.push(decoded_text);
+            }
+        }
+
+        // With a crib every candidate is checked, in key order: the crib says which is right
+        if get_config().regex.is_some() {
+            let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
+            for (index, candidate) in decoded_strings.iter().enumerate() {
+                let checker_result = checker_with_sensitivity.check(candidate);
                 if checker_result.is_identified {
-                    trace!(
-                        "Found a match with railfence {} rails and {} offset",
-                        rails,
-                        offset
-                    );
-                    results.unencrypted_text = Some(vec![borrowed_decoded_text.to_string()]);
+                    trace!("Found a match with railfence candidate {}", index);
+                    results.unencrypted_text = Some(vec![candidate.clone()]);
+                    results.update_checker(&checker_result);
+                    return results;
+                }
+            }
+            results.unencrypted_text = Some(decoded_strings);
+            return results;
+        }
+
+        if let Some((index, rails, offset, fitness)) = best {
+            let mut to_check = vec![index];
+            // The same number of rails at offset 0 goes first if it is nearly as good. The
+            // best-ranked candidate is only checked after it on longer texts: on short ones
+            // the ranking is mostly noise, and the best-ranked is usually just a wrong key
+            // that happens to pass.
+            if offset != 0 {
+                let (zero_index, zero_fitness) = offset_zero[rails - 2];
+                let letters = decoded_strings[index]
+                    .bytes()
+                    .filter(u8::is_ascii_alphabetic)
+                    .count();
+                if (fitness - zero_fitness) * (letters as f64) < NEAR_TIE {
+                    if letters < MIN_LETTERS_FOR_RANKED_FALLBACK {
+                        to_check.clear();
+                    }
+                    to_check.insert(0, zero_index);
+                }
+            }
+            // A candidate that is a CTF flag (`picoCTF{...}`) goes first: only the right
+            // key puts the prefix and braces back together. A flag without a flag word in
+            // its prefix (`SEKAI{...}`) only counts if no other key gives a flag shape and
+            // the input didn't have one: otherwise the braces may just have landed there.
+            let flag_shaped: Vec<usize> = (0..decoded_strings.len())
+                .filter(|&i| is_ctf_flag_shaped(&decoded_strings[i]))
+                .collect();
+            let trusted_flag = flag_shaped
+                .iter()
+                .copied()
+                .find(|&i| is_marked_ctf_flag(&decoded_strings[i]))
+                .or_else(|| {
+                    (flag_shaped.len() == 1 && !is_ctf_flag_shaped(text)).then(|| flag_shaped[0])
+                });
+            to_check.retain(|index| !flag_shaped.contains(index));
+            if let Some(flag) = trusted_flag {
+                to_check.insert(0, flag);
+            }
+            let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
+            for index in to_check {
+                let checker_result = checker_with_sensitivity.check(&decoded_strings[index]);
+                if checker_result.is_identified {
+                    trace!("Found a match with railfence candidate {}", index);
+                    results.unencrypted_text = Some(vec![decoded_strings[index].clone()]);
                     results.update_checker(&checker_result);
                     return results;
                 }
@@ -90,6 +160,14 @@ impl Crack for Decoder<RailfenceDecoder> {
         self.link
     }
 }
+
+/// How much worse (in summed log10 bigram probability) the offset-0 candidate may be than
+/// a better candidate with the same number of rails and still be preferred. A rotation of
+/// the plaintext only differs in the letter pairs around the wrap.
+const NEAR_TIE: f64 = 4.0;
+
+/// See `crack`: below this many letters only the offset-0 candidate is checked on a near-tie.
+const MIN_LETTERS_FOR_RANKED_FALLBACK: usize = 20;
 
 /// Decodes a text encoded with the Rail Fence Cipher with the specified number of rails and offset
 ///
@@ -203,48 +281,49 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn railfence_decodes_successfully() {
-        // This tests if Railfence can decode Railfence successfully
-        // Key is 5 rails and 3 offset
+        // 5 rails, offset 3. Offset 0 with 5 rails ranks nearly as well (it is a near
+        // rotation), so it is checked first and rejected.
         let railfence_decoder_instance = Decoder::<RailfenceDecoder>::new();
         let input = "xcz n akt,emiol r gywShfbqajd op uuv";
-        let expected = "Sphinx of black quartz, judge my vow";
-
-        println!("Input text: {:?}", input);
-
-        // Try decoding with specific rails and offset to debug
-        let manual_decode = railfence_decoder(input, 5, 3);
-        println!("Manual decode with 5 rails, 3 offset: {:?}", manual_decode);
-
-        // Try other rail/offset combinations to see what works
-        for rails in 2..7 {
-            for offset in 0..5 {
-                let decoded = railfence_decoder(input, rails, offset);
-                println!(
-                    "Rails: {}, Offset: {}, Result: {:?}",
-                    rails, offset, decoded
-                );
-            }
-        }
-
+        assert_eq!(
+            railfence_decoder(input, 5, 3),
+            "Sphinx of black quartz, judge my vow"
+        );
         let result = railfence_decoder_instance.crack(input, &get_athena_checker());
+        assert!(result.success);
+        assert_eq!(
+            result.unencrypted_text.unwrap()[0],
+            "Sphinx of black quartz, judge my vow"
+        );
+    }
 
-        if let Some(decoded_texts) = &result.unencrypted_text {
-            println!("Number of decoded texts: {}", decoded_texts.len());
-            for (i, text) in decoded_texts.iter().enumerate() {
-                println!("Decoded text {}: {:?}", i, text);
-            }
+    #[test]
+    fn railfence_finds_flags_with_random_contents() {
+        let railfence_decoder_instance = Decoder::<RailfenceDecoder>::new();
+        // picoCTF{7e1b9e3a2f4d} on 3 rails
+        let flag = "picoCTF{7e1b9e3a2f4d}";
+        let chars: Vec<char> = flag.chars().collect();
+        let mut by_rail: Vec<(usize, usize)> = zigzag(3, 0).zip(0..).take(chars.len()).collect();
+        by_rail.sort();
+        let encoded: String = by_rail.iter().map(|&(_, i)| chars[i]).collect();
+        let result = railfence_decoder_instance.crack(&encoded, &get_athena_checker());
+        assert!(result.success, "{encoded}");
+        assert_eq!(result.unencrypted_text.unwrap()[0], flag);
+    }
 
-            if !decoded_texts.is_empty() {
-                println!("First decoded text: {:?}", decoded_texts[0]);
-                println!("Expected text: {:?}", expected);
-            }
-        } else {
-            println!("No decoded texts found");
-        }
-
-        assert_eq!(result.unencrypted_text.unwrap()[0], expected);
+    #[test]
+    fn railfence_prefers_offset_zero_over_a_rotation() {
+        // https://github.com/bee-san/Ciphey/issues/1031: wrong offsets with the right
+        // number of rails rank about as well as the plaintext
+        let railfence_decoder_instance = Decoder::<RailfenceDecoder>::new();
+        let result =
+            railfence_decoder_instance.crack("WECRLTEERDSOEEFEAOCAIVDEN", &get_athena_checker());
+        assert!(result.success);
+        assert_eq!(
+            result.unencrypted_text.unwrap()[0],
+            "WEAREDISCOVEREDFLEEATONCE"
+        );
     }
 
     #[test]

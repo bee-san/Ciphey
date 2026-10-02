@@ -2,7 +2,7 @@ use crate::checkers::checker_result::CheckResult;
 use crate::cli_pretty_printing::human_checker_check;
 use crate::config::get_config;
 use crate::storage::database;
-use crate::{cli_pretty_printing, timer};
+use crate::timer;
 use dashmap::DashSet;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
@@ -49,8 +49,6 @@ pub fn human_checker(input: &CheckResult) -> bool {
 
     let result = ask_once(input, prompt_user);
     timer::resume();
-
-    cli_pretty_printing::success(&format!("DEBUG: Human checker returning: {}", result));
     result
 }
 
@@ -65,9 +63,7 @@ fn ask_once(input: &CheckResult, ask: impl FnOnce(&CheckResult) -> bool) -> bool
     let _guard = match lock_result {
         Ok(guard) => guard,
         Err(poisoned) => {
-            cli_pretty_printing::warning(
-                "DEBUG: Prompt lock was poisoned; proceeding with recovered lock guard",
-            );
+            log::warn!("The human checker's prompt lock was poisoned; using it anyway");
             // Recover the inner guard even though the mutex is poisoned
             poisoned.into_inner()
         }
@@ -87,12 +83,9 @@ fn ask_once(input: &CheckResult, ask: impl FnOnce(&CheckResult) -> bool) -> bool
     }
 
     let result = ask(input);
-    // If the user confirmed, set the atomic boolean to true
+    // If the user confirmed, set the atomic boolean to true so future checks are skipped
     if result {
         HUMAN_CONFIRMED.store(true, Ordering::Release);
-        cli_pretty_printing::success(
-            "DEBUG: Human confirmed a result, future checks will be skipped",
-        );
     }
     // Lock is released here when _guard goes out of scope
     result
@@ -104,19 +97,12 @@ fn prompt_user(input: &CheckResult) -> bool {
     human_checker_check(&input.description, &input.text);
 
     let reply: String = read!("{}\n");
-    cli_pretty_printing::success(&format!("DEBUG: Human checker received reply: '{}'", reply));
     let result = reply.to_ascii_lowercase().starts_with('y');
 
     if !result {
-        let fd_result = database::insert_human_rejection(uuid::Uuid::new_v4(), &input.text, input);
-        match fd_result {
-            Ok(_) => (),
-            Err(e) => {
-                cli_pretty_printing::warning(&format!(
-                    "DEBUG: Failed to write human checker rejection due to error: {}",
-                    e
-                ));
-            }
+        if let Err(e) = database::insert_human_rejection(uuid::Uuid::new_v4(), &input.text, input) {
+            // This used to build a warning string and drop it, so nobody saw it
+            log::warn!("Could not save the rejected plaintext to the database: {e}");
         }
     }
     result
