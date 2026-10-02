@@ -49,6 +49,22 @@ input = "4d656574206d6520617420746865206f6c64206c69676874686f7573652061667465722
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# `hexdump` (util-linux 2.37.4): little-endian 16-bit words and no ASCII column
+kind = "single"
+name = "hexdump"
+layers = ["Hexdump"]
+input = '''
+0000000 654d 7465 6d20 2065 7461 7420 6568 6f20
+0000010 646c 6c20 6769 7468 6f68 7375 2065 6661
+0000020 6574 2072 696d 6e64 6769 7468 6120 646e
+0000030 6220 6972 676e 7420 6568 6d20 7061 202c
+0000040 6874 2065 656b 2079 6e61 2064 2061 6f74
+0000050 6372 2e68                              
+0000054
+'''
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 # Base64 of gzip.compress(text, mtime=0). Gzip reads the Base64 itself, so it is one step.
 kind = "single"
 name = "gzip"
@@ -370,6 +386,22 @@ kind = "multi"
 name = "hex_base32"
 layers = ["Hexadecimal", "Base32"]
 input = "GRSDMNJWGU3TIMRQGZSDMNJSGA3DCNZUGIYDONBWHA3DKMRQGZTDMYZWGQZDANTDGY4TMNZWHA3TINRYGZTDONJXGM3DKMRQGYYTMNRXGQ3DKNZSGIYDMZBWHE3DINTFGY4TMNZWHA3TIMRQGYYTMZJWGQZDANRSG4ZDMOJWMU3DOMRQG42DMOBWGUZDANTEGYYTOMBSMMZDANZUGY4DMNJSGA3GENRVG44TEMBWGE3GKNRUGIYDMMJSGA3TINTGG4ZDMMZWHAZGK==="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# `base64 -w0 | xxd`
+kind = "multi"
+name = "base64_hexdump"
+layers = ["Base64", "Hexdump"]
+input = '''
+00000000: 5457 566c 6443 4274 5a53 4268 6443 4230  TWVldCBtZSBhdCB0
+00000010: 6147 5567 6232 786b 4947 7870 5a32 6830  aGUgb2xkIGxpZ2h0
+00000020: 6147 3931 6332 5567 5957 5a30 5a58 4967  aG91c2UgYWZ0ZXIg
+00000030: 6257 6c6b 626d 6c6e 6148 5167 5957 356b  bWlkbmlnaHQgYW5k
+00000040: 4947 4a79 6157 356e 4948 526f 5a53 4274  IGJyaW5nIHRoZSBt
+00000050: 5958 4173 4948 526f 5a53 4272 5a58 6b67  YXAsIHRoZSBrZXkg
+00000060: 5957 356b 4947 4567 6447 3979 5932 6775  YW5kIGEgdG9yY2gu
+'''
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

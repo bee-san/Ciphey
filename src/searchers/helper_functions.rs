@@ -89,6 +89,7 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         "Ascii85",
         "Uuencode",
         "Hexadecimal",
+        "Hexdump",
         "Decimal",
         "Binary",
         "Octal",

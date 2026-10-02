@@ -17,6 +17,7 @@ use crate::decoders::baudot_decoder::BaudotDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::decimal_decoder::DecimalDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
+use crate::decoders::hexdump_decoder::HexdumpDecoder;
 use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
 use crate::DecoderResult;
@@ -263,6 +264,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let binary = Decoder::<BinaryDecoder>::new();
     let decimal = Decoder::<DecimalDecoder>::new();
     let hexadecimal = Decoder::<HexadecimalDecoder>::new();
+    let hexdump = Decoder::<HexdumpDecoder>::new();
     let octal = Decoder::<OctalDecoder>::new();
     let html_entity = Decoder::<HtmlEntityDecoder>::new();
     let base58_bitcoin = Decoder::<Base58BitcoinDecoder>::new();
@@ -338,6 +340,8 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // two decoders find the same plaintext the search reports the first one.
             Box::new(quoted_printable),
             Box::new(mime_encoded_word),
+            // Before Hexadecimal, which reads a dump's offsets and ASCII column as hex too
+            Box::new(hexdump),
             Box::new(hexadecimal),
             Box::new(octal),
             Box::new(html_entity),

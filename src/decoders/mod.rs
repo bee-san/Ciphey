@@ -33,6 +33,8 @@ pub mod binary_decoder;
 pub mod decimal_decoder;
 /// The hexadecimal_decoder module decodes hexadecimal
 pub mod hexadecimal_decoder;
+/// The hexdump_decoder module decodes the output of xxd, hexdump and od
+pub mod hexdump_decoder;
 /// The html_entity_decoder module decodes HTML entities
 pub mod html_entity_decoder;
 /// The octal_decoder module decodes octal
@@ -145,6 +147,7 @@ use baudot_decoder::BaudotDecoder;
 use binary_decoder::BinaryDecoder;
 use decimal_decoder::DecimalDecoder;
 use hexadecimal_decoder::HexadecimalDecoder;
+use hexdump_decoder::HexdumpDecoder;
 use html_entity_decoder::HtmlEntityDecoder;
 use interface::{Crack, Decoder};
 
@@ -218,6 +221,8 @@ pub enum DecoderType {
     DecimalDecoder(decimal_decoder::DecimalDecoder),
     /// hexadecimal decoder
     HexadecimalDecoder(hexadecimal_decoder::HexadecimalDecoder),
+    /// hexdump decoder
+    HexdumpDecoder(hexdump_decoder::HexdumpDecoder),
     /// octal decoder
     OctalDecoder(octal_decoder::OctalDecoder),
     /// HTML entity decoder
@@ -336,6 +341,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             "Hexadecimal",
             DecoderBox::new(Decoder::<HexadecimalDecoder>::new()),
         ),
+        ("Hexdump", DecoderBox::new(Decoder::<HexdumpDecoder>::new())),
         ("Octal", DecoderBox::new(Decoder::<OctalDecoder>::new())),
         (
             "HTML Entities",

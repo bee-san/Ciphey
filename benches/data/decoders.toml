@@ -443,6 +443,66 @@ success = true
 input = "43697068657920697320616e206175746f6d61746564206465636f64696e6720746f6f6c2e20596f75206769766520697420656e63727970746564206f7220656e636f646564207465787420616e6420697420747269657320746f20776f726b206f757420776861742077617320646f6e6520746f2069742c20776974686f757420796f7520686176696e6720746f206b6e6f7720746865206b6579206f72206576656e20746865206369706865722e204974207365617263686573207468726f756768206d616e7920706f737369626c65206465636f64696e67732c20636865636b7320656163682063616e64696461746520746f207365652077686574686572206974206c6f6f6b73206c696b6520456e676c697368206f72206d6174636865732061206b6e6f776e207061747465726e207375636820617320616e20656d61696c20616464726573732c20616e642073746f7073207768656e2069742066696e647320736f6d657468696e672074686174207265616473206c696b6520706c61696e746578742e204d6f7374206f66207468652074696d6520746869732074616b6573206c657373207468616e2061207365636f6e642c207768696368206d616b65732069742068616e647920666f7220636170747572652074686520666c6167206368616c6c656e6765732c2070757a7a6c652068756e747320616e6420666f7220616e796f6e652077686f207374756d626c6573206163726f7373206120737472616e676520737472696e6720696e2061206c6f672066696c652e"
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+# Hexdump: `xxd` of the plaintext (xxd 2026-06-16; `xxd -r` gives it back). TOML literal
+# strings keep the ASCII column as xxd wrote it, trailing spaces included.
+[[case]]
+decoder = "Hexdump"
+size = "medium"
+success = true
+input = '''
+00000000: 4d65 6574 206d 6520 6174 2074 6865 206f  Meet me at the o
+00000010: 6c64 206c 6967 6874 686f 7573 6520 6166  ld lighthouse af
+00000020: 7465 7220 6d69 646e 6967 6874 2061 6e64  ter midnight and
+00000030: 2062 7269 6e67 2074 6865 206d 6170 2c20   bring the map, 
+00000040: 7468 6520 6b65 7920 616e 6420 6120 746f  the key and a to
+00000050: 7263 682e                                rch.
+'''
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "Hexdump"
+size = "long"
+success = true
+input = '''
+00000000: 4369 7068 6579 2069 7320 616e 2061 7574  Ciphey is an aut
+00000010: 6f6d 6174 6564 2064 6563 6f64 696e 6720  omated decoding 
+00000020: 746f 6f6c 2e20 596f 7520 6769 7665 2069  tool. You give i
+00000030: 7420 656e 6372 7970 7465 6420 6f72 2065  t encrypted or e
+00000040: 6e63 6f64 6564 2074 6578 7420 616e 6420  ncoded text and 
+00000050: 6974 2074 7269 6573 2074 6f20 776f 726b  it tries to work
+00000060: 206f 7574 2077 6861 7420 7761 7320 646f   out what was do
+00000070: 6e65 2074 6f20 6974 2c20 7769 7468 6f75  ne to it, withou
+00000080: 7420 796f 7520 6861 7669 6e67 2074 6f20  t you having to 
+00000090: 6b6e 6f77 2074 6865 206b 6579 206f 7220  know the key or 
+000000a0: 6576 656e 2074 6865 2063 6970 6865 722e  even the cipher.
+000000b0: 2049 7420 7365 6172 6368 6573 2074 6872   It searches thr
+000000c0: 6f75 6768 206d 616e 7920 706f 7373 6962  ough many possib
+000000d0: 6c65 2064 6563 6f64 696e 6773 2c20 6368  le decodings, ch
+000000e0: 6563 6b73 2065 6163 6820 6361 6e64 6964  ecks each candid
+000000f0: 6174 6520 746f 2073 6565 2077 6865 7468  ate to see wheth
+00000100: 6572 2069 7420 6c6f 6f6b 7320 6c69 6b65  er it looks like
+00000110: 2045 6e67 6c69 7368 206f 7220 6d61 7463   English or matc
+00000120: 6865 7320 6120 6b6e 6f77 6e20 7061 7474  hes a known patt
+00000130: 6572 6e20 7375 6368 2061 7320 616e 2065  ern such as an e
+00000140: 6d61 696c 2061 6464 7265 7373 2c20 616e  mail address, an
+00000150: 6420 7374 6f70 7320 7768 656e 2069 7420  d stops when it 
+00000160: 6669 6e64 7320 736f 6d65 7468 696e 6720  finds something 
+00000170: 7468 6174 2072 6561 6473 206c 696b 6520  that reads like 
+00000180: 706c 6169 6e74 6578 742e 204d 6f73 7420  plaintext. Most 
+00000190: 6f66 2074 6865 2074 696d 6520 7468 6973  of the time this
+000001a0: 2074 616b 6573 206c 6573 7320 7468 616e   takes less than
+000001b0: 2061 2073 6563 6f6e 642c 2077 6869 6368   a second, which
+000001c0: 206d 616b 6573 2069 7420 6861 6e64 7920   makes it handy 
+000001d0: 666f 7220 6361 7074 7572 6520 7468 6520  for capture the 
+000001e0: 666c 6167 2063 6861 6c6c 656e 6765 732c  flag challenges,
+000001f0: 2070 757a 7a6c 6520 6875 6e74 7320 616e   puzzle hunts an
+00000200: 6420 666f 7220 616e 796f 6e65 2077 686f  d for anyone who
+00000210: 2073 7475 6d62 6c65 7320 6163 726f 7373   stumbles across
+00000220: 2061 2073 7472 616e 6765 2073 7472 696e   a strange strin
+00000230: 6720 696e 2061 206c 6f67 2066 696c 652e  g in a log file.
+'''
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
 # JWT: {"message": <plaintext>} signed HS256 with PyJWT 2.4.0 (secret
 # "your-256-bit-secret"); crack() returns the payload JSON as encoded.
 [[case]]
