@@ -10,7 +10,9 @@
 //! first, without decrypting anything: every key turns the ciphertext's letter pairs into
 //! some other letter pairs, and the keys that would produce the most English-looking pairs
 //! come first. Only the best few are decrypted and checked, with Low sensitivity for
-//! gibberish detection.
+//! gibberish detection. Ciphey runs every decoder on every text the search expands, so
+//! text that can't be English under any key (Base64 and its Caesar shifts, long runs of a
+//! few letters, letter pairs that no key makes English) is turned away before that.
 //! Reference: <https://en.wikipedia.org/wiki/Affine_cipher>
 
 use crate::checkers::CheckerTypes;
@@ -53,6 +55,13 @@ const MIN_LETTERS_FOR_DISTINCT_CHECK: usize = 100;
 /// Caesar shifts of Base64 of binary digits, can rank a key highly on a handful of
 /// repeated letter pairs, but no key turns them into English.
 const MIN_DISTINCT_LETTERS: usize = 12;
+
+/// Pre-check: with at least [`MIN_PAIRS_FOR_SCORE_GATE`] letter pairs, at most one pair in
+/// this many may be a lowercase letter followed by an uppercase one (`aB`). A key keeps
+/// each letter's case, and English almost never changes case inside a word: at most 1 pair
+/// in 11 in 4,480 windows of Project Gutenberg books and of Ciphey's docs, Rust identifiers
+/// included. Base64 and its Caesar and rot47 shifts do it about one pair in four.
+const MAX_LOWER_UPPER_PAIRS_ONE_IN: usize = 8;
 
 /// Gate: the fewest letter pairs for which [`MIN_MEAN_PAIR_LOG_PROB`] is applied. Fewer
 /// pairs give a noisier score, and short texts are cheap to check anyway.
@@ -227,16 +236,19 @@ fn keys() -> impl Iterator<Item = (u8, u8)> {
 /// Returns `None` unless `text` passes the pre-checks that reject what can't be affine
 /// ciphertext, such as hex, numbers and very short input, before any work is done:
 /// at least [`MIN_LETTERS`] ASCII letters, letters making up at least half of the
-/// non-whitespace characters, at least [`MIN_BIGRAMS`] letter pairs, and at least
+/// non-whitespace characters, at least [`MIN_BIGRAMS`] letter pairs, at least
 /// [`MIN_DISTINCT_LETTERS`] different letters once there are
-/// [`MIN_LETTERS_FOR_DISTINCT_CHECK`] letters.
+/// [`MIN_LETTERS_FOR_DISTINCT_CHECK`] letters, and few case changes inside words (see
+/// [`MAX_LOWER_UPPER_PAIRS_ONE_IN`]).
 fn ciphertext_bigrams(text: &str) -> Option<Vec<(usize, usize, f32)>> {
     let mut counts = [[0u32; 26]; 26];
     let mut letters = 0usize;
     let mut seen_letters = 0u32;
     let mut non_whitespace = 0usize;
     let mut pairs = 0usize;
+    let mut lower_upper_pairs = 0usize;
     let mut previous: Option<usize> = None;
+    let mut previous_lowercase = false;
 
     for c in text.chars() {
         if c.is_whitespace() {
@@ -251,9 +263,13 @@ fn ciphertext_bigrams(text: &str) -> Option<Vec<(usize, usize, f32)>> {
             if let Some(first) = previous {
                 counts[first][second] = counts[first][second].saturating_add(1);
                 pairs += 1;
+                if previous_lowercase && c.is_ascii_uppercase() {
+                    lower_upper_pairs += 1;
+                }
             }
         }
         previous = current;
+        previous_lowercase = c.is_ascii_lowercase();
     }
 
     if letters < MIN_LETTERS || letters * 2 < non_whitespace || pairs < MIN_BIGRAMS {
@@ -261,6 +277,11 @@ fn ciphertext_bigrams(text: &str) -> Option<Vec<(usize, usize, f32)>> {
     }
     if letters >= MIN_LETTERS_FOR_DISTINCT_CHECK
         && (seen_letters.count_ones() as usize) < MIN_DISTINCT_LETTERS
+    {
+        return None;
+    }
+    if pairs as f32 >= MIN_PAIRS_FOR_SCORE_GATE
+        && lower_upper_pairs * MAX_LOWER_UPPER_PAIRS_ONE_IN > pairs
     {
         return None;
     }
@@ -641,17 +662,16 @@ mod tests {
 
     #[test]
     fn score_gate_skips_text_no_key_turns_into_english() {
-        // Each has enough letter pairs for the gate, and the best key's decryption still
-        // doesn't read like English: nothing is decrypted or checked, nothing returned.
+        // Each passes the pre-checks with enough letter pairs for the gate, but the best
+        // key's decryption still doesn't read like English: nothing is decrypted or
+        // checked, and nothing is returned.
         let affine_decoder = Decoder::<AffineDecoder>::new();
         for text in [
             // Plain English is not an affine encryption of English: a = 1 is Caesar's
             "The quick brown fox jumps over the lazy dog",
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
-            // Base64 of "The quick brown fox jumps over the lazy dog"
-            "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw==",
-            // The decoder benchmarks' miss input (benches/data/decoders.toml)
-            "T00 l3= ox+#G WKyV pajU6j qxH@ %B4+a 5Pn^ 7p_v1q 9sLvu *+36i R5rL&3 mVJZI iO0 Ut8_m COTV",
+            // Base32 of "The quick brown fox jumps over the lazy dog"
+            "KRUGKIDROVUWG2ZAMJZG653OEBTG66BANJ2W24DTEBXXMZLSEB2GQZJANRQXU6JAMRXWO===",
         ] {
             let bigrams = ciphertext_bigrams(text).expect("passes the pre-checks");
             let pairs: f32 = bigrams.iter().map(|&(_, _, count)| count).sum();
@@ -662,6 +682,30 @@ mod tests {
             assert!(!result.success, "{text:?}");
             assert!(result.unencrypted_text.is_none(), "{text:?}");
         }
+    }
+
+    #[test]
+    fn mixed_case_text_is_rejected() {
+        let affine_decoder = Decoder::<AffineDecoder>::new();
+        for text in [
+            // Base64 of "The quick brown fox jumps over the lazy dog": 12 of 49 pairs are `aB`
+            "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw==",
+            // The decoder benchmarks' miss input (benches/data/decoders.toml): 7 of 23
+            "T00 l3= ox+#G WKyV pajU6j qxH@ %B4+a 5Pn^ 7p_v1q 9sLvu *+36i R5rL&3 mVJZI iO0 Ut8_m COTV",
+        ] {
+            assert!(ciphertext_bigrams(text).is_none(), "{text:?}");
+            let result = affine_decoder.crack(text, &get_athena_checker());
+            assert!(result.unencrypted_text.is_none(), "{text:?}");
+        }
+        // English with identifiers in it stays below one pair in eight (7 of 73 here)
+        let identifiers = encrypt(
+            "The CheckerTypes::CheckWaitAthena function returns a ThreadSafePriorityQueue of SearchNodes",
+            5,
+            8,
+        );
+        assert!(ciphertext_bigrams(&identifiers).is_some());
+        // Short texts aren't checked: too few pairs to tell
+        assert!(ciphertext_bigrams("aBcDeF gHiJ").is_some());
     }
 
     #[test]
