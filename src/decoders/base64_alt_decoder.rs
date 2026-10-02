@@ -366,10 +366,10 @@ fn decode_printable(engine: &GeneralPurpose, body: &[u8]) -> Option<String> {
     String::from_utf8(bytes).ok()
 }
 
-/// Whether the Base64 decoder already finds a candidate in `text`, so this decoder must not
-/// add the same one. Text ending in `-` is left to this decoder: `-` is y64's padding, and
-/// the Base64 decoder reads it as data (`aGVsbG8gd29ybGQ-` is `hello world>` to it and
-/// `hello world` in y64).
+/// Whether `text` (already trimmed) is standard or URL-safe Base64 that the Base64 decoder
+/// turns into UTF-8, so this decoder must not offer another reading of it. Text ending in
+/// `-` is left to this decoder: `-` is y64's padding, and the Base64 decoder reads it as
+/// data (`aGVsbG8gd29ybGQ-` is `hello world>` to it and `hello world` in y64).
 fn base64_decoder_finds(text: &str, scan: &Scan) -> bool {
     // Anything else would fail to decode
     let fits = scan.all & !STANDARD == 0 || scan.all & !URL_SAFE == 0;
