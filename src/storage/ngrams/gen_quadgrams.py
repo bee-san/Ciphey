@@ -16,7 +16,9 @@ lines) is dropped.
   ("ll", "re", "de"), which would let gibberish split into "words".
 
 Only the Python standard library is used. Downloaded books are kept in
---cache-dir, so a second run doesn't download them again.
+target/ciphey-gutenberg at the top of the repository (Cargo's build directory,
+which git ignores), so a second run doesn't download them again. The two files
+are written next to this script.
 
     python3 src/storage/ngrams/gen_quadgrams.py
 """
@@ -26,7 +28,6 @@ import collections
 import os
 import re
 import sys
-import tempfile
 import time
 import urllib.request
 
@@ -47,10 +48,16 @@ WORD = re.compile(r"[A-Z]+")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
+# Where downloaded books are kept: target/ciphey-gutenberg in the repository.
+# Fixed rather than a command-line option, so no file path comes from user input.
+CACHE_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(HERE))), "target", "ciphey-gutenberg"
+)
 
-def download(book_id, cache_dir):
+
+def download(book_id):
     """Returns the book's text, from the cache if it's there."""
-    path = os.path.join(cache_dir, "pg{}.txt".format(book_id))
+    path = os.path.join(CACHE_DIR, "pg{}.txt".format(book_id))
     if not os.path.exists(path):
         url = URL.format(id=book_id)
         print("downloading", url, file=sys.stderr)
@@ -143,16 +150,6 @@ def write_words(path, words, min_count):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
-        "--cache-dir",
-        default=os.path.join(tempfile.gettempdir(), "ciphey-gutenberg"),
-        help="where downloaded books are kept (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--output-dir",
-        default=HERE,
-        help="where the two files are written (default: %(default)s)",
-    )
-    parser.add_argument(
         "--min-quadgram-count",
         type=int,
         default=2,
@@ -165,12 +162,12 @@ def main():
         help="leave out words seen fewer times (default: %(default)s)",
     )
     args = parser.parse_args()
-    os.makedirs(args.cache_dir, exist_ok=True)
+    os.makedirs(CACHE_DIR, exist_ok=True)
 
     quadgrams = collections.Counter()
     words = collections.Counter()
     for book_id in BOOK_IDS:
-        text = body(book_id, download(book_id, args.cache_dir))
+        text = body(book_id, download(book_id))
         stream = letters(text)
         # Counted per book, so no quadgram spans two books
         quadgrams.update(stream[i : i + 4] for i in range(len(stream) - 3))
@@ -179,13 +176,11 @@ def main():
         words.update(WORD.findall(text.upper()))
 
     write_quadgrams(
-        os.path.join(args.output_dir, "english_quadgrams.txt"),
+        os.path.join(HERE, "english_quadgrams.txt"),
         quadgrams,
         args.min_quadgram_count,
     )
-    write_words(
-        os.path.join(args.output_dir, "english_words.txt"), words, args.min_word_count
-    )
+    write_words(os.path.join(HERE, "english_words.txt"), words, args.min_word_count)
 
 
 if __name__ == "__main__":
