@@ -92,7 +92,10 @@ EOF
     local pane_pid
     pane_pid=$(tmux -S "$sock" display-message -p -t rec '#{pane_pid}' 2>/dev/null || true)
     if [ -n "$pane_pid" ]; then
+      # The pane runs asciinema itself: kill what it recorded, then asciinema, which
+      # would otherwise outlive the tmux server
       kill_tree "$pane_pid"
+      kill -KILL "$pane_pid" 2>/dev/null || true
     fi
     tmux -S "$sock" kill-server 2>/dev/null || true
   }
