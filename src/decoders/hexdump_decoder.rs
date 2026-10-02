@@ -1,8 +1,9 @@
 //! Decode a hex dump back to the bytes that were dumped: the output of `xxd`,
-//! `hexdump -C`, `od -A x -t x1z`, `od -t x1`, and plain `hexdump` or `od -x`.
+//! `hexdump -C`, `od -A x -t x1z`, `od -t x1`, plain `hexdump` or `od -x`, and the octal
+//! dumps of plain `od` and `od -b`.
 //!
-//! Every line of a dump is an offset, a run of hex groups and an optional column of
-//! ASCII, which is ignored:
+//! Every line of a dump is an offset, a run of groups and an optional column of ASCII,
+//! which is ignored:
 //!
 //! * `xxd`: `00000000: 5370 6869 … 6b20  Sphinx of black `. Groups of 4 hex digits
 //!   (2 with `-g1`, 8 with `-g4`) in byte order; the last group of the dump can be
@@ -11,13 +12,17 @@
 //! * `od -A x -t x1z` and `od -t x1`: `000000 53 70 … 20  >Sphinx of black <`, or
 //!   `0000000 53 70 … 20` with octal (or, with `-A d`, decimal) offsets.
 //! * Plain `hexdump`, `hexdump -x`, `od -x` and `od -t x2`: `0000000 7053 6968 …`,
-//!   16-bit little-endian words, so `7053` is the bytes `53 70`. An odd trailing byte is
-//!   padded with `00`, which is dropped.
+//!   16-bit little-endian words, so `7053` is the bytes `53 70`.
+//! * `od -b` and `hexdump -b`: `0000000 123 160 150 …`, one byte per 3 octal digits.
+//! * Plain `od`, `od -o` and `hexdump -o`: `0000000 070123 064550 …`, 16-bit
+//!   little-endian words in 6 octal digits, so `070123` is `0x7053`, the bytes `53 70`.
 //!
-//! `hexdump` and `od` end with a line holding only the offset after the last byte.
-//! Offsets have to increase from line to line, and every line has as many bytes as the
-//! first except the last one. A `*` line, which stands for repeated lines that were
-//! left out, fails the decode.
+//! A dump of words pads an odd trailing byte with `00`, which is dropped. `hexdump` and
+//! `od` end with a line holding only the offset after the last byte. Offsets have to
+//! increase from line to line, and every line has as many bytes as the first except the
+//! last one. A `*` line, which stands for repeated lines that were left out, fails the
+//! decode. Line breaks at the end of dumped text are dropped, as `ciphey -f` drops them
+//! from a file.
 //!
 //! Call hexdump_decoder.crack to use. It returns a `CrackResult` whose `unencrypted_text`
 //! is `None` when the input isn't a hex dump.
@@ -74,7 +79,7 @@ impl Crack for Decoder<HexdumpDecoder> {
     fn new() -> Decoder<HexdumpDecoder> {
         Decoder {
             name: "Hexdump",
-            description: "The output of xxd, hexdump -C, od -t x1 and plain hexdump/od -x: an offset, hex bytes or 16-bit words, and an ASCII column that is ignored",
+            description: "The output of xxd, hexdump -C, od and plain hexdump: an offset, hex or octal bytes or 16-bit words, and an ASCII column that is ignored",
             link: "https://en.wikipedia.org/wiki/Hex_dump",
             tags: vec!["hexdump", "xxd", "hex", "decoder"],
             popularity: 0.5,
@@ -144,7 +149,8 @@ fn decode_hexdump(text: &str) -> Option<Vec<u8>> {
     let colon = text.as_bytes()[offset_digits] == b':';
 
     let mut bytes = Vec::with_capacity(text.len() / 3);
-    // Hex digits per group, set by the first group of the dump: 2, 4 or (xxd -g4) 8
+    // What the groups hold and how many digits each has, set by the first group of the dump
+    let mut format = None;
     let mut group_digits = 0;
     // Bytes on the first line. Every later line has as many, except the last data line.
     let mut line_bytes = 0;
@@ -210,14 +216,18 @@ fn decode_hexdump(text: &str) -> Option<Vec<u8>> {
                 .take_while(|byte| byte.is_ascii_hexdigit())
                 .count();
             let whole_token = rest.get(digits).is_none_or(|&byte| byte == b' ');
-            if group_digits == 0 {
-                // The first group of the dump sets the group width. 32-bit words without a
-                // colon (od -t x4) are out of scope; they are in host byte order.
-                if !whole_token || !(digits == 2 || digits == 4 || (colon && digits == 8)) {
-                    return None;
+            let group_format = match format {
+                Some(group_format) => group_format,
+                None => {
+                    // The first group of the dump sets the format
+                    let group_format = whole_token
+                        .then(|| Format::from_first_group(digits, colon))
+                        .flatten()?;
+                    format = Some(group_format);
+                    group_digits = digits;
+                    group_format
                 }
-                group_digits = digits;
-            }
+            };
             if !whole_token || digits != group_digits {
                 if !colon {
                     // Not a group, so the hex ends here and the rest of the line is ignored
@@ -230,19 +240,11 @@ fn decode_hexdump(text: &str) -> Option<Vec<u8>> {
             }
 
             let (group, after) = rest.split_at(digits);
-            only_binary_digits &= group.iter().all(|&digit| matches!(digit, b'0' | b'1'));
-            // Groups have an even number of digits, so nothing is left over
-            let (pairs, _) = group.as_chunks::<2>();
-            bytes.extend(
-                pairs
-                    .iter()
-                    .map(|&[high, low]| (hex_value(high) << 4) | hex_value(low)),
-            );
-            if !colon && group_digits == 4 {
-                // A little-endian 16-bit word: `7053` is the bytes `53 70`
-                let len = bytes.len();
-                bytes.swap(len - 2, len - 1);
+            // An octal group with a digit that isn't octal, or too big for its size
+            if !push_group(&mut bytes, group, group_format) {
+                return None;
             }
+            only_binary_digits &= group.iter().all(|&digit| matches!(digit, b'0' | b'1'));
             rest = after;
         }
 
@@ -258,14 +260,112 @@ fn decode_hexdump(text: &str) -> Option<Vec<u8>> {
         short_line_seen = short_group || on_line < line_bytes;
     }
 
-    if only_binary_digits {
+    let format = format?;
+    // Octal digits are 0 to 7, so text like `HAHA` (110 101 110 101) is all 0s and 1s
+    if only_binary_digits && !format.is_octal() {
         return None;
     }
-    if !colon && group_digits == 4 && bytes.last() == Some(&0) {
+    if format.is_words() && bytes.last() == Some(&0) {
         // The pad byte of a dump of an odd number of bytes
         bytes.pop();
     }
+    // A text file ends in a line break, which `ciphey -f` leaves out of a file it reads
+    // too, and which would stop Base64 inside the dump from decoding. Bytes that aren't
+    // UTF-8, like compressed data, are kept as they are.
+    if std::str::from_utf8(&bytes).is_ok() {
+        let end = bytes
+            .iter()
+            .rposition(|&byte| !matches!(byte, b'\n' | b'\r'))
+            .map_or(0, |last| last + 1);
+        bytes.truncate(end);
+    }
     (bytes.len() >= MIN_BYTES).then_some(bytes)
+}
+
+/// What the groups of a dump hold.
+#[derive(Clone, Copy, PartialEq)]
+enum Format {
+    /// Bytes in hex, in order, one or more per group: xxd, `hexdump -C`, `od -t x1`
+    HexBytes,
+    /// 16-bit little-endian words, 4 hex digits each: plain `hexdump`, `od -x`
+    HexWords,
+    /// Bytes, 3 octal digits each: `od -b`, `hexdump -b`
+    OctalBytes,
+    /// 16-bit little-endian words, 6 octal digits each: plain `od`, `hexdump -o`
+    OctalWords,
+}
+
+impl Format {
+    /// The format of a dump whose first group has `digits` digits. xxd (with a colon) only
+    /// writes hex bytes. 32-bit words without a colon (`od -t x4`) are out of scope: they
+    /// are in the byte order of the machine that wrote them.
+    fn from_first_group(digits: usize, colon: bool) -> Option<Format> {
+        match (digits, colon) {
+            (2 | 4 | 8, true) | (2, false) => Some(Format::HexBytes),
+            (4, false) => Some(Format::HexWords),
+            (3, false) => Some(Format::OctalBytes),
+            (6, false) => Some(Format::OctalWords),
+            _ => None,
+        }
+    }
+
+    /// Whether the groups are octal.
+    fn is_octal(self) -> bool {
+        matches!(self, Format::OctalBytes | Format::OctalWords)
+    }
+
+    /// Whether the groups are 16-bit words, whose last one is padded with a zero byte when
+    /// the dump has an odd number of bytes.
+    fn is_words(self) -> bool {
+        matches!(self, Format::HexWords | Format::OctalWords)
+    }
+}
+
+/// Appends the bytes `group`, a run of hex digits, stands for. Returns false when it is an
+/// octal group with a digit that isn't octal or a value too big for its size.
+fn push_group(bytes: &mut Vec<u8>, group: &[u8], format: Format) -> bool {
+    match format {
+        Format::HexBytes | Format::HexWords => {
+            // Groups have an even number of digits, so nothing is left over
+            let (pairs, _) = group.as_chunks::<2>();
+            bytes.extend(
+                pairs
+                    .iter()
+                    .map(|&[high, low]| (hex_value(high) << 4) | hex_value(low)),
+            );
+            if format == Format::HexWords {
+                // A little-endian 16-bit word: `7053` is the bytes `53 70`
+                let len = bytes.len();
+                bytes.swap(len - 2, len - 1);
+            }
+        }
+        Format::OctalBytes | Format::OctalWords => {
+            if !group.iter().all(|digit| (b'0'..=b'7').contains(digit)) {
+                return false;
+            }
+            let value = parse_digits(group, 8);
+            if format == Format::OctalBytes {
+                let Ok(byte) = u8::try_from(value) else {
+                    return false;
+                };
+                bytes.push(byte);
+            } else {
+                // `062510` is the word 0x6548, the bytes `48 65`
+                let Ok(word) = u16::try_from(value) else {
+                    return false;
+                };
+                bytes.extend(word.to_le_bytes());
+            }
+        }
+    }
+    true
+}
+
+/// The value of a run of at most 8 digits in base 16 or 8. Callers only pass digits.
+fn parse_digits(digits: &[u8], radix: u32) -> u32 {
+    digits.iter().fold(0, |value, &digit| {
+        value * radix + u32::from(hex_value(digit))
+    })
 }
 
 /// The cheap first check, which rejects almost every input that isn't a dump within its
@@ -291,9 +391,7 @@ fn split_offset(line: &[u8], digits: usize) -> Option<(u32, &[u8])> {
     {
         return None;
     }
-    let offset = offset.iter().fold(0, |value, &digit| {
-        (value << 4) | u32::from(hex_value(digit))
-    });
+    let offset = parse_digits(offset, 16);
     Some((offset, rest))
 }
 
@@ -466,6 +564,90 @@ mod tests {
 0000040 7620 776f 002e\n\
 0000045\n";
         assert_eq!(crack(dump).unwrap(), SPHINX);
+    }
+
+    #[test]
+    fn decodes_octal_bytes() {
+        // od -b and od -t o1
+        let dump = "\
+0000000 123 160 150 151 156 170 040 157 146 040 142 154 141 143 153 040\n\
+0000020 161 165 141 162 164 172 054 040 152 165 144 147 145 040 155 171\n\
+0000040 040 166 157 167 056\n\
+0000045\n";
+        assert_eq!(crack(dump).unwrap(), SPHINX);
+        // hexdump -b, which pads the last data line and ends in a hex offset
+        let dump = "\
+0000000 123 160 150 151 156 170 040 157 146 040 142 154 141 143 153 040\n\
+0000010 161 165 141 162 164 172 054 040 152 165 144 147 145 040 155 171\n\
+0000020 040 166 157 167 056                                            \n\
+0000025\n";
+        assert_eq!(crack(dump).unwrap(), SPHINX);
+        // od -A x -t o1z
+        let dump = "\
+000000 123 160 150 151 156 170 040 157 146 040 142 154 141 143 153 040  >Sphinx of black <\n\
+000010 161 165 141 162 164 172 054 040 152 165 144 147 145 040 155 171  >quartz, judge my<\n\
+000020 040 166 157 167 056                                              > vow.<\n\
+000025\n";
+        assert_eq!(crack(dump).unwrap(), SPHINX);
+    }
+
+    #[test]
+    fn decodes_octal_words() {
+        // Plain od (od -o, od -t o2): little-endian 16-bit words in octal, and a pad byte
+        let dump = "\
+0000000 070123 064550 074156 067440 020146 066142 061541 020153\n\
+0000020 072561 071141 075164 020054 072552 063544 020145 074555\n\
+0000040 073040 073557 000056\n\
+0000045\n";
+        assert_eq!(crack(dump).unwrap(), SPHINX);
+        // hexdump -o
+        let dump = "\
+0000000  070123  064550  074156  067440  020146  066142  061541  020153\n\
+0000010  072561  071141  075164  020054  072552  063544  020145  074555\n\
+0000020  073040  073557  000056                                        \n\
+0000025\n";
+        assert_eq!(crack(dump).unwrap(), SPHINX);
+    }
+
+    #[test]
+    fn decodes_the_internetwache_od_dump() {
+        // Internetwache CTF 2016, misc50 "The hidden message": plain `od -b` output of a
+        // Base64 string and its line break.
+        // https://raw.githubusercontent.com/internetwache/Internetwache-CTF-2016/master/tasks/misc50/task/README.txt
+        let dump = "\
+0000000 126 062 126 163 142 103 102 153 142 062 065 154 111 121 157 113\n\
+0000020 122 155 170 150 132 172 157 147 123 126 144 067 124 152 102 146\n\
+0000040 115 107 065 154 130 062 116 150 142 154 071 172 144 104 102 167\n\
+0000060 130 063 153 167 144 130 060 113 012\n\
+0000071";
+        assert_eq!(
+            crack(dump).unwrap(),
+            "V2VsbCBkb25lIQoKRmxhZzogSVd7TjBfMG5lX2Nhbl9zdDBwX3kwdX0K"
+        );
+    }
+
+    #[test]
+    fn drops_line_breaks_at_the_end_of_text() {
+        // `printf 'Hello, World!\r\n\n' | xxd`: as `ciphey -f` reads a file
+        let dump = "00000000: 4865 6c6c 6f2c 2057 6f72 6c64 210d 0a0a  Hello, World!...\n";
+        assert_eq!(crack(dump).unwrap(), "Hello, World!");
+        // Line breaks inside the text stay
+        let dump = "00000000: 4869 0a74 6865 7265 0a                   Hi.there.\n";
+        assert_eq!(crack(dump).unwrap(), "Hi\nthere");
+        // `echo hi | xxd` is only two bytes of text
+        assert_eq!(
+            crack("00000000: 6869 0a                                  hi.\n"),
+            None
+        );
+    }
+
+    #[test]
+    fn decodes_octal_text_of_only_zeros_and_ones() {
+        // `HAHA` is 110 101 110 101 in octal, which xxd -b's check mustn't reject
+        assert_eq!(
+            crack("0000000 110 101 110 101 041\n0000005\n").unwrap(),
+            "HAHA!"
+        );
     }
 
     #[test]
@@ -673,6 +855,20 @@ mod tests {
 0000040 776f7620 0000002e\n\
 0000045\n";
         assert_eq!(crack(dump), None);
+        // od -t o4
+        assert_eq!(
+            crack("0000000 15433062510 12710026157 14433071157 00000000041\n0000015\n"),
+            None
+        );
+        // od -d and od -t d1: decimal words and bytes
+        assert_eq!(
+            crack("0000000 25928 27756 11375 22304 29295 25708    33\n0000015\n"),
+            None
+        );
+        assert_eq!(
+            crack("0000000   72  101  108  108  111   44   32   87  111  114  108  100   33\n0000015\n"),
+            None
+        );
         // xxd -g3
         assert_eq!(
             crack("00000000: 537068 696e78 206f66 20626c 61636b 20  Sphinx of black \n"),
@@ -683,6 +879,17 @@ mod tests {
             crack("00000000: 537068696e78206f 6620626c61636b20  Sphinx of black \n"),
             None
         );
+    }
+
+    #[test]
+    fn fails_on_groups_that_are_not_octal() {
+        // 3- and 6-digit groups are octal, so a digit above 7 or a value too big fails
+        assert_eq!(crack("0000000 123 158 150 151\n0000004\n"), None);
+        assert_eq!(crack("0000000 123 400 150 151\n0000004\n"), None);
+        assert_eq!(crack("0000000 070123 200000 074156\n0000006\n"), None);
+        assert_eq!(crack("0000000 abc def 123\n0000003\n"), None);
+        // Numbers that only look like a dump
+        assert_eq!(crack("5551234 555 1234"), None);
     }
 
     #[test]
