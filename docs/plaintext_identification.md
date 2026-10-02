@@ -62,7 +62,7 @@ The checker works by:
 Caesar shifts, Atbash and Vigenère keep a flag's shape: ROT13 of `flag{this_is_the_flag}` is `synt{guvf_vf_gur_synt}`, which the pattern matches too. So:
 
 - A flag whose prefix is a shift or Atbash of a flag word (`synt`, `uozt`, `cvpbPGS`) is not a flag; the search goes on and finds the real one. A flag word is a prefix ending in `ctf` or `flag` (digits after it allowed), starting with `flag`, or one of `htb`, `thm`, `hackthebox`, `tryhackme`.
-- A flag without a flag word in its prefix (`SEKAI{...}`) can't be told apart from its own shifts. It is not taken as plaintext when it is the input itself, when Caesar, Atbash or Vigenère produced it, or when the input was already shaped like a flag; it is when another decoder produced it (Base64, hex, a railfence key that is the only one giving a flag shape). Use a crib (`-r 'SEKAI\{'`) for those.
+- A flag without a flag word in its prefix (`SEKAI{...}`) can't be told apart from its own shifts. Its contents may only be letters, digits and `_-!?.@$#&+'` (ROT47 junk is often flag-shaped), and it is not taken as plaintext when it is the input itself, when Caesar, Atbash or Vigenère produced it, or when the input was already shaped like a flag; it is when another decoder produced it (Base64, hex, a railfence key that is the only one giving a flag shape). Use a crib (`-r 'SEKAI\{'`) for those.
 - Caesar and railfence check a candidate that is a flag with a flag word first, since a flag's hex or random contents needn't make the right key rank best.
 
 This checker is particularly useful for identifying structured data that might not be natural language but is still valid plaintext.
@@ -72,6 +72,8 @@ A fork of LemmeKnow would let these rules live in its data instead: generating i
 ### JSON Checker
 
 The JSON checker (`src/checkers/json_checker.rs`) accepts a JSON object or array with at least one entry, such as `{"key": "value"}`. Bare values (`1`, `"x"`, `true`) are valid JSON too but say nothing, so they are rejected.
+
+Caesar, Atbash and Vigenère only change letters, so every key of theirs turns JSON into JSON. When their input is JSON they don't ask the checkers about their candidates (without a crib).
 
 ### English Checker
 
@@ -93,7 +95,7 @@ The thresholds were picked with `examples/plaintext_eval.rs` (the harness from [
 
 The English checker supports three sensitivity levels:
 
-- **Low Sensitivity**: Most strict classification, requires very high confidence to classify text as English. Used by Caesar, railfence, ROT47 and Vigenère. Caesar, railfence and ROT47 rank their candidates by letter-pair fitness and only check the best one (ROT47 checks shift 47 first); Vigenère only checks candidates whose words are at least 70% English words, because its key search optimises the letter statistics the other checks look at.
+- **Low Sensitivity**: Most strict classification, requires very high confidence to classify text as English. Used by Caesar, railfence, ROT47 and Vigenère. Caesar, railfence and ROT47 rank their candidates by letter-pair fitness and only check the best one (ROT47 checks shift 47 first); Vigenère only checks candidates with spaces whose words are at least 75% English words, or without spaces that have at least 85% of their letters inside known words, because its key search optimises the letter statistics the other checks look at. With a `--regex` crib all of them check every key in order, so the crib decides.
 
 - **Medium Sensitivity (Default)**: Balanced approach for general use, suitable for most applications. Used by most decoders in ciphey, and for the check of the input itself.
 

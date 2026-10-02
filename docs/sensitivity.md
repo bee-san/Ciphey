@@ -30,7 +30,7 @@ In ciphey, different decoders use different sensitivity levels based on their ch
 
 1. **Caesar, railfence and ROT47**: Use Low sensitivity because classical ciphers often produce text that can appear English-like even when the key is incorrect. They also rank all their candidates by letter-pair fitness and only check the best one (ROT47 checks shift 47, ROT47 itself, first), instead of returning the first candidate any check accepts.
 
-2. **Vigenère**: Uses Low sensitivity, and only checks a candidate with spaces if at least 70% of its words are English words. Its key search maximises letter-pair fitness, which is what the statistical checks reward, so wrong keys look English to them.
+2. **Vigenère**: Uses Low sensitivity, and only checks a candidate with spaces if at least 75% of its words are English words, or one without spaces if at least 85% of its letters are inside known words. Its key search maximises letter-pair fitness, which is what the statistical checks reward, so wrong keys look English to them.
 
 3. **Other Decoders**: Use Medium sensitivity by default, which provides a balanced approach for most types of encoded text. So does the check of the input itself.
 
