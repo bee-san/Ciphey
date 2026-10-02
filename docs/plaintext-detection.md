@@ -267,6 +267,8 @@ cargo bench --bench plaintext -- --dump=FILE       # every sample with every ver
 cargo bench --bench plaintext -- --check < FILE    # classify each line (\n, \t escaped)
 cargo bench --bench plaintext -- --vigenere-keys   # the Vigenère key-length study
 cargo bench --bench plaintext -- --no-captured     # leave out captured.tsv
+cargo bench --bench plaintext -- --checkers='^Athena'          # only some checkers
+cargo bench --bench plaintext -- --checkers=Athena@Medium --repeat=5  # run checks only
 cargo bench --bench plaintext -- --capture=FILE    # re-capture search candidates
 ```
 
@@ -322,7 +324,9 @@ text. Tune on train; held-out is the check that a change generalises.
 - **Per category**: recall of each positive category, false-positive rate of each negative
   one, acceptance of the informational ones.
 - **Time per check**: median, p99 and mean over samples, for negatives and positives
-  separately. Checks under 2 µs are repeated and averaged.
+  separately. Checks under 2 µs are repeated and averaged. On a busy machine, count
+  instructions instead: `perf stat -e instructions:u` on `--repeat=5` minus `--repeat=0`,
+  divided by five times the number of samples, is the mean cost of one check.
 - **What accepted negatives**: false positives by the checker and format that took them.
 - **Decoders**: `crack()` with Athena on the data set's plaintexts encrypted with Caesar,
   ROT47, Atbash, railfence and Vigenère: right, wrong plaintext, nothing.
@@ -360,7 +364,8 @@ few reversed texts (0.5%) and wrong railfence keys (0.3%). Other languages are a
 
 **Time per check** over all samples (median / p99 / mean): Athena@Medium 4.0 µs / 18 µs /
 4.5 µs, the English checker 0.8 µs / 13 µs / 1.5 µs, LemmeKnow 2.2 µs / 5.7 µs / 2.2 µs,
-JSON 18 ns, the password list 22 ns, code 270 ns.
+JSON 18 ns, the password list 22 ns, code 270 ns. In instructions per check: Athena@Medium
+42,600, English@Medium 14,800, LemmeKnow 25,800, code 3,200.
 
 **Decoders** (`crack()` with Athena), held-out split, right / wrong plaintext / nothing:
 Caesar 91% / 0.4% / 8%, ROT47 93% / 0.2% / 7%, Atbash 94% / 0% / 6%, railfence 85% / 1.3%

@@ -12,6 +12,8 @@
 //! cargo bench --bench plaintext -- --dump=FILE       # every sample with every verdict
 //! cargo bench --bench plaintext -- --vigenere-keys   # Vigenère key search by key length
 //! cargo bench --bench plaintext -- --no-captured     # leave out the captured candidates
+//! cargo bench --bench plaintext -- --checkers='^Athena'  # only some checkers
+//! cargo bench --bench plaintext -- --checkers=Athena@Medium --repeat=20  # for perf stat
 //! cargo bench --bench plaintext -- --capture=FILE    # re-capture search candidates
 //! ```
 //!
@@ -2030,6 +2032,11 @@ struct Args {
     dump: Option<String>,
     vigenere_keys: bool,
     no_captured: bool,
+    /// Only the checkers whose name matches.
+    checkers_filter: Option<regex::Regex>,
+    /// Check every sample this many times with the selected checkers and print nothing
+    /// else, for counting instructions with `perf stat`.
+    repeat: Option<u32>,
     /// A criterion-style filter given to every bench binary that doesn't select this one.
     filtered_out: bool,
 }
@@ -2050,6 +2057,8 @@ fn parse_args() -> Args {
         dump: None,
         vigenere_keys: false,
         no_captured: false,
+        checkers_filter: None,
+        repeat: None,
         filtered_out: false,
     };
     // Criterion options that take a value, which must not be read as a filter
@@ -2095,6 +2104,11 @@ fn parse_args() -> Args {
             "--dump" => args.dump = Some(value.to_string()),
             "--vigenere-keys" => args.vigenere_keys = true,
             "--no-captured" => args.no_captured = true,
+            "--checkers" => {
+                args.checkers_filter =
+                    Some(regex::Regex::new(value).expect("--checkers needs a valid regex"))
+            }
+            "--repeat" => args.repeat = Some(value.parse().expect("--repeat needs a number")),
             k if WITH_VALUE.contains(&k) => {
                 if value.is_empty() {
                     iter.next();
@@ -2182,10 +2196,37 @@ fn main() {
         return;
     }
 
+    let selected = |probes: Vec<Probe>| -> Vec<Probe> {
+        probes
+            .into_iter()
+            .filter(|p| {
+                args.checkers_filter
+                    .as_ref()
+                    .is_none_or(|filter| filter.is_match(&p.name))
+            })
+            .collect()
+    };
+    if let Some(times) = args.repeat {
+        let probes = selected(probes());
+        let started = Instant::now();
+        let mut hits = 0usize;
+        for _ in 0..times {
+            for probe in &probes {
+                hits += samples.iter().filter(|s| (probe.check)(&s.text)).count();
+            }
+        }
+        let checks = samples.len() * probes.len() * times as usize;
+        eprintln!(
+            "{checks} checks ({hits} accepted) in {:.2?}",
+            started.elapsed()
+        );
+        return;
+    }
+
     println!("# Plaintext-detection benchmark\n");
     report_overview(&samples, &tsv);
     if args.checkers {
-        let probes = probes();
+        let probes = selected(probes());
         let runs: Vec<Run> = probes
             .iter()
             .map(|p| run_probe(p, &samples, args.latency))
