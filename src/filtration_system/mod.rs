@@ -24,6 +24,7 @@ use crate::decoders::base58_ripple_decoder::Base58RippleDecoder;
 
 use crate::decoders::a1z26_decoder::A1Z26Decoder;
 use crate::decoders::affine_decoder::AffineDecoder;
+use crate::decoders::base64_alt_decoder::Base64AltDecoder;
 use crate::decoders::base64_decoder::Base64Decoder;
 use crate::decoders::base65536_decoder::Base65536Decoder;
 use crate::decoders::base85_decoder::Base85Decoder;
@@ -263,6 +264,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let base58_ripple = Decoder::<Base58RippleDecoder>::new();
     let base58_flickr = Decoder::<Base58FlickrDecoder>::new();
     let base64 = Decoder::<Base64Decoder>::new();
+    let base64_alt = Decoder::<Base64AltDecoder>::new();
     let base85 = Decoder::<Base85Decoder>::new();
     let base91 = Decoder::<Base91Decoder>::new();
     let base65536 = Decoder::<Base65536Decoder>::new();
@@ -303,6 +305,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(vigenere),
             Box::new(xor_repeating_key),
             Box::new(reversedecoder),
+            // Before Base64, and so before railfence and rot47 too: results found in the
+            // same step tie on checker class and cost and keep this order. The y64 reading
+            // of `aGVsbG8gd29ybGQ-` (`hello world`) has to beat Base64's `hello world>`.
+            Box::new(base64_alt),
             Box::new(base64),
             Box::new(base58_bitcoin),
             Box::new(base58_monero),

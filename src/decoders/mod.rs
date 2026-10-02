@@ -40,6 +40,8 @@ pub mod base58_ripple_decoder;
 /// The base58_flickr decoder module decodes base58 flickr
 pub mod base58_flickr_decoder;
 
+/// The base64_alt_decoder module decodes Base64 written with a non-standard alphabet
+pub mod base64_alt_decoder;
 /// The base64_decoder module decodes base64
 /// It is public as we use it in some tests.
 pub mod base64_decoder;
@@ -134,6 +136,7 @@ use interface::{Crack, Decoder};
 
 use a1z26_decoder::A1Z26Decoder;
 use affine_decoder::AffineDecoder;
+use base64_alt_decoder::Base64AltDecoder;
 use base64_decoder::Base64Decoder;
 use base65536_decoder::Base65536Decoder;
 use base85_decoder::Base85Decoder;
@@ -205,6 +208,8 @@ pub enum DecoderType {
     Base58FlickrDecoder(base58_flickr_decoder::Base58FlickrDecoder),
     /// base64 decoder
     Base64Decoder(base64_decoder::Base64Decoder),
+    /// base64 decoder for non-standard alphabets
+    Base64AltDecoder(base64_alt_decoder::Base64AltDecoder),
     /// base65536 decoder
     Base65536Decoder(base65536_decoder::Base65536Decoder),
     /// base85 (RFC 1924) decoder
@@ -323,6 +328,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<Base58FlickrDecoder>::new()),
         ),
         ("Base64", DecoderBox::new(Decoder::<Base64Decoder>::new())),
+        (
+            "Base64 Alt",
+            DecoderBox::new(Decoder::<Base64AltDecoder>::new()),
+        ),
         ("Base85", DecoderBox::new(Decoder::<Base85Decoder>::new())),
         ("Base91", DecoderBox::new(Decoder::<Base91Decoder>::new())),
         (

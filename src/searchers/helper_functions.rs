@@ -73,6 +73,7 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
     // twice in a row is cheap: its output has no NULs, so its first check rejects it.
     const STACKABLE: &[&str] = &[
         "Base64",
+        "Base64 Alt",
         "Base32",
         "Base36",
         "Base58 Bitcoin",

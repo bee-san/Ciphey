@@ -34,6 +34,14 @@ input = "Q2lwaGV5IGlzIGFuIGF1dG9tYXRlZCBkZWNvZGluZyB0b29sLiBZb3UgZ2l2ZSBpdCBlbmN
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
 [[case]]
+# Base64 with the crypt(3) / itoa64 alphabet (./0-9A-Za-z)
+kind = "single"
+name = "base64_itoa64"
+layers = ["Base64 Alt"]
+input = "HKJZR0/hNG/VR0/oO4IUPqlY64ldNqVoO4xpQqIUMKNoNL6UPKZYPaZbO5EUMKtY647mOKtb65FcNG/hML.g65FcNG/fNLYUMKtY642UR4xmMqUi"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "hexadecimal"
 layers = ["Hexadecimal"]
@@ -219,6 +227,14 @@ kind = "multi"
 name = "base64_x3"
 layers = ["Base64", "Base64", "Base64"]
 input = "VkZkV2JHUkRRblJhVTBKb1pFTkNNR0ZIVldkaU1uaHJTVWQ0Y0ZveWFEQmhSemt4WXpKVloxbFhXakJhV0VsbllsZHNhMkp0Ykc1aFNGRm5XVmMxYTBsSFNubGhWelZ1U1VoU2IxcFRRblJaV0VGelNVaFNiMXBUUW5KYVdHdG5XVmMxYTBsSFJXZGtSemw1V1RKbmRRPT0="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Standard Base64 of the Atom128 form of the plaintext
+kind = "multi"
+name = "base64_alt_base64"
+layers = ["Base64 Alt", "Base64"]
+input = "ZmlINjAyMTlMRDFYMDIxSk1JZ1crbHI1UElyQkxsWEpNSWNrbmxnV0tpTEpMalBXK2k2NSt4NnlNb2JXS2l1NVBJUXNNaXV5UG9BekxEMTlLai8zUG9BekxEMT1MajVXS2l1NVBJR1cwSWNzS2xXVg=="
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
