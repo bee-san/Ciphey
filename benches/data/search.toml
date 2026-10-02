@@ -93,6 +93,13 @@ expected = "Meet me at the old lighthouse after midnight and bring the map, the 
 
 [[case]]
 kind = "single"
+name = "base100"
+layers = ["Base100"]
+input = "👄👜👜👫🐗👤👜🐗👘👫🐗👫👟👜🐗👦👣👛🐗👣👠👞👟👫👟👦👬👪👜🐗👘👝👫👜👩🐗👤👠👛👥👠👞👟👫🐗👘👥👛🐗👙👩👠👥👞🐗👫👟👜🐗👤👘👧🐣🐗👫👟👜🐗👢👜👰🐗👘👥👛🐗👘🐗👫👦👩👚👟🐥"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
 name = "binary"
 layers = ["Binary"]
 input = "01001101 01100101 01100101 01110100 00100000 01101101 01100101 00100000 01100001 01110100 00100000 01110100 01101000 01100101 00100000 01101111 01101100 01100100 00100000 01101100 01101001 01100111 01101000 01110100 01101000 01101111 01110101 01110011 01100101 00100000 01100001 01100110 01110100 01100101 01110010 00100000 01101101 01101001 01100100 01101110 01101001 01100111 01101000 01110100 00100000 01100001 01101110 01100100 00100000 01100010 01110010 01101001 01101110 01100111 00100000 01110100 01101000 01100101 00100000 01101101 01100001 01110000 00101100 00100000 01110100 01101000 01100101 00100000 01101011 01100101 01111001 00100000 01100001 01101110 01100100 00100000 01100001 00100000 01110100 01101111 01110010 01100011 01101000 00101110"
@@ -271,6 +278,13 @@ name = "punycode_base64"
 layers = ["Punycode", "Base64"]
 input = "aGVsbG8ueG4tLW1sbGVyLWt2YS5leGFtcGxlLmNvbQ=="
 expected = "hello.müller.example.com"
+
+[[case]]
+kind = "multi"
+name = "base100_base64"
+layers = ["Base100", "Base64"]
+input = "8J+RhPCfkZzwn5Gc8J+Rq/CfkJfwn5Gk8J+RnPCfkJfwn5GY8J+Rq/CfkJfwn5Gr8J+Rn/CfkZzwn5CX8J+RpvCfkaPwn5Gb8J+Ql/CfkaPwn5Gg8J+RnvCfkZ/wn5Gr8J+Rn/Cfkabwn5Gs8J+RqvCfkZzwn5CX8J+RmPCfkZ3wn5Gr8J+RnPCfkanwn5CX8J+RpPCfkaDwn5Gb8J+RpfCfkaDwn5Ge8J+Rn/Cfkavwn5CX8J+RmPCfkaXwn5Gb8J+Ql/CfkZnwn5Gp8J+RoPCfkaXwn5Ge8J+Ql/Cfkavwn5Gf8J+RnPCfkJfwn5Gk8J+RmPCfkafwn5Cj8J+Ql/Cfkavwn5Gf8J+RnPCfkJfwn5Gi8J+RnPCfkbDwn5CX8J+RmPCfkaXwn5Gb8J+Ql/CfkZjwn5CX8J+Rq/Cfkabwn5Gp8J+RmvCfkZ/wn5Cl"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
 kind = "multi"

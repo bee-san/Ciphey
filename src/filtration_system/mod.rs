@@ -24,6 +24,7 @@ use crate::decoders::base58_ripple_decoder::Base58RippleDecoder;
 
 use crate::decoders::a1z26_decoder::A1Z26Decoder;
 use crate::decoders::affine_decoder::AffineDecoder;
+use crate::decoders::base100_decoder::Base100Decoder;
 use crate::decoders::base64_alt_decoder::Base64AltDecoder;
 use crate::decoders::base64_decoder::Base64Decoder;
 use crate::decoders::base65536_decoder::Base65536Decoder;
@@ -268,6 +269,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let base85 = Decoder::<Base85Decoder>::new();
     let base91 = Decoder::<Base91Decoder>::new();
     let base65536 = Decoder::<Base65536Decoder>::new();
+    let base100 = Decoder::<Base100Decoder>::new();
     let citrix_ctx1 = Decoder::<CitrixCTX1Decoder>::new();
     let url = Decoder::<URLDecoder>::new();
     let punycode = Decoder::<PunycodeDecoder>::new();
@@ -317,6 +319,9 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(base91),
             Box::new(base85),
             Box::new(base65536),
+            // Before rot47, which reads each emoji as its low byte and so turns Base100 of
+            // printable ASCII back into the ASCII with a shift of 9
+            Box::new(base100),
             Box::new(binary),
             // Before Hexadecimal, which skips the `=` in `=48=65` and decodes it too: when
             // two decoders find the same plaintext the search reports the first one.
