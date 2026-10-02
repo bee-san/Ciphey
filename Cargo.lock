@@ -601,6 +601,7 @@ dependencies = [
  "half",
  "html-escape",
  "human-panic",
+ "idna",
  "include_dir",
  "lazy-regex",
  "lazy_static",

@@ -105,6 +105,15 @@ input = "Meet%20me%20at%20the%20old%20lighthouse%20after%20midnight%20and%20brin
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# An IDNA domain: Python's "hello.müller.example.com".encode("idna"). The standard
+# plaintext has no non-ASCII character for Punycode to encode.
+kind = "single"
+name = "punycode"
+layers = ["Punycode"]
+input = "hello.xn--mller-kva.example.com"
+expected = "hello.müller.example.com"
+
+[[case]]
 kind = "single"
 name = "unicode_escapes"
 layers = ["Unicode Escapes"]
@@ -232,6 +241,13 @@ name = "url_base64"
 layers = ["URL", "Base64"]
 input = "TWVldCUyMG1lJTIwYXQlMjB0aGUlMjBvbGQlMjBsaWdodGhvdXNlJTIwYWZ0ZXIlMjBtaWRuaWdodCUyMGFuZCUyMGJyaW5nJTIwdGhlJTIwbWFwJTJDJTIwdGhlJTIwa2V5JTIwYW5kJTIwYSUyMHRvcmNoLg=="
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "punycode_base64"
+layers = ["Punycode", "Base64"]
+input = "aGVsbG8ueG4tLW1sbGVyLWt2YS5leGFtcGxlLmNvbQ=="
+expected = "hello.müller.example.com"
 
 [[case]]
 kind = "multi"

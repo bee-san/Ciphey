@@ -56,6 +56,8 @@ pub mod crack_results;
 pub mod gzip_decoder;
 /// The jwt_decoder module decodes JSON Web Tokens (JWT)
 pub mod jwt_decoder;
+/// The punycode_decoder module decodes Punycode and IDNA `xn--` labels
+pub mod punycode_decoder;
 /// The quoted_printable_decoder module decodes Quoted-Printable (RFC 2045)
 pub mod quoted_printable_decoder;
 /// The unicode_escape_decoder module decodes Unicode escapes like `\u00e9`, `%u00E9` and `U+00E9`
@@ -141,6 +143,7 @@ use jwt_decoder::JwtDecoder;
 use monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use morse_code::MorseCodeDecoder;
 use octal_decoder::OctalDecoder;
+use punycode_decoder::PunycodeDecoder;
 use quoted_printable_decoder::QuotedPrintableDecoder;
 use railfence_decoder::RailfenceDecoder;
 use reverse_decoder::ReverseDecoder;
@@ -211,6 +214,8 @@ pub enum DecoderType {
     GzipDecoder(gzip_decoder::GzipDecoder),
     /// url decoder
     UrlDecoder(url_decoder::URLDecoder),
+    /// punycode decoder
+    PunycodeDecoder(punycode_decoder::PunycodeDecoder),
     /// unicode escape decoder
     UnicodeEscapeDecoder(unicode_escape_decoder::UnicodeEscapeDecoder),
     /// quoted-printable decoder
@@ -326,6 +331,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ("JWT", DecoderBox::new(Decoder::<JwtDecoder>::new())),
         ("Gzip", DecoderBox::new(Decoder::<GzipDecoder>::new())),
         ("URL", DecoderBox::new(Decoder::<URLDecoder>::new())),
+        (
+            "Punycode",
+            DecoderBox::new(Decoder::<PunycodeDecoder>::new()),
+        ),
         (
             "Unicode Escapes",
             DecoderBox::new(Decoder::<UnicodeEscapeDecoder>::new()),

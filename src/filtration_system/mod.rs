@@ -36,6 +36,7 @@ use crate::decoders::interface::{Crack, Decoder};
 use crate::decoders::jwt_decoder::JwtDecoder;
 use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
+use crate::decoders::punycode_decoder::PunycodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
 use crate::decoders::reverse_decoder::ReverseDecoder;
@@ -266,6 +267,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let base65536 = Decoder::<Base65536Decoder>::new();
     let citrix_ctx1 = Decoder::<CitrixCTX1Decoder>::new();
     let url = Decoder::<URLDecoder>::new();
+    let punycode = Decoder::<PunycodeDecoder>::new();
     let unicode_escape = Decoder::<UnicodeEscapeDecoder>::new();
     let quoted_printable = Decoder::<QuotedPrintableDecoder>::new();
     let utf16 = Decoder::<Utf16Decoder>::new();
@@ -331,6 +333,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(railfencedecoder),
             Box::new(citrix_ctx1),
             Box::new(url),
+            Box::new(punycode),
             Box::new(unicode_escape),
             Box::new(utf16),
             Box::new(rot47decoder),
