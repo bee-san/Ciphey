@@ -9,6 +9,7 @@ use crate::decoders::a1z26_decoder::A1Z26Decoder;
 use crate::decoders::affine_decoder::AffineDecoder;
 use crate::decoders::ascii85_decoder::Ascii85Decoder;
 use crate::decoders::atbash_decoder::AtbashDecoder;
+use crate::decoders::backslash_escape_decoder::BackslashEscapeDecoder;
 use crate::decoders::baconian_decoder::BaconianDecoder;
 use crate::decoders::base100_decoder::Base100Decoder;
 use crate::decoders::base32_decoder::Base32Decoder;
@@ -22,6 +23,7 @@ use crate::decoders::base64_decoder::Base64Decoder;
 use crate::decoders::base65536_decoder::Base65536Decoder;
 use crate::decoders::base85_decoder::Base85Decoder;
 use crate::decoders::base91_decoder::Base91Decoder;
+use crate::decoders::base92_decoder::Base92Decoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::braille_decoder::BrailleDecoder;
 use crate::decoders::brainfuck_interpreter::BrainfuckInterpreter;
@@ -32,6 +34,7 @@ use crate::decoders::gzip_decoder::GzipDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
 use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
 use crate::decoders::jwt_decoder::JwtDecoder;
+use crate::decoders::mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
@@ -113,6 +116,15 @@ decoder_functions! {
     /// assert_eq!(decoded.plaintext().unwrap().text, "hello world");
     /// ```
     atbash: AtbashDecoder, aliases [], key None;
+
+    /// Decodes backslash escapes as C, Python and JavaScript string literals write them:
+    /// `\110`, `\x48`, `\n` and so on. Escapes stand for bytes, read as UTF-8.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::backslash_escapes(r"\x68\x65\x6c\x6c\x6f\x20\x77\x6f\x72\x6c\x64");
+    /// assert_eq!(decoded.candidates[0].text, "hello world");
+    /// ```
+    backslash_escapes: BackslashEscapeDecoder, aliases ["backslash_escape", "string_escapes"], key None;
 
     /// Decodes Bacon's cipher: five A/B symbols per letter, which can be any two
     /// characters or hidden in the letter case of a cover text. The key says which
@@ -230,6 +242,14 @@ decoder_functions! {
     /// ```
     base91: Base91Decoder, aliases [], key None;
 
+    /// Decodes Base92.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::base92("Fc_$aOTdKnsM*k");
+    /// assert_eq!(decoded.candidates[0].text, "hello world");
+    /// ```
+    base92: Base92Decoder, aliases [], key None;
+
     /// Decodes character codes written in binary, trying every code length from 1 to 24
     /// bits.
     ///
@@ -327,6 +347,15 @@ decoder_functions! {
     /// assert_eq!(payload.key.as_deref(), Some(r#"{"alg":"HS256","typ":"JWT"}"#));
     /// ```
     jwt: JwtDecoder, aliases ["json_web_token"], key None;
+
+    /// Decodes MIME encoded-words (RFC 2047), the `=?charset?B?...?=` and
+    /// `=?charset?Q?...?=` of email headers.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::mime_encoded_word("=?utf-8?b?Q2Fmw6kgb2zDqSDigJMgcsOpc3Vtw6k=?=");
+    /// assert_eq!(decoded.candidates[0].text, "Café olé – résumé");
+    /// ```
+    mime_encoded_word: MimeEncodedWordDecoder, aliases ["rfc2047", "encoded_word"], key None;
 
     /// Cracks monoalphabetic substitution, where any permutation of the alphabet is the
     /// key (cryptograms, Aristocrats, Patristocrats). It needs at least 60 letters. The key

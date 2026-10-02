@@ -188,6 +188,14 @@ fn atbash_decodes() {
 }
 
 #[test]
+fn backslash_escapes_decode() {
+    assert_plaintext(
+        &backslash_escapes(r"\124\150\145 \x71\x75\x69\x63\x6b brown fox"),
+        "The quick brown fox",
+    );
+}
+
+#[test]
 fn baconian_decodes() {
     let decoded = baconian("10001 00100 00010 10000 00100 10010");
     assert_plaintext(&decoded, "SECRET");
@@ -272,6 +280,11 @@ fn base91_decodes() {
 }
 
 #[test]
+fn base92_decodes() {
+    assert_plaintext(&base92("Fc_$aOTdKnsM*k"), "hello world");
+}
+
+#[test]
 fn binary_decodes() {
     assert_plaintext(
         &binary("01010011011100000110100001101001011011100111100000100000011011110110011000100000011000100110110001100001011000110110101100100000011100010111010101100001011100100111010001111010"),
@@ -349,6 +362,18 @@ fn jwt_decodes() {
     let detection = decoded.candidates[0].detection.as_ref().unwrap();
     assert_eq!(detection.checker, CheckerKind::JwtStructure);
     assert_eq!(detection.description, "JSON Web Token");
+}
+
+#[test]
+fn mime_encoded_word_decodes() {
+    assert_first(
+        &mime_encoded_word("=?utf-8?b?Q2Fmw6kgb2zDqSDigJMgcsOpc3Vtw6k=?="),
+        "Café olé – résumé",
+    );
+    assert_first(
+        &mime_encoded_word("=?ISO-8859-1?Q?Gr=FC=DFe_aus_K=F6ln?="),
+        "Grüße aus Köln",
+    );
 }
 
 #[test]
