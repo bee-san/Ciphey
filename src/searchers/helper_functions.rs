@@ -234,7 +234,11 @@ pub fn generate_heuristic(
 /// A string is considered undecodeble if:
 /// - It has 2 or fewer characters
 /// - It has more than 30% non-printable characters
-/// - Its overall quality score is below 0.2
+///
+/// Length is not held against it. This used to also require a
+/// [`calculate_string_quality`] of 0.2, which past the two checks above only fails for
+/// text of 821 to 5,000 characters (the length score drops below 0.2 at 821 characters,
+/// and text over 5,000 gets 0.3), so a correct answer that long was always rejected.
 ///
 /// ## Rationale
 ///
@@ -242,7 +246,6 @@ pub fn generate_heuristic(
 /// 2. LemmeKnow and other pattern matchers perform poorly on very short strings
 /// 3. Most encoding schemes produce output of at least 3 characters
 /// 4. Strings with high percentages of non-printable characters are unlikely to be valid encodings
-/// 5. Very low quality strings waste computational resources and rarely yield useful results
 ///
 /// Filtering out these strings early saves computational resources and
 /// prevents the search from exploring unproductive paths.
@@ -255,12 +258,6 @@ pub fn check_if_string_cant_be_decoded(text: &str) -> bool {
     // Check for strings with high non-printable character ratio
     let non_printable_ratio = calculate_non_printable_ratio(text);
     if non_printable_ratio > 0.3 {
-        return true;
-    }
-
-    // Check for overall string quality
-    let quality = calculate_string_quality(text);
-    if quality < 0.2 {
         return true;
     }
 
@@ -330,6 +327,20 @@ mod tests {
         let all_invisible = "\u{0}\u{0}\u{0}\u{0}\u{0}";
         let all_invisible_quality = calculate_string_quality(all_invisible);
         assert_eq!(all_invisible_quality, 0.0);
+    }
+
+    #[test]
+    fn long_text_can_be_a_result() {
+        // The quality check used to reject every text of 821 to 5,000 characters
+        let sentence = "The quick brown fox jumps over the lazy dog. ";
+        for repeats in [17, 19, 25, 60, 110, 120] {
+            let text = sentence.repeat(repeats);
+            assert!(
+                !check_if_string_cant_be_decoded(&text),
+                "{} chars",
+                text.len()
+            );
+        }
     }
 
     #[test]
