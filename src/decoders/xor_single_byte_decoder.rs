@@ -449,14 +449,20 @@ fn is_encoded_layer(text: &str) -> bool {
 }
 
 /// The bytes behind text an earlier decoder made from raw bytes, which shows as control
-/// characters or U+0080 to U+00FF. Other text has no raw view.
+/// characters or Latin-1 symbols (U+0080 to U+00BF, `×` and `÷`). Other text has no raw
+/// view, including text whose only non-ASCII characters are accented letters: that is
+/// usually just text, such as French. English XORed with a key of 0x80 or more always has
+/// one of those characters, for its spaces or for its letters: a space becomes U+0080 to
+/// U+00BF for keys 0x80 to 0xBF, and the letters do for keys 0xC0 to 0xFF.
 ///
 /// When every character is at most U+00FF the bytes are its Latin-1 values. If some of
 /// those are 0x80 or more, the UTF-8 encoding is tried too: the Hexadecimal decoder turns
 /// bytes that happen to be valid UTF-8 into the characters they encode, not into Latin-1.
 fn raw_views(text: &str) -> Vec<Vec<u8>> {
     let carries_bytes = text.chars().any(|c| {
-        (c.is_control() && !matches!(c, '\t' | '\n' | '\r')) || ('\u{80}'..='\u{ff}').contains(&c)
+        (c.is_control() && !matches!(c, '\t' | '\n' | '\r'))
+            || ('\u{80}'..='\u{bf}').contains(&c)
+            || matches!(c, '×' | '÷')
     });
     if !carries_bytes {
         return Vec::new();
@@ -516,8 +522,8 @@ mod tests {
     /// Base64 of the hex of "Meet me at the old lighthouse"
     const BASE64_OF_HEX: &str =
         "NGQ2NTY1NzQyMDZkNjUyMDYxNzQyMDc0Njg2NTIwNmY2YzY0MjA2YzY5Njc2ODc0Njg2Zjc1NzM2NQ==";
-    /// A few accented letters repeated, which XOR (as Latin-1 bytes) to letter soup
-    const ACCENTED_SOUP: &str = "éèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüç";
+    /// A few Latin-1 symbols repeated, which XOR (as Latin-1 bytes) to letter soup
+    const SYMBOL_SOUP: &str = "¥¤£¢¡¥¤£¢¡¥¤£¢¡¥¤£¢¡¥¤£¢¡¥¤£¢¡";
 
     /// The checker the search uses
     fn get_athena_checker() -> CheckerTypes {
@@ -735,9 +741,8 @@ mod tests {
 
     #[test]
     fn at_most_five_candidates_are_checked() {
-        // Repeated accented letters, read as Latin-1, XOR to dozens of strings of common
-        // letters
-        let soup = ACCENTED_SOUP;
+        // Repeated Latin-1 symbols XOR to dozens of strings of common letters
+        let soup = SYMBOL_SOUP;
         let latin1: Vec<u8> = soup.chars().map(|c| u32::from(c) as u8).collect();
         assert!(crack_bytes(&latin1).len() > MAX_CHECKED);
 
@@ -832,13 +837,35 @@ mod tests {
 
     #[test]
     fn letter_soup_is_not_handed_to_the_search() {
-        // Repeated accented letters, read as Latin-1 bytes, XOR to strings of common
-        // letters that score like English but have no spaces and aren't Base64 or hex of
-        // anything. They are checked, and rejected, but none may become a search node.
-        assert!(!best_candidates(ACCENTED_SOUP).is_empty());
-        let result = crack(ACCENTED_SOUP);
+        // Repeated Latin-1 symbols, read as bytes, XOR to strings of common letters that
+        // score like English but have no spaces and aren't Base64 or hex of anything. They
+        // are checked, and rejected, but none may become a search node.
+        assert!(!best_candidates(SYMBOL_SOUP).is_empty());
+        let result = crack(SYMBOL_SOUP);
         assert!(!result.success, "{result:?}");
         assert!(result.unencrypted_text.is_none(), "{result:?}");
+    }
+
+    #[test]
+    fn accented_text_has_no_raw_view() {
+        // Accented letters alone are text, not bytes from an earlier decoder. Reading them
+        // as bytes made every such node cost five checks; the search suite's
+        // `unicode_exhausts` input is 48 of them.
+        for text in [
+            "éèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüç",
+            "Où est la bibliothèque ? Déjà vu, garçon, à bientôt",
+        ] {
+            assert!(raw_views(text).is_empty(), "{text:?}");
+            assert!(best_candidates(text).is_empty(), "{text:?}");
+            assert!(crack(text).unencrypted_text.is_none(), "{text:?}");
+        }
+        // English XORed with any key of 0x80 or more has a Latin-1 symbol or a C1 control
+        // character, for its spaces (keys 0x80 to 0xBF) or for its letters (0xC0 to 0xFF),
+        // so it still has a raw view
+        for key in 0x80..=u8::MAX {
+            let latin1: String = FOX.bytes().map(|byte| char::from(byte ^ key)).collect();
+            assert!(!raw_views(&latin1).is_empty(), "key {key:#04x}");
+        }
     }
 
     #[test]
@@ -927,9 +954,11 @@ mod tests {
         // No byte-carrier characters: no view
         assert!(raw_views(FOX).is_empty());
         assert!(raw_views("日本語のテキストです、こんにちは").is_empty());
+        // Accented letters alone are text too
+        assert!(raw_views("café au lait, s'il vous plaît").is_empty());
         // Latin-1 only: one view, two if a byte is 0x80 or more
         assert_eq!(raw_views(SPHINX_RAW).len(), 1);
-        assert_eq!(raw_views("café au lait, s'il vous plaît").len(), 2);
+        assert_eq!(raw_views("café au lait ¤ 2 ± 1, s'il vous plaît").len(), 2);
         // Wider characters: the UTF-8 bytes
         assert_eq!(
             raw_views("ctrl\u{1}日本語").first().map(Vec::as_slice),
