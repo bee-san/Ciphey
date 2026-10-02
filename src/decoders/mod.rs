@@ -7,10 +7,10 @@
 
 /// The a1z26_decoder module decodes A1Z26
 pub mod a1z26_decoder;
-/// The ascii85_decoder module decodes Ascii85 (Adobe / btoa Base85)
-pub mod ascii85_decoder;
 /// The affine_decoder module cracks the affine cipher
 pub mod affine_decoder;
+/// The ascii85_decoder module decodes Ascii85 (Adobe / btoa Base85)
+pub mod ascii85_decoder;
 /// The atbash_decoder module decodes atbash
 pub mod atbash_decoder;
 /// The baconian_decoder module decodes Bacon's cipher
