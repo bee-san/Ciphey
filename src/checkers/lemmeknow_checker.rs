@@ -2,8 +2,6 @@ use super::checker_type::{Check, Checker};
 use crate::checkers::checker_result::CheckResult;
 use gibberish_or_not::Sensitivity;
 use lemmeknow::{Data, Identifier};
-use once_cell::sync::Lazy;
-use regex::Regex;
 
 /// The LemmeKnow Checker checks if the text matches a known Regex pattern.
 /// This is the struct for it.
@@ -44,18 +42,34 @@ const URL: &str = "Uniform Resource Locator (URL)";
 /// Shown for the generic CTF flag pattern; the same name as LemmeKnow's own flag pattern.
 const CTF_FLAG: &str = "Capture The Flag (CTF) Flag";
 
-/// A flag in any CTF's format, such as `picoCTF{...}` or `DUCTF{...}`. LemmeKnow only
-/// knows `flag{}`, `ctf{}`, `htb{}` and `thm{}`.
-static CTF_FLAG_PATTERN: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^[A-Za-z][A-Za-z0-9_]{1,19}\{[^{}\n]{1,200}\}$").expect("valid flag regex")
-});
+/// Whether `text` is a flag in any CTF's format, such as `picoCTF{...}` or `DUCTF{...}`:
+/// `^[A-Za-z][A-Za-z0-9_]{1,19}\{[^{}\n]{1,200}\}$`. LemmeKnow only knows `flag{}`,
+/// `ctf{}`, `htb{}` and `thm{}`.
+///
+/// Written out by hand because the regex crate compiles a bounded repeat of a Unicode
+/// class like `[^{}\n]{1,200}` into hundreds of states, which took longer than the rest of
+/// a short search.
+fn matches_flag_pattern(text: &str) -> bool {
+    let Some((prefix, rest)) = text.split_once('{') else {
+        return false;
+    };
+    let Some(contents) = rest.strip_suffix('}') else {
+        return false;
+    };
+    let mut prefix_chars = prefix.chars();
+    prefix_chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+        && (2..=20).contains(&prefix.len())
+        && prefix_chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+        && !contents.contains(['{', '}', '\n'])
+        && (1..=200).contains(&contents.chars().count())
+}
 
 /// Flag prefixes that are a flag word on their own (lower case).
 const FLAG_PREFIXES: [&str; 5] = ["htb", "thm", "hackthebox", "tryhackme", "flag"];
 
 /// Whether `text` is shaped like a CTF flag, `prefix{...}`, whatever its prefix.
 pub fn is_ctf_flag_shaped(text: &str) -> bool {
-    CTF_FLAG_PATTERN.is_match(text.trim())
+    matches_flag_pattern(text.trim())
 }
 
 /// Whether `text` is shaped like a CTF flag, `prefix{...}`, and its prefix has a flag word,
@@ -63,7 +77,7 @@ pub fn is_ctf_flag_shaped(text: &str) -> bool {
 /// candidate first.
 pub(crate) fn is_marked_ctf_flag(text: &str) -> bool {
     let text = text.trim();
-    CTF_FLAG_PATTERN.is_match(text) && flag_prefix_has_marker(&flag_prefix(text))
+    matches_flag_pattern(text) && flag_prefix_has_marker(&flag_prefix(text))
 }
 
 /// Whether `text` is shaped like a CTF flag but its prefix has no flag word (see
@@ -75,7 +89,7 @@ pub(crate) fn is_marked_ctf_flag(text: &str) -> bool {
 /// alone; a crib (`--regex 'SEKAI\{'`) finds these.
 pub fn is_unmarked_ctf_flag(text: &str) -> bool {
     let text = text.trim();
-    CTF_FLAG_PATTERN.is_match(text) && !flag_prefix_has_marker(&flag_prefix(text))
+    matches_flag_pattern(text) && !flag_prefix_has_marker(&flag_prefix(text))
 }
 
 /// Whether `text` is a CTF flag in any format.
@@ -86,7 +100,7 @@ pub fn is_unmarked_ctf_flag(text: &str) -> bool {
 /// rejected, so the search goes on and the decoder finds the real one.
 fn is_ctf_flag(text: &str) -> bool {
     let text = text.trim();
-    if !CTF_FLAG_PATTERN.is_match(text) {
+    if !matches_flag_pattern(text) {
         return false;
     }
     let prefix = flag_prefix(text);
@@ -370,6 +384,58 @@ mod tests {
         assert!(is_unmarked_ctf_flag("ohTBJ00m3_ddRN{_wv}"));
         assert!(is_marked_ctf_flag("ctf2024{x}"));
         assert!(is_marked_ctf_flag("TryHackMe{x}"));
+    }
+
+    #[test]
+    fn flag_pattern_matches_the_regex() {
+        let regex = regex::Regex::new(r"^[A-Za-z][A-Za-z0-9_]{1,19}\{[^{}\n]{1,200}\}$").unwrap();
+        let mut texts: Vec<String> = [
+            "flag{x}",
+            "a{b}",
+            "ab{}",
+            "ab{c}",
+            "1b{c}",
+            "a-{c}",
+            "ab{c}d",
+            "ab{c{d}",
+            "ab{c}}",
+            "ab{\n}",
+            "ab{é}",
+            "é{a}",
+            "abcdefghijklmnopqrst{x}",
+            "abcdefghijklmnopqrstu{x}",
+            "{x}",
+            "ab",
+            "",
+            "ab{{}",
+            "a_{x}",
+            "a__{ü😂}",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+        texts.push(format!("ab{{{}}}", "x".repeat(200)));
+        texts.push(format!("ab{{{}}}", "x".repeat(201)));
+        texts.push(format!("ab{{{}}}", "é".repeat(200)));
+        let alphabet: Vec<char> = "aZ09_{}-\n é".chars().collect();
+        let mut seed: u64 = 0x1031;
+        for len in 0..40 {
+            for _ in 0..50 {
+                texts.push(
+                    (0..len)
+                        .map(|_| {
+                            seed ^= seed << 13;
+                            seed ^= seed >> 7;
+                            seed ^= seed << 17;
+                            alphabet[(seed % alphabet.len() as u64) as usize]
+                        })
+                        .collect(),
+                );
+            }
+        }
+        for text in &texts {
+            assert_eq!(matches_flag_pattern(text), regex.is_match(text), "{text:?}");
+        }
     }
 
     #[test]
