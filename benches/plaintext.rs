@@ -730,19 +730,16 @@ fn generated_formats(rng: &mut Rng, out: &mut Vec<Sample>) {
                     s(URL_SAFE, 68)
                 ),
             ),
-            ("lemmeknow", format!("pypi-AgEIcHlwaS5vcmc{}", s(URL_SAFE, 50))),
+            (
+                "lemmeknow",
+                format!("pypi-AgEIcHlwaS5vcmc{}", s(URL_SAFE, 50)),
+            ),
             ("lemmeknow", format!("{}-us{}", s(HEX, 32), s(DIGITS, 1))),
             ("lemmeknow", format!("secret_{}", s(ALNUM, 43))),
-            (
-                "lemmeknow",
-                format!("AIza{}", s(URL_SAFE, 35)),
-            ),
+            ("lemmeknow", format!("AIza{}", s(URL_SAFE, 35))),
             ("lemmeknow", format!("key-{}", s(ALNUM, 32))),
             ("lemmeknow", format!("pub{}", s(HEX, 32))),
-            (
-                "lemmeknow",
-                format!("{}|{}", s(DIGITS, 16), s(ALNUM, 27)),
-            ),
+            ("lemmeknow", format!("{}|{}", s(DIGITS, 16), s(ALNUM, 27))),
             ("lemmeknow_ignored", format!("AC{}", s(HEX, 32))),
             ("lemmeknow_ignored", s(HEX, 40)),
         ]);
