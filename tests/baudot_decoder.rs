@@ -45,8 +45,8 @@ fn path(result: &DecoderResult) -> Vec<&str> {
 #[test]
 #[serial]
 fn issue_example_is_cracked() {
-    // On master the search settled on the false positive `EAADAASENDEIT/E`
-    // (railfence -> simplesubstitution) for this input
+    // On master (aa5ce486) the search settled on the false positive `THIREUSEARP`
+    // (Baconian -> Vigenere) for this input
     let result = crack("10100 00001 10010 10010 11000 00100 10011 11000 01010 10010 01001");
     assert_eq!(result.text[0], "HELLO WORLD");
     assert_eq!(path(&result), ["Baudot"]);
