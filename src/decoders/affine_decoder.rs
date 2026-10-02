@@ -43,6 +43,29 @@ const MIN_LETTERS: usize = 6;
 /// Pre-check: the fewest pairs of adjacent letters (inside a word) worth ranking keys on.
 const MIN_BIGRAMS: usize = 3;
 
+/// Pre-check: texts with at least this many ASCII letters must use at least
+/// [`MIN_DISTINCT_LETTERS`] different ones.
+const MIN_LETTERS_FOR_DISTINCT_CHECK: usize = 100;
+
+/// A key maps distinct letters to distinct letters, so an affine encryption of English
+/// uses as many different letters as the English does: at least 16 in every window of
+/// 100 or more letters from 30 Project Gutenberg books. Long texts with fewer, such as
+/// Caesar shifts of Base64 of binary digits, can rank a key highly on a handful of
+/// repeated letter pairs, but no key turns them into English.
+const MIN_DISTINCT_LETTERS: usize = 12;
+
+/// Gate: the fewest letter pairs for which [`MIN_MEAN_PAIR_LOG_PROB`] is applied. Fewer
+/// pairs give a noisier score, and short texts are cheap to check anyway.
+const MIN_PAIRS_FOR_SCORE_GATE: f32 = 20.0;
+
+/// Gate: the lowest mean `ln P` per letter pair that the best-ranked key may produce for
+/// its decryption to be checked. Affine encryptions of 5,213 English windows from Project
+/// Gutenberg (10 to 120 letter pairs, random keys) never scored below -6.53 (median -5.2),
+/// while half of the nodes the search runs this cracker on (Base64, hex, their Caesar and
+/// rot47 shifts, gibberish) score below -6.88. Below this no key reads like English, so
+/// checking the best five would only spend about 0.5 ms per long node for nothing.
+const MIN_MEAN_PAIR_LOG_PROB: f32 = -6.6;
+
 /// `ln P(first, second)` for every pair of English letters, from
 /// `src/storage/ngrams/english_bigrams.txt`. The file is embedded in the binary, so an
 /// installed `ciphey` doesn't need the source tree to find it.
@@ -149,7 +172,8 @@ fn decryptions_to_check(text: &str) -> impl Iterator<Item = ((u8, u8), String)> 
 }
 
 /// Every key (a, b) this cracker tries, best first, or nothing if `text` fails the
-/// pre-checks (see [`ciphertext_bigrams`]).
+/// pre-checks (see [`ciphertext_bigrams`]) or no key turns it into English-looking letter
+/// pairs (see [`MIN_MEAN_PAIR_LOG_PROB`]).
 ///
 /// A key's score is the English log-probability of the letter pairs its decryption would
 /// contain, `sum of count(y1, y2) * ln P(D(y1), D(y2))` over the ciphertext's letter pairs.
@@ -159,6 +183,7 @@ fn rank_keys(text: &str) -> Vec<(u8, u8)> {
     let Some(bigrams) = ciphertext_bigrams(text) else {
         return Vec::new();
     };
+    let pairs: f32 = bigrams.iter().map(|&(_, _, count)| count).sum();
     let log_probs = &*BIGRAM_LOG_PROBS;
 
     let mut scored: Vec<(f32, (u8, u8))> = keys()
@@ -175,6 +200,15 @@ fn rank_keys(text: &str) -> Vec<(u8, u8)> {
         .collect();
     // A stable sort, so the ranking is deterministic
     scored.sort_by(|left, right| right.0.total_cmp(&left.0));
+    if let Some(&(best, _)) = scored.first() {
+        if pairs >= MIN_PAIRS_FOR_SCORE_GATE && best / pairs < MIN_MEAN_PAIR_LOG_PROB {
+            trace!(
+                "Affine: no key reads like English (best {:.2} per pair)",
+                best / pairs
+            );
+            return Vec::new();
+        }
+    }
     scored.into_iter().map(|(_, key)| key).collect()
 }
 
@@ -193,10 +227,13 @@ fn keys() -> impl Iterator<Item = (u8, u8)> {
 /// Returns `None` unless `text` passes the pre-checks that reject what can't be affine
 /// ciphertext, such as hex, numbers and very short input, before any work is done:
 /// at least [`MIN_LETTERS`] ASCII letters, letters making up at least half of the
-/// non-whitespace characters, and at least [`MIN_BIGRAMS`] letter pairs.
+/// non-whitespace characters, at least [`MIN_BIGRAMS`] letter pairs, and at least
+/// [`MIN_DISTINCT_LETTERS`] different letters once there are
+/// [`MIN_LETTERS_FOR_DISTINCT_CHECK`] letters.
 fn ciphertext_bigrams(text: &str) -> Option<Vec<(usize, usize, f32)>> {
     let mut counts = [[0u32; 26]; 26];
     let mut letters = 0usize;
+    let mut seen_letters = 0u32;
     let mut non_whitespace = 0usize;
     let mut pairs = 0usize;
     let mut previous: Option<usize> = None;
@@ -210,6 +247,7 @@ fn ciphertext_bigrams(text: &str) -> Option<Vec<(usize, usize, f32)>> {
         let current = letter_index(c);
         if let Some(second) = current {
             letters += 1;
+            seen_letters |= 1 << second;
             if let Some(first) = previous {
                 counts[first][second] = counts[first][second].saturating_add(1);
                 pairs += 1;
@@ -219,6 +257,11 @@ fn ciphertext_bigrams(text: &str) -> Option<Vec<(usize, usize, f32)>> {
     }
 
     if letters < MIN_LETTERS || letters * 2 < non_whitespace || pairs < MIN_BIGRAMS {
+        return None;
+    }
+    if letters >= MIN_LETTERS_FOR_DISTINCT_CHECK
+        && (seen_letters.count_ones() as usize) < MIN_DISTINCT_LETTERS
+    {
         return None;
     }
 
@@ -568,8 +611,9 @@ mod tests {
     fn checks_at_most_five_keys() {
         assert_eq!(KEYS_CHECKED, 5);
         for text in [
+            // 19 letter pairs, too few for the score gate
             "T00 l3= ox+#G WKyV pajU6j qxH@ %B4+a 5Pn^ 7p_v1q 9sLvu *+36i R5rL&3 mVJZI iO0",
-            "The quick brown fox jumps over the lazy dog",
+            VECTORS[4].0,
             VECTORS[6].0,
         ] {
             assert_eq!(decryptions_to_check(text).count(), KEYS_CHECKED);
@@ -578,17 +622,72 @@ mod tests {
 
     #[test]
     fn unidentified_text_returns_the_three_best_decryptions() {
+        // Reversed English: its letter pairs pass the score gate under the true key, but no
+        // decryption is English the right way round.
         let affine_decoder = Decoder::<AffineDecoder>::new();
-        let text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit";
-        let result = affine_decoder.crack(text, &get_athena_checker());
-        assert!(!result.success);
+        let reversed: String = VECTORS[3].3.chars().rev().collect();
+        let text = encrypt(&reversed, 9, 4);
+        let result = affine_decoder.crack(&text, &get_athena_checker());
+        assert!(!result.success, "{result:?}");
         assert!(result.key.is_none());
-        let expected: Vec<String> = rank_keys(text)
+        let expected: Vec<String> = rank_keys(&text)
             .into_iter()
             .take(CANDIDATES_RETURNED)
-            .map(|(a, b)| decrypt(text, a, b))
+            .map(|(a, b)| decrypt(&text, a, b))
             .collect();
+        assert_eq!(expected.len(), CANDIDATES_RETURNED);
         assert_eq!(result.unencrypted_text.unwrap(), expected);
+    }
+
+    #[test]
+    fn score_gate_skips_text_no_key_turns_into_english() {
+        // Each has enough letter pairs for the gate, and the best key's decryption still
+        // doesn't read like English: nothing is decrypted or checked, nothing returned.
+        let affine_decoder = Decoder::<AffineDecoder>::new();
+        for text in [
+            // Plain English is not an affine encryption of English: a = 1 is Caesar's
+            "The quick brown fox jumps over the lazy dog",
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+            // Base64 of "The quick brown fox jumps over the lazy dog"
+            "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw==",
+            // The decoder benchmarks' miss input (benches/data/decoders.toml)
+            "T00 l3= ox+#G WKyV pajU6j qxH@ %B4+a 5Pn^ 7p_v1q 9sLvu *+36i R5rL&3 mVJZI iO0 Ut8_m COTV",
+        ] {
+            let bigrams = ciphertext_bigrams(text).expect("passes the pre-checks");
+            let pairs: f32 = bigrams.iter().map(|&(_, _, count)| count).sum();
+            assert!(pairs >= MIN_PAIRS_FOR_SCORE_GATE, "{text:?}: {pairs} pairs");
+            assert!(rank_keys(text).is_empty(), "{text:?} passed the score gate");
+            assert_eq!(decryptions_to_check(text).count(), 0, "{text:?}");
+            let result = affine_decoder.crack(text, &get_athena_checker());
+            assert!(!result.success, "{text:?}");
+            assert!(result.unencrypted_text.is_none(), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn score_gate_keeps_affine_english() {
+        // Longer than the gate's minimum, encrypted with every one of the 285 keys
+        let plaintext =
+            "It was the best of times, it was the worst of times, it was the age of wisdom";
+        for (a, b) in keys() {
+            let ranked = rank_keys(&encrypt(plaintext, a, b));
+            assert_eq!(ranked.len(), 285, "a={a}, b={b} was gated");
+            assert_eq!(ranked[0], (a, b), "a={a}, b={b}");
+        }
+    }
+
+    #[test]
+    fn long_text_with_few_distinct_letters_is_rejected() {
+        // A Caesar shift of Hexadecimal output that the search produces: 120 letters but
+        // only 10 different ones. Its best key scores -6.04 per pair, so only this
+        // pre-check stops it.
+        let text = "L|NMNMOLJHN|NMJHNIOLJHOLNPNMJHN~N{NLJHN{NQNONPOLNPN~OMOKNMJHNINNOLNMOJJHN|NQNLN}NQNONPOLJHNIN}NLJHNJOJNQN}NOJHOLNPNMJHN|NIOHJ{JHOLNP";
+        assert!(ciphertext_bigrams(text).is_none());
+        let result = Decoder::<AffineDecoder>::new().crack(text, &get_athena_checker());
+        assert!(result.unencrypted_text.is_none());
+        // English of the same length uses far more letters
+        let english = VECTORS[3].0.repeat(3);
+        assert!(ciphertext_bigrams(&english).is_some());
     }
 
     #[test]
