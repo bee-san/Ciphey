@@ -1,5 +1,6 @@
 use super::checker_type::{Check, Checker};
 use crate::checkers::checker_result::CheckResult;
+use crate::checkers::english::is_known_word as is_english_word;
 use gibberish_or_not::Sensitivity;
 use lemmeknow::{Data, Identifier};
 
@@ -26,13 +27,20 @@ const EXCLUDED_TAGS: [&str; 5] = ["Credit Card", "Phone", "Bitly", "Visual Studi
 /// pattern (`B` and 9 capitals or digits) is tagged "Amazon" like the SNS topic ARN, and
 /// matches Caesar shifts such as `BYFFIQILFX`. A match is only dropped if no other
 /// pattern matched too.
-const EXCLUDED_NAMES: [&str; 6] = [
+const EXCLUDED_NAMES: [&str; 10] = [
     "Amazon Standard Identification Number (ASIN)",
     "Bitcoin Cash (BCH) Wallet Address",
     "Litecoin (LTC) Wallet Address",
     "Ripple (XRP) Wallet Address",
     "Dogecoin (DOGE) Wallet Address",
     "Google ReCaptcha API Key",
+    // Two letters and then letters and digits: `EA` and 190 or more, `AC` or `AP` and 32,
+    // `o-` and 10 to 32. A Vigenère key that happened to start a long Base64-like string
+    // with `EA` ended a search as a "Facebook Access Token".
+    "Facebook Access Token",
+    "Twilio Account SID",
+    "Twilio Application SID",
+    "Amazon Web Services Organization Identifier",
 ];
 
 /// LemmeKnow's name for its URL pattern. It also matches anything shaped like a domain,
@@ -123,7 +131,7 @@ fn is_ctf_flag(text: &str) -> bool {
         return false;
     }
     let atbash: String = prefix.chars().map(|c| map_letter(c, |l| 25 - l)).collect();
-    ![prefix, atbash].iter().any(|prefix| {
+    let encoded_marker = [&prefix, &atbash].iter().any(|prefix| {
         (1..26).any(|shift| {
             let rotated: String = prefix
                 .chars()
@@ -131,7 +139,101 @@ fn is_ctf_flag(text: &str) -> bool {
                 .collect();
             flag_prefix_has_marker(&rotated)
         }) || flag_prefix_has_marker(prefix)
+    });
+    !encoded_marker && flag_contents_are_words(contents)
+}
+
+/// Whether a flag's contents read as words once leetspeak is undone, and better than any
+/// Caesar shift or Atbash of them: `y0u_f0und_m3` is "you found me", `sp4rkl3s`
+/// "sparkles", `w3ll_d0ne!` "well done".
+///
+/// A flag without a flag word in its prefix needs this: a Caesar shift, Atbash or
+/// Vigenère of one keeps its shape but not its words (`QCIYG{u3ja0kc_r0_q3i41}` is a
+/// Caesar shift of `SEKAI{y0u_f0und_m3}`; `NZFVD{t0p_a0piy_h3}` another, with two words by
+/// chance), and wrong ROT47 and railfence keys make flag-shaped junk out of digits
+/// (`wyv{wxwwwyvvyzyvxvy}`). Contents that are random or hex (`SECCON{7e1b9e3a}`) don't
+/// pass; a crib (`--regex 'SECCON\{'`) finds those.
+fn flag_contents_are_words(contents: &str) -> bool {
+    let score = word_letters(contents);
+    if score * 2 < letters_in(contents) || !has_long_word(contents) {
+        return false;
+    }
+    let atbash: String = contents
+        .chars()
+        .map(|c| map_any_letter(c, |l| 25 - l))
+        .collect();
+    [contents, &atbash].iter().all(|variant| {
+        (1..26).all(|shift| {
+            let shifted: String = variant
+                .chars()
+                .map(|c| map_any_letter(c, |l| (l + shift) % 26))
+                .collect();
+            word_letters(&shifted) <= score
+        }) && (*variant == contents || word_letters(variant) <= score)
     })
+}
+
+/// The parts of flag contents between `_`, `-`, `.`, `!`, `?` and spaces, except numbers.
+fn flag_parts(contents: &str) -> impl Iterator<Item = &str> {
+    contents
+        .split(['_', '-', '.', '!', '?', ' '])
+        .filter(|part| !part.is_empty() && !part.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// The leetspeak reading of `part` that is a word, if any (`1` is `i` or `l`).
+fn part_as_word(part: &str) -> Option<String> {
+    ['i', 'l']
+        .iter()
+        .map(|&one| unleet(part, one))
+        .find(|word| is_english_word(word))
+}
+
+/// How many characters of the parts of `contents` are in parts that are words.
+fn word_letters(contents: &str) -> usize {
+    flag_parts(contents)
+        .filter(|part| part_as_word(part).is_some())
+        .map(|part| part.chars().count())
+        .sum()
+}
+
+/// How many characters the parts of `contents` have.
+fn letters_in(contents: &str) -> usize {
+    flag_parts(contents).map(|part| part.chars().count()).sum()
+}
+
+/// Whether one of the parts of `contents` is a word of three letters or more: short words
+/// alone are chance (`spovwuot{my}` came out of a wrong railfence key).
+fn has_long_word(contents: &str) -> bool {
+    flag_parts(contents)
+        .filter_map(part_as_word)
+        .any(|word| word.chars().count() >= 3)
+}
+
+/// Applies `f` to the alphabet position (0 to 25) of an ASCII letter of either case.
+fn map_any_letter(c: char, f: impl Fn(u8) -> u8) -> char {
+    match c {
+        'a'..='z' => (b'a' + f(c as u8 - b'a')) as char,
+        'A'..='Z' => (b'A' + f(c as u8 - b'A')) as char,
+        _ => c,
+    }
+}
+
+/// `part` in lower case with leetspeak digits and symbols turned into the letters they
+/// stand for, `1` into `one`.
+fn unleet(part: &str, one: char) -> String {
+    part.chars()
+        .map(|c| match c {
+            '0' => 'o',
+            '1' => one,
+            '3' => 'e',
+            '4' | '@' => 'a',
+            '5' | '$' => 's',
+            '7' => 't',
+            '8' => 'b',
+            '9' => 'g',
+            c => c.to_ascii_lowercase(),
+        })
+        .collect()
 }
 
 /// The lower-cased part of a flag before its `{`.
@@ -179,14 +281,7 @@ impl Check for Checker<LemmeKnow> {
     }
 
     fn check(&self, text: &str) -> CheckResult {
-        let matches = self.lemmeknow_config.identify(text);
-        let description = matches
-            .iter()
-            .map(|found| &found.data)
-            .find(|data| is_trusted_match(data, text))
-            .map(format_data_result)
-            .or_else(|| is_ctf_flag(text).then(|| CTF_FLAG.to_string()));
-
+        let description = identify(&self.lemmeknow_config, text);
         CheckResult {
             is_identified: description.is_some(),
             text: text.to_owned(),
@@ -207,6 +302,35 @@ impl Check for Checker<LemmeKnow> {
     }
 }
 
+/// What `identifier` (LemmeKnow) or the CTF flag pattern identify `text` as, if anything.
+///
+/// Text with control characters other than tabs and line breaks isn't plaintext of any
+/// format, and is a fifth of what a search checks (wrong decoders' bytes), so it skips
+/// LemmeKnow's hundred-odd regexes.
+pub(crate) fn identify(identifier: &Identifier, text: &str) -> Option<String> {
+    if has_control_characters(text) {
+        return None;
+    }
+    identifier
+        .identify(text)
+        .iter()
+        .map(|found| &found.data)
+        .find(|data| is_trusted_match(data, text))
+        .map(format_data_result)
+        .or_else(|| is_ctf_flag(text).then(|| CTF_FLAG.to_string()))
+}
+
+/// Whether `text` has a control character other than a tab or line break: C0 controls,
+/// DEL, or C1 controls (U+0080 to U+009F, which decoders' bytes become as Latin-1).
+fn has_control_characters(text: &str) -> bool {
+    text.as_bytes()
+        .windows(2)
+        .any(|pair| pair[0] == 0xC2 && (0x80..0xA0).contains(&pair[1]))
+        || text
+            .bytes()
+            .any(|b| (b < 0x20 && !matches!(b, b'\t' | b'\n' | b'\r')) || b == 0x7F)
+}
+
 /// Whether a LemmeKnow match on `text` says something about it, rather than only that it
 /// has the right characters and length.
 fn is_trusted_match(data: &Data, text: &str) -> bool {
@@ -219,7 +343,73 @@ fn is_trusted_match(data: &Data, text: &str) -> bool {
         let text = text.trim_start().to_ascii_lowercase();
         return text.contains("://") || text.starts_with("www.");
     }
-    true
+    match data.name {
+        EC2_INSTANCE_ID => is_ec2_instance_id(text),
+        ARN => is_arn(text),
+        EMAIL => has_known_tld(text),
+        _ => true,
+    }
+}
+
+/// LemmeKnow's name for EC2 instance IDs. Its pattern, `(?i)^i-[a-z0-9]{8}$` (or 17), takes
+/// `I-NHyontTe`; real IDs are `i-` and 8 or 17 lower-case hex digits.
+const EC2_INSTANCE_ID: &str = "Amazon Web Services EC2 Instance ID";
+
+/// Whether `text` is an EC2 instance ID: see [`EC2_INSTANCE_ID`].
+fn is_ec2_instance_id(text: &str) -> bool {
+    text.trim().strip_prefix("i-").is_some_and(|id| {
+        matches!(id.len(), 8 | 17) && id.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+    })
+}
+
+/// LemmeKnow's name for ARNs. Its pattern is case-insensitive and allows anything between
+/// the colons, so decoder junk such as `Arn:?n8A;m:p>oo:...` matches; real ARNs start
+/// with `arn:`, a partition and a service in lower case (`arn:aws:sns:...`).
+const ARN: &str = "Amazon Resource Name (ARN)";
+
+/// Whether `text` starts like an ARN: see [`ARN`].
+fn is_arn(text: &str) -> bool {
+    let mut fields = text.trim().split(':');
+    let lower_name = |field: Option<&str>| {
+        field.is_some_and(|f| {
+            f.bytes().next().is_some_and(|b| b.is_ascii_lowercase())
+                && f.bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        })
+    };
+    fields.next() == Some("arn") && lower_name(fields.next()) && lower_name(fields.next())
+}
+
+/// LemmeKnow's name for email addresses.
+const EMAIL: &str = "Email Address";
+
+/// Top-level domains an email address may end in: the common generic ones and the
+/// country codes most used. LemmeKnow takes any, and a Caesar shift of an address is still
+/// shaped like one (`uryyb@jbeyq.pbz` is ROT13 of `hello@world.com`), so a shifted address
+/// was taken as plaintext and the search stopped at the ciphertext.
+const EMAIL_TLDS: [&str; 112] = [
+    "ac", "academy", "ae", "agency", "ai", "app", "ar", "art", "asia", "at", "au", "be", "bg",
+    "biz", "blog", "br", "by", "ca", "cat", "cc", "ch", "cl", "cloud", "club", "cn", "co", "com",
+    "company", "cz", "de", "design", "dev", "digital", "dk", "edu", "ee", "email", "es", "eu",
+    "fi", "fm", "fr", "gg", "global", "gov", "gr", "group", "hk", "hr", "hu", "id", "ie", "il",
+    "in", "info", "int", "io", "ir", "is", "it", "jobs", "jp", "kr", "life", "link", "live", "lt",
+    "lu", "lv", "ly", "mail", "me", "media", "mil", "mobi", "museum", "mx", "my", "name", "net",
+    "network", "news", "nl", "no", "nz", "online", "org", "page", "ph", "pk", "pl", "pro", "pt",
+    "ro", "rs", "ru", "se", "sg", "sh", "site", "sk", "space", "store", "studio", "tech", "tv",
+    "uk", "us", "website", "xyz", "za", "zone",
+];
+
+/// Whether the address `text` ends in one of [`EMAIL_TLDS`], or in an IP address in
+/// brackets (`john.smith@[123.123.123.123]`).
+fn has_known_tld(text: &str) -> bool {
+    let text = text.trim();
+    if text.ends_with(']') {
+        return true;
+    }
+    let tld = text.rsplit('.').next().unwrap_or_default();
+    EMAIL_TLDS
+        .binary_search(&tld.to_ascii_lowercase().as_str())
+        .is_ok()
 }
 
 /// Formats the data result to a string
@@ -395,6 +585,71 @@ mod tests {
         }
         // A flag word makes any contents fine
         assert_eq!(identify("flag{~|~}").as_deref(), Some(CTF_FLAG));
+    }
+
+    #[test]
+    fn shape_only_matches_need_the_real_format() {
+        // Matched LemmeKnow's patterns, but are decoder junk or Caesar shifts
+        for junk in [
+            "I-NHyontTe",                                                       // EC2 ID
+            "Arn:?n8A;m:p>oo:o;n?8:<9pr<9<=nm8o899@:<:=>>:;=@@8?<or?@9nm:A9?9", // ARN
+            "uryyb@jbeyq.pbz",                    // ROT13 of hello@world.com
+            "lyl.cwsdr@mywzkxi.ybq",              // a Caesar shift of an email address
+            "ACq8Zr1Xk0pLm3Vb7Nc5Tw9Hd2Fg4Js6Ky", // "Twilio Account SID": AC and 32 characters
+        ] {
+            assert_eq!(identify(junk), None, "{junk}");
+        }
+        let facebook = format!("EA{}", "AbCd12".repeat(40));
+        assert_eq!(
+            identify(&facebook),
+            None,
+            "two letters and 190 letters or digits"
+        );
+        for (text, name) in [
+            ("i-1234567890abcdef0", EC2_INSTANCE_ID),
+            ("arn:aws:iam::123456789012:user/bee", ARN),
+            ("hello@world.com", EMAIL),
+            ("first.last@university.ac.uk", EMAIL),
+            ("john.smith@[123.123.123.123]", EMAIL),
+        ] {
+            assert_eq!(identify(text).as_deref(), Some(name), "{text}");
+        }
+    }
+
+    #[test]
+    fn text_with_control_characters_is_not_a_format() {
+        assert_eq!(identify("192.168.0.1\u{1}"), None);
+        assert_eq!(identify("flag{a\u{7f}b}"), None);
+        assert!(identify("flag{tabs\tare fine}").is_some());
+    }
+
+    #[test]
+    fn email_tlds_are_sorted() {
+        assert!(EMAIL_TLDS.windows(2).all(|pair| pair[0] < pair[1]));
+    }
+
+    #[test]
+    fn flags_without_a_flag_word_need_words_inside() {
+        for flag in [
+            "SEKAI{y0u_f0und_m3}",
+            "dice{sp4rkl3s}",
+            "ENO{w3ll_d0ne!}",
+            "DEADFACE{d34d_f4c3}",
+            "SECCON{j4p4n3s3_fl4g}",
+        ] {
+            assert_eq!(identify(flag).as_deref(), Some(CTF_FLAG), "{flag}");
+        }
+        for junk in [
+            "QCIYG{u3ja0kc_r0_q3i41}", // a Caesar shift of SEKAI{y0u_f0und_m3}
+            "NZFVD{t0p_a0piy_h3}",     // another, with two words by chance
+            "wyv{wxwwwyvvyzyvxvy}",    // wrong ROT47 and railfence keys on digits
+            "spovwuot{my}",
+            "SECCON{7e1b9e3a}", // hex: can't tell it from a shift of it
+        ] {
+            assert_eq!(identify(junk), None, "{junk}");
+        }
+        // A flag word makes any contents fine
+        assert_eq!(identify("flag{7e1b9e3a}").as_deref(), Some(CTF_FLAG));
     }
 
     #[test]

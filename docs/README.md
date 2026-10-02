@@ -12,7 +12,7 @@ Welcome to the ciphey documentation! This repository contains comprehensive docu
 ### Technical Documentation
 
 - [ciphey Architecture](ciphey_architecture.md) - Detailed explanation of ciphey's internal architecture and components
-- [Plaintext Identification](plaintext_identification.md) - How ciphey identifies plaintext and determines when decoding is successful
+- [Plaintext Detection](plaintext-detection.md) - How ciphey decides a candidate is the plaintext: every checker and threshold, the quadgram model, the benchmark and its numbers
 
 ### Feature-Specific Documentation
 

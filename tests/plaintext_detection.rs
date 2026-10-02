@@ -120,6 +120,15 @@ cases! {
     // The ciphertext happens to be shaped like a flag too
     railfence_pico_ctf_flag: "pCb_1uioT{436_sfncFs4_}" => "picoCTF{b4s3_64_1s_fun}";
     rot47_htb_flag: "w%qLD_>b07=c809bCbN" => "HTB{s0m3_fl4g_h3r3}";
+
+    // Found by the plaintext-detection benchmark (benches/plaintext.rs)
+    // Was returned unchanged: a Caesar shift of an email address is shaped like one
+    rot13_email: "uryyb@jbeyq.pbz" => "hello@world.com";
+    // Was `0b=m1m=rn` (junk): form data reads as neither English nor a known format
+    base64_query_string: "bnVtYmVyXzE9MSZudW1iZXJfMj0wJm9wZXJhdGlvbj0vCg==" => "number_1=1&number_2=0&operation=/";
+    // A shell command, found by the code checker now that most of its words aren't
+    // English words
+    base64_shell_command: "Y3VybCAtcyBodHRwczovL2V4YW1wbGUuY29tL2FwaS92MS9zdGF0dXM=" => "curl -s https://example.com/api/v1/status";
 }
 
 /// A flag whose prefix has no flag word (`SEKAI`, not `...CTF` or `flag`) can't be told

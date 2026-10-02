@@ -1,0 +1,765 @@
+# Sentences of 5 to 14 words and phrases of 1 to 4 words from public-domain books
+# (Project Gutenberg ebooks 1342, 98, 64317, 1661 and 11), for benches/plaintext.rs.
+# Written by `src/storage/ngrams/generate.py --bench`. The held-out books (Pride and
+# Prejudice, A Tale of Two Cities, The Great Gatsby) are not among the books the quadgram
+# table is counted from; the train ones are. category<TAB>split<TAB>text
+en_literary	heldout	Do not you want to know who has taken it?" cried his wife, impatiently.
+en_literary	heldout	She was a woman of mean understanding, little information, and uncertain temper.
+en_literary	heldout	How good it was in you, my dear Mr Bennet!
+en_literary	heldout	His sisters were fine women, with an air of decided fashion.
+en_literary	heldout	Mr Darcy walked off; and Elizabeth remained with no very cordial feelings towards him.
+en_literary	heldout	I never in my life saw anything more elegant than their dresses.
+en_literary	heldout	What could be more natural than his asking you again?
+en_literary	heldout	In that respect his friend had greatly the advantage.
+en_literary	heldout	A person may be proud without being vain.
+en_literary	heldout	There is nothing like dancing, after all.
+en_literary	heldout	The rain continued the whole evening without intermission; Jane certainly could not come back.
+en_literary	heldout	The latter was thinking only of his breakfast.
+en_literary	heldout	Mr Hurst looked at her with astonishment.
+en_literary	heldout	Indeed I have, sir," was her answer.
+en_literary	heldout	You quite mistook Mr Darcy.
+en_literary	heldout	But, however, he did not.
+en_literary	heldout	Let me mend it for you.
+en_literary	heldout	Put them next to your great-uncle the judge.
+en_literary	heldout	When tea was over Mr Hurst reminded his sister-in-law of the card-table--but in vain.
+en_literary	heldout	I hope I never ridicule what is wise or good.
+en_literary	heldout	On Sunday, after morning service, the separation, so agreeable to almost all, took place.
+en_literary	heldout	Pray do not talk of that odious man.
+en_literary	heldout	There is a mixture of servility and self-importance in his letter which promises well.
+en_literary	heldout	It is a pity that great ladies in general are not more like her.
+en_literary	heldout	Both changed colour, one looked white, the other red.
+en_literary	heldout	I have known him too long and too well to be a fair judge.
+en_literary	heldout	I cannot do justice to his kindness.
+en_literary	heldout	He does not want abilities.
+en_literary	heldout	If it be not so, let Mr Darcy contradict it.
+en_literary	heldout	That would be the greatest misfortune of all!
+en_literary	heldout	I do not get on at all.
+en_literary	heldout	What advantage can it be to you to offend Mr Darcy?
+en_literary	heldout	Darcy said nothing at all.
+en_literary	heldout	You forget that I have made no answer.
+en_literary	heldout	Of what are you talking?" "Of Mr Collins and Lizzy.
+en_literary	heldout	Your mother insists upon your accepting it.
+en_literary	heldout	I have no pleasure in talking to undutiful children.
+en_literary	heldout	But you do not know all.
+en_literary	heldout	Charlotte herself was tolerably composed.
+en_literary	heldout	Nor did that day wear out her resentment.
+en_literary	heldout	Her heart was divided between concern for her sister and resentment against all others.
+en_literary	heldout	Consider Mr Collins's respectability, and Charlotte's prudent, steady character.
+en_literary	heldout	When is your turn to come?
+en_literary	heldout	He made her an offer in this very room, and she refused him.
+en_literary	heldout	Every time they met, it was more decided and remarkable.
+en_literary	heldout	You have sense, and we all expect you to use it.
+en_literary	heldout	But do not imagine that he is always here so often.
+en_literary	heldout	Let me hear from you very soon.
+en_literary	heldout	March was to take Elizabeth to Hunsford.
+en_literary	heldout	I am sick of them all.
+en_literary	heldout	At length the Parsonage was discernible.
+en_literary	heldout	The old lady is Mrs Jenkinson, who lives with them.
+en_literary	heldout	Elizabeth's courage did not fail her.
+en_literary	heldout	I never heard of such a thing.
+en_literary	heldout	Perhaps she is full young to be much in company.
+en_literary	heldout	Elizabeth merely courtesied to him, without saying a word.
+en_literary	heldout	He drew a chair near her.
+en_literary	heldout	He took the hint and soon began with, "This seems a very comfortable house.
+en_literary	heldout	In her kind schemes for Elizabeth, she sometimes planned her marrying Colonel Fitzwilliam.
+en_literary	heldout	Now, seriously, what have you ever known of self-denial and dependence?
+en_literary	heldout	Your cousin's conduct does not suit my feelings.
+en_literary	heldout	Was not this some excuse for incivility, if I was uncivil?
+en_literary	heldout	My faults, according to this calculation, are heavy indeed!
+en_literary	heldout	Your sister I also watched.
+en_literary	heldout	It is done, however, and it was done for the best.
+en_literary	heldout	How he lived, I know not.
+en_literary	heldout	It was all pride and insolence.
+en_literary	heldout	How despicably have I acted!" she cried.
+en_literary	heldout	Elizabeth could but just affect concern in missing him; she really rejoiced at it.
+en_literary	heldout	Daughters are never of so much consequence to a father.
+en_literary	heldout	Mr Darcy's letter she was in a fair way of soon knowing by heart.
+en_literary	heldout	There is in everything a most remarkable resemblance of character and ideas between us.
+en_literary	heldout	There is no danger of Wickham's marrying Mary King--there's for you!
+en_literary	heldout	My aunt Philips wants you so to get husbands you can't think.
+en_literary	heldout	There was another reason, too, for her opposition.
+en_literary	heldout	What is your own opinion?" "That it ought not to be attempted.
+en_literary	heldout	But I cannot find out that Jane saw anything of him in London.
+en_literary	heldout	The dejection was almost universal.
+en_literary	heldout	I have no such injuries to resent.
+en_literary	heldout	In Lydia's imagination, a visit to Brighton comprised every possibility of earthly happiness.
+en_literary	heldout	A small part of Derbyshire is all the present concern.
+en_literary	heldout	They followed her into the dining-parlour.
+en_literary	heldout	She plays and sings all day long.
+en_literary	heldout	And this is always the way with him," she added.
+en_literary	heldout	In what a disgraceful light might it not strike so vain a man!
+en_literary	heldout	From what can it proceed?
+en_literary	heldout	But perhaps he may be a little whimsical in his civilities," replied her uncle.
+en_literary	heldout	No look appeared on either side that spoke particular regard.
+en_literary	heldout	But Georgiana would not join her.
+en_literary	heldout	My father bears it better.
+en_literary	heldout	I am not so selfish, however, as to press for it, if inconvenient.
+en_literary	heldout	You know him too well to doubt the rest.
+en_literary	heldout	But I knew not--I was afraid of doing too much.
+en_literary	heldout	But now it was all too natural.
+en_literary	heldout	If, indeed, it should be so!
+en_literary	heldout	But Jane knows, as well as I do, what Wickham really is.
+en_literary	heldout	It is not quite a week since they left Brighton.
+en_literary	heldout	What a good joke it will be!
+en_literary	heldout	Mr Gardiner had waited only for the letters before he set off.
+en_literary	heldout	When Mr Bennet arrived, he had all the appearance of his usual philosophic composure.
+en_literary	heldout	She comes to us to-day.
+en_literary	heldout	Oh, it must be my uncle's doings!
+en_literary	heldout	To know that her daughter would be married was enough.
+en_literary	heldout	Ring the bell, Kitty, for Hill.
+en_literary	heldout	My dear Hill, have you heard the good news?
+en_literary	heldout	She was humbled, she was grieved; she repented, though she hardly knew of what.
+en_literary	heldout	His countenance rather gained in austerity; and he scarcely opened his lips.
+en_literary	heldout	I only hope they may have half my good luck.
+en_literary	heldout	And it was settled that we should all be there by eleven o'clock.
+en_literary	heldout	If you do not choose to understand me, forgive my impertinence.
+en_literary	heldout	Mr Darcy asked why he did not marry your sister at once.
+en_literary	heldout	Lydia came to us, and Wickham had constant admission to the house.
+en_literary	heldout	She was ashamed to think how much.
+en_literary	heldout	We passed each other several times.
+en_literary	heldout	He smiled, looked handsome, and said many pretty things.
+en_literary	heldout	But that is nothing to us.
+en_literary	heldout	Her daughters were eagerly called to partake of her joy.
+en_literary	heldout	Could I expect it to be otherwise?" said she.
+en_literary	heldout	How Mr Darcy looked, therefore, she could not tell.
+en_literary	heldout	Elizabeth, with a triumphant sensation, looked towards his friend.
+en_literary	heldout	And, my dear Jane, I never saw you look in greater beauty.
+en_literary	heldout	And how impossible in others!
+en_literary	heldout	The latter was much more agreeable than his companion expected.
+en_literary	heldout	Kitty simpered and smiled, and hoped her turn was coming soon.
+en_literary	heldout	Jane was beyond competition her favourite child.
+en_literary	heldout	She is my youngest girl but one.
+en_literary	heldout	From their infancy, they have been intended for each other.
+en_literary	heldout	Is nothing due to me on that score?
+en_literary	heldout	I expected to find a more reasonable young woman.
+en_literary	heldout	I must beg to return to the house." And she rose as she spoke.
+en_literary	heldout	Do not imagine, Miss Bennet, that your ambition will ever be gratified.
+en_literary	heldout	Now, Lizzy, I think I have surprised you.
+en_literary	heldout	But your family owe me nothing.
+en_literary	heldout	You must learn some of my philosophy.
+en_literary	heldout	I never meant to deceive you, but my spirits might often lead me wrong.
+en_literary	heldout	I speak nothing but the truth.
+en_literary	heldout	Shall you like to have such a brother?" "Very, very much.
+en_literary	heldout	When convinced on that article, Miss Bennet had nothing further to wish.
+en_literary	heldout	Lizzy," said he, "what are you doing?
+en_literary	heldout	If this be the case, he deserves you.
+en_word	heldout	A
+en_phrase	heldout	an excellent
+en_phrase	heldout	sake say no
+en_phrase	heldout	which they spoke of
+en_word	heldout	you
+en_phrase	heldout	about the
+en_phrase	heldout	the mince pies
+en_phrase	heldout	supposition did not pain
+en_word	heldout	I
+en_phrase	heldout	something very
+en_phrase	heldout	discomposed Mr Bennet
+en_phrase	heldout	can recall nothing worse
+en_word	heldout	it
+en_phrase	heldout	What is
+en_phrase	heldout	in my refusal
+en_phrase	heldout	What do you think
+en_word	heldout	point
+en_phrase	heldout	that pain
+en_phrase	heldout	much to complain
+en_phrase	heldout	care of myself and
+en_word	heldout	his
+en_phrase	heldout	she had
+en_phrase	heldout	Elizabeth felt all
+en_phrase	heldout	ladies sat was backwards
+en_word	heldout	good
+en_phrase	heldout	do you
+en_phrase	heldout	which you hold
+en_phrase	heldout	you pain to what
+en_word	heldout	After
+en_phrase	heldout	you for
+en_phrase	heldout	like to go
+en_phrase	heldout	to die of laughter
+en_word	heldout	Well
+en_phrase	heldout	wherever Lydia
+en_phrase	heldout	formal nor falsely
+en_phrase	heldout	by Mrs Reynolds was
+en_word	heldout	flattered
+en_phrase	heldout	ever reached
+en_phrase	heldout	very ill No
+en_phrase	heldout	as long as it
+en_word	heldout	Elizabeth
+en_phrase	heldout	at such
+en_phrase	heldout	Well well said
+en_phrase	heldout	shall see her again
+en_word	heldout	Into
+en_phrase	heldout	must all
+en_phrase	heldout	character was to
+en_phrase	heldout	done it for her
+en_word	heldout	us
+en_phrase	heldout	than Elizabeth
+en_phrase	heldout	glad he dines
+en_phrase	heldout	Mr Bingley is come
+en_word	heldout	shan't
+en_phrase	heldout	my daughter
+en_phrase	heldout	by no means
+en_phrase	heldout	shall then give over
+en_word	heldout	But
+en_phrase	heldout	all to
+en_phrase	heldout	rather stay at
+en_phrase	heldout	so handsome so tall
+en_literary	heldout	It was the year of Our Lord one thousand seven hundred and seventy-five.
+en_literary	heldout	I am going to Paris on business.
+en_literary	heldout	Sometimes the broken reply was, "Wait!
+en_literary	heldout	According to the immemorial usage of waiters in all ages.
+en_literary	heldout	I have no time for them, no chance of them.
+en_literary	heldout	This is a secret service altogether.
+en_literary	heldout	Put it on, put it on," said the other.
+en_literary	heldout	Is he alone?" the latter whispered.
+en_literary	heldout	Come in, come in!" "I am afraid of it," she answered, shuddering.
+en_literary	heldout	It is a young lady's walking-shoe.
+en_literary	heldout	Releasing his arm, she laid her hand upon his shoulder.
+en_literary	heldout	Tellson's (they said) wanted no elbow-room, Tellson's wanted no light, Tellson's wanted no embellishment.
+en_literary	heldout	He resented Mrs Cruncher's saying grace with particular animosity.
+en_literary	heldout	Blest if I know," said Jerry.
+en_literary	heldout	Never in a debtors' prison?
+en_literary	heldout	He had taken these lists from the drawer of the prisoner's desk.
+en_literary	heldout	When he called at my lodgings in London.
+en_literary	heldout	He stood, half turned from the prisoner, lounging with his elbow against the bar.
+en_literary	heldout	Don't be nettled, Mr Lorry.
+en_literary	heldout	What a change you have made in yourself!
+en_literary	heldout	What has roughened your temper?
+en_literary	heldout	You'd have thought!" said Miss Pross; and Mr Lorry left off.
+en_literary	heldout	Touch that string, and he instantly changes for the worse.
+en_literary	heldout	The rain-drops are still falling, large, heavy, and few," said Doctor Manette.
+en_literary	heldout	Everybody was dressed for a Fancy Ball that was never to leave off.
+en_literary	heldout	Among the men, not one.
+en_literary	heldout	Go aside!" said Monsieur Gabelle.
+en_literary	heldout	He had heard of Monseigneur, at the posting-houses, as being before him.
+en_literary	heldout	It is little to relinquish.
+en_literary	heldout	The chateau awoke later, as became its quality, but awoke gradually and surely.
+en_literary	heldout	Shall I go on, sir?" Another blank.
+en_literary	heldout	Tell me when I ask you, not now.
+en_literary	heldout	Provide somebody to take care of you.
+en_literary	heldout	Now, I'll put you in a corner," forensically shaking a forefinger at him.
+en_literary	heldout	He was shown up-stairs, and found Lucie at her work, alone.
+en_literary	heldout	O Mr Carton, think again!
+en_literary	heldout	What's it about?" "I don't know," said the man.
+en_literary	heldout	And mind you!" said Mr Cruncher.
+en_literary	heldout	If you're a religious woman, give me a irreligious one!
+en_literary	heldout	Give him to drink, my wife!" A second man got up and went out.
+en_literary	heldout	Go on!" "Good!" said the mender of roads, with an air of mystery.
+en_literary	heldout	At midday, the roll of drums.
+en_literary	heldout	Would you not?" "Truly, madame, I think so.
+en_literary	heldout	How long," demanded madame, composedly, "does it take to make and store the lightning?
+en_literary	heldout	They had lounged away in a poverty-stricken, purposeless, accidental manner, quite natural and unimpeachable.
+en_literary	heldout	Very interesting remembrances!" said the spy.
+en_literary	heldout	Even as it is--" Even as it was, she could not command her voice.
+en_literary	heldout	Doctor Manette was very cheerful at the little supper.
+en_literary	heldout	What is to be told to Ladybird?
+en_literary	heldout	The Doctor was summoned in the usual way, and came to breakfast.
+en_literary	heldout	Some intense associations of a most distressing nature were vividly recalled, I think.
+en_literary	heldout	Give me your authority, like a dear good man.
+en_literary	heldout	I will always remember it, dear Heart!
+en_literary	heldout	Here you see me!" said madame, composed as ever, but not knitting to-day.
+en_literary	heldout	What is that in your hand?
+en_literary	heldout	I have said that he had reason to fear us.
+en_literary	heldout	It was known directly, to the furthest confines of the crowd.
+en_literary	heldout	He was fast asleep directly.
+en_literary	heldout	Confided to the cares of Messrs.
+en_literary	heldout	Ah! most gracious Monsieur heretofore the Marquis, where is that emigrant?
+en_literary	heldout	He will be judged at Paris." "Judged!" repeated the farrier, swinging his hammer.
+en_literary	heldout	My duty is to my country and the People.
+en_literary	heldout	You will be visited, and can ask then.
+en_literary	heldout	You must let me put you in a room at the back here.
+en_literary	heldout	Both the women followed; the second woman being The Vengeance.
+en_literary	heldout	The Wood-Sawyer One year and three months.
+en_literary	heldout	La, la, la; La, la, la!
+en_literary	heldout	I salute you, citizen." This in passing.
+en_literary	heldout	Liberty, Equality, Fraternity, or Death!
+en_literary	heldout	Was that criminal in the eyes of the Republic?
+en_literary	heldout	Pray, pray, be cautious!" cried Lucie.
+en_literary	heldout	In a moment, the whole company were on their feet.
+en_literary	heldout	Which of the two goes first?
+en_literary	heldout	Let me take your arm, Miss Pross.
+en_literary	heldout	Seeing it, he poured out and drank another glassful.
+en_literary	heldout	That there Roger Cly, master," said Mr Cruncher, with a taciturn and iron-bound visage.
+en_literary	heldout	Now, what do you want with me?" "Not very much.
+en_literary	heldout	He gave him his hand, and Carton gently pressed it.
+en_literary	heldout	There is nobody to weep for me." "How can you say that?
+en_literary	heldout	Samson and his men complain sometimes, of being exhausted.
+en_literary	heldout	Indictment delivered to him last night.
+en_literary	heldout	I write it at stolen intervals, under every difficulty.
+en_literary	heldout	I had to pass through that part, to get at the other.
+en_literary	heldout	I saw her pass me on the road.
+en_literary	heldout	The brothers were waiting in a room down-stairs, impatient to ride away.
+en_literary	heldout	She was in great agitation.
+en_literary	heldout	Much influence around him, has that Doctor?" murmured Madame Defarge, smiling to The Vengeance.
+en_literary	heldout	What have you done, what have you done, that you should kneel to us!
+en_literary	heldout	Within an hour or two from this." "It will be dark soon after four.
+en_literary	heldout	He repeated what he had already said.
+en_literary	heldout	But I would leave the matter there.
+en_literary	heldout	He sank into the chair, and brooded over the embers, and shed tears.
+en_literary	heldout	I have lost no time, and since then, I have seen the spy.
+en_literary	heldout	But, all this was at first.
+en_literary	heldout	I could not believe it to be you.
+en_literary	heldout	Carton, standing over him with his hand in his breast, looked down.
+en_literary	heldout	Such a thing has happened here, often, and too often.
+en_literary	heldout	He pressed the work-worn, hunger-worn young fingers, and touched his lips.
+en_literary	heldout	Behold your papers, Jarvis Lorry, countersigned." "One can depart, citizen?" "One can depart.
+en_literary	heldout	Madame Defarge cast down her eyes, and reflected a little.
+en_word	heldout	Spiritual
+en_phrase	heldout	Bank in
+en_phrase	heldout	notice a word
+en_phrase	heldout	in the surprise of
+en_word	heldout	are
+en_phrase	heldout	well of
+en_phrase	heldout	hoped there were
+en_phrase	heldout	father and daughter departed
+en_word	heldout	holding
+en_phrase	heldout	Mr Carton
+en_phrase	heldout	man May the
+en_phrase	heldout	but is the property
+en_word	heldout	you
+en_phrase	heldout	a man
+en_phrase	heldout	you hooroaring at
+en_phrase	heldout	sort said Mr Cruncher
+en_word	heldout	they
+en_phrase	heldout	always advancing
+en_phrase	heldout	But as the
+en_phrase	heldout	been finished long ago
+en_word	heldout	it
+en_phrase	heldout	astounding noise
+en_phrase	heldout	old villain bound
+en_phrase	heldout	but I'll answer you
+en_word	heldout	Will
+en_phrase	heldout	soldiers' swords
+en_phrase	heldout	of the firewood
+en_phrase	heldout	President desired to know
+en_word	heldout	Pross
+en_phrase	heldout	the people
+en_phrase	heldout	two sides to
+en_phrase	heldout	the prison every day
+en_word	heldout	'
+en_phrase	heldout	and no
+en_phrase	heldout	darling of my
+en_phrase	heldout	went on direct to
+en_word	heldout	Lorry
+en_phrase	heldout	me he
+en_phrase	heldout	standing some seated
+en_phrase	heldout	have a child there
+en_literary	heldout	Reserving judgements is a matter of infinite hope.
+en_literary	heldout	And just after the war I spent two days with them in Chicago.
+en_literary	heldout	Again a sort of apology arose to my lips.
+en_literary	heldout	I'm absolutely in training." Her host looked at her incredulously.
+en_literary	heldout	Well, it's a fine book, and everybody ought to read it.
+en_literary	heldout	I am not even faintly like a rose.
+en_literary	heldout	It couldn't be helped!" cried Daisy with tense gaiety.
+en_literary	heldout	Ten o'clock," she remarked, apparently finding the time on the ceiling.
+en_literary	heldout	Besides, Nick's going to look after her, aren't you, Nick?
+en_literary	heldout	I forgot to ask you something, and it's important.
+en_literary	heldout	The supercilious assumption was that on Sunday afternoon I had nothing better to do.
+en_literary	heldout	Awful." "It does her good to get away." "Doesn't her husband object?" "Wilson?
+en_literary	heldout	That dog's a boy." "It's a bitch," said Tom decisively.
+en_literary	heldout	With the influence of the dress her personality had also undergone a change.
+en_literary	heldout	Two of them we have framed downstairs." "Two what?" demanded Tom.
+en_literary	heldout	It's really his wife that's keeping them apart.
+en_literary	heldout	I married him because I thought he was a gentleman," she said finally.
+en_literary	heldout	I'm going to make a list of all the things I've got to get.
+en_literary	heldout	People were not invited - they went there.
+en_literary	heldout	Do you come to these parties often?" inquired Jordan of the girl beside her.
+en_literary	heldout	I'll bet he killed a man." She narrowed her eyes and shivered.
+en_literary	heldout	They're real." "The books?" He nodded.
+en_literary	heldout	Who brought you?" he demanded.
+en_literary	heldout	I was still with Jordan Baker.
+en_literary	heldout	Much better." I turned again to my new acquaintance.
+en_literary	heldout	And I like large parties.
+en_literary	heldout	The wives were sympathizing with each other in slightly raised voices.
+en_literary	heldout	Do you want to commit suicide?" "You're lucky it was just a wheel!
+en_literary	heldout	Most of the time I worked.
+en_literary	heldout	From farther out on the Island came the Cheadles and the O.
+en_literary	heldout	This quality was continually breaking through his punctilious manner in the shape of restlessness.
+en_literary	heldout	He lifted up the words and nodded at them - with his smile.
+en_literary	heldout	His correctness grew on him as we neared the city.
+en_literary	heldout	Highballs?" asked the head waiter.
+en_literary	heldout	Several years," he answered in a gratified way.
+en_literary	heldout	I wondered if I had said anything to offend him.
+en_literary	heldout	She asked me if I was going to the Red Cross to make bandages.
+en_literary	heldout	Perhaps because she doesn't drink.
+en_literary	heldout	But there wasn't a sound.
+en_literary	heldout	I suspected that he meant my grass.
+en_literary	heldout	The day agreed upon was pouring rain.
+en_literary	heldout	Will they do?" I asked.
+en_literary	heldout	I had nothing to do in the hall, so I went into the room.
+en_literary	heldout	Not only that, but you're rude.
+en_literary	heldout	Yes." His eyes went over it, every arched door and square tower.
+en_literary	heldout	Now, in the reaction, he was running down like an over-wound clock.
+en_literary	heldout	Come here quick!" cried Daisy at the window.
+en_literary	heldout	In the music-room Gatsby turned on a solitary lamp beside the piano.
+en_literary	heldout	But his heart was in a constant, turbulent riot.
+en_literary	heldout	You were with Nick here." "I know your wife," continued Gatsby, almost aggressively.
+en_literary	heldout	Come along," he said - but to her only.
+en_literary	heldout	I haven't got a horse," said Gatsby.
+en_literary	heldout	I'm giving out green - " "Look around," suggested Gatsby.
+en_literary	heldout	I wouldn't let you operate on me!" It was like that.
+en_literary	heldout	Lots of people come who haven't been invited," she said suddenly.
+en_literary	heldout	Of course she did." "She didn't like it," he insisted.
+en_literary	heldout	But they made no sound, and what I had almost remembered was uncommunicable forever.
+en_literary	heldout	The next day was broiling, almost the last, certainly the warmest, of the summer.
+en_literary	heldout	And Mr Thomas Buchanan, the athlete?" I inquired.
+en_literary	heldout	Afterward he kept looking at the child with surprise.
+en_literary	heldout	I read somewhere that the sun's getting hotter every year," said Tom genially.
+en_literary	heldout	You resemble the advertisement of the man," she went on innocently.
+en_literary	heldout	I don't see the idea of going to town," broke out Tom savagely.
+en_literary	heldout	He looked at the gauge.
+en_literary	heldout	I've made a small investigation of this fellow," he continued.
+en_literary	heldout	I didn't mean to interrupt your lunch," he said.
+en_literary	heldout	I'll let you have that car," said Tom.
+en_literary	heldout	It's a swell suite," whispered Jordan respectfully, and everyone laughed.
+en_literary	heldout	Who was it fainted, Tom?" "Biloxi," he answered shortly.
+en_literary	heldout	He came down in the private car." "Well, he said he knew you.
+en_literary	heldout	He isn't causing a row," Daisy looked desperately from one to the other.
+en_literary	heldout	Please don't!" she interrupted helplessly.
+en_literary	heldout	But all the rest of that's a God damned lie.
+en_literary	heldout	Oh, you want too much!" she cried to Gatsby.
+en_literary	heldout	She turned to her husband.
+en_literary	heldout	Then I turned back to Gatsby - and was startled at his expression.
+en_literary	heldout	He was his wife's man and not his own.
+en_literary	heldout	It was a yellow car," he said, "big yellow car.
+en_literary	heldout	What's all that?" he demanded.
+en_literary	heldout	It's only half-past nine," she said.
+en_literary	heldout	Anyhow - Daisy stepped on it.
+en_literary	heldout	Once in a while she looked up at him and nodded in agreement.
+en_literary	heldout	You ought to go away," I said.
+en_literary	heldout	But he didn't despise himself and it didn't turn out as he had imagined.
+en_literary	heldout	I'm going to drain the pool today, Mr Gatsby.
+en_literary	heldout	They're a rotten crowd," I shouted across the lawn.
+en_literary	heldout	Finally someone said it was a shame, and closed the door.
+en_literary	heldout	Maybe even if you haven't been there for a long time?
+en_literary	heldout	I found it yesterday afternoon.
+en_literary	heldout	Eckleburg, which had just emerged, pale and enormous, from the dissolving night.
+en_literary	heldout	But all this part of it seemed remote and unessential.
+en_literary	heldout	But the connection came through as a man's voice, very thin and far away.
+en_literary	heldout	I saw it in the Chicago newspaper," he said.
+en_literary	heldout	If he'd of lived, he'd of been a great man.
+en_literary	heldout	What I called up about is - " "Wait a minute," I interrupted.
+en_literary	heldout	Will you just - What was your name?" She vanished.
+en_literary	heldout	Jimmy sent me this picture." He took out his wallet with trembling fingers.
+en_literary	heldout	He always had some resolves like this or something.
+en_literary	heldout	I couldn't get to the house," he remarked.
+en_literary	heldout	Well, I met another bad driver, didn't I?
+en_word	heldout	I
+en_phrase	heldout	you ever
+en_phrase	heldout	me of a
+en_phrase	heldout	Of course you will
+en_word	heldout	had
+en_phrase	heldout	she urged
+en_phrase	heldout	from Really She
+en_phrase	heldout	whenever I want to
+en_word	heldout	doesn't
+en_phrase	heldout	what do
+en_phrase	heldout	Gatsby he said
+en_phrase	heldout	how did it happen
+en_word	heldout	well
+en_phrase	heldout	it this
+en_phrase	heldout	his acquaintance just
+en_phrase	heldout	Daisy's change' her mine
+en_word	heldout	want
+en_phrase	heldout	my overwhelming
+en_phrase	heldout	you think of
+en_phrase	heldout	cried Mr Klipspringer in
+en_word	heldout	I'm
+en_phrase	heldout	never bought
+en_phrase	heldout	big bootlegger Where'd
+en_phrase	heldout	faster as Daisy's white
+en_word	heldout	concealed
+en_phrase	heldout	always look
+en_phrase	heldout	Tom pressing her
+en_phrase	heldout	I owe you demanded
+en_word	heldout	And
+en_phrase	heldout	don't give
+en_phrase	heldout	Suddenly she threw
+en_phrase	heldout	any of this stuff
+en_word	heldout	got
+en_phrase	heldout	he said
+en_phrase	heldout	he knew that
+en_phrase	heldout	him for his hospitality
+en_word	heldout	came
+en_phrase	heldout	were a
+en_phrase	heldout	Wouldn't you like
+en_phrase	heldout	he's in Chicago he's
+en_literary	train	To Sherlock Holmes she is always the woman.
+en_literary	train	And in practice again, I observe.
+en_literary	train	What do you make of that?" asked Holmes.
+en_literary	train	Then there was a loud and authoritative tap.
+en_literary	train	Twice she has been waylaid.
+en_literary	train	One other question," said he.
+en_literary	train	See the advantages of a cabman as a confidant.
+en_literary	train	Come!' "'What then?' I asked.
+en_literary	train	It was not merely that Holmes changed his costume.
+en_literary	train	Is the poor gentleman much hurt?" she asked.
+en_literary	train	Nothing could have been better.
+en_literary	train	Our quest is practically finished.
+en_literary	train	Until after the alarm of fire, I had not a suspicion.
+en_literary	train	Pray tell me in what way I can reward you.
+en_literary	train	Just two months ago." "Very good.
+en_literary	train	'Dear me!' he said gravely, 'that is very serious indeed!
+en_literary	train	I did not know what to do.
+en_literary	train	Have you ever observed that his ears are pierced for earrings?" "Yes, sir.
+en_literary	train	But to-day being Saturday rather complicates matters.
+en_literary	train	He has one positive virtue.
+en_literary	train	Suddenly my eyes caught the glint of a light.
+en_literary	train	What could it be, once more?
+en_literary	train	I can quite understand your thinking so," I said.
+en_literary	train	He never did wish us to go anywhere.
+en_literary	train	I shall be true to Hosmer.
+en_literary	train	That will do," said Holmes.
+en_literary	train	I am delighted to hear it," he said.
+en_literary	train	He conceives an idea more creditable to his head than to his heart.
+en_literary	train	Boscombe Valley is a country district not very far from Ross, in Herefordshire.
+en_literary	train	Witness: It conveyed no meaning to me.
+en_literary	train	You have, no doubt, already formed your conclusions from the newspapers," he said.
+en_literary	train	Why should you raise up hopes which you are bound to disappoint?
+en_literary	train	It was late before Sherlock Holmes returned.
+en_literary	train	What did you go into the pool for?" he asked.
+en_literary	train	Having done that, we may drive back to our luncheon.
+en_literary	train	It was mere chance that he was within earshot.
+en_literary	train	Therefore he used a holder.
+en_literary	train	Just tell us the truth," he said.
+en_literary	train	I was already a dying and a desperate man.
+en_literary	train	There was nothing else save the five dried pips.
+en_literary	train	I went about, however, with a heart which was full of forebodings.
+en_literary	train	I think myself that it is a page from some private diary.
+en_literary	train	We have not yet grasped the results which the reason alone can attain to.
+en_literary	train	It may well have been cause and effect.
+en_literary	train	It had escaped my memory.
+en_literary	train	Folk who were in grief came to my wife like birds to a lighthouse.
+en_literary	train	I could manage it better if I were alone.
+en_literary	train	I took two steps forward and looked back.
+en_literary	train	The bedroom window was a broad one and opened from below.
+en_literary	train	I am not hysterical, nor given to fainting.
+en_literary	train	Those are the principal points about which I wished to be absolutely clear.
+en_literary	train	He was brought up and remanded for further inquiries." "So I heard.
+en_literary	train	Be it so," said he.
+en_literary	train	I do not know that there is anything else for me to explain.
+en_literary	train	You fail, however, to reason from what you see.
+en_literary	train	By Jove, Peterson!" said he, "this is treasure trove indeed.
+en_literary	train	In spite of its youth, it has already a sinister history.
+en_literary	train	Let us follow it out to the bitter end.
+en_literary	train	I've had enough of it.
+en_literary	train	The game's up, Ryder," said Holmes quietly.
+en_literary	train	Oh, don't bring it into court!
+en_literary	train	I'll have the other, and I'll take it now,' said I.
+en_literary	train	Besides, it is the season of forgiveness.
+en_literary	train	The name is familiar to me," said he.
+en_literary	train	But have you told me all?" "Yes, all." "Miss Roylott, you have not.
+en_literary	train	What has she been saying to you?" screamed the old man furiously.
+en_literary	train	I have seen the will of the deceased wife," said he.
+en_literary	train	Won't it ring?" "No, it is not even attached to a wire.
+en_literary	train	Palmer and Pritchard were among the heads of their profession.
+en_literary	train	How long they seemed, those quarters!
+en_literary	train	It is a swamp adder!" cried Holmes; "the deadliest snake in India.
+en_literary	train	Good heavens!" I cried, "this is a terrible injury.
+en_literary	train	'Do you promise, then?' said he at last.
+en_literary	train	I should not stay here.
+en_literary	train	'Come! come!' she cried breathlessly. 'They will be here in a moment.
+en_literary	train	Was there a police-station anywhere near?
+en_literary	train	I am for west," remarked the plain-clothes man.
+en_literary	train	The letter which I hold in my hand is from Lord St Simon.
+en_literary	train	I have already learned all that is in the public prints, nothing more.
+en_literary	train	She used to be at the Allegro.
+en_literary	train	You surprise me." "Who ever heard of such a mixed affair?
+en_literary	train	Ha! you find it so?" "Extremely so.
+en_literary	train	I fainted dead away, and I was very sick for months after.
+en_literary	train	What on earth can be the matter with him?" I asked.
+en_literary	train	Bankers' safes had been forced before now, and why should not mine be?
+en_literary	train	'Where have you put it?' asked Arthur.
+en_literary	train	There cannot be any missing,' said he.
+en_literary	train	Sir George Burnwell has been several times lately.
+en_literary	train	You know what woman's instincts are.
+en_literary	train	Now we shall go upstairs," said he at last.
+en_literary	train	I shall never see them again!" he cried.
+en_literary	train	I trust, Mr Holder, that you are nearing the end of your troubles." "Ha!
+en_literary	train	She told him of the coronet.
+en_literary	train	Then he became a little more reasonable.
+en_literary	train	'May I ask where you live, sir?' said I.
+en_literary	train	Your duties, as far as the child is concerned, are very light.
+en_literary	train	HUNTER." "Will you come with me?" asked Holmes, glancing up.
+en_literary	train	More than once I have surprised her in tears.
+en_literary	train	It was my coil of hair.
+en_literary	train	It was not mere curiosity, though I have my share of that.
+en_word	train	I
+en_phrase	train	he continued
+en_phrase	train	it It's quite
+en_phrase	train	am to be neutral
+en_word	train	simple
+en_phrase	train	the freedom
+en_phrase	train	I am sorry
+en_phrase	train	in an enemy's country
+en_word	train	upon
+en_phrase	train	much for
+en_phrase	train	are very commonplace
+en_phrase	train	really don't know what
+en_word	train	to
+en_phrase	train	is interesting
+en_phrase	train	is a distinctly
+en_phrase	train	came to be in
+en_word	train	however
+en_phrase	train	another point
+en_phrase	train	It was very
+en_phrase	train	of silence Watson said
+en_word	train	for
+en_phrase	train	one man
+en_phrase	train	what you have
+en_phrase	train	other page in red
+en_word	train	For
+en_phrase	train	have no
+en_phrase	train	that the crocuses
+en_phrase	train	he rising and putting
+en_word	train	has
+en_phrase	train	change not
+en_phrase	train	There was one
+en_phrase	train	would not have missed
+en_word	train	Every
+en_phrase	train	things and
+en_phrase	train	' I answered
+en_phrase	train	not say so Precisely
+en_word	train	between
+en_phrase	train	who was
+en_phrase	train	know your train
+en_phrase	train	was my first impression
+en_literary	train	How brave they'll all think me at home!
+en_literary	train	I wonder how many miles I've fallen by this time?" she said aloud.
+en_literary	train	I wonder if I shall fall right through the earth!
+en_literary	train	I wish you were down here with me!
+en_literary	train	But it's no use now," thought poor Alice, "to pretend to be two people!
+en_literary	train	And how odd the directions will look!
+en_literary	train	How queer everything is to-day!
+en_literary	train	I wonder if I've been changed in the night?
+en_literary	train	I almost think I can remember feeling a little different.
+en_literary	train	I shall never get to twenty at that rate!
+en_literary	train	I must have been changed for Mabel!
+en_literary	train	That will be a queer thing, to be sure!
+en_literary	train	As if I would talk on such a subject!
+en_literary	train	A little bright-eyed terrier, you know, with oh, such long curly brown hair!
+en_literary	train	Alice led the way, and the whole party swam to the shore.
+en_literary	train	This is the driest thing I know.
+en_literary	train	William's conduct at first was moderate.
+en_literary	train	But she must have a prize herself, you know," said the Mouse.
+en_literary	train	What else have you got in your pocket?" he went on, turning to Alice.
+en_literary	train	Hand it over here," said the Dodo.
+en_literary	train	But you're so easily offended, you know!" The Mouse only growled in reply.
+en_literary	train	And oh, I wish you could see her after the birds!
+en_literary	train	Oh my fur and whiskers!
+en_literary	train	Run home this moment, and fetch me a pair of gloves and a fan!
+en_literary	train	How surprised he'll be when he finds out who I am!
+en_literary	train	I do wonder what can have happened to me!
+en_literary	train	Oh, I shouldn't like that!" "Oh, you foolish Alice!" she answered herself.
+en_literary	train	Mary Ann!" said the voice.
+en_literary	train	Digging for apples, yer honour!" "Digging for apples, indeed!" said the Rabbit angrily.
+en_literary	train	This time there were two little shrieks, and more sounds of broken glass.
+en_literary	train	I wonder what they'll do next!
+en_literary	train	So Bill's got to come down the chimney, has he?" said Alice to herself.
+en_literary	train	I'd nearly forgotten that I've got to grow up again!
+en_literary	train	Who are you?" said the Caterpillar.
+en_literary	train	Who are you?" Which brought them back again to the beginning of the conversation.
+en_literary	train	Keep your temper," said the Caterpillar.
+en_literary	train	Repeat, 'You are old, Father William,'" said the Caterpillar.
+en_literary	train	The Caterpillar was the first to speak.
+en_literary	train	Are you content now?" said the Caterpillar.
+en_literary	train	This time Alice waited patiently until it chose to speak again.
+en_literary	train	What can all that green stuff be?" said Alice.
+en_literary	train	I'm not a serpent!" said Alice indignantly.
+en_literary	train	I'm a - I'm a - " "Well!
+en_literary	train	A likely story indeed!" said the Pigeon in a tone of the deepest contempt.
+en_literary	train	Come, there's half my plan done now!
+en_literary	train	I'm never sure what I'm going to be, from one minute to another!
+en_literary	train	How am I to get in?" asked Alice again, in a louder tone.
+en_literary	train	It's really dreadful," she muttered to herself, "the way all the creatures argue.
+en_literary	train	There was certainly too much of it in the air.
+en_literary	train	No, there were no tears.
+en_literary	train	Come, it's pleased so far," thought Alice, and she went on.
+en_literary	train	Then it doesn't matter which way you go," said the Cat.
+en_literary	train	Oh, you can't help that," said the Cat: "we're all mad here.
+en_literary	train	You grant that?" "I suppose so," said Alice.
+en_literary	train	Therefore I'm mad." "I call it purring, not growling," said Alice.
+en_literary	train	By-the-bye, what became of the baby?" said the Cat.
+en_literary	train	Did you say pig, or fig?" said the Cat.
+en_literary	train	Have some wine," the March Hare said in an encouraging tone.
+en_literary	train	I don't see any wine," she remarked.
+en_literary	train	Then it wasn't very civil of you to offer it," said Alice angrily.
+en_literary	train	The Hatter was the first to break the silence.
+en_literary	train	What a funny watch!" she remarked.
+en_literary	train	Nor I," said the March Hare.
+en_literary	train	Of course you don't!" the Hatter said, tossing his head contemptuously.
+en_literary	train	Off with his head!'" "How dreadfully savage!" exclaimed Alice.
+en_literary	train	Is that the reason so many tea-things are put out here?" she asked.
+en_literary	train	I'm getting tired of this.
+en_literary	train	Wake up, Dormouse!" And they pinched it on both sides at once.
+en_literary	train	Yes, please do!" pleaded Alice.
+en_literary	train	Who's making personal remarks now?" the Hatter asked triumphantly.
+en_literary	train	However, he consented to go on.
+en_literary	train	Why not?" said the March Hare.
+en_literary	train	I think I may as well go in at once." And in she went.
+en_literary	train	That's none of your business, Two!" said Seven.
+en_literary	train	How should I know?" said Alice, surprised at her own courage.
+en_literary	train	Are their heads off?" shouted the Queen.
+en_literary	train	That's right!" shouted the Queen.
+en_literary	train	She was walking by the White Rabbit, who was peeping anxiously into her face.
+en_literary	train	Hush!" said the Rabbit in a low, hurried tone.
+en_literary	train	No, I didn't," said Alice: "I don't think it's at all a pity.
+en_literary	train	Alice gave a little scream of laughter.
+en_literary	train	The Queen will hear you!
+en_literary	train	A cat may look at a king," said Alice.
+en_literary	train	I'll fetch the executioner myself," said the King eagerly, and he hurried off.
+en_literary	train	You're thinking about something, my dear, and that makes you forget to talk.
+en_literary	train	Very true," said the Duchess: "flamingoes and mustard both bite.
+en_literary	train	Oh, don't talk about trouble!" said the Duchess.
+en_literary	train	A fine day, your Majesty!" the Duchess began in a low, weak voice.
+en_literary	train	I never saw one, or heard of one," said Alice.
+en_literary	train	What is the fun?" said Alice.
+en_literary	train	It's all her fancy, that: they never executes nobody, you know.
+en_literary	train	You did," said the Mock Turtle.
+en_literary	train	The Mock Turtle went on.
+en_literary	train	Certainly not!" said Alice indignantly.
+en_literary	train	What is it?" The Gryphon lifted up both its paws in surprise.
+en_literary	train	Well, I can't show it you myself," the Mock Turtle said: "I'm too stiff.
+en_literary	train	Turn a somersault in the sea!" cried the Mock Turtle, capering wildly about.
+en_literary	train	It must be a very pretty dance," said Alice timidly.
+en_literary	train	Very much indeed," said Alice.
+en_literary	train	We can do without lobsters, you know.
+en_word	train	Would
+en_phrase	train	how I
+en_phrase	train	things went on
+en_phrase	train	Table doesn't signify let's
+en_word	train	cats
+en_phrase	train	the Mouse
+en_phrase	train	thimble said Alice
+en_phrase	train	said to herself in
+en_word	train	walk
+en_phrase	train	an angry
+en_phrase	train	wish they could
+en_phrase	train	opening for a conversation
+en_word	train	you
+en_phrase	train	thought Alice
+en_phrase	train	you said the
+en_phrase	train	up to the door
+en_word	train	what
+en_phrase	train	added as
+en_phrase	train	Call it what
+en_phrase	train	was nothing on it
+en_word	train	It
+en_phrase	train	Hatter shook
+en_phrase	train	Dormouse shall they
+en_phrase	train	there may be one
+en_word	train	Always
+en_phrase	train	in reply
+en_phrase	train	say 'What a
+en_phrase	train	the eyes appeared and
+en_word	train	the
+en_phrase	train	The Duchess
+en_phrase	train	Turtle Drive on
+en_phrase	train	was that inquired Alice
+en_word	train	top
+en_phrase	train	shall sing
+en_phrase	train	not could not
+en_phrase	train	So they had to
+en_word	train	with
+en_phrase	train	explain it
+en_phrase	train	Beau ootiful Soo
+en_phrase	train	Beau ootiful Soo oop

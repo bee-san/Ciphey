@@ -1,8 +1,9 @@
 [codespell]
 # "ue" appears in Caesar-cipher test vectors in caesar_decoder.rs.
-# "sais" and "ist" are French and German test sentences (plaintext_eval.rs, english.rs);
-# "fpr" is the harness's false-positive-rate column.
-ignore-words-list = ue,sais,ist,fpr
-# Encoded benchmark inputs are gibberish by design; the ngram tables are binary counts and
-# word lists (with archaic words like "fro"), and the held-out text is Jane Austen's
-skip = ./benches/data/*,benches/data/*,./src/storage/ngrams/*.bin,src/storage/ngrams/*.bin,./src/storage/ngrams/*.txt,src/storage/ngrams/*.txt,./examples/data/*,examples/data/*
+# "sais", "ist" and "sie" are French and German words (english.rs);
+# "fpr" is the plaintext benchmark's false-positive-rate key (benches/plaintext.rs).
+ignore-words-list = ue,sais,ist,sie,fpr
+# Encoded benchmark inputs and near misses are gibberish by design, and the plaintext
+# benchmark's data has Gutenberg prose and other languages; the ngram tables are binary
+# counts and word lists (with archaic words like "fro")
+skip = ./benches/data/*,benches/data/*,./src/storage/ngrams/*.bin,src/storage/ngrams/*.bin,./src/storage/ngrams/*.txt,src/storage/ngrams/*.txt

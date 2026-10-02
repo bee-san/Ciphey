@@ -106,6 +106,12 @@ harness = false
 name = "startup"
 harness = false
 
+# Plaintext-detection accuracy, time per check and end-to-end results, see
+# docs/plaintext-detection.md
+[[bench]]
+name = "plaintext"
+harness = false
+
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)

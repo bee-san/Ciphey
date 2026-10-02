@@ -1,5 +1,5 @@
 use crate::checkers::checker_result::CheckResult;
-use crate::storage::ngrams::{is_short_word, quadgram_score};
+use crate::storage::ngrams::{is_short_word, quadgram_score, quadgram_score_and_letters};
 use gibberish_or_not::{is_gibberish, Sensitivity};
 use lemmeknow::Identifier;
 
@@ -7,8 +7,11 @@ use crate::checkers::checker_type::{Check, Checker};
 
 /// Checks English plaintext.
 ///
-/// The candidate is normalised first (see `normalise_string`) and then classified by
-/// shape:
+/// The candidate is normalised first (see `normalise_string`), rejected if it looks like
+/// decoder output (`looks_like_decoder_output`: words cased like `hHeREoUtHo`, mostly
+/// symbols such as `!%TOO(NO`, unbalanced brackets), and then classified by shape. The
+/// full list of rules and thresholds, and the benchmark they were tuned with, are in
+/// `docs/plaintext-detection.md`.
 ///
 /// 1. **Space-less letters** (no whitespace, at least `SPACELESS_MIN_LETTERS` (8) letters,
 ///    at least 90% letters), the usual output of Caesar, railfence and other classical
@@ -20,16 +23,19 @@ use crate::checkers::checker_type::{Check, Checker};
 ///    9 letters.
 /// 2. **Mostly known words**: two or more words, at least one of three or more letters, of
 ///    which more than 80% are English words, counting the common one to three letter
-///    words gibberish-or-not's dictionary lacks (`a`, `is`, `me` ...). This is
-///    gibberish-or-not's own "almost every word is English" rule with those words added,
-///    so `call me` and `meet me at noon` pass, but not decoder output like `I A`.
+///    words gibberish-or-not's dictionary lacks (`a`, `is`, `me` ...) and leaving numbers
+///    out. So `call me` and `meet me at noon` pass, but not decoder output like `I A`.
+///    Without whitespace the words must be separated by writing's punctuation.
 /// 3. **Other text without whitespace** (digits or symbols mixed in, like
-///    `ThI2THAtThE2THe0`): only a single dictionary word passes. gibberish-or-not's
-///    letter-pair scores accept too much of this decoder junk.
-/// 4. **Everything else**: gibberish-or-not's `is_gibberish` at the checker's sensitivity,
-///    unless the letters' quadgram score is below `quadgram_veto`, far from any natural
-///    language (wrong Caesar shifts such as `Max mkxtlnkx bl unkbxw ngwxk`, reversed text),
-///    or three or more words contain not a single English word.
+///    `ThI2THAtThE2THe0`), **one or two words**: only a single dictionary word passes, of
+///    five or more letters at Low. gibberish-or-not's letter-pair scores accept too much
+///    of this decoder junk.
+/// 4. **Everything else**: rejected if its letters' quadgram score is below
+///    `quadgram_veto`, far from any natural language (wrong Caesar shifts such as
+///    `Max mkxtlnkx bl unkbxw ngwxk`), if no word is English, or if fewer than
+///    `min_known_ratio` of the words are and it isn't in another language (reversed text,
+///    wrong railfence keys, partly decrypted Vigenère); otherwise gibberish-or-not's
+///    `is_gibberish` at the checker's sensitivity decides.
 pub struct EnglishChecker;
 
 /// Space-less text needs at least this many letters for its quadgram score to mean
@@ -70,7 +76,7 @@ fn quadgram_veto(sensitivity: Sensitivity) -> f64 {
 const QUADGRAM_VETO_MIN_LETTERS: usize = 12;
 
 /// The minimum mean quadgram score for space-less text at each sensitivity (Low is the
-/// strictest). Chosen with `examples/plaintext_eval.rs` so that the issue #1031 corpus
+/// strictest). Chosen with the #1031 harness so that the issue's corpus
 /// has no more false positives than before, and checked on held-out text.
 fn quadgram_threshold(sensitivity: Sensitivity) -> f64 {
     match sensitivity {
@@ -120,16 +126,19 @@ impl Check for Checker<EnglishChecker> {
 }
 
 /// Whether `text` reads as English at `sensitivity`. See [`EnglishChecker`].
-fn is_english(text: &str, sensitivity: Sensitivity) -> bool {
+pub(crate) fn is_english(text: &str, sensitivity: Sensitivity) -> bool {
     let normalised = normalise_string(text);
     if normalised.is_empty() {
         return false;
     }
     let trimmed = text.trim();
+    if looks_like_decoder_output(trimmed) {
+        return false;
+    }
     let spaceless = !trimmed.contains(char::is_whitespace);
 
     if spaceless && is_mostly_letters(trimmed) {
-        if is_dictionary_word(&normalised) {
+        if is_single_word(&normalised, sensitivity) {
             return true;
         }
         let Some(score) = quadgram_score(trimmed) else {
@@ -149,25 +158,258 @@ fn is_english(text: &str, sensitivity: Sensitivity) -> bool {
     }
 
     let words: Vec<&str> = normalised.split(' ').collect();
-    if words.len() >= 2
-        && words.iter().any(|word| word.chars().count() >= 3)
-        && mostly_known_words(&words)
+    // Numbers are neither English nor not: `number 1 1 number 2 0 operation` is three
+    // English words
+    let alpha_words: Vec<&str> = words
+        .iter()
+        .copied()
+        .filter(|word| word.chars().any(char::is_alphabetic))
+        .collect();
+    // Without spaces, words must be separated the way writing separates them
+    // (`Hello,world!How`), and numbers count against them: `9=inn@on` and
+    // `SO[\OTSTONTNOTTR` are junk
+    let candidates: &[&str] = if spaceless { &words } else { &alpha_words };
+    // Cheapest first: a quadgram score far from any language rejects text with spaces
+    // before its words are looked up
+    if !spaceless {
+        let (score, letters) = quadgram_score_and_letters(trimmed);
+        if letters >= QUADGRAM_VETO_MIN_LETTERS
+            && score.is_some_and(|score| score < quadgram_veto(sensitivity))
+        {
+            return false;
+        }
+    }
+    let known = known_words(candidates, min_known_ratio(sensitivity));
+    if candidates.len() >= 2
+        && known == Known::Mostly
+        && (!spaceless || is_separated_like_writing(trimmed))
+        && candidates.iter().any(|word| word.chars().count() >= 3)
     {
         return true;
     }
     if spaceless {
-        return words.len() == 1 && is_dictionary_word(words[0]);
+        return words.len() == 1 && is_single_word(words[0], sensitivity);
     }
-    if words.len() >= 3 && !words.iter().any(|word| is_known_word(word)) {
-        return false;
+    // Two words that aren't both words, like `terces pot` (reversed) or `peg knioge` (a
+    // wrong railfence key)
+    if alpha_words.len() <= 2 {
+        return alpha_words.len() == 1 && is_single_word(alpha_words[0], sensitivity);
     }
-    if trimmed.bytes().filter(u8::is_ascii_alphabetic).count() >= QUADGRAM_VETO_MIN_LETTERS
-        && quadgram_score(trimmed).is_some_and(|score| score < quadgram_veto(sensitivity))
-    {
+    if known == Known::None || (known == Known::Few && !is_other_language(&alpha_words)) {
         return false;
     }
     !is_gibberish(&normalised, sensitivity)
 }
+
+/// Text with spaces needs at least this share of English words (one to three letter words
+/// included), unless it is in another language (see [`is_other_language`]). In the
+/// benchmark's English (benches/plaintext.rs) under 1% of sentences fall below half, and
+/// almost all reversed text, wrong railfence keys and partly decrypted Vigenère do.
+fn min_known_ratio(sensitivity: Sensitivity) -> f64 {
+    match sensitivity {
+        Sensitivity::Low | Sensitivity::Medium => 0.5,
+        Sensitivity::High => 0.35,
+    }
+}
+
+/// Whether `word` (lower case) is a common short word of French, German, Spanish,
+/// Italian, Portuguese or Dutch that is not an English word. Ciphey doesn't claim to
+/// recognise these languages, but gibberish-or-not accepts some of their sentences, and
+/// two of these words keep text out of [`min_known_ratio`].
+fn is_other_language_word(word: &str) -> bool {
+    matches!(
+        word,
+        "aux"
+            | "avec"
+            | "ce"
+            | "ces"
+            | "cette"
+            | "dans"
+            | "des"
+            | "du"
+            | "est"
+            | "il"
+            | "je"
+            | "la"
+            | "le"
+            | "les"
+            | "mais"
+            | "ne"
+            | "nous"
+            | "pas"
+            | "pour"
+            | "que"
+            | "qui"
+            | "sur"
+            | "une"
+            | "vous"
+            | "das"
+            | "dem"
+            | "der"
+            | "dich"
+            | "ein"
+            | "eine"
+            | "für"
+            | "ich"
+            | "ist"
+            | "mit"
+            | "nicht"
+            | "sehr"
+            | "sie"
+            | "uns"
+            | "und"
+            | "wir"
+            | "zu"
+            | "con"
+            | "del"
+            | "el"
+            | "está"
+            | "las"
+            | "los"
+            | "muy"
+            | "por"
+            | "una"
+            | "di"
+            | "che"
+            | "non"
+            | "per"
+            | "sono"
+            | "não"
+            | "com"
+            | "para"
+            | "um"
+            | "uma"
+            | "een"
+            | "het"
+            | "niet"
+            | "van"
+    )
+}
+
+/// Whether at least two different words of `words` (lower case) are other languages'
+/// words: see [`is_other_language_word`].
+fn is_other_language(words: &[&str]) -> bool {
+    let mut found: Option<&str> = None;
+    for word in words {
+        if is_other_language_word(word) {
+            match found {
+                Some(first) if first != *word => return true,
+                _ => found = Some(word),
+            }
+        }
+    }
+    false
+}
+
+/// Whether `text` has the case, symbols or brackets of decoder output rather than of
+/// writing:
+///
+/// * **case**: Caesar, Vigenère, Atbash and the like only change letters, so on mixed-case
+///   input (Base64, random characters) they give words like `hHeREoUtHo`, `baLL` or
+///   `NoNeININ` (see [`has_word_case`]). Rejected when more than a third of the words, or
+///   any of three words or fewer, are cased like that.
+/// * **symbols**: more than a third of the characters (spaces aside) are symbols and one of
+///   them is in [`DECODER_SYMBOLS`], like `!%TOO(NO` or `%{DINe}.`. Code has symbols too,
+///   but fewer: `x = [i * i for i in range(5)]` is a fifth.
+/// * **brackets**: square or curly brackets that don't balance. Writing closes them; junk
+///   such as `[bede 'cab'  'ea` doesn't.
+///
+/// One pass over the text: almost every text a search checks is rejected, and rejecting
+/// it early is what keeps checking fast.
+fn looks_like_decoder_output(text: &str) -> bool {
+    let (mut words, mut odd_case) = (0usize, 0usize);
+    let (mut chars, mut symbols, mut decoder_symbol) = (0usize, 0usize, false);
+    let (mut square, mut curly) = (0i32, 0i32);
+    let mut token_start: Option<usize> = None;
+    let bytes = text.as_bytes();
+    for (i, &b) in bytes.iter().enumerate() {
+        if b.is_ascii_alphabetic() {
+            token_start.get_or_insert(i);
+        } else if let Some(start) = token_start.take() {
+            words += 1;
+            odd_case += usize::from(!has_word_case(&bytes[start..i]));
+        }
+        if b.is_ascii_whitespace() {
+            continue;
+        }
+        // Count characters, not bytes: only the first byte of a UTF-8 sequence
+        if b & 0xC0 != 0x80 {
+            chars += 1;
+        }
+        if b.is_ascii_punctuation() {
+            symbols += 1;
+            decoder_symbol |= DECODER_SYMBOLS.as_bytes().contains(&b);
+        } else if b >= 0x80 && b & 0xC0 != 0x80 {
+            // A non-ASCII character that isn't a letter (`©`, `«`) counts as a symbol
+            let c = text[i..].chars().next().unwrap_or_default();
+            symbols += usize::from(!c.is_alphanumeric());
+        }
+        match b {
+            b'[' => square += 1,
+            b']' => square -= 1,
+            b'{' => curly += 1,
+            b'}' => curly -= 1,
+            _ => {}
+        }
+    }
+    if let Some(start) = token_start {
+        words += 1;
+        odd_case += usize::from(!has_word_case(&bytes[start..]));
+    }
+    (odd_case > 0 && (odd_case * 3 > words || words <= 3))
+        || (decoder_symbol && symbols * 3 > chars)
+        || square != 0
+        || curly != 0
+}
+
+/// Whether a run of ASCII letters is cased the way written words are: all lower case, all
+/// upper case, capitalised, or capitalised words run together (`GitHub`, `iPhone`,
+/// `McDonald`, `URLs`).
+fn has_word_case(token: &[u8]) -> bool {
+    let upper = token.iter().filter(|c| c.is_ascii_uppercase()).count();
+    if token.len() < 2 || upper == 0 || upper == token.len() {
+        return true;
+    }
+    // An acronym's plural
+    if token.ends_with(b"s") && upper == token.len() - 1 {
+        return true;
+    }
+    // Otherwise every capital starts a lower case run: `GitHub`, not `HuB` or `aLL`
+    token
+        .iter()
+        .zip(token.iter().skip(1).map(Some).chain(std::iter::once(None)))
+        .all(|(c, next)| !c.is_ascii_uppercase() || next.is_some_and(u8::is_ascii_lowercase))
+}
+
+/// Punctuation that separates words in writing.
+const WRITING_PUNCTUATION: &str = ".,!?;:'\"-()";
+
+/// Whether every character of `text` that isn't a letter or digit is
+/// [`WRITING_PUNCTUATION`].
+fn is_separated_like_writing(text: &str) -> bool {
+    text.chars()
+        .all(|c| c.is_alphanumeric() || WRITING_PUNCTUATION.contains(c))
+}
+
+/// Symbols that decoders put in their output but writing hardly uses. `#`, `$`, `@`, `&`,
+/// `/` and `_` are left out: `#42`, `$5`, `@name`, `and/or`, `snake_case`.
+const DECODER_SYMBOLS: &str = "\\^[]{}|~=<>%*+`";
+
+/// Whether `word` (lower case) is plaintext on its own: a dictionary word, of at least
+/// [`LOW_MIN_WORD_LETTERS`] letters at Low sensitivity.
+///
+/// Low is what Caesar, ROT47, railfence and Vigenère check with. One in 150 strings of four
+/// letters is in the dictionary, and those ciphers ask about the most English-looking of
+/// their keys, so wrong keys find four-letter words often: `SHAG`, `MEAN`, `scut` and `AdEn`
+/// ended searches of inputs with no plaintext. One in 2,000 strings of five letters is a
+/// word.
+fn is_single_word(word: &str, sensitivity: Sensitivity) -> bool {
+    (sensitivity != Sensitivity::Low || word.chars().count() >= LOW_MIN_WORD_LETTERS)
+        && is_dictionary_word(word)
+}
+
+/// See [`is_single_word`].
+const LOW_MIN_WORD_LETTERS: usize = 5;
 
 /// At least [`SPACELESS_MIN_LETTERS`] ASCII letters, and at least 90% of the characters.
 fn is_mostly_letters(text: &str) -> bool {
@@ -254,23 +496,54 @@ fn splits_into_words(letters: &str) -> bool {
     reachable[letters.len()]
 }
 
-/// Whether more than 80% of `words` (lower case) are English words.
-fn mostly_known_words(words: &[&str]) -> bool {
-    // known > 80% of words <=> unknown < 20% of words
-    let mut unknown = 0;
-    for word in words {
-        if !is_known_word(word) {
+/// How many of a text's words are English words, as far as [`known_words`] needs to know.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Known {
+    /// More than 80%
+    Mostly,
+    /// At least the floor, but not more than 80%
+    Enough,
+    /// Some, but fewer than the floor
+    Few,
+    /// None at all
+    None,
+}
+
+/// How many of `words` (lower case) are English words: more than 80%, at least `floor`
+/// (a share), fewer, or none. Stops looking words up as soon as the answer is clear:
+/// every lookup is a dictionary search, and long texts have many words.
+fn known_words(words: &[&str], floor: f64) -> Known {
+    let n = words.len();
+    let need = (floor * n as f64).ceil() as usize;
+    let (mut known, mut unknown) = (0usize, 0usize);
+    for (i, word) in words.iter().enumerate() {
+        if is_known_word(word) {
+            known += 1;
+        } else {
             unknown += 1;
-            if unknown * 5 >= words.len() {
-                return false;
+        }
+        // known > 80% of words <=> unknown < 20% of words
+        if unknown * 5 >= n {
+            let left = n - i - 1;
+            if known >= need.max(1) {
+                return Known::Enough;
+            }
+            // Without a known word yet, keep looking: none at all is a stronger answer
+            if known > 0 && known + left < need {
+                return Known::Few;
             }
         }
     }
-    true
+    match (known, unknown) {
+        (0, _) => Known::None,
+        (_, unknown) if unknown * 5 < n => Known::Mostly,
+        (known, _) if known >= need => Known::Enough,
+        _ => Known::Few,
+    }
 }
 
 /// Whether `word` (lower case, letters and apostrophes) is an English word.
-fn is_known_word(word: &str) -> bool {
+pub(crate) fn is_known_word(word: &str) -> bool {
     if !word.chars().all(|c| c.is_alphabetic() || c == '\'') {
         return false;
     }
@@ -278,13 +551,46 @@ fn is_known_word(word: &str) -> bool {
         0 => false,
         1..=3 => is_short_word(word),
         4..=9 => is_dictionary_word(word),
-        // Too long to look up on its own (see `is_dictionary_word`), but long words
-        // carry enough quadgrams to tell
-        _ => {
-            quadgram_score(word).is_some_and(|score| score >= quadgram_threshold(Sensitivity::Low))
-        }
+        // Too long to look up on its own (see `is_dictionary_word`): a word if it splits
+        // into words (`understanding`, `throughout`) or its quadgrams are very English
+        // (`congratulations`). Wrong keys make long strings of English letters
+        // (`otstontnottr`, `hegifidded`) that a looser score let through.
+        _ => quadgram_score(word).is_some_and(|score| {
+            (score >= LONG_WORD_MIN_SCORE && has_varied_letters(word))
+                || (score >= LONG_WORD_SPLIT_MIN_SCORE
+                    && word.bytes().all(|b| b.is_ascii_lowercase())
+                    && splits_into_words(word))
+        }),
     }
 }
+
+/// Words of 10 or more letters that don't split into words must score at least this. Of
+/// the long words in the benchmark's plaintext 93% split or reach it (`photography`
+/// doesn't), of those in its near misses 6%.
+const LONG_WORD_MIN_SCORE: f64 = -4.6;
+
+/// Whether a word has as many different letters as words of its length do: at least 45%
+/// up to 16 letters. Wrong keys on digit strings use a handful of letters
+/// (`otstontnottr`); `mississippi` is a rare word that doesn't pass.
+fn has_varied_letters(word: &str) -> bool {
+    let letters = word.chars().count();
+    if letters > 16 {
+        return true;
+    }
+    let mut seen = [false; 128];
+    let mut distinct = 0usize;
+    for b in word.bytes().filter(u8::is_ascii) {
+        if !seen[usize::from(b)] {
+            seen[usize::from(b)] = true;
+            distinct += 1;
+        }
+    }
+    distinct * 20 >= letters * 9
+}
+
+/// Long words scoring below this aren't split into words at all: splitting costs a
+/// dictionary lookup per letter and word length, and nothing that low is English.
+const LONG_WORD_SPLIT_MIN_SCORE: f64 = -5.6;
 
 /// Whether `word` (lower case) is in gibberish-or-not's dictionary.
 ///
@@ -417,8 +723,10 @@ mod tests {
 
     #[test]
     fn test_checker_works_with_puncuation_and_lowercase() {
+        // Punctuation separates words (it used to be deleted, which made
+        // `Prei?nterview He!llo` read as `preinterview hello`)
         let checker = Checker::<EnglishChecker>::new();
-        assert!(checker.check("Prei?nterview He!llo Dog?").is_identified);
+        assert!(checker.check("Preinterview? Hello, Dog!").is_identified);
     }
 
     #[test]
@@ -547,7 +855,7 @@ mod tests {
 
     #[test]
     fn has_mostly_words_counts_known_words() {
-        // Wrong-key Vigenère outputs from examples/plaintext_eval.rs
+        // Wrong-key Vigenère outputs from the #1031 harness
         assert!(!has_mostly_words(
             "She sehls sea ohells xy the saa shora every oummer iorninc",
             0.7
@@ -593,16 +901,94 @@ mod tests {
 
     #[test]
     fn test_sensitivity_affects_gibberish_detection() {
-        // This text has one English word "iron" but is otherwise gibberish
-        let text = "Rcl maocr otmwi lit dnoen oehc 13 iron seah.";
+        // A Vigenère decryption with one key letter wrong: about half of its words are
+        // words. High, the most lenient sensitivity, still takes it.
+        let text = "let me jnow whdn you gdt home";
+        assert!(!english(text, Sensitivity::Low));
+        assert!(!english(text, Sensitivity::Medium));
+        assert!(english(text, Sensitivity::High));
+        // Junk with one English word in it is rejected at every sensitivity
+        let junk = "Rcl maocr otmwi lit dnoen oehc 13 iron seah.";
+        for sensitivity in [Sensitivity::Low, Sensitivity::Medium, Sensitivity::High] {
+            assert!(!english(junk, sensitivity), "{sensitivity:?}");
+        }
+    }
 
-        // With Low sensitivity, it should be classified as gibberish
-        let low_checker = Checker::<EnglishChecker>::new().with_sensitivity(Sensitivity::Low);
-        assert!(!low_checker.check(text).is_identified);
+    #[test]
+    fn decoder_case_is_not_english() {
+        // Caesar, Vigenère and the like keep the case of mixed-case input
+        for junk in [
+            "hHeREoUtHo",
+            "baLL^^",
+            "NoNeININ",
+            "EnDTHEMEtALtInv",
+            "doRa-(mE",
+            "uoY era",
+        ] {
+            assert!(!english(junk, Sensitivity::Medium), "{junk}");
+        }
+        for text in [
+            "GitHub is down again",
+            "my iPhone died",
+            "McDonald's is open late",
+            "Use HTTPS URLs for the API",
+            "TheQuickBrownFox",
+        ] {
+            assert!(english(text, Sensitivity::Medium), "{text}");
+        }
+    }
 
-        // With High sensitivity, it should be classified as English
-        let high_checker = Checker::<EnglishChecker>::new().with_sensitivity(Sensitivity::High);
-        assert!(high_checker.check(text).is_identified);
+    #[test]
+    fn symbol_junk_is_not_english() {
+        for junk in [
+            "!%TOO(NO",
+            "%{DINe}.",
+            "9=inn@on",
+            "SO[\\OTSTONTNOTTR",
+            "[bede 'cab'  'ea",
+        ] {
+            assert!(!english(junk, Sensitivity::Medium), "{junk}");
+        }
+        for text in [
+            "The cost is $5.99 - a bargain!",
+            "Item #42: 'fragile' - handle with care.",
+            "Hello,world!How are you?",
+            "meet at 221 Baker Street at 7",
+        ] {
+            assert!(english(text, Sensitivity::Medium), "{text}");
+        }
+    }
+
+    #[test]
+    fn most_words_must_be_words() {
+        // Reversed text, wrong railfence keys and partly decrypted Vigenère
+        for junk in [
+            "terces pot",
+            "peg knioge",
+            ".gnidoced peek ,resolc gnitteg era uoY",
+            "where zre you? ve're wahting ottside",
+            "so otstontnottr",
+            "_hegifidded  if ",
+        ] {
+            assert!(!english(junk, Sensitivity::Medium), "{junk}");
+        }
+        for text in [
+            "Sherlock Holmes",
+            "hello world",
+            "Congratulations on the new job!!",
+            "understanding cryptography takes time",
+        ] {
+            assert!(english(text, Sensitivity::Medium), "{text}");
+        }
+    }
+
+    #[test]
+    fn single_words_need_five_letters_at_low() {
+        // Low is what Caesar, ROT47, railfence and Vigenère check with
+        assert!(!english("SHAG", Sensitivity::Low));
+        assert!(english("SHAG", Sensitivity::Medium));
+        assert!(english("attack", Sensitivity::Low));
+        assert!(english("Hello!", Sensitivity::Low));
     }
 
     #[test]

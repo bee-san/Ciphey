@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regenerates english_quadgrams.bin and english_short_words.txt.
 
-    python3 src/storage/ngrams/generate.py [--cache DIR] [--heldout]
+    python3 src/storage/ngrams/generate.py [--cache DIR] [--bench]
 
 Both files are built from the public-domain books in BOOKS (Project Gutenberg plain
 text). The script downloads each book once into the cache directory (default
@@ -24,9 +24,10 @@ target/gutenberg), cuts off Project Gutenberg's header and licence footer, and c
     word fragments in NOT_WORDS.
 
 The tables hold counts only, no text from the books. Jane Austen is left out on
-purpose: examples/plaintext_eval.rs validates the thresholds on sentences from
-Pride and Prejudice, which must not be in the training data. `--heldout` writes those
-sentences to examples/data/heldout_pride_and_prejudice.txt instead.
+purpose: the plaintext-detection benchmark (benches/plaintext.rs) validates the thresholds
+on sentences from Pride and Prejudice and two other books that must not be in the training
+data. `--bench` writes those sentences, and some from two training books, to
+benches/data/plaintext/gutenberg.tsv instead (see BENCH_BOOKS).
 
 Only the Python 3 standard library is needed.
 """
@@ -139,7 +140,6 @@ NOT_WORDS = {"co", "de", "em", "en", "la", "le", "non", "re", "th", "un"}
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
-HELDOUT = os.path.join(ROOT, "examples", "data", "heldout_pride_and_prejudice.txt")
 PRIDE_AND_PREJUDICE = 1342
 
 ROMAN = re.compile(r"^(?=[ivxlcdm]+$)m{0,3}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$")
@@ -172,12 +172,14 @@ def strip_gutenberg(text, number):
     return text[start.end():end.start()]
 
 
-def write_heldout(cache):
-    """140 sentences and 60 short phrases from Pride and Prejudice, picked evenly."""
-    body = strip_gutenberg(fetch(PRIDE_AND_PREJUDICE, cache), PRIDE_AND_PREJUDICE)
+def pick_sentences(cache, number, start_marker, n_sentences, n_phrases):
+    """`n_sentences` sentences of 5 to 14 words and `n_phrases` phrases of 1 to 4 words from a
+    book, picked evenly: every k-th usable sentence, then 1, 2, 3 or 4 words (in turn) from
+    inside every m-th other one."""
+    body = strip_gutenberg(fetch(number, cache), number)
     for curly, straight in (("\u2018", "'"), ("\u2019", "'"), ("\u201c", '"'), ("\u201d", '"'), ("\u2014", " - "), ("_", "")):
         body = body.replace(curly, straight)
-    body = re.sub(r"\s+", " ", body[body.index("It is a truth universally"):])
+    body = re.sub(r"\s+", " ", body[body.index(start_marker):])
     # "Mr. Bennet" is not the end of a sentence
     body = re.sub(r"\b(Mr|Mrs|Dr|St)\.", r"\1", body)
     sentences = [s.strip(' "') for s in re.split(r'(?<=[.!?])\s+(?=["A-Z])', body)]
@@ -185,37 +187,65 @@ def write_heldout(cache):
         s for s in sentences
         if s.isascii() and 5 <= len(s.split()) <= 14 and not re.search(r"[\[\]\d]|CHAPTER|Chapter", s)
     ]
-    step = len(usable) // 140
-    chosen = [usable[i * step] for i in range(140)]
+    step = len(usable) // n_sentences
+    chosen = [usable[i * step] for i in range(n_sentences)]
     rest = [s for i, s in enumerate(usable) if i % step != 0]
-    phrase_step = len(rest) // 60
+    phrase_step = len(rest) // n_phrases
     phrases = []
-    for i in range(60):
+    for i in range(n_phrases):
         words = re.findall(r"[A-Za-z']+", rest[i * phrase_step])
         length = 1 + i % 4
         start = i % (len(words) - length + 1)
         phrases.append(" ".join(words[start : start + length]))
-    os.makedirs(os.path.dirname(HELDOUT), exist_ok=True)
-    with open(HELDOUT, "w", newline="\n") as f:
+    print(f"pg{number}: {len(usable)} usable sentences", file=sys.stderr)
+    return chosen, phrases
+
+
+# Books for the plaintext-detection benchmark (benches/plaintext.rs), with the text its first
+# chapter starts with. "heldout" books are not in BOOKS, so the quadgram table has never seen
+# them; the "train" ones are.
+BENCH_BOOKS = [
+    (PRIDE_AND_PREJUDICE, "It is a truth universally", "heldout", 140, 60),
+    (98, "It was the best of times", "heldout", 100, 40),  # A Tale of Two Cities
+    (64317, "In my younger and more vulnerable years", "heldout", 100, 40),  # The Great Gatsby
+    (1661, "To Sherlock Holmes she is always", "train", 100, 40),  # The Adventures of Sherlock Holmes
+    (11, "Alice was beginning to get very tired", "train", 100, 40),  # Alice's Adventures in Wonderland
+]
+BENCH_GUTENBERG = os.path.join(ROOT, "benches", "data", "plaintext", "gutenberg.tsv")
+
+
+def write_bench(cache):
+    """Sentences and phrases from BENCH_BOOKS for the plaintext-detection benchmark, as
+    `category<TAB>split<TAB>text` lines. Pride and Prejudice's are the 200 lines the #1031 harness
+    held out (examples/data/heldout_pride_and_prejudice.txt in that change)."""
+    lines = []
+    for number, marker, split, n_sentences, n_phrases in BENCH_BOOKS:
+        chosen, phrases = pick_sentences(cache, number, marker, n_sentences, n_phrases)
+        lines += [f"en_literary\t{split}\t{s}" for s in chosen]
+        lines += [f"{'en_word' if ' ' not in p else 'en_phrase'}\t{split}\t{p}" for p in phrases]
+    os.makedirs(os.path.dirname(BENCH_GUTENBERG), exist_ok=True)
+    with open(BENCH_GUTENBERG, "w", newline="\n") as f:
         f.write(
-            "# Held-out text for examples/plaintext_eval.rs (PDETECT_HELDOUT=1): 140 sentences of 5 to 14\n"
-            "# words and 60 phrases of 1 to 4 words from Jane Austen's Pride and Prejudice (1813, public\n"
-            "# domain; Project Gutenberg ebook 1342). Nothing by Austen is in the books that\n"
-            "# src/storage/ngrams/generate.py counts. Written by `generate.py --heldout`: every k-th\n"
-            "# usable sentence, then 1, 2, 3 or 4 words (in turn) from inside every m-th other one.\n"
+            "# Sentences of 5 to 14 words and phrases of 1 to 4 words from public-domain books\n"
+            "# (Project Gutenberg ebooks 1342, 98, 64317, 1661 and 11), for benches/plaintext.rs.\n"
+            "# Written by `src/storage/ngrams/generate.py --bench`. The held-out books (Pride and\n"
+            "# Prejudice, A Tale of Two Cities, The Great Gatsby) are not among the books the quadgram\n"
+            "# table is counted from; the train ones are. category<TAB>split<TAB>text\n"
         )
-        f.write("\n".join(chosen + phrases) + "\n")
-    print(f"{len(usable)} usable sentences, wrote {HELDOUT}", file=sys.stderr)
+        f.write("\n".join(lines) + "\n")
+    print(f"wrote {len(lines)} lines to {BENCH_GUTENBERG}", file=sys.stderr)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--cache", default=os.path.join(ROOT, "target", "gutenberg"))
-    parser.add_argument("--heldout", action="store_true", help="write the held-out file instead")
+    parser.add_argument(
+        "--bench", action="store_true", help="write the benchmark's book sentences instead"
+    )
     args = parser.parse_args()
     os.makedirs(args.cache, exist_ok=True)
-    if args.heldout:
-        write_heldout(args.cache)
+    if args.bench:
+        write_bench(args.cache)
         return
 
     counts = [0] * (26 ** 4)

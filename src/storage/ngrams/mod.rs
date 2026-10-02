@@ -88,15 +88,25 @@ fn letter_index(letter: u8) -> usize {
 /// assert_eq!(quadgram_score("abc"), None);
 /// ```
 pub fn quadgram_score(text: &str) -> Option<f64> {
-    let (mut window, mut letters, mut sum) = (0usize, 0usize, 0u32);
+    quadgram_score_and_letters(text).0
+}
+
+/// [`quadgram_score`], and how many ASCII letters `text` has.
+pub(crate) fn quadgram_score_and_letters(text: &str) -> (Option<f64>, usize) {
+    // The last three letters' index (0 to 26³ - 1); the next letter extends it to a
+    // quadgram's. Keeping the three letters apart avoids a division per letter.
+    let (mut a, mut b, mut c) = (0usize, 0usize, 0usize);
+    let (mut letters, mut sum) = (0usize, 0u32);
     for letter in text.bytes().filter(u8::is_ascii_alphabetic) {
-        window = (window * 26 + letter_index(letter)) % QUADGRAMS;
+        let d = letter_index(letter);
         letters += 1;
         if letters >= 4 {
-            sum += u32::from(QUADGRAM_TABLE[window]);
+            sum += u32::from(QUADGRAM_TABLE[((a * 26 + b) * 26 + c) * 26 + d]);
         }
+        (a, b, c) = (b, c, d);
     }
-    (letters >= 4).then(|| -f64::from(sum) / QUADGRAM_SCALE / (letters - 3) as f64)
+    let score = (letters >= 4).then(|| -f64::from(sum) / QUADGRAM_SCALE / (letters - 3) as f64);
+    (score, letters)
 }
 
 /// The mean log10 probability of the letter bigrams in `text`, or `None` if it has
