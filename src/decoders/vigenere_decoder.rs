@@ -8,7 +8,7 @@
 use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
 use crate::checkers::english::has_mostly_words;
-use crate::checkers::lemmeknow_checker::is_unmarked_ctf_flag;
+use crate::checkers::lemmeknow_checker::{is_marked_ctf_flag, is_unmarked_ctf_flag};
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
 use gibberish_or_not::Sensitivity;
@@ -106,8 +106,9 @@ static KEY_SEARCH_TABLES: Lazy<KeySearchTables> = Lazy::new(|| {
 
 /// A candidate with spaces is only checked if at least this share of its words are
 /// English words. In `examples/plaintext_eval.rs` the right key's output never scores
-/// below 0.78 and a wrong key's that the checker accepted never above 0.62.
-const MIN_WORD_RATIO: f64 = 0.7;
+/// below 0.78 and a wrong key's that the checker accepted never above 0.62; a near miss in
+/// the #1031 end-to-end cases (`1HE TREASURE IS BURIED ... [W MPG [OZEQF`) scores 0.73.
+const MIN_WORD_RATIO: f64 = 0.75;
 
 /// The Vigenère decoder struct
 pub struct VigenereDecoder;
@@ -153,6 +154,7 @@ impl Crack for Decoder<VigenereDecoder> {
             // before the checker also keeps them away from the human checker. With a
             // crib, the crib decides.
             if !crib
+                && !is_marked_ctf_flag(&decode_attempt)
                 && (!has_mostly_words(&decode_attempt, MIN_WORD_RATIO)
                     || is_unmarked_ctf_flag(&decode_attempt))
             {

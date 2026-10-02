@@ -92,12 +92,20 @@ pub fn is_unmarked_ctf_flag(text: &str) -> bool {
     matches_flag_pattern(text) && !flag_prefix_has_marker(&flag_prefix(text))
 }
 
+/// Symbols, besides ASCII letters and digits, that a flag without a flag word in its
+/// prefix may contain.
+const FLAG_CONTENT_SYMBOLS: &str = "_-!?.@$#&+'";
+
 /// Whether `text` is a CTF flag in any format.
 ///
 /// A Caesar shift or Atbash keeps the shape of a flag, so `synt{guvf_vf_gur_synt}` (ROT13
 /// of `flag{this_is_the_flag}`) matches the pattern too. A prefix that is a shift, an
 /// Atbash, or a shift of an Atbash of a flag word is taken as an encoded flag and
 /// rejected, so the search goes on and the decoder finds the real one.
+///
+/// Without a flag word in the prefix, the contents may only be letters, digits and
+/// [`FLAG_CONTENT_SYMBOLS`]: ROT47 turns letters into braces and other symbols, so its
+/// junk often has a flag's shape (`zw{~|~vw|}`).
 fn is_ctf_flag(text: &str) -> bool {
     let text = text.trim();
     if !matches_flag_pattern(text) {
@@ -106,6 +114,13 @@ fn is_ctf_flag(text: &str) -> bool {
     let prefix = flag_prefix(text);
     if flag_prefix_has_marker(&prefix) {
         return true;
+    }
+    let contents = &text[prefix.len() + 1..text.len() - 1];
+    if !contents
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || FLAG_CONTENT_SYMBOLS.contains(c))
+    {
+        return false;
     }
     let atbash: String = prefix.chars().map(|c| map_letter(c, |l| 25 - l)).collect();
     ![prefix, atbash].iter().any(|prefix| {
@@ -368,6 +383,18 @@ mod tests {
         // Prefixes without a flag word are kept unless they are an encoded one
         assert_eq!(identify("SEKAI{y0u_f0und_m3}").as_deref(), Some(CTF_FLAG));
         assert_eq!(identify("dice{sp4rkl3s}").as_deref(), Some(CTF_FLAG));
+        assert_eq!(identify("ENO{w3ll_d0ne!}").as_deref(), Some(CTF_FLAG));
+        // ...as long as the contents look like a flag's. These are ROT47 junk from the
+        // search.
+        for junk in [
+            "zw{~|~vw|}",
+            "U9SB{4@<5eN}",
+            "Om{HUkOiVJPgvtmo4]^j4onpX\\k95}",
+        ] {
+            assert_eq!(identify(junk), None, "{junk}");
+        }
+        // A flag word makes any contents fine
+        assert_eq!(identify("flag{~|~}").as_deref(), Some(CTF_FLAG));
     }
 
     #[test]

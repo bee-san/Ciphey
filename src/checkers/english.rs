@@ -40,9 +40,19 @@ const SPACELESS_MIN_LETTERS: usize = 8;
 /// can't tell English from a shuffle of it, like railfence's wrong keys.
 const SPLIT_MAX_LETTERS: usize = 12;
 
-/// ...unless its quadgram score is at least this. Most real words of 10 to 12 letters
-/// that can't be split score above it, and the shuffles in the #1031 corpora below.
+/// ...unless it has at least [`SPLIT_EXEMPT_MIN_LETTERS`] letters and its quadgram score is
+/// at least this. Most real words of 10 to 12 letters that can't be split score above it,
+/// and the shuffles in the #1031 corpora below.
 const SPLIT_EXEMPT_SCORE: f64 = -4.4;
+
+/// Words up to 9 letters are in the dictionary, so only longer ones may need the exemption.
+const SPLIT_EXEMPT_MIN_LETTERS: usize = 10;
+
+/// A space-less candidate from a cipher whose key search games letter statistics (see
+/// [`has_mostly_words`]) needs at least this share of its letters inside known words.
+/// Real space-less sentences in the #1031 corpora are covered 94% of the time at this
+/// level, Vigenère's wrong keys in the search 4%.
+const SPACELESS_MIN_WORD_COVERAGE: f64 = 0.85;
 
 /// Text with at least [`QUADGRAM_VETO_MIN_LETTERS`] letters that scores below this is not
 /// English, whatever gibberish-or-not says. English, even ALL CAPS, names and code,
@@ -134,7 +144,7 @@ fn is_english(text: &str, sensitivity: Sensitivity) -> bool {
             .map(|c| c.to_ascii_lowercase())
             .collect();
         return letters.len() > SPLIT_MAX_LETTERS
-            || score >= SPLIT_EXEMPT_SCORE
+            || (letters.len() >= SPLIT_EXEMPT_MIN_LETTERS && score >= SPLIT_EXEMPT_SCORE)
             || splits_into_words(&letters);
     }
 
@@ -168,21 +178,60 @@ fn is_mostly_letters(text: &str) -> bool {
 }
 
 /// Whether at least `min_ratio` of the words in `text` are English words, counting the
-/// common one to three letter words. Text without whitespace counts as passing, since it
-/// has no words to count; the quadgram score judges it.
+/// common one to three letter words. Text without whitespace that is mostly letters must
+/// instead have at least [`SPACELESS_MIN_WORD_COVERAGE`] of its letters inside known
+/// words; other text without whitespace (flags, URLs ...) passes.
 ///
 /// For decoders whose key search maximises the very letter statistics the English checker
 /// scores, like Vigenère: their wrong keys give text such as
-/// `She sehls sea ohells xy the saa shora` that passes those checks, but most of its
-/// "words" aren't words.
+/// `She sehls sea ohells xy the saa shora` or `theththttrictirm` that passes those checks,
+/// but most of its "words" aren't words.
 pub(crate) fn has_mostly_words(text: &str, min_ratio: f64) -> bool {
-    if !text.trim().contains(char::is_whitespace) {
-        return true;
+    let trimmed = text.trim();
+    if !trimmed.contains(char::is_whitespace) {
+        // The English checker rejects these anyway, and splitting long text into words
+        // costs a dictionary lookup per letter and word length
+        if !is_mostly_letters(trimmed)
+            || quadgram_score(trimmed)
+                .is_none_or(|score| score < quadgram_threshold(Sensitivity::High))
+        {
+            return true;
+        }
+        let letters: String = trimmed
+            .chars()
+            .filter(char::is_ascii_alphabetic)
+            .map(|c| c.to_ascii_lowercase())
+            .collect();
+        return word_coverage(&letters) >= SPACELESS_MIN_WORD_COVERAGE;
     }
     let normalised = normalise_string(text);
     let words: Vec<&str> = normalised.split(' ').collect();
     let known = words.iter().filter(|word| is_known_word(word)).count();
     known as f64 >= min_ratio * words.len() as f64
+}
+
+/// The largest share of `letters` (lower case ASCII letters) that a split into English
+/// words and leftover letters can put inside words: 1.0 for `meetmeatnoon`.
+fn word_coverage(letters: &str) -> f64 {
+    if letters.is_empty() {
+        return 0.0;
+    }
+    // uncovered[i]: fewest letters of letters[..i] left outside words
+    let mut uncovered = vec![usize::MAX; letters.len() + 1];
+    uncovered[0] = 0;
+    for start in 0..letters.len() {
+        let here = uncovered[start];
+        if here == usize::MAX {
+            continue;
+        }
+        uncovered[start + 1] = uncovered[start + 1].min(here + 1);
+        for end in start + 1..=(start + 9).min(letters.len()) {
+            if uncovered[end] > here && is_known_word(&letters[start..end]) {
+                uncovered[end] = here;
+            }
+        }
+    }
+    1.0 - uncovered[letters.len()] as f64 / letters.len() as f64
 }
 
 /// Whether `letters` (lower case ASCII letters) is a run of English words, such as
@@ -456,6 +505,8 @@ mod tests {
         // A long word the dictionary can't be asked about passes on its quadgram score
         assert!(english("EXPERIENCE", Sensitivity::Low));
         assert!(english("MEETMEATNOON", Sensitivity::Low));
+        // Below 10 letters words are in the dictionary, so a high score isn't enough
+        assert!(!english("THRETHAN", Sensitivity::Low));
     }
 
     #[test]
@@ -509,10 +560,20 @@ mod tests {
             "She sells sea shells by the sea shore every summer morning",
             0.7
         ));
+        // 11 of 15 words: a near miss from the search
+        assert!(!has_mostly_words(
+            "1HE TREASURE IS BURIED UNDER THE OLD OAK TREE NEAR THE RIVER [W MPG [OZEQF",
+            0.75
+        ));
+        // Without spaces, the share of letters inside words counts
+        assert!(has_mostly_words("THEQUICKBROWNFOXJUMPSOVERTHELAZYDOG", 0.7));
+        assert!(!has_mostly_words("theththttrictirm", 0.7));
+        assert!(!has_mostly_words("QTHEDTHINTHEHYTHRYATATHV", 0.7));
         assert!(
-            has_mostly_words("THEQUICKBROWNFOX", 0.7),
-            "no words to count"
+            has_mostly_words("picoCTF{b4s3_64_1s_fun}", 0.7),
+            "not mostly letters"
         );
+        assert!((word_coverage("meetmeatnoon") - 1.0).abs() < 1e-9);
     }
 
     #[test]
