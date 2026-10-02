@@ -307,6 +307,8 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
     let seen_strings: DashSet<u64> = DashSet::new();
     let seen_results: DashSet<u64> = DashSet::new();
     let open_set = ThreadSafePriorityQueue::new();
+    // Like the seen-sets, Athena's memory of rejected candidates starts empty.
+    crate::checkers::athena::forget_rejections();
 
     open_set.push(AStarNode {
         state: initial,

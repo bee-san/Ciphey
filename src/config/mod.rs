@@ -103,6 +103,12 @@ pub fn get_config() -> &'static Config {
     CONFIG.get().unwrap_or_else(|| &DEFAULT_CONFIG)
 }
 
+/// Whether [`set_global_config`] has been called. From then on [`get_config`] returns
+/// the same config for the rest of the process.
+pub(crate) fn is_global_config_set() -> bool {
+    CONFIG.get().is_some()
+}
+
 /// Creates a default lemmeknow config
 const LEMMEKNOW_DEFAULT_CONFIG: Identifier = Identifier {
     min_rarity: 0.0_f32,
