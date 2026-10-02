@@ -7,6 +7,7 @@ use crate::checkers::CheckerTypes;
 use crate::cli_pretty_printing;
 use crate::decoders::ascii85_decoder::Ascii85Decoder;
 use crate::decoders::atbash_decoder::AtbashDecoder;
+use crate::decoders::backslash_escape_decoder::BackslashEscapeDecoder;
 use crate::decoders::baconian_decoder::BaconianDecoder;
 use crate::decoders::base32_decoder::Base32Decoder;
 use crate::decoders::base36_decoder::Base36Decoder;
@@ -276,6 +277,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let url = Decoder::<URLDecoder>::new();
     let punycode = Decoder::<PunycodeDecoder>::new();
     let unicode_escape = Decoder::<UnicodeEscapeDecoder>::new();
+    let backslash_escape = Decoder::<BackslashEscapeDecoder>::new();
     let quoted_printable = Decoder::<QuotedPrintableDecoder>::new();
     let utf16 = Decoder::<Utf16Decoder>::new();
     let base32 = Decoder::<Base32Decoder>::new();
@@ -352,6 +354,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(url),
             Box::new(punycode),
             Box::new(unicode_escape),
+            Box::new(backslash_escape),
             Box::new(utf16),
             Box::new(rot47decoder),
             Box::new(z85),

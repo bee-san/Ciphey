@@ -152,6 +152,13 @@ expected = "Meet me at the old lighthouse after midnight and bring the map, the 
 
 [[case]]
 kind = "single"
+name = "backslash_escapes"
+layers = ["Backslash Escapes"]
+input = '\x4d\x65\x65\x74\040\x6d\x65\040\x61\x74\040\x74\x68\x65\040\x6f\x6c\x64\040\x6c\x69\x67\x68\x74\x68\x6f\x75\x73\x65\040\x61\x66\x74\x65\x72\040\x6d\x69\x64\x6e\x69\x67\x68\x74\040\x61\x6e\x64\040\x62\x72\x69\x6e\x67\040\x74\x68\x65\040\x6d\x61\x70\054\040\x74\x68\x65\040\x6b\x65\x79\040\x61\x6e\x64\040\x61\040\x74\x6f\x72\x63\x68\056'
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
 name = "quoted_printable"
 layers = ["Quoted-Printable"]
 input = "Meet=20me=20at=20the=20old=20lighthouse=20after=20midnight=20and=20bring=20=\nthe=20map,=20the=20key=20and=20a=20torch."
@@ -313,6 +320,13 @@ kind = "multi"
 name = "octal_base64"
 layers = ["Octal", "Base64"]
 input = "MTE1IDE0NSAxNDUgMTY0IDQwIDE1NSAxNDUgNDAgMTQxIDE2NCA0MCAxNjQgMTUwIDE0NSA0MCAxNTcgMTU0IDE0NCA0MCAxNTQgMTUxIDE0NyAxNTAgMTY0IDE1MCAxNTcgMTY1IDE2MyAxNDUgNDAgMTQxIDE0NiAxNjQgMTQ1IDE2MiA0MCAxNTUgMTUxIDE0NCAxNTYgMTUxIDE0NyAxNTAgMTY0IDQwIDE0MSAxNTYgMTQ0IDQwIDE0MiAxNjIgMTUxIDE1NiAxNDcgNDAgMTY0IDE1MCAxNDUgNDAgMTU1IDE0MSAxNjAgNTQgNDAgMTY0IDE1MCAxNDUgNDAgMTUzIDE0NSAxNzEgNDAgMTQxIDE1NiAxNDQgNDAgMTQxIDQwIDE2NCAxNTcgMTYyIDE0MyAxNTAgNTY="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "backslash_escapes_base64"
+layers = ["Backslash Escapes", "Base64"]
+input = "XHg0ZFx4NjVceDY1XHg3NFwwNDBceDZkXHg2NVwwNDBceDYxXHg3NFwwNDBceDc0XHg2OFx4NjVcMDQwXHg2Zlx4NmNceDY0XDA0MFx4NmNceDY5XHg2N1x4NjhceDc0XHg2OFx4NmZceDc1XHg3M1x4NjVcMDQwXHg2MVx4NjZceDc0XHg2NVx4NzJcMDQwXHg2ZFx4NjlceDY0XHg2ZVx4NjlceDY3XHg2OFx4NzRcMDQwXHg2MVx4NmVceDY0XDA0MFx4NjJceDcyXHg2OVx4NmVceDY3XDA0MFx4NzRceDY4XHg2NVwwNDBceDZkXHg2MVx4NzBcMDU0XDA0MFx4NzRceDY4XHg2NVwwNDBceDZiXHg2NVx4NzlcMDQwXHg2MVx4NmVceDY0XDA0MFx4NjFcMDQwXHg3NFx4NmZceDcyXHg2M1x4NjhcMDU2"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

@@ -94,6 +94,8 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         "HTML Entities",
         "URL",
         "Unicode Escapes",
+        // Escaped strings get Base64'd, and escaped twice: `\\x41` -> `\x41` -> `A`
+        "Backslash Escapes",
         "Quoted-Printable",
         "UTF-16",
         // Compressed data is usually wrapped in one of the above, and can be nested

@@ -13,6 +13,8 @@ pub mod affine_decoder;
 pub mod ascii85_decoder;
 /// The atbash_decoder module decodes atbash
 pub mod atbash_decoder;
+/// The backslash_escape_decoder module decodes C, Python and JavaScript string escapes like `\x41` and `\101`
+pub mod backslash_escape_decoder;
 /// The baconian_decoder module decodes Bacon's cipher
 pub mod baconian_decoder;
 /// The base32_decoder module decodes base32
@@ -125,6 +127,7 @@ pub mod xor_repeating_key_decoder;
 pub mod monoalphabetic_substitution_decoder;
 
 use atbash_decoder::AtbashDecoder;
+use backslash_escape_decoder::BackslashEscapeDecoder;
 use baconian_decoder::BaconianDecoder;
 use base32_decoder::Base32Decoder;
 use base36_decoder::Base36Decoder;
@@ -238,6 +241,8 @@ pub enum DecoderType {
     PunycodeDecoder(punycode_decoder::PunycodeDecoder),
     /// unicode escape decoder
     UnicodeEscapeDecoder(unicode_escape_decoder::UnicodeEscapeDecoder),
+    /// backslash escape decoder
+    BackslashEscapeDecoder(backslash_escape_decoder::BackslashEscapeDecoder),
     /// quoted-printable decoder
     QuotedPrintableDecoder(quoted_printable_decoder::QuotedPrintableDecoder),
     /// UTF-16 decoder
@@ -364,6 +369,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Unicode Escapes",
             DecoderBox::new(Decoder::<UnicodeEscapeDecoder>::new()),
+        ),
+        (
+            "Backslash Escapes",
+            DecoderBox::new(Decoder::<BackslashEscapeDecoder>::new()),
         ),
         (
             "Quoted-Printable",
