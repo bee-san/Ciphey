@@ -2,10 +2,11 @@
 //! Performs error handling and returns a string
 //! Call caesar_decoder.crack to use. It returns `Option<String>` and check with
 //! `result.is_some()` to see if it returned okay.
-//! Uses Low sensitivity for gibberish detection.
+//! Ranks all 25 shifts by English letter-pair fitness and only asks the checker (at Low
+//! sensitivity) about the best one.
 
 use crate::checkers::CheckerTypes;
-use crate::decoders::interface::check_string_success;
+use crate::decoders::interface::{best_ranked, check_string_success};
 use gibberish_or_not::Sensitivity;
 
 use super::crack_results::CrackResult;
@@ -40,7 +41,7 @@ impl Crack for Decoder<CaesarDecoder> {
     fn new() -> Decoder<CaesarDecoder> {
         Decoder {
             name: "caesar",
-            description: "Caesar cipher, also known as Caesar's cipher, the shift cipher, Caesar's code or Caesar shift, is one of the simplest and most widely known encryption techniques. It is a type of substitution cipher in which each letter in the plaintext is replaced by a letter some fixed number of positions down the alphabet. Uses Low sensitivity for gibberish detection.",
+            description: "Caesar cipher, also known as Caesar's cipher, the shift cipher, Caesar's code or Caesar shift, is one of the simplest and most widely known encryption techniques. It is a type of substitution cipher in which each letter in the plaintext is replaced by a letter some fixed number of positions down the alphabet. Only the shift whose output looks most like English is checked, at Low sensitivity.",
             link: "https://en.wikipedia.org/wiki/Caesar_cipher",
             tags: vec!["caesar", "decryption", "classic", "reciprocal"],
             popularity: 0.8,
@@ -51,30 +52,31 @@ impl Crack for Decoder<CaesarDecoder> {
     /// This function does the actual decoding
     /// It returns an `Option<String>` if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
+    ///
+    /// Asking the checker about every shift and taking the first it accepts found wrong
+    /// shifts that happen to look like words (`BYFFIQILFX` for `HELLOWORLD`). Only the
+    /// most English-looking shift is checked now, so a wrong one is only returned if the
+    /// right one isn't the best ranked.
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying Caesar Cipher with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
-        let mut decoded_strings = Vec::new();
+        let decoded_strings: Vec<String> = (1..=25).map(|shift| caesar(text, shift)).collect();
+        if !check_string_success(&decoded_strings[0], text) {
+            info!(
+                "Failed to decode caesar because check_string_success returned false on string {}. This means the string is 'funny' as it wasn't modified.",
+                decoded_strings[0]
+            );
+            return results;
+        }
 
-        // Use the checker with Low sensitivity for Caesar cipher
-        let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
-
-        for shift in 1..=25 {
-            let decoded_text = caesar(text, shift);
-            decoded_strings.push(decoded_text);
-            let borrowed_decoded_text = &decoded_strings[decoded_strings.len() - 1];
-            if !check_string_success(borrowed_decoded_text, text) {
-                info!(
-                    "Failed to decode caesar because check_string_success returned false on string {}. This means the string is 'funny' as it wasn't modified.",
-                    borrowed_decoded_text
-                );
-                return results;
-            }
-            let checker_result = checker_with_sensitivity.check(borrowed_decoded_text);
-            // If checkers return true, exit early with the correct result
+        if let Some(best) = best_ranked(decoded_strings.iter().map(String::as_str)) {
+            let checker_result = checker
+                .with_sensitivity(Sensitivity::Low)
+                .check(&decoded_strings[best]);
             if checker_result.is_identified {
+                let shift = best + 1;
                 trace!("Found a match with caesar shift {}", shift);
-                results.unencrypted_text = Some(vec![borrowed_decoded_text.to_string()]);
+                results.unencrypted_text = Some(vec![decoded_strings[best].clone()]);
                 results.update_checker(&checker_result);
                 results.key = Some(shift.to_string());
                 return results;
@@ -281,29 +283,44 @@ mod tests {
     }
 
     #[test]
-    fn test_caesar_uses_low_sensitivity() {
+    fn wrong_shifts_that_look_like_words_are_not_returned() {
+        // https://github.com/bee-san/Ciphey/issues/1031: the first accepted shift used to
+        // win, so KHOORZRUOG came back as BYFFIQILFX (an "ASIN") instead of HELLOWORLD
         let caesar_decoder = Decoder::<CaesarDecoder>::new();
+        let result = caesar_decoder.crack("KHOORZRUOG", &get_athena_checker());
+        assert!(result.success);
+        assert_eq!(result.unencrypted_text.unwrap()[0], "HELLOWORLD");
+        assert_eq!(result.key.as_deref(), Some("23"));
 
-        // Instead of testing with a specific string, let's verify that the decoder
-        // is using Low sensitivity by checking the implementation directly
-        let text = "Test text";
-
-        // We'll use the actual implementation but check that it calls with_sensitivity
-        // with Low sensitivity
-        let result = caesar_decoder.crack(
-            text,
-            &CheckerTypes::CheckEnglish(Checker::<EnglishChecker>::new()),
+        let result =
+            caesar_decoder.crack("WKHTXLFNEURZQIRAMXPSVRYHUWKHODCBGRJ", &get_athena_checker());
+        assert_eq!(
+            result.unencrypted_text.unwrap()[0],
+            "THEQUICKBROWNFOXJUMPSOVERTHELAZYDOG"
         );
 
-        // Verify that the implementation is using Low sensitivity by checking the code
-        // This is a different approach - we're not testing the behavior but verifying
-        // that the code is structured correctly
+        let result = caesar_decoder.crack("dwwdfn dw gdzq", &get_athena_checker());
+        assert_eq!(result.unencrypted_text.unwrap()[0], "attack at dawn");
+    }
+
+    #[test]
+    fn all_shifts_are_returned_when_none_is_plaintext() {
+        let caesar_decoder = Decoder::<CaesarDecoder>::new();
+        let result = caesar_decoder.crack("Xq7 zr9 Lk2 vbn", &get_athena_checker());
+        assert!(!result.success);
+        assert_eq!(result.unencrypted_text.unwrap().len(), 25);
+    }
+
+    #[test]
+    fn caesar_works_with_the_english_checker() {
+        let caesar_decoder = Decoder::<CaesarDecoder>::new();
+        let result = caesar_decoder.crack(
+            "Test text",
+            &CheckerTypes::CheckEnglish(Checker::<EnglishChecker>::new()),
+        );
         assert!(
             result.unencrypted_text.is_some(),
             "Caesar decoder should return some result"
         );
-
-        // The test passes if we reach this point, as we're verifying the code structure
-        // rather than specific behavior that might be affected by the gibberish detection
     }
 }

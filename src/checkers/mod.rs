@@ -3,6 +3,7 @@ use self::{
     checker_result::CheckResult,
     checker_type::{Check, CheckInfo, Checker},
     english::EnglishChecker,
+    json_checker::JsonChecker,
     lemmeknow_checker::LemmeKnow,
     password::PasswordChecker,
     regex_checker::RegexChecker,
@@ -26,6 +27,8 @@ pub mod default_checker;
 pub mod english;
 /// The Human Checker asks humans if the expected plaintext is real plaintext
 pub mod human_checker;
+/// The JSON Checker checks if the text is a JSON object or array
+pub mod json_checker;
 /// The LemmeKnow Checker checks if the text matches a known Regex pattern.
 pub mod lemmeknow_checker;
 /// The Password checker checks if the text matches a known common password
@@ -53,6 +56,8 @@ pub enum CheckerTypes {
     CheckPassword(Checker<PasswordChecker>),
     /// Wrapper for Wordlist Checker
     CheckWordlist(Checker<WordlistChecker>),
+    /// Wrapper for JSON Checker
+    CheckJson(Checker<JsonChecker>),
 }
 
 impl CheckerTypes {
@@ -66,6 +71,7 @@ impl CheckerTypes {
             CheckerTypes::CheckRegex(regex_checker) => regex_checker.check(text),
             CheckerTypes::CheckPassword(password_checker) => password_checker.check(text),
             CheckerTypes::CheckWordlist(wordlist_checker) => wordlist_checker.check(text),
+            CheckerTypes::CheckJson(json_checker) => json_checker.check(text),
         }
     }
 
@@ -107,6 +113,11 @@ impl CheckerTypes {
                 new_checker.sensitivity = sensitivity;
                 CheckerTypes::CheckWordlist(new_checker)
             }
+            CheckerTypes::CheckJson(_checker) => {
+                let mut new_checker = Checker::<JsonChecker>::new();
+                new_checker.sensitivity = sensitivity;
+                CheckerTypes::CheckJson(new_checker)
+            }
         }
     }
 
@@ -120,6 +131,7 @@ impl CheckerTypes {
             CheckerTypes::CheckRegex(checker) => checker.get_sensitivity(),
             CheckerTypes::CheckPassword(checker) => checker.get_sensitivity(),
             CheckerTypes::CheckWordlist(checker) => checker.get_sensitivity(),
+            CheckerTypes::CheckJson(checker) => checker.get_sensitivity(),
         }
     }
 }
@@ -156,6 +168,10 @@ pub static CHECKER_MAP: Lazy<HashMap<&str, CheckerBox>> = Lazy::new(|| {
         (
             "Template checker",
             CheckerBox::new(Checker::<default_checker::DefaultChecker>::new()),
+        ),
+        (
+            "JSON Checker",
+            CheckerBox::new(Checker::<JsonChecker>::new()),
         ),
         (
             "LemmeKnow Checker",

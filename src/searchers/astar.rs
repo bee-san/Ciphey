@@ -228,7 +228,10 @@ fn expand_node(
                             path,
                         },
                         depth: current_node.depth + 1,
-                        cost: current_node.cost + 1.0,
+                        // Results that tie on confidence go to the cheaper path, so this
+                        // has to depend on the decoder: with a flat cost the tie fell back
+                        // to decoder order, and Vigenere is first.
+                        cost: current_node.cost + edge_cost(decoder.as_ref(), 1),
                         total_cost: f32::NEG_INFINITY,
                         is_result: true,
                     });

@@ -1,12 +1,62 @@
 use crate::checkers::checker_result::CheckResult;
+use crate::storage::ngrams::{is_short_word, quadgram_score};
 use gibberish_or_not::{is_gibberish, Sensitivity};
 use lemmeknow::Identifier;
 
 use crate::checkers::checker_type::{Check, Checker};
-use crate::config::get_config;
 
 /// Checks English plaintext.
+///
+/// The candidate is normalised first (see `normalise_string`) and then classified by
+/// shape:
+///
+/// 1. **Space-less letters** (no whitespace, at least `SPACELESS_MIN_LETTERS` (8) letters,
+///    at least 90% letters), the usual output of Caesar, railfence and other classical
+///    ciphers: the mean [quadgram score](crate::storage::ngrams::quadgram_score) must
+///    reach the sensitivity's threshold, or the text must be one dictionary word.
+/// 2. **Mostly known words**: two or more words, at least one of three or more letters, of
+///    which more than 80% are English words, counting the common one to three letter
+///    words gibberish-or-not's dictionary lacks (`a`, `is`, `me` ...). This is
+///    gibberish-or-not's own "almost every word is English" rule with those words added,
+///    so `call me` and `meet me at noon` pass, but not decoder output like `I A`.
+/// 3. **Other text without whitespace** (digits or symbols mixed in, like
+///    `ThI2THAtThE2THe0`): only a single dictionary word passes. gibberish-or-not's
+///    letter-pair scores accept too much of this decoder junk.
+/// 4. **Everything else**: gibberish-or-not's `is_gibberish` at the checker's sensitivity,
+///    unless the letters' quadgram score is below `quadgram_veto`, far from any natural
+///    language (wrong Caesar shifts such as `Max mkxtlnkx bl unkbxw ngwxk`, reversed text),
+///    or three or more words contain not a single English word.
 pub struct EnglishChecker;
+
+/// Space-less text needs at least this many letters for its quadgram score to mean
+/// anything. Shorter words are looked up in the dictionary instead.
+const SPACELESS_MIN_LETTERS: usize = 8;
+
+/// Text with at least [`QUADGRAM_VETO_MIN_LETTERS`] letters that scores below this is not
+/// English, whatever gibberish-or-not says. English, even ALL CAPS, names and code,
+/// scores above -5.3 in the #1031 corpora, and French, German and Spanish above -6.5.
+/// Reversed English and wrong Caesar shifts mostly score below. High, the most lenient
+/// sensitivity, only vetoes text further away.
+fn quadgram_veto(sensitivity: Sensitivity) -> f64 {
+    match sensitivity {
+        Sensitivity::Low | Sensitivity::Medium => -6.5,
+        Sensitivity::High => -7.5,
+    }
+}
+
+/// Fewer letters give too few quadgrams for the veto to be reliable.
+const QUADGRAM_VETO_MIN_LETTERS: usize = 12;
+
+/// The minimum mean quadgram score for space-less text at each sensitivity (Low is the
+/// strictest). Chosen with `examples/plaintext_eval.rs` so that the issue #1031 corpus
+/// has no more false positives than before, and checked on held-out text.
+fn quadgram_threshold(sensitivity: Sensitivity) -> f64 {
+    match sensitivity {
+        Sensitivity::Low => -5.1,
+        Sensitivity::Medium => -5.3,
+        Sensitivity::High => -5.6,
+    }
+}
 
 /// given an input, check every item in the array and return true if any of them match
 impl Check for Checker<EnglishChecker> {
@@ -19,29 +69,14 @@ impl Check for Checker<EnglishChecker> {
             expected_runtime: 0.01,
             popularity: 1.0,
             lemmeknow_config: Identifier::default(),
-            enhanced_detector: None,
             sensitivity: Sensitivity::Medium, // Default to Medium sensitivity
             _phantom: std::marker::PhantomData,
         }
     }
 
     fn check(&self, text: &str) -> CheckResult {
-        // Normalize before checking
-        let normalised = normalise_string(text);
-
-        // Get config to check if enhanced detection is enabled
-        let config = get_config();
-        let is_enhanced = config.enhanced_detection;
-
-        let mut result = CheckResult {
-            // Use a more sensitive setting if enhanced detection is enabled
-            is_identified: if is_enhanced {
-                // When enhanced detection is enabled, use a more sensitive setting
-                // This is a simple approximation since we don't have the actual BERT model
-                !is_gibberish(&normalised, Sensitivity::High)
-            } else {
-                !is_gibberish(&normalised, self.sensitivity)
-            },
+        CheckResult {
+            is_identified: is_english(text, self.sensitivity),
             // The text as given, not the normalised copy: this is what the human checker
             // asks about and what top results lists.
             text: text.to_string(),
@@ -49,15 +84,7 @@ impl Check for Checker<EnglishChecker> {
             checker_description: self.description,
             description: "Words".to_string(),
             link: self.link,
-        };
-
-        // Handle edge case of very short strings after normalization
-        if normalised.len() < 2 {
-            // Reduced from 3 since normalization may remove punctuation
-            result.is_identified = false;
         }
-
-        result
     }
 
     fn with_sensitivity(mut self, sensitivity: Sensitivity) -> Self {
@@ -70,30 +97,156 @@ impl Check for Checker<EnglishChecker> {
     }
 }
 
+/// Whether `text` reads as English at `sensitivity`. See [`EnglishChecker`].
+fn is_english(text: &str, sensitivity: Sensitivity) -> bool {
+    let normalised = normalise_string(text);
+    if normalised.is_empty() {
+        return false;
+    }
+    let trimmed = text.trim();
+    let spaceless = !trimmed.contains(char::is_whitespace);
+
+    if spaceless && is_mostly_letters(trimmed) {
+        return quadgram_score(trimmed)
+            .is_some_and(|score| score >= quadgram_threshold(sensitivity))
+            || is_dictionary_word(&normalised);
+    }
+
+    let words: Vec<&str> = normalised.split(' ').collect();
+    if words.len() >= 2
+        && words.iter().any(|word| word.chars().count() >= 3)
+        && mostly_known_words(&words)
+    {
+        return true;
+    }
+    if spaceless {
+        return words.len() == 1 && is_dictionary_word(words[0]);
+    }
+    if words.len() >= 3 && !words.iter().any(|word| is_known_word(word)) {
+        return false;
+    }
+    if trimmed.bytes().filter(u8::is_ascii_alphabetic).count() >= QUADGRAM_VETO_MIN_LETTERS
+        && quadgram_score(trimmed).is_some_and(|score| score < quadgram_veto(sensitivity))
+    {
+        return false;
+    }
+    !is_gibberish(&normalised, sensitivity)
+}
+
+/// At least [`SPACELESS_MIN_LETTERS`] ASCII letters, and at least 90% of the characters.
+fn is_mostly_letters(text: &str) -> bool {
+    let (letters, chars) = text.chars().fold((0, 0), |(letters, chars), c| {
+        (letters + usize::from(c.is_ascii_alphabetic()), chars + 1)
+    });
+    letters >= SPACELESS_MIN_LETTERS && letters * 10 >= chars * 9
+}
+
+/// Whether at least `min_ratio` of the words in `text` are English words, counting the
+/// common one to three letter words. Text without whitespace counts as passing, since it
+/// has no words to count; the quadgram score judges it.
+///
+/// For decoders whose key search maximises the very letter statistics the English checker
+/// scores, like Vigenère: their wrong keys give text such as
+/// `She sehls sea ohells xy the saa shora` that passes those checks, but most of its
+/// "words" aren't words.
+pub(crate) fn has_mostly_words(text: &str, min_ratio: f64) -> bool {
+    if !text.trim().contains(char::is_whitespace) {
+        return true;
+    }
+    let normalised = normalise_string(text);
+    let words: Vec<&str> = normalised.split(' ').collect();
+    let known = words.iter().filter(|word| is_known_word(word)).count();
+    known as f64 >= min_ratio * words.len() as f64
+}
+
+/// Whether more than 80% of `words` (lower case) are English words.
+fn mostly_known_words(words: &[&str]) -> bool {
+    // known > 80% of words <=> unknown < 20% of words
+    let mut unknown = 0;
+    for word in words {
+        if !is_known_word(word) {
+            unknown += 1;
+            if unknown * 5 >= words.len() {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// Whether `word` (lower case, letters and apostrophes) is an English word.
+fn is_known_word(word: &str) -> bool {
+    if !word.chars().all(|c| c.is_alphabetic() || c == '\'') {
+        return false;
+    }
+    match word.chars().count() {
+        0 => false,
+        1..=3 => is_short_word(word),
+        4..=9 => is_dictionary_word(word),
+        // Too long to look up on its own (see `is_dictionary_word`), but long words
+        // carry enough quadgrams to tell
+        _ => {
+            quadgram_score(word).is_some_and(|score| score >= quadgram_threshold(Sensitivity::Low))
+        }
+    }
+}
+
+/// Whether `word` (lower case) is in gibberish-or-not's dictionary.
+///
+/// gibberish-or-not only looks a text up in its dictionary when it is 4 to 9 bytes long:
+/// it rejects anything shorter outright and scores anything longer.
+fn is_dictionary_word(word: &str) -> bool {
+    (4..10).contains(&word.len()) && !is_gibberish(word, Sensitivity::Medium)
+}
+
 /// Strings look funny, they might have commas, be uppercase etc
 /// This normalises the string so English checker can work on it
 /// In particular it:
-/// Removes punctuation from the string
-/// Lowercases the string
+/// * lowercases the string,
+/// * turns punctuation into spaces, so `Hello,world!How` is three words and not
+///   `helloworldhow`, except for apostrophes inside a word (`don't`, `o'clock`), which
+///   the dictionary spells with them,
+/// * and collapses runs of whitespace into one space, trimming both ends.
 fn normalise_string(input: &str) -> String {
-    // The replace function supports patterns https://doc.rust-lang.org/std/str/pattern/trait.Pattern.html#impl-Pattern%3C%27a%3E-3
-    // TODO add more punctuation
-    input
-        .to_ascii_lowercase()
-        .chars()
-        .filter(|x| !x.is_ascii_punctuation())
-        .collect()
+    let chars: Vec<char> = input.chars().collect();
+    let mut normalised = String::with_capacity(input.len());
+    for (i, &c) in chars.iter().enumerate() {
+        let in_word_apostrophe = c == '\''
+            && i > 0
+            && chars[i - 1].is_alphabetic()
+            && chars.get(i + 1).is_some_and(|next| next.is_alphabetic());
+        let c = if (c.is_ascii_punctuation() && !in_word_apostrophe) || c.is_whitespace() {
+            ' '
+        } else {
+            c.to_ascii_lowercase()
+        };
+        // No leading space and no runs of spaces
+        if c != ' ' || (!normalised.is_empty() && !normalised.ends_with(' ')) {
+            normalised.push(c);
+        }
+    }
+    if normalised.ends_with(' ') {
+        normalised.pop();
+    }
+    normalised
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::checkers::english::normalise_string;
+    use super::*;
     use crate::checkers::{
         checker_type::{Check, Checker},
         english::EnglishChecker,
     };
     // Import Sensitivity directly
     use gibberish_or_not::Sensitivity;
+
+    fn english(text: &str, sensitivity: Sensitivity) -> bool {
+        Checker::<EnglishChecker>::new()
+            .with_sensitivity(sensitivity)
+            .check(text)
+            .is_identified
+    }
 
     #[test]
     fn test_check_basic() {
@@ -144,8 +297,27 @@ mod tests {
     }
     #[test]
     fn test_check_normalise_string_works_with_messy_puncuation() {
+        // Punctuation separates words instead of being deleted
         let x = normalise_string(".He/ll?O, Dea!r");
-        assert_eq!(x, "hello dear")
+        assert_eq!(x, "he ll o dea r")
+    }
+
+    #[test]
+    fn normalise_string_keeps_apostrophes_inside_words() {
+        assert_eq!(normalise_string("Don't stop!"), "don't stop");
+        assert_eq!(
+            normalise_string("Rock'n'roll isn't dead"),
+            "rock'n'roll isn't dead"
+        );
+        assert_eq!(
+            normalise_string("Item #42: 'fragile' - handle"),
+            "item 42 fragile handle"
+        );
+        assert_eq!(
+            normalise_string("Hello,world!How are\tyou?"),
+            "hello world how are you"
+        );
+        assert_eq!(normalise_string("  ?!  "), "");
     }
 
     #[test]
@@ -168,6 +340,119 @@ mod tests {
     fn test_check_fail_single_puncuation_char() {
         let checker = Checker::<EnglishChecker>::new();
         assert!(!checker.check("#").is_identified);
+        assert!(!checker.check("").is_identified);
+    }
+
+    #[test]
+    fn short_phrases_with_one_and_two_letter_words() {
+        // gibberish-or-not's dictionary has no words shorter than three letters, and
+        // text under 10 characters had to be a single dictionary word
+        for phrase in [
+            "call me",
+            "hi there",
+            "is it in the box",
+            "meet me at noon",
+            "I'm here",
+        ] {
+            assert!(english(phrase, Sensitivity::Low), "{phrase}");
+        }
+        // One word must still be a real word of four or more letters, and a few one and
+        // two letter words aren't enough
+        for not_english in [
+            "yes",
+            "an",
+            "xq zv",
+            "BYFFIQILFX",
+            "I A",
+            "a i a i",
+            "is it",
+        ] {
+            assert!(!english(not_english, Sensitivity::Medium), "{not_english}");
+        }
+    }
+
+    #[test]
+    fn punctuation_separates_words() {
+        assert!(english("Wait... what?!", Sensitivity::Low));
+        assert!(english("Hello,world!How are you?", Sensitivity::Low));
+        assert!(english("Don't stop believing!", Sensitivity::Low));
+    }
+
+    #[test]
+    fn spaceless_text_uses_quadgrams() {
+        for text in [
+            "THEQUICKBROWNFOXJUMPSOVERTHELAZYDOG",
+            "WEAREDISCOVEREDFLEEATONCE",
+            "HELLOWORLD",
+            "attackatdawn",
+        ] {
+            assert!(english(text, Sensitivity::Low), "{text}");
+        }
+        for junk in [
+            "WKHTXLFNEURZQIRAMXPSVRYHUWKHODCBGRJ", // Caesar +3
+            "WECRLTEERDSOEEFEAOCAIVDEN",           // railfence, 3 rails
+            "BYFFIQILFX",                          // a wrong Caesar shift of HELLOWORLD
+            "TISUYYOQVTHERBMEITHAATNMONOERETOHTH",
+        ] {
+            assert!(!english(junk, Sensitivity::Medium), "{junk}");
+        }
+    }
+
+    #[test]
+    fn spaceless_decoder_junk_with_digits_is_not_english() {
+        // Vigenere and Reverse outputs on base64 input that used to be accepted
+        for junk in [
+            "ThI2THAtThE2THe0",
+            "==FRiERthI2N",
+            "nthaNANHfilES020ERUErI0ntt1=hHHe",
+            "ToEterNth2EtkoLhALNhE2NheHIoNAE1NGDttHriNHmeSR==",
+            "==EatIThiThowXmEwfINoNos",
+        ] {
+            assert!(!english(junk, Sensitivity::Medium), "{junk}");
+        }
+        // A single word with punctuation is still a word
+        assert!(english("Hello!", Sensitivity::Low));
+    }
+
+    #[test]
+    fn spaced_text_far_from_english_is_not_english() {
+        // Accepted by gibberish-or-not at Medium; a wrong Caesar shift and a Reverse ->
+        // Caesar output from the #1031 end-to-end cases
+        for junk in [
+            "Max mkxtlnkx bl unkbxw ngwxk max hew htd mkxx gxtk max kboxk",
+            "gjebrd him yd ufoit him rcho xetw lto fop xhv ufwnw gfbrwe tb etxttetw faT",
+            // No English word in it at all
+            "Boa rsnerW f  gahfnmemuftirenon h",
+        ] {
+            assert!(!english(junk, Sensitivity::Medium), "{junk}");
+        }
+        // Other languages are not English either, but are far enough from junk to pass
+        // where gibberish-or-not accepts them
+        assert!(english(
+            "Je ne sais pas ce que tu veux dire",
+            Sensitivity::Medium
+        ));
+    }
+
+    #[test]
+    fn has_mostly_words_counts_known_words() {
+        // Wrong-key Vigenère outputs from examples/plaintext_eval.rs
+        assert!(!has_mostly_words(
+            "She sehls sea ohells xy the saa shora every oummer iorninc",
+            0.7
+        ));
+        assert!(!has_mostly_words(
+            "Attask the nerth gaje at damn and held the rridge kntil neon",
+            0.7
+        ));
+        assert!(has_mostly_words(
+            "She sells sea shells by the sea shore every summer morning",
+            0.7
+        ));
+        assert!(
+            has_mostly_words("THEQUICKBROWNFOX", 0.7),
+            "no words to count"
+        );
     }
 
     #[test]
@@ -197,5 +482,11 @@ mod tests {
         // With High sensitivity, it should be classified as English
         let high_checker = Checker::<EnglishChecker>::new().with_sensitivity(Sensitivity::High);
         assert!(high_checker.check(text).is_identified);
+    }
+
+    #[test]
+    fn quadgram_thresholds_get_more_lenient_from_low_to_high() {
+        assert!(quadgram_threshold(Sensitivity::Low) > quadgram_threshold(Sensitivity::Medium));
+        assert!(quadgram_threshold(Sensitivity::Medium) > quadgram_threshold(Sensitivity::High));
     }
 }

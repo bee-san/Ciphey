@@ -21,7 +21,6 @@ impl Check for Checker<DefaultChecker> {
             popularity: 0.0,
             lemmeknow_config: Identifier::default(),
             sensitivity: Sensitivity::Medium, // Default to Medium sensitivity
-            enhanced_detector: None,
             _phantom: std::marker::PhantomData,
         }
     }

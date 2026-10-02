@@ -1,4 +1,5 @@
 use crate::checkers::CheckerTypes;
+use crate::storage::ngrams::bigram_fitness;
 
 use super::crack_results::CrackResult;
 
@@ -104,6 +105,24 @@ pub fn check_string_success(decoded_text: &str, original_text: &str) -> bool {
         return true;
     }
     false
+}
+
+/// The index of the candidate whose letters look most like English (by bigram fitness),
+/// the first if several tie, or `None` if none has two letters.
+///
+/// Ciphers with a small key space use it to ask the checker only about their best
+/// candidate. Asking about every candidate and taking the first accepted one finds wrong
+/// keys whose output happens to pass.
+pub(crate) fn best_ranked<'a>(candidates: impl IntoIterator<Item = &'a str>) -> Option<usize> {
+    let mut best: Option<(usize, f64)> = None;
+    for (i, candidate) in candidates.into_iter().enumerate() {
+        if let Some(fitness) = bigram_fitness(candidate) {
+            if best.is_none_or(|(_, best_fitness)| fitness > best_fitness) {
+                best = Some((i, fitness));
+            }
+        }
+    }
+    best.map(|(i, _)| i)
 }
 
 /// Turns decoded bytes into text.

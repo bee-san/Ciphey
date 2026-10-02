@@ -12,6 +12,7 @@ use crate::storage::wait_athena_storage;
 use super::{
     checker_type::{Check, Checker},
     english::EnglishChecker,
+    json_checker::JsonChecker,
     lemmeknow_checker::LemmeKnow,
     password::PasswordChecker,
     regex_checker::RegexChecker,
@@ -34,7 +35,6 @@ impl Check for Checker<WaitAthena> {
             popularity: 1.0,
             lemmeknow_config: Identifier::default(),
             sensitivity: Sensitivity::Medium, // Default to Medium sensitivity
-            enhanced_detector: None,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -113,6 +113,26 @@ impl Check for Checker<WaitAthena> {
                 return check_res;
             }
 
+            let json = Checker::<JsonChecker>::new().with_sensitivity(self.sensitivity);
+            let json_result = json.check(text);
+            if json_result.is_identified {
+                let mut check_res = CheckResult::new(&json);
+                check_res.is_identified = true; // No human checker involvement
+                check_res.text = json_result.text;
+                check_res.description = json_result.description;
+
+                // Store the result instead of returning immediately
+                wait_athena_storage::add_plaintext_result(
+                    check_res.text.clone(),
+                    check_res.description.clone(),
+                    json.name.to_string(),
+                    "JsonChecker".to_string(),
+                );
+
+                // Continue checking by returning the result
+                return check_res;
+            }
+
             let password = Checker::<PasswordChecker>::new().with_sensitivity(self.sensitivity);
             let password_result = password.check(text);
             if password_result.is_identified {
@@ -182,6 +202,15 @@ mod tests {
     fn test_check_dictionary_word() {
         let checker = Checker::<WaitAthena>::new();
         assert!(checker.check("exuberant").is_identified);
+    }
+
+    #[test]
+    fn test_check_json_and_ctf_flags() {
+        let checker = Checker::<WaitAthena>::new();
+        let json = checker.check("[{\"id\": 1, \"title\": \"hello world\"}]");
+        assert!(json.is_identified);
+        assert_eq!(json.checker_name, "JSON Checker");
+        assert!(checker.check("DUCTF{d0wn_und3r}").is_identified);
     }
 
     #[test]

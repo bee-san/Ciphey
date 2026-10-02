@@ -125,7 +125,6 @@ pub(crate) fn jwt_structure_checker() -> Checker<JwtStructure> {
         popularity: 0.5,
         lemmeknow_config: Identifier::default(),
         sensitivity: Sensitivity::Medium,
-        enhanced_detector: None,
         _phantom: std::marker::PhantomData,
     }
 }

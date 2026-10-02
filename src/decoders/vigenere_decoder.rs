@@ -1,10 +1,13 @@
 //! Vigenère cipher decoder with automated key detection
 //! Uses Index of Coincidence (IoC) for key length detection and frequency analysis for key discovery
 //! Returns `Option<String>` with the decrypted text if successful
-//! Uses Medium sensitivity for gibberish detection as the default.
+//! Uses Low sensitivity (the strictest) for gibberish detection: the key search maximises
+//! letter-pair fitness, which is what the English checker looks at, so near-misses pass at
+//! Medium.
 
 use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
+use crate::checkers::english::has_mostly_words;
 use crate::checkers::CheckerTypes;
 use gibberish_or_not::Sensitivity;
 use log::{debug, trace};
@@ -99,6 +102,11 @@ static KEY_SEARCH_TABLES: Lazy<KeySearchTables> = Lazy::new(|| {
     KeySearchTables { plain, scores }
 });
 
+/// A candidate with spaces is only checked if at least this share of its words are
+/// English words. In `examples/plaintext_eval.rs` the right key's output never scores
+/// below 0.78 and a wrong key's that the checker accepted never above 0.62.
+const MIN_WORD_RATIO: f64 = 0.7;
+
 /// The Vigenère decoder struct
 pub struct VigenereDecoder;
 
@@ -106,7 +114,7 @@ impl Crack for Decoder<VigenereDecoder> {
     fn new() -> Decoder<VigenereDecoder> {
         Decoder {
             name: "Vigenere",
-            description: "A polyalphabetic substitution cipher using a keyword to shift each letter. This implementation automatically detects the key length and breaks the cipher. Uses Medium sensitivity for gibberish detection.",
+            description: "A polyalphabetic substitution cipher using a keyword to shift each letter. This implementation automatically detects the key length and breaks the cipher. Uses Low sensitivity for gibberish detection.",
             link: "https://en.wikipedia.org/wiki/Vigen%C3%A8re_cipher",
             tags: vec!["substitution", "classical"],
             popularity: 0.6,
@@ -126,18 +134,23 @@ impl Crack for Decoder<VigenereDecoder> {
             return results;
         }
 
-        let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Medium);
+        let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
         let mut checker_result = checker_with_sensitivity.check(text);
 
         let letters = cipher_letters(text);
         for key_length in 3..30 {
-            // Use Medium sensitivity for Vigenere decoder
             let key = break_vigenere_letters(&letters, key_length);
             let key_str = key.as_str().trim();
             if key_str.is_empty() {
                 continue;
             }
             let decode_attempt = decrypt(text, key_str);
+            // The key search maximises letter-pair fitness, so even wrong keys give text
+            // the statistical checks accept; only words tell them apart. Skipping these
+            // before the checker also keeps them away from the human checker.
+            if !has_mostly_words(&decode_attempt, MIN_WORD_RATIO) {
+                continue;
+            }
             checker_result = checker_with_sensitivity.check(&decode_attempt);
             if checker_result.is_identified {
                 results.unencrypted_text = Some(vec![decode_attempt]);
