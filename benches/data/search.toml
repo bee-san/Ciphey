@@ -97,6 +97,14 @@ input = "59242868943602221754561107537520274288249114069524361916735499978647926
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# The phone keypad keys of each word. Ranked word by word, ME reads as OF and MAP as OAR.
+kind = "single"
+name = "t9"
+layers = ["T9"]
+input = "6338 63 28 843 653 5444846873 23837 64364448 263 27464 843 627 843 539 263 2 86724"
+expected = "meet of at the old lighthouse after midnight and bring the oar the key and a torch"
+
+[[case]]
 kind = "single"
 name = "base32"
 layers = ["Base32"]

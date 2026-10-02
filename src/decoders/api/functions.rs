@@ -55,6 +55,7 @@ use crate::decoders::reverse_decoder::ReverseDecoder;
 use crate::decoders::rot47_decoder::ROT47Decoder;
 use crate::decoders::standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder;
 use crate::decoders::substitution_generic_decoder::SubstitutionGenericDecoder;
+use crate::decoders::t9_decoder::T9Decoder;
 use crate::decoders::tap_code_decoder::TapCodeDecoder;
 use crate::decoders::unicode_escape_decoder::UnicodeEscapeDecoder;
 use crate::decoders::unicode_fancy_text_decoder::UnicodeFancyTextDecoder;
@@ -590,6 +591,21 @@ decoder_functions! {
     /// assert_eq!(decoded.plaintext().unwrap().text, "hello");
     /// ```
     symbol_substitution: SubstitutionGenericDecoder, aliases ["substitution_generic"], key None;
+
+    /// Decodes T9 predictive text, where every letter is its phone keypad key pressed once
+    /// (`2` for ABC … `9` for WXYZ). Each word is looked up in an English dictionary, so
+    /// the most likely readings come back, best first. For keys pressed several times
+    /// (`44 33 555`), use [`multi_tap`].
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::t9("43556 96753");
+    /// assert_eq!(decoded.plaintext().unwrap().text, "hello world");
+    ///
+    /// // Words that share keys come back best first: 4663 is GOOD, GONE, HOME and HOOD
+    /// let decoded = ciphey::decoders::t9("4663 6676464");
+    /// assert_eq!(decoded.candidates[0].text, "good morning");
+    /// ```
+    t9: T9Decoder, aliases ["predictive_text"], key None;
 
     /// Decodes tap code (knock code): each letter is its row and column in a 5×5 square with
     /// K sent as C, written as `row,col` pairs or as knocks such as `.. ...`.

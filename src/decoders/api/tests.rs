@@ -578,6 +578,26 @@ fn symbol_substitution_decodes() {
 }
 
 #[test]
+fn t9_decodes() {
+    assert_plaintext(
+        &t9("843 3524 47 443336 46 843 427336"),
+        "the flag is hidden in the garden",
+    );
+    // No reading of RING and SING in two places is accepted, so the 3 best come back
+    let ranked: Vec<String> = t9("7464 7464")
+        .candidates
+        .into_iter()
+        .map(|candidate| candidate.text)
+        .collect();
+    assert_eq!(ranked, ["ring ring", "ring sing", "sing ring"]);
+    // By name or alias
+    for name in ["T9", "t9", "predictive_text", "Predictive text"] {
+        let decoded = decode_with(name, "43556 96753", &DecodeOptions::default()).unwrap();
+        assert_plaintext(&decoded, "hello world");
+    }
+}
+
+#[test]
 fn tap_code_decodes() {
     assert_plaintext(
         &tap_code(".. ...  . .....  ... .  ... .  ... ...."),

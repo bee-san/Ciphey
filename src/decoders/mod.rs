@@ -230,6 +230,8 @@ pub mod monoalphabetic_substitution_decoder;
 
 /// The yunying_decoder module decodes the 01248 (Yunying) cipher, letters as sums of 1, 2, 4 and 8
 pub mod yunying_decoder;
+/// The t9_decoder module decodes T9 predictive text (phone keypad digits)
+pub mod t9_decoder;
 
 use atbash_decoder::AtbashDecoder;
 use backslash_escape_decoder::BackslashEscapeDecoder;
@@ -281,6 +283,7 @@ use reverse_decoder::ReverseDecoder;
 use rot47_decoder::ROT47Decoder;
 use standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder;
 use substitution_generic_decoder::SubstitutionGenericDecoder;
+use t9_decoder::T9Decoder;
 use tap_code_decoder::TapCodeDecoder;
 use unicode_escape_decoder::UnicodeEscapeDecoder;
 use unicode_fancy_text_decoder::UnicodeFancyTextDecoder;
@@ -435,6 +438,8 @@ pub enum DecoderType {
     MonoalphabeticSubstitutionDecoder(
         monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder,
     ),
+    /// T9 predictive text decoder
+    T9Decoder(t9_decoder::T9Decoder),
 }
 
 /// Wrapper struct to hold Decoders for DECODER_MAP
@@ -636,5 +641,6 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             "Monoalphabetic Substitution",
             DecoderBox::new(Decoder::<MonoalphabeticSubstitutionDecoder>::new()),
         ),
+        ("T9", DecoderBox::new(Decoder::<T9Decoder>::new())),
     ])
 });

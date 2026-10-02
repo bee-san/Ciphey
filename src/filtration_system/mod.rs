@@ -59,6 +59,7 @@ use crate::decoders::reverse_decoder::ReverseDecoder;
 use crate::decoders::rot47_decoder::ROT47Decoder;
 use crate::decoders::standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder;
 use crate::decoders::substitution_generic_decoder::SubstitutionGenericDecoder;
+use crate::decoders::t9_decoder::T9Decoder;
 use crate::decoders::tap_code_decoder::TapCodeDecoder;
 use crate::decoders::unicode_escape_decoder::UnicodeEscapeDecoder;
 use crate::decoders::unicode_fancy_text_decoder::UnicodeFancyTextDecoder;
@@ -282,6 +283,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let big_integer = Decoder::<BigIntegerDecoder>::new();
     let dtmf = Decoder::<DtmfDecoder>::new();
     let dna_codon = Decoder::<DnaCodonDecoder>::new();
+    let t9 = Decoder::<T9Decoder>::new();
     let hexadecimal = Decoder::<HexadecimalDecoder>::new();
     let hexdump = Decoder::<HexdumpDecoder>::new();
     let octal = Decoder::<OctalDecoder>::new();
@@ -406,6 +408,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // same reason: when several decoders find plaintext in one search batch, the
             // first in this list wins a tie.
             Box::new(dtmf),
+            // Before railfence: results found in the same step tie and keep this order, and
+            // railfence turns T9's `43556 96753` into `4936575563 `, which LemmeKnow takes
+            // for a phone number.
+            Box::new(t9),
             // Before the classical ciphers: when several decoders find plaintext in one
             // search batch, the first in this list wins a tie, and rot47 turns Base64
             // into strings LemmeKnow takes for URLs.

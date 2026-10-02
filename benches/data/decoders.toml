@@ -919,6 +919,25 @@ success = true
 input = "gKqzq6a646qw46Kt46K2t6yuoremp+OnpqCsp6qtpOO3rKyv7eOarLbjpKq1puOqt+OmraCxurO3pqfjrLHjpq2grKemp+O3pru346Ktp+Oqt+O3saqmsOO3rOO0rLGo46y2t+O0q6K347SisOOnrK2m47es46q37+O0qrerrLa347qstuOrorWqraTjt6zjqK2stOO3q6bjqKa646yx46a1pq3jt6um46Cqs6umse3jirfjsKaisaCrprDjt6uxrLakq+Ouoq2647OssLCqoa+m46emoKynqq2ksO/joKumoKiw46aioKvjoKKtp6qnorem47es47CmpuO0q6a3q6ax46q346+srKiw46+qqKbjhq2kr6qwq+OsseOuoregq6aw46LjqK2stK3js6K3t6axreOwtqCr46Kw46Kt46auoqqv46Knp7GmsLDv46Ktp+Owt6yzsOO0q6at46q346Wqraew47Csrqa3q6qtpOO3q6K347Gmoqew46+qqKbjs6+iqq23pru37eOOrLC346yl47erpuO3qq6m47erqrDjt6KoprDjr6awsOO3q6Kt46LjsKagrK2n7+O0q6qgq+OuoqimsOOqt+Oroq2nuuOlrLHjoKKzt7axpuO3q6bjpa+ipOOgq6Kvr6atpKaw7+Oztrm5r6bjq7att7Djoq2n46WsseOirbqsrabjtKus47C3tq6hr6aw46KgsaywsOOi47C3saKtpKbjsLexqq2k46qt46Ljr6yk46Wqr6bt"
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+# T9 writes each word as its phone keypad keys (ITU-T E.161, 2=ABC ... 9=WXYZ), with the
+# words separated by spaces and the case and punctuation dropped. The dictionary reading
+# ranks each word on its own, so some words come back as another word with the same keys
+# (ME -> OF, MAP -> OAR, HAVING -> HATING), and the 9 words of the long text that aren't in
+# its dictionary (CIPHEY, AUTOMATED, ...) keep their digits.
+[[case]]
+decoder = "T9"
+size = "medium"
+success = true
+input = "6338 63 28 843 653 5444846873 23837 64364448 263 27464 843 627 843 539 263 2 86724"
+expected = "meet of at the old lighthouse after midnight and bring the oar the key and a torch"
+
+[[case]]
+decoder = "T9"
+size = "long"
+success = true
+input = "247439 47 26 288662833 33263464 8665 968 4483 48 362797833 67 3626333 8398 263 48 87437 86 9675 688 9428 927 3663 86 48 9484688 968 428464 86 5669 843 539 67 3836 843 247437 48 73272437 8476844 6269 76774253 332634647 243257 3224 226343283 86 733 9438437 48 56657 5453 3645474 67 6282437 2 56696 7288376 7824 27 26 36245 2337377 263 78677 9436 48 34637 766384464 8428 73237 5453 752468398 6678 63 843 8463 8447 82537 5377 8426 2 732663 94424 62537 48 42639 367 2278873 843 3524 2425536437 789953 48687 263 367 269663 946 78862537 227677 2 7872643 787464 46 2 564 3453"
+expected = "247439 is an 288662833 decoding took you give it encrypted or encoded text and it tries to work out what was done to it without you hating to know the key or even the cipher it 73272437 through many possible 332634647 243257 each 226343283 to red whether it looks like english or matches a known pattern such as an email address and pumps when it finds something that reads like 752468398 most of the time this takes less than a second which makes it handy for capture the flag challenges puzzle 48687 and for anyone who 78862537 across a strange string in a log file"
+
 [[case]]
 decoder = "URL"
 size = "medium"
