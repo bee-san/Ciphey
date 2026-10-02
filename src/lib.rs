@@ -448,6 +448,32 @@ mod tests {
     }
 
     #[test]
+    fn test_perform_cracking_decodes_long_base64() {
+        // 966 characters of plaintext. Text between 821 and 5,000 characters used to be
+        // rejected as a result, so this ran into the timeout.
+        let _test_db = TestDatabase::default();
+        set_test_db_path();
+
+        let plaintext = "It was the best of times, it was the worst of times, it was the age of \
+            wisdom, it was the age of foolishness, it was the epoch of belief. "
+            .repeat(7);
+        assert!(plaintext.len() > 900);
+        let encoded = {
+            use base64::Engine as _;
+            base64::engine::general_purpose::STANDARD.encode(&plaintext)
+        };
+        let config = Config {
+            // Unoptimised builds need a while for the first search step on this much text
+            timeout: 60,
+            ..Config::default()
+        };
+        let result = perform_cracking(&encoded, config).unwrap();
+        let result = result.expect("the long Base64 should be decoded");
+        assert_eq!(result.text[0], plaintext);
+        assert_eq!(result.path.last().unwrap().decoder, "Base64");
+    }
+
+    #[test]
     fn test_perform_cracking_early_exit_if_input_is_plaintext() {
         let _test_db = TestDatabase::default();
         set_test_db_path();
