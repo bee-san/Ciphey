@@ -236,6 +236,13 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
         }
     }
 
+    // Every check from here on runs LemmeKnow (unless a regex crib replaces the checkers),
+    // so start compiling its regexes now, all at once, instead of one after another
+    // during the first check.
+    if get_config().regex.is_none() {
+        checkers::lemmeknow_checker::warm_up();
+    }
+
     let initial_check_for_plaintext = check_if_input_text_is_plaintext(&text);
     if initial_check_for_plaintext.is_identified {
         debug!(
