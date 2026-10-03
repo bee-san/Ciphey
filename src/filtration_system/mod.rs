@@ -23,6 +23,7 @@ use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
 use crate::decoders::hexdump_decoder::HexdumpDecoder;
 use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
+use crate::decoders::ook_decoder::OokDecoder;
 use crate::decoders::polybius_decoder::PolybiusDecoder;
 use crate::DecoderResult;
 
@@ -275,6 +276,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let jwt = Decoder::<JwtDecoder>::new();
     let zero_width = Decoder::<ZeroWidthDecoder>::new();
     let leetspeak = Decoder::<LeetspeakDecoder>::new();
+    let ook = Decoder::<OokDecoder>::new();
     let vigenere = Decoder::<VigenereDecoder>::new();
     let xor_repeating_key = Decoder::<XorRepeatingKeyDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
@@ -357,6 +359,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // text into something the English checker accepts. Leetspeak only answers when
             // most of its words are dictionary words.
             Box::new(leetspeak),
+            // Before Vigenere and simplesubstitution, which can turn an Ook! program into
+            // text the English checker accepts, in the same step as this runs it: on a tie
+            // the first in this list is reported.
+            Box::new(ook),
             Box::new(vigenere),
             Box::new(xor_repeating_key),
             Box::new(reversedecoder),

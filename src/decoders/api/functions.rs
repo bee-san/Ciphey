@@ -47,6 +47,7 @@ use crate::decoders::morse_code::MorseCodeDecoder;
 use crate::decoders::multi_tap_decoder::MultiTapDecoder;
 use crate::decoders::nato_phonetic_decoder::NatoPhoneticDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
+use crate::decoders::ook_decoder::OokDecoder;
 use crate::decoders::polybius_decoder::PolybiusDecoder;
 use crate::decoders::punycode_decoder::PunycodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
@@ -510,6 +511,19 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "hello world");
     /// ```
     octal: OctalDecoder, aliases ["oct"], key None;
+
+    /// Runs an Ook! program, Brainfuck written as pairs of `Ook.`, `Ook?` and `Ook!`, and
+    /// returns what it prints. The short form, with only `.`, `?` and `!`, is read too.
+    /// Programs that run too long are stopped.
+    ///
+    /// ```
+    /// // `++++++++[>+++++++++++++<-]>.+.` in short Ook!
+    /// let decoded = ciphey::decoders::ook(
+    ///     ". . . . . . . . . . . . . . . . ! ? . ? . . . . . . . . . . . . . . . . . . . . . . . . . . ? . ! ! ? ! . ? ! . . . ! .",
+    /// );
+    /// assert_eq!(decoded.candidates[0].text, "hi");
+    /// ```
+    ook: OokDecoder, aliases ["short_ook"], key None;
 
     /// Decodes the Polybius square cipher: each letter as its row and column in a 5×5
     /// square with I and J in one cell, written as digits (`23` is H) or as letters from

@@ -510,6 +510,17 @@ fn octal_decodes() {
 }
 
 #[test]
+fn ook_runs() {
+    // The Hello World program on https://esolangs.org/wiki/Ook!, in short Ook!
+    assert_plaintext(
+        &ook(". ? . . . . . . . . . . . . . . . . . . ! ? ? . . . . . . . . . . . . . . . . . . ? ! ! ? ! ? . ! . . ? . . . . . . . . . . . . . . ! ? ? . . . . . . . . . . ? ! ! ? ! ? . . . ! . . . . . . . . . . . . . . . ! . ! . . . . . . . ! . . ? . ? . ? . . . . . . . . . . . . . . . . ! ? ? . . . . . . . . . . ? ! ! ? ! ? . ! . . ? . ? . ? . . . . . . . . . . . . . . . . . . . . ! ? ? . . . . . . . . . . . . . . . . . . . . ? ! ! ? ! ? . ! ! ! ! ! ! ! . ? . ? . ? . ? . ! . . . . . . . ! . ! ! ! ! ! ! ! ! ! ! ! ! ! . ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! . . ? . ? . . ! ."),
+        "Hello World!",
+    );
+    assert!(ook("hello world").is_empty());
+    assert_eq!(decoder_info("Ook").unwrap().name, "Ook!");
+}
+
+#[test]
 fn polybius_decodes() {
     let decoded = polybius("DF AX FA FA FG  XD FG GD FA AG");
     assert_plaintext(&decoded, "HELLO WORLD");

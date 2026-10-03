@@ -111,6 +111,8 @@ pub mod hexdump_decoder;
 pub mod html_entity_decoder;
 /// The octal_decoder module decodes octal
 pub mod octal_decoder;
+/// The ook_decoder module runs Ook! programs (Brainfuck written as `Ook.` `Ook?` `Ook!`)
+pub mod ook_decoder;
 /// The polybius_decoder module decodes the Polybius square cipher
 pub mod polybius_decoder;
 
@@ -275,6 +277,7 @@ use morse_code::MorseCodeDecoder;
 use multi_tap_decoder::MultiTapDecoder;
 use nato_phonetic_decoder::NatoPhoneticDecoder;
 use octal_decoder::OctalDecoder;
+use ook_decoder::OokDecoder;
 use polybius_decoder::PolybiusDecoder;
 use punycode_decoder::PunycodeDecoder;
 use quoted_printable_decoder::QuotedPrintableDecoder;
@@ -426,6 +429,8 @@ pub enum DecoderType {
     SubstitutionGenericDecoder(substitution_generic_decoder::SubstitutionGenericDecoder),
     /// brainfuck interpreter
     BrainfuckInterpreter(brainfuck_interpreter::BrainfuckInterpreter),
+    /// Ook! interpreter
+    OokDecoder(ook_decoder::OokDecoder),
     /// vigenere decoder
     VigenereDecoder(vigenere_decoder::VigenereDecoder),
     /// zlib decoder
@@ -632,6 +637,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             "Brainfuck",
             DecoderBox::new(Decoder::<BrainfuckInterpreter>::new()),
         ),
+        ("Ook!", DecoderBox::new(Decoder::<OokDecoder>::new())),
         ("Zlib", DecoderBox::new(Decoder::<ZlibDecoder>::new())),
         (
             "Single-byte XOR",

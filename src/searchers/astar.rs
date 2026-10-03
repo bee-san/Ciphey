@@ -593,4 +593,23 @@ mod tests {
             615
         ));
     }
+
+    #[test]
+    fn sanity_lets_ook_print_much_less_than_its_program() {
+        // 1,329 characters of Ook! print `hello world`, 11: under 5% of the input. Fine for
+        // an interpreter (tag `program`), not for Base64.
+        assert!(result_passes_sanity(
+            &result_node("hello world", "Ook!", "English Checker"),
+            1_329
+        ));
+        assert!(!result_passes_sanity(
+            &result_node("hello world", "Base64", "English Checker"),
+            1_329
+        ));
+        // Two characters are still too few
+        assert!(!result_passes_sanity(
+            &result_node("hi", "Ook!", "English Checker"),
+            299
+        ));
+    }
 }

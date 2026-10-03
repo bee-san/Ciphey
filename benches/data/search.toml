@@ -409,6 +409,16 @@ input = "0e0c151c45142649111c450d2b0c5007091d6305190f0d0d2b06051b0059220f040d175
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# An Ook! program (https://esolangs.org/wiki/Ook!) that prints `hello world`. 1,329
+# characters print 11: the search takes results under 5% of the input's length only from
+# interpreters (tag `program`)
+kind = "single"
+name = "ook"
+layers = ["Ook!"]
+input = "Ook. Ook? Ook? Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook! Ook? Ook. Ook? Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook? Ook. Ook! Ook! Ook? Ook! Ook. Ook? Ook! Ook. Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook! Ook. Ook! Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook! Ook. Ook! Ook? Ook! Ook! Ook? Ook! Ook? Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook! Ook? Ook. Ook? Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook? Ook. Ook! Ook! Ook? Ook! Ook. Ook? Ook! Ook. Ook! Ook? Ook! Ook! Ook? Ook! Ook? Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook! Ook? Ook. Ook? Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook? Ook. Ook! Ook! Ook? Ook! Ook. Ook? Ook! Ook! Ook! Ook. Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook! Ook. Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook. Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook."
+expected = "hello world"
+
+[[case]]
 kind = "multi"
 name = "base64_x3"
 layers = ["Base64", "Base64", "Base64"]
@@ -537,6 +547,15 @@ name = "big_integer_base64"
 layers = ["Big integer to bytes", "Base64"]
 input = "NTkyNDI4Njg5NDM2MDIyMjE3NTQ1NjExMDc1Mzc1MjAyNzQyODgyNDkxMTQwNjk1MjQzNjE5MTY3MzU0OTk5Nzg2NDc5MjYxNzQ0NzAzMDU5ODA0ODYzMDYyMDE3NjA1NzUyNTI2NTM0MDIwOTg5NTExNTcyNDc0MTI0ODE2NzMxMjkzMjIwNDQ3OTQyMzM5MTgzNDExOTEzOTQzMjE2OTk3MTU2MDY3MjU0ODA0MDg4NTkwMDA4NjMyODE1OTQxNDU3MjUwOTIzMA=="
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Python base64.b64encode of the 709 characters of Ook! for
+# `><++++++++[>+++++++++++++<-]>.---.+++++++..+++.[-]<++++[>++++++++<-]>+.`
+kind = "multi"
+name = "ook_base64"
+layers = ["Ook!", "Base64"]
+input = "T29rLiBPb2s/IE9vaz8gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vayEgT29rPyBPb2suIE9vaz8gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vaz8gT29rLiBPb2shIE9vayEgT29rPyBPb2shIE9vay4gT29rPyBPb2shIE9vay4gT29rISBPb2shIE9vayEgT29rISBPb2shIE9vayEgT29rISBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2shIE9vay4gT29rISBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vayEgT29rLiBPb2shIE9vaz8gT29rISBPb2shIE9vaz8gT29rISBPb2s/IE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vayEgT29rPyBPb2suIE9vaz8gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2s/IE9vay4gT29rISBPb2shIE9vaz8gT29rISBPb2suIE9vaz8gT29rLiBPb2suIE9vayEgT29rLg=="
+expected = "hello!"
 
 [[case]]
 kind = "multi"
