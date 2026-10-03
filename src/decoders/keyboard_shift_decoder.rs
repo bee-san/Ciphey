@@ -542,7 +542,7 @@ mod tests {
         ("jr;;p ept;f", "QWERTY right 1", "hello world"),
         ("gwkki qieks", "QWERTY left 1", "hello world"),
         ("y3oo9 294oe", "QWERTY up", "hello world"),
-        ("nd..l slf.c", "QWERTY down", "hello world"),
+        ("nd..l slf.c", "QWERTY down", "hello world"), // codespell:ignore nd
         // `a` is the first key of its row, so one to the left wraps round to `'`
         ("'rr'xj 'r s'qb", "QWERTY left 1", "attack at dawn"),
         (
@@ -786,7 +786,7 @@ mod tests {
         let result = decoder.crack("y3oo9 294oe", &get_athena_checker());
         assert_eq!(result.unencrypted_text.unwrap(), vec!["hello world"]);
         assert_eq!(result.key.as_deref(), Some("QWERTY up"));
-        let result = decoder.crack("nd..l slf.c", &get_athena_checker());
+        let result = decoder.crack("nd..l slf.c", &get_athena_checker()); // codespell:ignore nd
         assert_eq!(result.unencrypted_text.unwrap(), vec!["hello world"]);
         assert_eq!(result.key.as_deref(), Some("QWERTY down"));
     }
