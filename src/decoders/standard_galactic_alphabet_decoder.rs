@@ -388,7 +388,8 @@ mod tests {
 
     #[test]
     fn decodes_the_fox_pangram_in_lingojam_form() {
-        // p, t, x and y in their LingoJam forms. Python Ciphey 5.14.0 gives `fo xjumps`.
+        // p, t, x and y in their LingoJam forms. Python Ciphey 5.14.0 moves the space
+        // before x to after it, splitting `fox` from `jumps` in the wrong place.
         assert_eq!(
             crack_successfully("ℸ ̣ ⍑ᒷ ᑑ⚍╎ᓵꖌ ʖ∷𝙹∴リ ⎓𝙹 ̇/ ⋮⚍ᒲ!¡ᓭ 𝙹⍊ᒷ∷ ℸ ̣ ⍑ᒷ ꖎᔑ⨅|| ↸𝙹⊣"),
             "the quick brown fox jumps over the lazy dog"
