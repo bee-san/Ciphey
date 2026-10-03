@@ -48,6 +48,7 @@ use crate::decoders::substitution_generic_decoder::SubstitutionGenericDecoder;
 use crate::decoders::unicode_escape_decoder::UnicodeEscapeDecoder;
 use crate::decoders::url_decoder::URLDecoder;
 use crate::decoders::utf16_decoder::Utf16Decoder;
+use crate::decoders::uuencode_decoder::UuencodeDecoder;
 use crate::decoders::vigenere_decoder::VigenereDecoder;
 use crate::decoders::xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use crate::decoders::xor_single_byte_decoder::XorSingleByteDecoder;
@@ -498,6 +499,14 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].key.as_deref(), Some("LE"));
     /// ```
     utf16: Utf16Decoder, aliases [], key None;
+
+    /// Decodes Uuencode, with or without its `begin` and `end` lines.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::uuencode("begin 644 hello.txt\n+:&5L;&\\@=V]R;&0`\n`\nend\n");
+    /// assert_eq!(decoded.candidates[0].text, "hello world");
+    /// ```
+    uuencode: UuencodeDecoder, aliases ["uu"], key None;
 
     /// Cracks the Vigenère cipher: Ciphey finds the key length and the key from the letter
     /// statistics. To decrypt with a known key, use

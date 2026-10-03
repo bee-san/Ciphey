@@ -484,6 +484,11 @@ fn utf16_decodes() {
 }
 
 #[test]
+fn uuencode_decodes() {
+    assert_plaintext(&uuencode("+:&5L;&\\@=V]R;&0"), "hello world");
+}
+
+#[test]
 fn vigenere_cracks() {
     let decoded = vigenere(VIGENERE_CRYPTII);
     assert_plaintext(
