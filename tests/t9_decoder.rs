@@ -44,3 +44,15 @@ fn sentence_with_a_one_letter_word_is_cracked() {
     assert_eq!(result.text[0], "this is a secret message");
     assert_eq!(path(&result), ["T9"]);
 }
+
+#[test]
+fn t9_inside_dtmf_is_cracked() {
+    // The DTMF tones of `43556 96753`, with a line break between the words, which DTMF
+    // decodes to a space. Athena doesn't take the digits for plaintext, so the search goes
+    // on to T9.
+    let result = crack(
+        "770-1209 697-1477 770-1336 770-1336 770-1477\n852-1477 770-1477 852-1209 770-1336 697-1477",
+    );
+    assert_eq!(result.text[0], "hello world");
+    assert_eq!(path(&result), ["DTMF", "T9"]);
+}

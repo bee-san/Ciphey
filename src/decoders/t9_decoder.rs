@@ -633,6 +633,7 @@ mod tests {
     use crate::decoders::a1z26_decoder::A1Z26Decoder;
     use crate::decoders::decimal_decoder::DecimalDecoder;
     use crate::decoders::interface::{Crack, Decoder};
+    use crate::decoders::multi_tap_decoder::MultiTapDecoder;
     use crate::decoders::{DecoderType, DECODER_MAP};
     use crate::filtration_system::get_decoder_by_name;
     use std::collections::HashSet;
@@ -894,6 +895,26 @@ mod tests {
             "4d656574",
         ] {
             assert_fails(text);
+        }
+    }
+
+    #[test]
+    fn leaves_multi_tap_to_multi_tap() {
+        let multi_tap = Decoder::<MultiTapDecoder>::new();
+        // Multi-tap presses a key once per letter position, so every word is one repeated
+        // digit, which T9 skips
+        for (text, plaintext) in [
+            ("44 33 555 555 666 0 9 666 777 555 3", "HELLO WORLD"),
+            ("6-33-33-8 6-33 2-8 3-2-9-66", "MEET ME AT DAWN"),
+        ] {
+            assert_fails(text);
+            let result = multi_tap.crack(text, &get_athena_checker());
+            assert_eq!(result.unencrypted_text.unwrap()[0], plaintext);
+        }
+        // And Multi-tap reads nothing in T9 text
+        for text in ["43556 96753", "843 3524 47 443336 46 843 427336"] {
+            let result = multi_tap.crack(text, &get_athena_checker());
+            assert_eq!(result.unencrypted_text, None, "for {text:?}");
         }
     }
 
