@@ -44,10 +44,12 @@ fn crack(text: &str) -> DecoderResult {
     // the result doesn't depend on which tests ran before.
     ciphey::reset_decoder_stats();
     // The default config apart from the timeout: `cargo test` builds without
-    // optimisations, and CI runners have few cores. The config is global to the process,
-    // so every test here gets the same one.
+    // optimisations, and CI runners have few cores. The Base64 of the medium program is
+    // 9,224 characters, and every decoder's candidates of it are checked in turn, which
+    // takes an unoptimised build several seconds. The config is global to the process, so
+    // every test here gets the same one; a search that finds its answer stops there.
     let config = Config {
-        timeout: 30,
+        timeout: 60,
         ..Config::default()
     };
     perform_cracking(text, config)
