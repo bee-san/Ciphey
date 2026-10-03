@@ -419,6 +419,14 @@ fn morse_decodes() {
 }
 
 #[test]
+fn multi_tap_decodes() {
+    assert_plaintext(
+        &multi_tap("44-33-555-555-666 9-666-777-555-3"),
+        "HELLO WORLD",
+    );
+}
+
+#[test]
 fn octal_decodes() {
     assert_plaintext(
         &octal("124 150 145 40 161 165 151 143 153 40 142 162 157 167 156 40 146 157 170 40 152 165 155 160 163 40 157 166 145 162 40 164 150 145 40 154 141 172 171 40 144 157 147"),
