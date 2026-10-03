@@ -294,6 +294,15 @@ input = "ACA CAC ATA AGC TAA ATA AGC TAA GCA TAA AGC GAA TGC AGA GAA ACA TAA ATG
 expected = "THIS IS A SECRET MESSAGE"
 
 [[case]]
+# CONGRATULATIONS in 01248: each letter's position as digits 1, 2, 4 and 8 adding up to
+# it, 0 between letters (01248 has no spaces or punctuation)
+kind = "single"
+name = "yunying"
+layers = ["01248 (Yunying)"]
+input = "21084210842042108820108840884108401088408108421084208821"
+expected = "CONGRATULATIONS"
+
+[[case]]
 kind = "single"
 name = "railfence"
 layers = ["railfence"]

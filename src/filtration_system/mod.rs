@@ -65,6 +65,7 @@ use crate::decoders::uuencode_decoder::UuencodeDecoder;
 use crate::decoders::vigenere_decoder::VigenereDecoder;
 use crate::decoders::xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use crate::decoders::xor_single_byte_decoder::XorSingleByteDecoder;
+use crate::decoders::yunying_decoder::YunyingDecoder;
 use crate::decoders::z85_decoder::Z85Decoder;
 use crate::decoders::zero_width_decoder::ZeroWidthDecoder;
 use crate::decoders::zlib_decoder::ZlibDecoder;
@@ -318,6 +319,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let z85 = Decoder::<Z85Decoder>::new();
     let ascii85 = Decoder::<Ascii85Decoder>::new();
     let a1z26decoder = Decoder::<A1Z26Decoder>::new();
+    let yunying = Decoder::<YunyingDecoder>::new();
     let brailledecoder = Decoder::<BrailleDecoder>::new();
     let standard_galactic_alphabet = Decoder::<StandardGalacticAlphabetDecoder>::new();
     let substitution_generic = Decoder::<SubstitutionGenericDecoder>::new();
@@ -418,6 +420,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(unicode_escape),
             Box::new(backslash_escape),
             Box::new(utf16),
+            // Before rot47: when two decoders find plaintext in the same step the search
+            // reports the one listed first, and rot47 shifts 01248 digits into strings
+            // LemmeKnow takes for Litecoin addresses (`88421…` to `LLHFE…`).
+            Box::new(yunying),
             Box::new(rot47decoder),
             Box::new(z85),
             Box::new(ascii85),

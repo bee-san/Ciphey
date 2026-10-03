@@ -222,6 +222,9 @@ pub mod zero_width_decoder;
 /// The monoalphabetic_substitution_decoder module cracks simple substitution ciphers
 pub mod monoalphabetic_substitution_decoder;
 
+/// The yunying_decoder module decodes the 01248 (Yunying) cipher, letters as sums of 1, 2, 4 and 8
+pub mod yunying_decoder;
+
 use atbash_decoder::AtbashDecoder;
 use backslash_escape_decoder::BackslashEscapeDecoder;
 use baconian_decoder::BaconianDecoder;
@@ -278,6 +281,7 @@ use uuencode_decoder::UuencodeDecoder;
 use vigenere_decoder::VigenereDecoder;
 use xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use xor_single_byte_decoder::XorSingleByteDecoder;
+use yunying_decoder::YunyingDecoder;
 use z85_decoder::Z85Decoder;
 use zero_width_decoder::ZeroWidthDecoder;
 use zlib_decoder::ZlibDecoder;
@@ -294,6 +298,8 @@ pub enum DecoderType {
     DefaultDecoder(interface::DefaultDecoder),
     /// a1z26 decoder
     A1z26Decoder(a1z26_decoder::A1Z26Decoder),
+    /// 01248 (Yunying) decoder
+    YunyingDecoder(yunying_decoder::YunyingDecoder),
     /// ascii85 decoder
     Ascii85Decoder(ascii85_decoder::Ascii85Decoder),
     /// affine decoder
@@ -577,6 +583,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ),
         ("Ascii85", DecoderBox::new(Decoder::<Ascii85Decoder>::new())),
         ("a1z26", DecoderBox::new(Decoder::<A1Z26Decoder>::new())),
+        (
+            "01248 (Yunying)",
+            DecoderBox::new(Decoder::<YunyingDecoder>::new()),
+        ),
         ("Braille", DecoderBox::new(Decoder::<BrailleDecoder>::new())),
         (
             "Standard Galactic Alphabet",
