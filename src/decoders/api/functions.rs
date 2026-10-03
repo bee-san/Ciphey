@@ -39,6 +39,7 @@ use crate::decoders::jwt_decoder::JwtDecoder;
 use crate::decoders::mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
+use crate::decoders::multi_tap_decoder::MultiTapDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
 use crate::decoders::punycode_decoder::PunycodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
@@ -417,6 +418,17 @@ decoder_functions! {
     /// assert_eq!(decoded.plaintext().unwrap().text, "192.168.0.1");
     /// ```
     morse: MorseCodeDecoder, aliases [], key None;
+
+    /// Decodes Multi-tap, the ABC text entry of keypad phones: each letter is its key
+    /// pressed once per position on it (2 = ABC … 9 = WXYZ), so `44` is H and `7777` is S.
+    /// Letters are separated by spaces, or joined by hyphens with spaces between words;
+    /// `0` is a space.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::multi_tap("44 33 555 555 666 0 9 666 777 555 3");
+    /// assert_eq!(decoded.plaintext().unwrap().text, "HELLO WORLD");
+    /// ```
+    multi_tap: MultiTapDecoder, aliases [], key None;
 
     /// Decodes character codes written in octal.
     ///

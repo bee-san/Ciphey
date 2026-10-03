@@ -419,6 +419,14 @@ fn morse_decodes() {
 }
 
 #[test]
+fn multi_tap_decodes() {
+    assert_plaintext(&multi_tap("222-666-3-33"), "CODE");
+    assert_first(&multi_tap("7777 9999 2"), "SZA");
+    // T9 (one press per letter) isn't Multi-tap
+    assert!(multi_tap("43556 96753").is_empty());
+}
+
+#[test]
 fn octal_decodes() {
     assert_plaintext(
         &octal("124 150 145 40 161 165 151 143 153 40 142 162 157 167 156 40 146 157 170 40 152 165 155 160 163 40 157 166 145 162 40 164 150 145 40 154 141 172 171 40 144 157 147"),
