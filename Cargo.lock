@@ -454,7 +454,7 @@ dependencies = [
  "supports-color",
  "supports-unicode",
  "swrite",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
  "tracing",
  "tracing-subscriber",
 ]
@@ -479,7 +479,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -626,7 +626,7 @@ dependencies = [
  "serial_test",
  "termcolor",
  "text_io",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
  "tokio",
  "toml 1.1.6+spec-1.1.0",
  "urlencoding",
@@ -1296,7 +1296,7 @@ dependencies = [
  "pretty-hex",
  "serde",
  "serde_json",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
  "zerocopy",
 ]
 
@@ -1308,7 +1308,7 @@ checksum = "dc09b90bda5770641457f1c0a42c8203c48f5a3d9799dcf1bafbd84e30ccf080"
 dependencies = [
  "pest",
  "pest_derive",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -2854,7 +2854,7 @@ dependencies = [
  "regex",
  "regex-syntax 0.8.11",
  "smol_str",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
  "winnow 0.7.15",
 ]
 
@@ -2937,7 +2937,7 @@ dependencies = [
  "tar",
  "target-spec",
  "target-spec-miette",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
  "tokio",
  "tokio-stream",
  "toml 0.9.12+spec-1.1.0",
@@ -3544,7 +3544,7 @@ dependencies = [
  "newtype-uuid",
  "quick-xml 0.38.4",
  "strip-ansi-escapes",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
  "uuid",
 ]
 
@@ -3580,7 +3580,7 @@ dependencies = [
  "rustc-hash",
  "rustls",
  "socket2 0.5.9",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
  "tokio",
  "tracing",
  "web-time",
@@ -3601,7 +3601,7 @@ dependencies = [
  "rustls",
  "rustls-pki-types",
  "slab",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
  "tinyvec",
  "tracing",
  "web-time",
@@ -3785,7 +3785,7 @@ checksum = "dd6f9d3d47bdd2ad6945c5015a226ec6155d0bcdfd8f7cd29f86b71f8de99d2b"
 dependencies = [
  "getrandom 0.2.16",
  "libredox",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -3966,7 +3966,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
  "tokio",
  "tokio-util",
  "tracing",
@@ -4938,11 +4938,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.17"
+version = "2.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f63587ca0f12b72a0600bcba1d40081f830876000bb46dd2337a3051618f4fc8"
+checksum = "09e52cb86a36cede5cb101bf8908837b3e4c6e5e59fe7fd85c23fb56200d189e"
 dependencies = [
- "thiserror-impl 2.0.17",
+ "thiserror-impl 2.0.21",
 ]
 
 [[package]]
@@ -4958,13 +4958,13 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.17"
+version = "2.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ff15c8ecd7de3849db632e14d18d2571fa09dfc5ed93479bc4485c7a517c913"
+checksum = "fe5197923287db20a58125f0bc85c062f7f2c892de97b18c356f9efb14b28524"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.117",
+ "syn 3.0.3",
 ]
 
 [[package]]
@@ -5449,7 +5449,7 @@ dependencies = [
  "serde",
  "serde_json",
  "syn 2.0.117",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
  "thread-id",
 ]
 
@@ -6446,7 +6446,7 @@ checksum = "a9240c17ab9e129def0c16b56608e90a734724dfb2bcf73af30f63e340cac495"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
- "thiserror 2.0.17",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
