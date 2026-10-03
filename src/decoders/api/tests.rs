@@ -632,6 +632,18 @@ fn xor_single_byte_cracks() {
 }
 
 #[test]
+fn yunying_decodes() {
+    assert_plaintext(
+        &yunying("21084210842042108820108840884108401088408108421084208821"),
+        "CONGRATULATIONS",
+    );
+    // CTF Wiki's example: Athena doesn't identify WELLDONE, but it is still the first
+    // candidate
+    assert_first(&yunying("8842101220480224404014224202480122"), "WELLDONE");
+    assert!(yunying("8 5 12 12 15").is_empty());
+}
+
+#[test]
 fn z85_decodes() {
     assert_plaintext(&z85("nm=QNzY&b1A+]nf"), "Hello World!");
 }

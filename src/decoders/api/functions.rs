@@ -61,6 +61,7 @@ use crate::decoders::uuencode_decoder::UuencodeDecoder;
 use crate::decoders::vigenere_decoder::VigenereDecoder;
 use crate::decoders::xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use crate::decoders::xor_single_byte_decoder::XorSingleByteDecoder;
+use crate::decoders::yunying_decoder::YunyingDecoder;
 use crate::decoders::z85_decoder::Z85Decoder;
 use crate::decoders::zero_width_decoder::ZeroWidthDecoder;
 use crate::decoders::zlib_decoder::ZlibDecoder;
@@ -658,6 +659,17 @@ decoder_functions! {
     /// assert_eq!(plaintext.key.as_deref(), Some("0x58"));
     /// ```
     xor_single_byte: XorSingleByteDecoder, aliases [], key Some(keys::XOR_SINGLE_BYTE);
+
+    /// Decodes the 01248 (Yunying, 云影) cipher: each letter is digits 1, 2, 4 and 8 that add
+    /// up to its place in the alphabet, and `0` separates the letters. The output is
+    /// unspaced upper case.
+    ///
+    /// ```
+    /// // CTF Wiki's example: 88421 is 8+8+4+2+1 = 23, W
+    /// let decoded = ciphey::decoders::yunying("8842101220480224404014224202480122");
+    /// assert_eq!(decoded.candidates[0].text, "WELLDONE");
+    /// ```
+    yunying: YunyingDecoder, aliases ["01248"], key None;
 
     /// Decodes Z85, ZeroMQ's Base85.
     ///
