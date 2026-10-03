@@ -24,6 +24,7 @@ use crate::decoders::hexdump_decoder::HexdumpDecoder;
 use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
 use crate::decoders::ook_decoder::OokDecoder;
+use crate::decoders::playfair_decoder::PlayfairDecoder;
 use crate::decoders::polybius_decoder::PolybiusDecoder;
 use crate::DecoderResult;
 
@@ -286,6 +287,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let ook = Decoder::<OokDecoder>::new();
     let jsfuck = Decoder::<JsFuckDecoder>::new();
     let route_transposition = Decoder::<RouteTranspositionDecoder>::new();
+    let playfair = Decoder::<PlayfairDecoder>::new();
     let vigenere = Decoder::<VigenereDecoder>::new();
     let xor_repeating_key = Decoder::<XorRepeatingKeyDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
@@ -386,6 +388,12 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // into English-looking junk that the English checker accepts. Route
             // Transposition only shows the checker readings that score as English.
             Box::new(route_transposition),
+            // Before Vigenere, which turns Playfair ciphertext into English-looking junk
+            // (`ALEETHLVMZRFEARETHNNGUINHE` for the Wikipedia example) that the English
+            // checker accepts. An unspaced Playfair plaintext and the junk tie on checker
+            // class and cost when both are found in the same step, and the first in this
+            // list is reported.
+            Box::new(playfair),
             Box::new(vigenere),
             Box::new(xor_repeating_key),
             Box::new(reversedecoder),

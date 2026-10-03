@@ -119,6 +119,8 @@ pub mod keyboard_layout_decoder;
 pub mod octal_decoder;
 /// The ook_decoder module runs Ook! programs (Brainfuck written as `Ook.` `Ook?` `Ook!`)
 pub mod ook_decoder;
+/// The playfair_decoder module cracks the Playfair cipher
+pub mod playfair_decoder;
 /// The polybius_decoder module decodes the Polybius square cipher
 pub mod polybius_decoder;
 
@@ -299,6 +301,7 @@ use nato_phonetic_decoder::NatoPhoneticDecoder;
 use null_cipher_decoder::NullCipherDecoder;
 use octal_decoder::OctalDecoder;
 use ook_decoder::OokDecoder;
+use playfair_decoder::PlayfairDecoder;
 use polybius_decoder::PolybiusDecoder;
 use punycode_decoder::PunycodeDecoder;
 use quoted_printable_decoder::QuotedPrintableDecoder;
@@ -352,6 +355,8 @@ pub enum DecoderType {
     BaudotDecoder(baudot_decoder::BaudotDecoder),
     /// Polybius square decoder
     PolybiusDecoder(polybius_decoder::PolybiusDecoder),
+    /// Playfair cracker
+    PlayfairDecoder(playfair_decoder::PlayfairDecoder),
     /// base32 decoder
     Base32Decoder(base32_decoder::Base32Decoder),
     /// base36 decoder
@@ -642,6 +647,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Polybius Square",
             DecoderBox::new(Decoder::<PolybiusDecoder>::new()),
+        ),
+        (
+            "Playfair",
+            DecoderBox::new(Decoder::<PlayfairDecoder>::new()),
         ),
         ("caesar", DecoderBox::new(Decoder::<CaesarDecoder>::new())),
         ("Affine", DecoderBox::new(Decoder::<AffineDecoder>::new())),

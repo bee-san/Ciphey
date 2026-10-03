@@ -53,6 +53,7 @@ use crate::decoders::nato_phonetic_decoder::NatoPhoneticDecoder;
 use crate::decoders::null_cipher_decoder::NullCipherDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
 use crate::decoders::ook_decoder::OokDecoder;
+use crate::decoders::playfair_decoder::PlayfairDecoder;
 use crate::decoders::polybius_decoder::PolybiusDecoder;
 use crate::decoders::punycode_decoder::PunycodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
@@ -616,6 +617,26 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "hi");
     /// ```
     ook: OokDecoder, aliases ["short_ook"], key None;
+
+    /// Cracks the Playfair cipher, which encrypts pairs of letters with a 5×5 key square.
+    /// It needs at least 200 letters, and the search for the square can take a second or
+    /// so. The plaintext comes back upper case and with the cipher's X fillers, and the key
+    /// is the square, row by row. To decrypt with a known keyword or square, use
+    /// [`playfair_with_key`](super::playfair_with_key).
+    ///
+    /// ```
+    /// // 300 letters of Treasure Island, with the square of the keyword TREASURE
+    /// let decoded = ciphey::decoders::playfair(
+    ///     "RGROSKIQDSTFCYCAMRIREAYRTSRETOROCPFTCEQKQEOXOPCQSRLRRPCPRGAEOPLEATRGCIKRHERPUARDIS\
+    ///      XRMRMXAEHOSKGVYDFISTINLFRASICQIZIQXRKDPBRGROEDAWQCYDHORPUAIRORVEHOTRRPEGTSRHKSDICP\
+    ///      HKQBFGQLGKHIRSPBRGCIDYRSHOINSGAYBTTFHOHUMENRGEKBESRWDBSGSTTATSPBRGSCNEOTETREASOGMH\
+    ///      FHXEPCBSPNRGSISCRTINFGCAEHFTRSEVRGACXENERGCIDYRSHOEKOT",
+    /// );
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert!(plaintext.text.starts_with("THENALLOFASUDXDENTHEREWASATREMENDOUSEXPLOSION"));
+    /// assert_eq!(plaintext.key.as_deref(), Some("TREASUBCDFGHIKLMNOPQVWXYZ"));
+    /// ```
+    playfair: PlayfairDecoder, aliases [], key Some(keys::PLAYFAIR);
 
     /// Decodes the Polybius square cipher: each letter as its row and column in a 5×5
     /// square with I and J in one cell, written as digits (`23` is H) or as letters from

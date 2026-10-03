@@ -146,6 +146,7 @@ fn crackers_with_keys_take_keys() {
             "affine",
             "caesar",
             "monoalphabetic_substitution",
+            "playfair",
             "railfence",
             "rot47",
             "vigenere",
@@ -591,6 +592,14 @@ fn ook_runs() {
 }
 
 #[test]
+fn playfair_cracks() {
+    // Wikipedia's example is far too short to crack: its 26 letters give no candidates
+    assert!(playfair("BMODZBXDNABEKUDMUIXMMOUVIF").is_empty());
+    assert!(playfair("hello world").is_empty());
+    // Cracking 300 letters is the doc test and the decoder's own tests
+}
+
+#[test]
 fn polybius_decodes() {
     let decoded = polybius("DF AX FA FA FG  XD FG GD FA AG");
     assert_plaintext(&decoded, "HELLO WORLD");
@@ -1006,6 +1015,36 @@ fn monoalphabetic_substitution_decrypts_with_a_key() {
     // Nothing decrypts to Z, so M (a cipher letter missing from the key) can't be read
     assert!(monoalphabetic_substitution_with_key("Itssg", "QWERTYUIOPASDFGHJKLZXCVBN?").is_ok());
     assert!(invalid("Mtssg", "QWERTYUIOPASDFGHJKLZXCVBN?").contains("which letter M stands for"));
+}
+
+#[test]
+fn playfair_decrypts_with_a_key() {
+    // Wikipedia's example, with the keyword and with the square
+    for key in [
+        "playfair example",
+        "PLAYFAIREXAMPLE",
+        "PLAYFIREXMBCDGHKNOQSTUVWZ",
+    ] {
+        let decoded = playfair_with_key("BMODZ BXDNA BEKUD MUIXM MOUVI F", key).unwrap();
+        assert_first(&decoded, "HIDETHEGOLDINTHETREXESTUMP");
+        assert_eq!(
+            decoded.candidates[0].key.as_deref(),
+            Some("PLAYFIREXMBCDGHKNOQSTUVWZ"),
+            "{key:?}"
+        );
+    }
+    assert_eq!(
+        with_key("playfair", "BMODZBXDNABEKUDMUIXMMOUVIF", "Playfair Example"),
+        playfair_with_key("BMODZBXDNABEKUDMUIXMMOUVIF", "PLAYFAIR EXAMPLE").unwrap()
+    );
+    // An odd number of letters isn't Playfair ciphertext
+    assert!(playfair_with_key("BMODZ", "playfair").unwrap().is_empty());
+    for key in ["", "  ", "key1", "café"] {
+        assert!(
+            key_error("playfair", "BMODZB", key).contains("keyword"),
+            "{key:?}"
+        );
+    }
 }
 
 // decode_with

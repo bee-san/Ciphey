@@ -8,6 +8,7 @@ use crate::decoders::interface::{bytes_to_string, Crack, Decoder};
 use crate::decoders::monoalphabetic_substitution_decoder::{
     self, MonoalphabeticSubstitutionDecoder,
 };
+use crate::decoders::playfair_decoder::{self, PlayfairDecoder};
 use crate::decoders::railfence_decoder::{self, RailfenceDecoder};
 use crate::decoders::rot47_decoder::{self, ROT47Decoder};
 use crate::decoders::vigenere_decoder::{self, VigenereDecoder};
@@ -265,6 +266,48 @@ pub fn monoalphabetic_substitution_with_key(text: &str, key: &str) -> Result<Dec
     )]))
 }
 
+/// Decrypts the Playfair cipher with a known key.
+///
+/// The key is the keyword the square was made from, such as `PLAYFAIR EXAMPLE`, or the
+/// square itself, its 25 letters row by row, as [`playfair`](super::playfair) reports it.
+/// A keyword's square starts with its letters, each once and with J as I, and goes on with
+/// the rest of the alphabet. Spaces in the key are ignored.
+///
+/// The letters of the text are decrypted in pairs, with J read as I, and everything else
+/// is dropped. The plaintext is upper case and keeps the X fillers, and the key comes back
+/// as the square. Text with an odd number of letters isn't Playfair ciphertext and gives
+/// no candidates.
+///
+/// ```
+/// let decoded = ciphey::decoders::playfair_with_key(
+///     "BMODZBXDNABEKUDMUIXMMOUVIF",
+///     "playfair example",
+/// )?;
+/// assert_eq!(decoded.candidates[0].text, "HIDETHEGOLDINTHETREXESTUMP");
+/// assert_eq!(decoded.candidates[0].key.as_deref(), Some("PLAYFIREXMBCDGHKNOQSTUVWZ"));
+/// # Ok::<(), ciphey::CipheyError>(())
+/// ```
+///
+/// # Errors
+///
+/// [`CipheyError::InvalidKey`] if the key has no letters, or anything but letters and
+/// spaces.
+pub fn playfair_with_key(text: &str, key: &str) -> Result<Decoded, CipheyError> {
+    let square = playfair_decoder::square_from_keyword(key).ok_or_else(|| {
+        invalid_key::<PlayfairDecoder>(format!(
+            "{key:?} isn't a key: it must be a keyword in letters, such as PLAYFAIR \
+             EXAMPLE, or the 25 letters of the square"
+        ))
+    })?;
+    let key = playfair_decoder::square_string(&square);
+    Ok(decrypted::<PlayfairDecoder>(
+        playfair_decoder::decipher_text(text, &square)
+            .map(|plaintext| (plaintext, key))
+            .into_iter()
+            .collect(),
+    ))
+}
+
 /// Caesar's key for [`decode_with`](super::decode_with).
 pub(super) const CAESAR: KeySupport = KeySupport {
     format: "A whole number, the shift that decodes the text (taken mod 26), as the cracker \
@@ -318,6 +361,13 @@ pub(super) const MONOALPHABETIC_SUBSTITUTION: KeySupport = KeySupport {
              letters the text doesn't use, as the cracker reports it: \
              QWERTYUIOPASDFGHJKLZXCVBNM.",
     decrypt: monoalphabetic_substitution_key,
+};
+
+/// Playfair's key for [`decode_with`](super::decode_with).
+pub(super) const PLAYFAIR: KeySupport = KeySupport {
+    format: "The keyword (PLAYFAIR EXAMPLE), or the 25 letters of the square row by row, as \
+             the cracker reports it: PLAYFIREXMBCDGHKNOQSTUVWZ.",
+    decrypt: playfair_with_key,
 };
 
 /// [`caesar_with_key`] with the key written as [`CAESAR`] says.
