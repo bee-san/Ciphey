@@ -676,6 +676,26 @@ input = '''
 '''
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+# Hill: the letters of the plaintexts, as Hill ciphertext is letters only. medium is the 66
+# letters of the medium plaintext encrypted with Wikipedia's 2×2 key [[3,3],[2,5]], and
+# long is the 463 of the long plaintext, padded with XX to whole blocks of 3, encrypted with
+# the 3×3 key [[2,4,5],[9,2,1],[3,17,7]] (blocks as column vectors, C = K·P mod 26, by a
+# Python script checked against Wikipedia's and dCode's examples). The checker doesn't
+# accept 465 unspaced letters at Medium, so crack() hands the long decryption on unconfirmed.
+[[case]]
+decoder = "Hill"
+size = "medium"
+success = true
+input = "WSRZWSFRAVCAQLFKNVAVYYOEPZRGJQHFLONVFMWPCJLDXDHIKYYVHIQOUWWPFRPJBN"
+expected = "MEETMEATTHEOLDLIGHTHOUSEAFTERMIDNIGHTANDBRINGTHEMAPTHEKEYANDATORCH"
+
+[[case]]
+decoder = "Hill"
+size = "long"
+success = false
+input = "HXNURXKESWHXYDPSQNMLKXXFUABIFDGFTASKUXFPKIKYVWVGRUCSMNIGRYRWSLCABQRSFSUKWNHQOLVDVUEDWHPOAVHOGZFZPZXOHJWZRQMXJKECCXMALZJWQICHBNIEHHGVEWYAXKFGIAOSZIETNJWHSVRDLRXWAJSYAOJKGLNCKTKRHAKXEEQSMAWPDABQXUMYKRUSUOIFIHWFGISLFRHXYSOMQPODJZEOPXNAKXIQUKLPIRIEFSUPIFJNUKUYHJJBFBJUKXLXTPREGWSHOIFXWWDWIMDZSYOCLYPSOFEYYFPDWCYSOWBYHNONXQOYKPWSIHWARRPDUBXVIYQWGJVJZBYIOOWVHXZAQHFDWOCQCKODUCRYVMIBHHVUWPDUFFSIOMRWUZQKOCEBSOKREDMKGZZLYVSETKXZWRBEFVWPNOJKUIQYRZWYYCXISDNPJCUABQULEDBTUUHBS"
+expected = "CIPHEYISANAUTOMATEDDECODINGTOOLYOUGIVEITENCRYPTEDORENCODEDTEXTANDITTRIESTOWORKOUTWHATWASDONETOITWITHOUTYOUHAVINGTOKNOWTHEKEYOREVENTHECIPHERITSEARCHESTHROUGHMANYPOSSIBLEDECODINGSCHECKSEACHCANDIDATETOSEEWHETHERITLOOKSLIKEENGLISHORMATCHESAKNOWNPATTERNSUCHASANEMAILADDRESSANDSTOPSWHENITFINDSSOMETHINGTHATREADSLIKEPLAINTEXTMOSTOFTHETIMETHISTAKESLESSTHANASECONDWHICHMAKESITHANDYFORCAPTURETHEFLAGCHALLENGESPUZZLEHUNTSANDFORANYONEWHOSTUMBLESACROSSASTRANGESTRINGINALOGFILEXX"
+
 # JWT: {"message": <plaintext>} signed HS256 with PyJWT 2.4.0 (secret
 # "your-256-bit-secret"); crack() returns the payload JSON as encoded.
 [[case]]

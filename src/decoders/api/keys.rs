@@ -4,6 +4,7 @@
 use super::{decrypted, name_of, Decoded, KeySupport};
 use crate::decoders::affine_decoder::{self, AffineDecoder};
 use crate::decoders::caesar_decoder::{self, CaesarDecoder};
+use crate::decoders::hill_decoder::{self, HillDecoder, KeyError};
 use crate::decoders::interface::{bytes_to_string, Crack, Decoder};
 use crate::decoders::monoalphabetic_substitution_decoder::{
     self, MonoalphabeticSubstitutionDecoder,
@@ -144,6 +145,53 @@ pub fn affine_with_key(text: &str, a: u32, b: u32) -> Result<Decoded, CipheyErro
         affine_decoder::decrypt(text, reduced_a, reduced_b),
         format!("a={reduced_a}, b={reduced_b}"),
     )]))
+}
+
+/// Decrypts the Hill cipher with a known key.
+///
+/// `key` is the encryption matrix K, 2×2 or 3×3, rows in order, as
+/// [`hill`](super::hill) reports it. The text was encrypted, as on Wikipedia and dCode, by
+/// multiplying each block of letters (A = 0, …, Z = 25), as a column vector, by K mod 26;
+/// it is decrypted with K⁻¹. Entries are taken mod 26. Letters keep their case and
+/// anything else is copied.
+///
+/// ```
+/// // Wikipedia's examples
+/// let decoded = ciphey::decoders::hill_with_key("HIAT", [[3, 3], [2, 5]])?;
+/// assert_eq!(decoded.candidates[0].text, "HELP");
+/// assert_eq!(decoded.candidates[0].key.as_deref(), Some("[[3,3],[2,5]]"));
+///
+/// let decoded = ciphey::decoders::hill_with_key("POH", [[6, 24, 1], [13, 16, 10], [20, 17, 15]])?;
+/// assert_eq!(decoded.candidates[0].text, "ACT");
+/// # Ok::<(), ciphey::CipheyError>(())
+/// ```
+///
+/// # Errors
+///
+/// [`CipheyError::InvalidKey`] if the key isn't 2×2 or 3×3, isn't invertible mod 26 (its
+/// determinant must be coprime with 26), or the text's letters don't fill whole blocks of
+/// its size.
+pub fn hill_with_key<const N: usize>(
+    text: &str,
+    key: [[u32; N]; N],
+) -> Result<Decoded, CipheyError> {
+    let reason = match hill_decoder::decrypt(text, &key) {
+        Ok(plaintext) => {
+            // Some, since decrypt only succeeds with a 2×2 or 3×3 key
+            let key = hill_decoder::format_key(&key).unwrap_or_default();
+            return Ok(decrypted::<HillDecoder>(vec![(plaintext, key)]));
+        }
+        Err(KeyError::Size) => format!("the key is {N}x{N}: it must be 2x2 or 3x3"),
+        Err(KeyError::Singular(determinant)) => format!(
+            "{} isn't invertible mod 26: its determinant is {determinant} (mod 26), which \
+             must be coprime with 26",
+            hill_decoder::format_key(&key).unwrap_or_default()
+        ),
+        Err(KeyError::Length(letters)) => {
+            format!("the text has {letters} letters, which isn't a whole number of blocks of {N}")
+        }
+    };
+    Err(invalid_key::<HillDecoder>(reason))
 }
 
 /// Decrypts the rail fence cipher with a known number of rails and offset.
@@ -373,6 +421,14 @@ pub(super) const AFFINE: KeySupport = KeySupport {
     decrypt: affine_key,
 };
 
+/// Hill's key for [`decode_with`](super::decode_with).
+pub(super) const HILL: KeySupport = KeySupport {
+    format: "The encryption matrix, 2x2 or 3x3, rows in order, as the cracker reports it: \
+             [[3,3],[2,5]] (or 3 3 2 5), or its entries as one word of letters with A = 0: \
+             GYBNQKURP is [[6,24,1],[13,16,10],[20,17,15]].",
+    decrypt: hill_key,
+};
+
 /// The rail fence's key for [`decode_with`](super::decode_with).
 pub(super) const RAILFENCE: KeySupport = KeySupport {
     format: "The number of rails, and the offset into the zigzag if it isn't 0: 3, \
@@ -435,6 +491,40 @@ fn affine_key(text: &str, key: &str) -> Result<Decoded, CipheyError> {
         _ => Err(invalid_key::<AffineDecoder>(format!(
             "{key:?} needs both a and b, as in a=5, b=8"
         ))),
+    }
+}
+
+/// [`hill_with_key`] with the key written as [`HILL`] says: 4 or 9 whole numbers separated
+/// by spaces, commas, semicolons or brackets, or one word of 4 or 9 letters.
+fn hill_key(text: &str, key: &str) -> Result<Decoded, CipheyError> {
+    let invalid = || {
+        invalid_key::<HillDecoder>(format!(
+            "{key:?} isn't a key like [[3,3],[2,5]], 3 3 2 5 or GYBNQKURP: it must be the 4 \
+             entries of a 2x2 matrix or the 9 of a 3x3 one"
+        ))
+    };
+    let tokens: Vec<&str> = key
+        .split(|c: char| c.is_whitespace() || matches!(c, ',' | ';' | '[' | ']' | '(' | ')'))
+        .filter(|token| !token.is_empty())
+        .collect();
+    let entries: Vec<u32> = match tokens.as_slice() {
+        [word] if word.bytes().all(|byte| byte.is_ascii_alphabetic()) => word
+            .bytes()
+            .map(|byte| u32::from(byte.to_ascii_uppercase() - b'A'))
+            .collect(),
+        _ => tokens
+            .iter()
+            .map(|token| {
+                let entry: i64 = token.parse().map_err(|_| invalid())?;
+                // Below 26 after rem_euclid, so the conversion can't fail
+                u32::try_from(entry.rem_euclid(26)).map_err(|_| invalid())
+            })
+            .collect::<Result<_, _>>()?,
+    };
+    match *entries.as_slice() {
+        [a, b, c, d] => hill_with_key(text, [[a, b], [c, d]]),
+        [a, b, c, d, e, f, g, h, i] => hill_with_key(text, [[a, b, c], [d, e, f], [g, h, i]]),
+        _ => Err(invalid()),
     }
 }
 

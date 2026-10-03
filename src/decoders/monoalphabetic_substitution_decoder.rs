@@ -137,8 +137,9 @@ const CACHE_WAIT: Duration = Duration::from_secs(10);
 /// Marks a letter that doesn't occur in a key or label table.
 const NONE: u8 = u8::MAX;
 
-/// log10 probability of every quadgram, indexed by [`quadgram_index`].
-static QUADGRAMS: Lazy<Box<[f32]>> =
+/// log10 probability of every quadgram, indexed by [`quadgram_index`]. The Hill cracker
+/// scores its decryptions with it too.
+pub(crate) static QUADGRAMS: Lazy<Box<[f32]>> =
     Lazy::new(|| parse_quadgrams(include_str!("../storage/ngrams/english_quadgrams.txt")));
 
 /// Upper-case English words.

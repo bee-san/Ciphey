@@ -41,6 +41,7 @@ use crate::decoders::dtmf_decoder::DtmfDecoder;
 use crate::decoders::gzip_decoder::GzipDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
 use crate::decoders::hexdump_decoder::HexdumpDecoder;
+use crate::decoders::hill_decoder::HillDecoder;
 use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
 use crate::decoders::jsfuck_decoder::JsFuckDecoder;
 use crate::decoders::jwt_decoder::JwtDecoder;
@@ -478,6 +479,25 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "Hello, World!");
     /// ```
     hexdump: HexdumpDecoder, aliases ["xxd", "od"], key None;
+
+    /// Cracks the Hill cipher with a 2×2 or 3×3 key: blocks of letters multiplied, as
+    /// column vectors, by an invertible matrix mod 26. Ciphey recovers the matrix row by
+    /// row from letter statistics, so it needs about 30 letters for a 2×2 key and 120 for
+    /// a 3×3 one. The key is the encryption matrix, rows in order. To decrypt with a known
+    /// key, use [`hill_with_key`](super::hill_with_key).
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::hill(
+    ///     "WSRZWSFRAVCAQLFKNVAVYYOEPZRGJQHFLONVFMWPCJLDXDHIKYYVHIQOUWWPFRPJBN",
+    /// );
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(
+    ///     plaintext.text,
+    ///     "MEETMEATTHEOLDLIGHTHOUSEAFTERMIDNIGHTANDBRINGTHEMAPTHEKEYANDATORCH",
+    /// );
+    /// assert_eq!(plaintext.key.as_deref(), Some("[[3,3],[2,5]]"));
+    /// ```
+    hill: HillDecoder, aliases [], key Some(keys::HILL);
 
     /// Decodes HTML entities such as `&lt;`, `&#233;` and `&#x2615;`.
     ///

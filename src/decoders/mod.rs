@@ -158,6 +158,8 @@ pub mod core_socialist_values_decoder;
 pub mod crack_results;
 /// The gzip_decoder module decompresses gzip given as Base64 or hex
 pub mod gzip_decoder;
+/// The hill_decoder module cracks the Hill cipher (2×2 and 3×3 key matrices)
+pub mod hill_decoder;
 /// The jwt_decoder module decodes JSON Web Tokens (JWT)
 pub mod jwt_decoder;
 /// The keyboard_shift_decoder module cracks the keyboard shift cipher (`jr;;p` for `hello`)
@@ -299,6 +301,7 @@ use caesar_decoder::CaesarDecoder;
 use citrix_ctx1_decoder::CitrixCTX1Decoder;
 use core_socialist_values_decoder::CoreSocialistValuesDecoder;
 use gzip_decoder::GzipDecoder;
+use hill_decoder::HillDecoder;
 use jsfuck_decoder::JsFuckDecoder;
 use jwt_decoder::JwtDecoder;
 use keyboard_layout_decoder::KeyboardLayoutDecoder;
@@ -432,6 +435,8 @@ pub enum DecoderType {
     Bzip2Decoder(bzip2_decoder::Bzip2Decoder),
     /// xz and lzma-alone decoder
     XzDecoder(xz_decoder::XzDecoder),
+    /// Hill cipher cracker
+    HillDecoder(hill_decoder::HillDecoder),
     /// url decoder
     UrlDecoder(url_decoder::URLDecoder),
     /// punycode decoder
@@ -681,6 +686,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ),
         ("caesar", DecoderBox::new(Decoder::<CaesarDecoder>::new())),
         ("Affine", DecoderBox::new(Decoder::<AffineDecoder>::new())),
+        ("Hill", DecoderBox::new(Decoder::<HillDecoder>::new())),
         (
             "railfence",
             DecoderBox::new(Decoder::<RailfenceDecoder>::new()),

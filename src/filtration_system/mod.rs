@@ -49,6 +49,7 @@ use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
 use crate::decoders::core_socialist_values_decoder::CoreSocialistValuesDecoder;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::gzip_decoder::GzipDecoder;
+use crate::decoders::hill_decoder::HillDecoder;
 use crate::decoders::interface::{Crack, Decoder};
 use crate::decoders::jsfuck_decoder::JsFuckDecoder;
 use crate::decoders::jwt_decoder::JwtDecoder;
@@ -290,6 +291,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let leetspeak = Decoder::<LeetspeakDecoder>::new();
     let ook = Decoder::<OokDecoder>::new();
     let jsfuck = Decoder::<JsFuckDecoder>::new();
+    let hill = Decoder::<HillDecoder>::new();
     let route_transposition = Decoder::<RouteTranspositionDecoder>::new();
     let playfair = Decoder::<PlayfairDecoder>::new();
     let vigenere_autokey = Decoder::<VigenereAutokeyDecoder>::new();
@@ -391,6 +393,14 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // step, the search reports the one listed first. Its first check rejects text
             // that isn't JSFuck at the first byte, so running early costs nothing.
             Box::new(jsfuck),
+            // Before Vigenere: a Hill plaintext and a Vigenère false positive found in the
+            // same step tie on checker class and cost, and the first in this list wins.
+            // Vigenère keys turn Hill ciphertexts into English-looking junk
+            // (`XTPJPUOUCKEGFCURFTYH` into `STNINTETNFEEEATHEETH`), while Hill hands the
+            // checker nothing on Vigenère ciphertexts. Before Route Transposition, Playfair
+            // and Vigenère Autokey for the same reason: Hill turns away their ciphertexts
+            // before its key search, or finds no key that reads as English.
+            Box::new(hill),
             // Before Vigenere: results found in the same step tie on checker class and
             // cost and keep this order, and Vigenere keys turn an unspaced transposition
             // into English-looking junk that the English checker accepts. Route

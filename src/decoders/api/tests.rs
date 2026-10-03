@@ -150,6 +150,7 @@ fn crackers_with_keys_take_keys() {
         [
             "affine",
             "caesar",
+            "hill",
             "monoalphabetic_substitution",
             "playfair",
             "railfence",
@@ -496,6 +497,23 @@ fn hexdump_decodes() {
         ),
         "Hello, World!",
     );
+}
+
+#[test]
+fn hill_cracks() {
+    let decoded = hill("VLFTLWVGACOCLZKHLVVMPBKIIZJRWFPZGXANTUCLBXVTJSYNVGAPEXUSPNCLOMNNNCARIS");
+    assert_plaintext(
+        &decoded,
+        "DEFENDTHEEASTWALLOFTHECASTLEATDAWNANDHOLDITUNTILTHERELIEFCOLUMNARRIVES",
+    );
+    assert_eq!(plaintext_key(&decoded), "[[5,8],[17,3]]");
+    // The issue's example is found, but 20 unspaced letters are too few for the checks: it
+    // comes back unmarked, with its key
+    let decoded = hill("XTPJPUOUCKEGFCURFTYH");
+    assert_first(&decoded, "SHORTMESSAGEFORHILLX");
+    assert!(decoded.plaintext().is_none(), "{decoded:#?}");
+    assert_eq!(decoded.candidates[0].key.as_deref(), Some("[[3,3],[2,5]]"));
+    assert!(hill("hello world").is_empty());
 }
 
 #[test]
@@ -1022,6 +1040,55 @@ fn affine_decrypts_with_a_key() {
             "a = {a}"
         );
     }
+}
+
+#[test]
+fn hill_decrypts_with_a_key() {
+    let decoded = hill_with_key(
+        "Wsrz ws fr avc aql fknvavyyoe pzrgj qhflonvf mwp cjldx dhi kyy, vhi qou wwp f rpjbn.",
+        [[3, 3], [2, 5]],
+    )
+    .unwrap();
+    assert_plaintext(
+        &decoded,
+        "Meet me at the old lighthouse after midnight and bring the map, the key and a torch.",
+    );
+    assert_eq!(plaintext_key(&decoded), "[[3,3],[2,5]]");
+    // Wikipedia's 3×3 example, with entries taken mod 26
+    let decoded = hill_with_key("POH", [[32, 24, 1], [13, 16, 10], [20, 17, 41]]).unwrap();
+    assert_first(&decoded, "ACT");
+    assert_eq!(
+        decoded.candidates[0].key.as_deref(),
+        Some("[[6,24,1],[13,16,10],[20,17,15]]")
+    );
+
+    // decode_with takes the key as the cracker reports it, as numbers, or as letters
+    for key in [
+        "[[3,3],[2,5]]",
+        "3 3 2 5",
+        "3,3; 2,5",
+        "(3, 3), (2, -21)",
+        "ddcf",
+    ] {
+        assert_first(&with_key("hill", "HIAT", key), "HELP");
+    }
+    assert_first(&with_key("hill", "POH", "GYBNQKURP"), "ACT");
+
+    assert!(key_error("hill", "HIAT", "[[2,4],[1,3]]").contains("isn't invertible mod 26"));
+    assert!(key_error("hill", "HIATX", "[[3,3],[2,5]]").contains("the text has 5 letters"));
+    for key in ["", "3 3 2", "three", "3 3 2 x", "[[1,2,3],[4,5,6]]"] {
+        assert!(
+            key_error("hill", "HIAT", key).contains("isn't a key"),
+            "{key:?}"
+        );
+    }
+    assert!(matches!(
+        hill_with_key("HIAT", [[1]]),
+        Err(CipheyError::InvalidKey {
+            decoder: "Hill",
+            ..
+        })
+    ));
 }
 
 #[test]

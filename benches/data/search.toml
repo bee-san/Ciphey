@@ -475,6 +475,14 @@ input = "Tll{'tl'h{'{ol'vsk'spno{ov|zl'hm{ly'tpkupno{'huk'iypun'{ol'thw3'{ol'rl\
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# The plaintext's letters encrypted with Wikipedia's 2×2 Hill key [[3,3],[2,5]]
+kind = "single"
+name = "hill"
+layers = ["Hill"]
+input = "WSRZWSFRAVCAQLFKNVAVYYOEPZRGJQHFLONVFMWPCJLDXDHIKYYVHIQOUWWPFRPJBN"
+expected = "MEETMEATTHEOLDLIGHTHOUSEAFTERMIDNIGHTANDBRINGTHEMAPTHEKEYANDATORCH"
+
+[[case]]
 kind = "single"
 name = "xor_single_byte"
 layers = ["Single-byte XOR", "Hexadecimal"]
@@ -644,6 +652,14 @@ name = "keyboard_shift_base64"
 layers = ["Keyboard shift", "Base64"]
 input = "PHJyeSAsciBzeSB5anIgcDtmIDtvaGp5anBpZHIgc2d5cnQgLG9mbW9oankgc21mIG50b21oIHlqciAsc1suIHlqciBscnUgc21mIHMgeXB0dmov"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Python's base64.b64encode of search/single/hill
+kind = "multi"
+name = "hill_base64"
+layers = ["Hill", "Base64"]
+input = "V1NSWldTRlJBVkNBUUxGS05WQVZZWU9FUFpSR0pRSEZMT05WRk1XUENKTERYREhJS1lZVkhJUU9VV1dQRlJQSkJO"
+expected = "MEETMEATTHEOLDLIGHTHOUSEAFTERMIDNIGHTANDBRINGTHEMAPTHEKEYANDATORCH"
 
 [[case]]
 kind = "multi"
