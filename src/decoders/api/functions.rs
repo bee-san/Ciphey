@@ -24,6 +24,7 @@ use crate::decoders::base65536_decoder::Base65536Decoder;
 use crate::decoders::base85_decoder::Base85Decoder;
 use crate::decoders::base91_decoder::Base91Decoder;
 use crate::decoders::base92_decoder::Base92Decoder;
+use crate::decoders::baudot_decoder::BaudotDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::braille_decoder::BrailleDecoder;
 use crate::decoders::brainfuck_interpreter::BrainfuckInterpreter;
@@ -249,6 +250,19 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "hello world");
     /// ```
     base92: Base92Decoder, aliases [], key None;
+
+    /// Decodes Baudot code (ITA2 and the US teletypewriter variant), five bits per
+    /// character with letter and figure shifts. The key says how it read the bits.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::baudot(
+    ///     "10100 00001 10010 10010 11000 00100 10011 11000 01010 10010 01001",
+    /// );
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(plaintext.text, "HELLO WORLD");
+    /// assert_eq!(plaintext.key.as_deref(), Some("MSB-first, US-TTY"));
+    /// ```
+    baudot: BaudotDecoder, aliases ["ita2", "murray"], key None;
 
     /// Decodes character codes written in binary, trying every code length from 1 to 24
     /// bits.

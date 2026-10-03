@@ -285,6 +285,13 @@ fn base92_decodes() {
 }
 
 #[test]
+fn baudot_decodes() {
+    let decoded = baudot("10100 00001 10010 10010 11000 00100 10011 11000 01010 10010 01001");
+    assert_plaintext(&decoded, "HELLO WORLD");
+    assert_eq!(plaintext_key(&decoded), "MSB-first, US-TTY");
+}
+
+#[test]
 fn binary_decodes() {
     assert_plaintext(
         &binary("01010011011100000110100001101001011011100111100000100000011011110110011000100000011000100110110001100001011000110110101100100000011100010111010101100001011100100111010001111010"),
