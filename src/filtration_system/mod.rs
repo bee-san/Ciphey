@@ -431,9 +431,9 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // the same step, the search reports the one listed first, and both Vigenere and
             // Caesar read ROT18 text as English with its digits still rotated
             // (`Gur zrrgvat vf ng 6785` is `The meeting is at 6785` to them, `at 1230` to
-            // rot18). It only checks its decodings when the rotated digits look more like
-            // ordinary numbers, so ROT13 text with numbers in it (`Ebgngr zr 13 cynprf!`)
-            // still goes to Caesar.
+            // rot18). It only tries text whose rotated digits look more like ordinary
+            // numbers, so ROT13 text with numbers in it (`Ebgngr zr 13 cynprf!`) still goes
+            // to Caesar.
             Box::new(rot18),
             Box::new(vigenere),
             Box::new(xor_repeating_key),
