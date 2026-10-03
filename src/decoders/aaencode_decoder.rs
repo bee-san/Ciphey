@@ -9,7 +9,7 @@
 //! ```
 //!
 //! The preamble makes `(ﾟДﾟ)['_']` the `Function` constructor, `ﾟεﾟ` the string `return`
-//! and `(ﾟДﾟ)[ﾟoﾟ]` a double quote, so the payload is
+//! and `(ﾟДﾟ)[ﾟoﾟ]` a quote character, so the payload is
 //! `Function(Function('return"\143\157…"')(1))('_')`: the inner function returns the
 //! string literal, which is the source, and the outer one runs it. Each UTF-16 code unit
 //! of the source is one escape in that literal: a backslash and the unit's octal digits if
@@ -116,7 +116,7 @@ const TOKENS: [(&str, Token); 20] = [
 /// // The example in issue #988, made by npm aaencode-cli 0.0.2 (1,660 characters)
 /// let program = concat!(
 ///     r#"ﾟωﾟﾉ= /｀ｍ´）ﾉ ~┻━┻   //*´∇｀*/ ["_"]; o=(ﾟｰﾟ)  =_=3; c=(ﾟΘﾟ) =(ﾟｰﾟ)-(ﾟｰﾟ); "#,
-///     // ... 1,500 more characters of emoticons ...
+///     // ... the rest of the 1,660 characters ...
 /// #   r#"(ﾟДﾟ) =(ﾟΘﾟ)= (o^_^o)/ (o^_^o);(ﾟДﾟ)={ﾟΘﾟ: "_" ,ﾟωﾟﾉ : ((ﾟωﾟﾉ==3) +"_") [ﾟΘﾟ] ,ﾟｰﾟﾉ :(ﾟωﾟﾉ+ "#,
 /// #   r#""_")[o^_^o -(ﾟΘﾟ)] ,ﾟДﾟﾉ:((ﾟｰﾟ==3) +"_")[ﾟｰﾟ] }; (ﾟДﾟ) [ﾟΘﾟ] =((ﾟωﾟﾉ==3) +"_") [c^_^o];"#,
 /// #   r#"(ﾟДﾟ) ["c"] = ((ﾟДﾟ)+"_") [ (ﾟｰﾟ)+(ﾟｰﾟ)-(ﾟΘﾟ) ];(ﾟДﾟ) ["o"] = ((ﾟДﾟ)+"_") [ﾟΘﾟ];"#,
@@ -139,6 +139,8 @@ const TOKENS: [(&str, Token); 20] = [
 ///     r#"(ﾟДﾟ)[ﾟoﾟ]) (ﾟΘﾟ)) ("_");"#,
 /// );
 /// let result = aaencode_decoder.crack(program, &checker);
+/// // Athena doesn't take this source for plaintext, so `result.success` is false, but
+/// // the source is the one candidate
 /// assert_eq!(result.unencrypted_text.unwrap()[0], r#"console.log("hi")"#);
 /// ```
 pub struct AAEncodeDecoder;
@@ -157,7 +159,7 @@ impl Crack for Decoder<AAEncodeDecoder> {
 
     /// Reads the JavaScript source back out of an AAEncode program and checks it: one
     /// candidate, one checker call. Anything that doesn't start with `ﾟωﾟﾉ` fails on its
-    /// first byte, before anything is allocated.
+    /// first byte.
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying AAEncode with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
