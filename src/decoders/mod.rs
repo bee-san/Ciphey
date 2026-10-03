@@ -160,6 +160,8 @@ pub mod quoted_printable_decoder;
 pub mod tap_code_decoder;
 /// The unicode_escape_decoder module decodes Unicode escapes like `\u00e9`, `%u00E9` and `U+00E9`
 pub mod unicode_escape_decoder;
+/// The unicode_fancy_text_decoder module decodes Unicode look-alike "fonts" like `𝐡𝐞𝐥𝐥𝐨` and `ｈｅｌｌｏ`
+pub mod unicode_fancy_text_decoder;
 /// The url_decoder module decodes url
 pub mod url_decoder;
 /// The utf16_decoder module decodes UTF-16 (LE/BE) text
@@ -281,6 +283,7 @@ use standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder;
 use substitution_generic_decoder::SubstitutionGenericDecoder;
 use tap_code_decoder::TapCodeDecoder;
 use unicode_escape_decoder::UnicodeEscapeDecoder;
+use unicode_fancy_text_decoder::UnicodeFancyTextDecoder;
 use url_decoder::URLDecoder;
 use utf16_decoder::Utf16Decoder;
 use uuencode_decoder::UuencodeDecoder;
@@ -378,6 +381,8 @@ pub enum DecoderType {
     PunycodeDecoder(punycode_decoder::PunycodeDecoder),
     /// unicode escape decoder
     UnicodeEscapeDecoder(unicode_escape_decoder::UnicodeEscapeDecoder),
+    /// unicode fancy text decoder
+    UnicodeFancyTextDecoder(unicode_fancy_text_decoder::UnicodeFancyTextDecoder),
     /// backslash escape decoder
     BackslashEscapeDecoder(backslash_escape_decoder::BackslashEscapeDecoder),
     /// quoted-printable decoder
@@ -540,6 +545,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Unicode Escapes",
             DecoderBox::new(Decoder::<UnicodeEscapeDecoder>::new()),
+        ),
+        (
+            "Unicode Fancy Text",
+            DecoderBox::new(Decoder::<UnicodeFancyTextDecoder>::new()),
         ),
         (
             "Backslash Escapes",

@@ -595,6 +595,13 @@ fn unicode_escapes_decode() {
 }
 
 #[test]
+fn unicode_fancy_text_decodes() {
+    assert_plaintext(&unicode_fancy_text("ⓗⓔⓛⓛⓞ ⓦⓞⓡⓛⓓ"), "hello world");
+    assert_first(&unicode_fancy_text("𝐅𝐥𝐚𝐠 𝟐𝟎𝟐𝟒"), "Flag 2024");
+    assert!(unicode_fancy_text("naïve résumé").is_empty());
+}
+
+#[test]
 fn url_decodes() {
     assert_first(
         &url("https%3A%2F%2Fexample.com%2F%3Fq%3Dhello%20world%26x%3D1"),

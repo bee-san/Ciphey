@@ -57,6 +57,7 @@ use crate::decoders::standard_galactic_alphabet_decoder::StandardGalacticAlphabe
 use crate::decoders::substitution_generic_decoder::SubstitutionGenericDecoder;
 use crate::decoders::tap_code_decoder::TapCodeDecoder;
 use crate::decoders::unicode_escape_decoder::UnicodeEscapeDecoder;
+use crate::decoders::unicode_fancy_text_decoder::UnicodeFancyTextDecoder;
 use crate::decoders::url_decoder::URLDecoder;
 use crate::decoders::utf16_decoder::Utf16Decoder;
 use crate::decoders::uuencode_decoder::UuencodeDecoder;
@@ -606,6 +607,17 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "Café ☕");
     /// ```
     unicode_escapes: UnicodeEscapeDecoder, aliases ["unicode_escape"], key None;
+
+    /// Decodes Unicode "fancy text", letters and digits written with look-alike Unicode
+    /// characters: mathematical bold, italic, script, fraktur, double-struck and
+    /// monospace, fullwidth, circled, squared, small capitals, superscripts and regional
+    /// indicators. Other characters are kept.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::unicode_fancy_text("𝐡𝐞𝐥𝐥𝐨 𝐰𝐨𝐫𝐥𝐝");
+    /// assert_eq!(decoded.candidates[0].text, "hello world");
+    /// ```
+    unicode_fancy_text: UnicodeFancyTextDecoder, aliases ["fancy_text", "fancy_font"], key None;
 
     /// Decodes URL (percent) encoding.
     ///

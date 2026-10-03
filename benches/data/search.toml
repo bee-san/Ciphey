@@ -219,6 +219,14 @@ input = '\u004D\u0065\u0065\u0074\u0020\u006D\u0065\u0020\u0061\u0074\u0020\u007
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# The plaintext in mathematical bold letters (U+1D400 for A, U+1D41A for a)
+kind = "single"
+name = "unicode_fancy_text"
+layers = ["Unicode Fancy Text"]
+input = "𝐌𝐞𝐞𝐭 𝐦𝐞 𝐚𝐭 𝐭𝐡𝐞 𝐨𝐥𝐝 𝐥𝐢𝐠𝐡𝐭𝐡𝐨𝐮𝐬𝐞 𝐚𝐟𝐭𝐞𝐫 𝐦𝐢𝐝𝐧𝐢𝐠𝐡𝐭 𝐚𝐧𝐝 𝐛𝐫𝐢𝐧𝐠 𝐭𝐡𝐞 𝐦𝐚𝐩, 𝐭𝐡𝐞 𝐤𝐞𝐲 𝐚𝐧𝐝 𝐚 𝐭𝐨𝐫𝐜𝐡."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "backslash_escapes"
 layers = ["Backslash Escapes"]
@@ -498,6 +506,14 @@ name = "multi_tap_base64"
 layers = ["Multi-tap", "Base64"]
 input = "NiAzMyAzMyA4IDAgNiAzMyAwIDIgOCAwIDggNDQgMzMgMCA2NjYgNTU1IDMgMCA1NTUgNDQ0IDQgNDQgOCA0NCA2NjYgODggNzc3NyAzMyAwIDIgMzMzIDggMzMgNzc3IDAgNiA0NDQgMyA2NiA0NDQgNCA0NCA4IDAgMiA2NiAzIDAgMjIgNzc3IDQ0NCA2NiA0IDAgOCA0NCAzMyAwIDYgMiA3IDAgOCA0NCAzMyAwIDU1IDMzIDk5OSAwIDIgNjYgMyAwIDIgMCA4IDY2NiA3NzcgMjIyIDQ0"
 expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP THE KEY AND A TORCH"
+
+[[case]]
+# Base64 of the UTF-8 of the unicode_fancy_text input
+kind = "multi"
+name = "unicode_fancy_text_base64"
+layers = ["Unicode Fancy Text", "Base64"]
+input = "8J2QjPCdkJ7wnZCe8J2QrSDwnZCm8J2QniDwnZCa8J2QrSDwnZCt8J2QofCdkJ4g8J2QqPCdkKXwnZCdIPCdkKXwnZCi8J2QoPCdkKHwnZCt8J2QofCdkKjwnZCu8J2QrPCdkJ4g8J2QmvCdkJ/wnZCt8J2QnvCdkKsg8J2QpvCdkKLwnZCd8J2Qp/CdkKLwnZCg8J2QofCdkK0g8J2QmvCdkKfwnZCdIPCdkJvwnZCr8J2QovCdkKfwnZCgIPCdkK3wnZCh8J2QniDwnZCm8J2QmvCdkKksIPCdkK3wnZCh8J2QniDwnZCk8J2QnvCdkLIg8J2QmvCdkKfwnZCdIPCdkJog8J2QrfCdkKjwnZCr8J2QnPCdkKEu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
 kind = "multi"

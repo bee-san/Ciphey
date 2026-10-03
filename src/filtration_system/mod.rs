@@ -61,6 +61,7 @@ use crate::decoders::standard_galactic_alphabet_decoder::StandardGalacticAlphabe
 use crate::decoders::substitution_generic_decoder::SubstitutionGenericDecoder;
 use crate::decoders::tap_code_decoder::TapCodeDecoder;
 use crate::decoders::unicode_escape_decoder::UnicodeEscapeDecoder;
+use crate::decoders::unicode_fancy_text_decoder::UnicodeFancyTextDecoder;
 use crate::decoders::url_decoder::URLDecoder;
 use crate::decoders::utf16_decoder::Utf16Decoder;
 use crate::decoders::uuencode_decoder::UuencodeDecoder;
@@ -301,6 +302,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let url = Decoder::<URLDecoder>::new();
     let punycode = Decoder::<PunycodeDecoder>::new();
     let unicode_escape = Decoder::<UnicodeEscapeDecoder>::new();
+    let unicode_fancy_text = Decoder::<UnicodeFancyTextDecoder>::new();
     let backslash_escape = Decoder::<BackslashEscapeDecoder>::new();
     let quoted_printable = Decoder::<QuotedPrintableDecoder>::new();
     let mime_encoded_word = Decoder::<MimeEncodedWordDecoder>::new();
@@ -438,6 +440,11 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // LemmeKnow takes for Litecoin addresses (the issue example `88421…` becomes
             // `LLHFE…`).
             Box::new(yunying),
+            // Before rot47, which reads each character as its low byte and so turns
+            // fullwidth, squared and negative circled letters into ASCII too: when two
+            // decoders find plaintext in the same step the search reports the one listed
+            // first, and rot47 reads `🄷🄴🄻🄻🄾, 🅆🄾🅁🄻🄳!` as `HELLO= WORLD2`.
+            Box::new(unicode_fancy_text),
             Box::new(rot47decoder),
             Box::new(z85),
             Box::new(ascii85),
