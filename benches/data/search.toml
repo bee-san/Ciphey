@@ -286,6 +286,14 @@ input = "Zrrg zr ng gur byq yvtugubhfr nsgre zvqavtug naq oevat gur znc, gur xrl
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# ROT18: ROT13 on the letters and ROT5 on the digits, so 1230 and 404 are 6785 and 959
+kind = "single"
+name = "rot18"
+layers = ["rot18"]
+input = "Gur zrrgvat vf ng 6785 va ebbz 959 ba gur frpbaq sybbe"
+expected = "The meeting is at 1230 in room 404 on the second floor"
+
+[[case]]
 kind = "single"
 name = "atbash"
 layers = ["atbash"]
@@ -536,6 +544,14 @@ name = "rot13_base64"
 layers = ["caesar", "Base64"]
 input = "WnJyZyB6ciBuZyBndXIgYnlxIHl2dHVndWJoZnIgbnNncmUgenZxYXZ0dWcgbmFxIG9ldmF0IGd1ciB6bmMsIGd1ciB4cmwgbmFxIG4gZ2JlcHUu"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Python 3 base64.b64encode() of search/single/rot18
+kind = "multi"
+name = "rot18_base64"
+layers = ["rot18", "Base64"]
+input = "R3VyIHpycmd2YXQgdmYgbmcgNjc4NSB2YSBlYmJ6IDk1OSBiYSBndXIgZnJwYmFxIHN5YmJl"
+expected = "The meeting is at 1230 in room 404 on the second floor"
 
 [[case]]
 kind = "multi"

@@ -997,6 +997,23 @@ success = true
 input = ".elif gol a ni gnirts egnarts a ssorca selbmuts ohw enoyna rof dna stnuh elzzup ,segnellahc galf eht erutpac rof ydnah ti sekam hcihw ,dnoces a naht ssel sekat siht emit eht fo tsoM .txetnialp ekil sdaer taht gnihtemos sdnif ti nehw spots dna ,sserdda liame na sa hcus nrettap nwonk a sehctam ro hsilgnE ekil skool ti rehtehw ees ot etadidnac hcae skcehc ,sgnidoced elbissop ynam hguorht sehcraes tI .rehpic eht neve ro yek eht wonk ot gnivah uoy tuohtiw ,ti ot enod saw tahw tuo krow ot seirt ti dna txet dedocne ro detpyrcne ti evig uoY .loot gnidoced detamotua na si yehpiC"
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+# rot18 only tries text with digits, and the standard texts have none, so these are the
+# texts with " Room 101." appended, encrypted with ROT18 (ROT13 on the letters, ROT5 on the
+# digits: 101 is 656). Athena identifies both decodings.
+[[case]]
+decoder = "rot18"
+size = "medium"
+success = true
+input = "Zrrg zr ng gur byq yvtugubhfr nsgre zvqavtug naq oevat gur znc, gur xrl naq n gbepu. Ebbz 656."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch. Room 101."
+
+[[case]]
+decoder = "rot18"
+size = "long"
+success = true
+input = "Pvcurl vf na nhgbzngrq qrpbqvat gbby. Lbh tvir vg rapelcgrq be rapbqrq grkg naq vg gevrf gb jbex bhg jung jnf qbar gb vg, jvgubhg lbh univat gb xabj gur xrl be rira gur pvcure. Vg frnepurf guebhtu znal cbffvoyr qrpbqvatf, purpxf rnpu pnaqvqngr gb frr jurgure vg ybbxf yvxr Ratyvfu be zngpurf n xabja cnggrea fhpu nf na rznvy nqqerff, naq fgbcf jura vg svaqf fbzrguvat gung ernqf yvxr cynvagrkg. Zbfg bs gur gvzr guvf gnxrf yrff guna n frpbaq, juvpu znxrf vg unaql sbe pncgher gur synt punyyratrf, chmmyr uhagf naq sbe nalbar jub fghzoyrf npebff n fgenatr fgevat va n ybt svyr. Ebbz 656."
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file. Room 101."
+
 [[case]]
 decoder = "rot47"
 size = "medium"

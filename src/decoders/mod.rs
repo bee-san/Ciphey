@@ -212,6 +212,8 @@ pub mod caesar_decoder;
 
 /// For the railfence cipher decoder
 pub mod railfence_decoder;
+/// For the ROT5 / ROT18 decoder (digits rotated by 5, letters by a Caesar shift)
+pub mod rot18_decoder;
 /// For the rot47 decoder
 pub mod rot47_decoder;
 /// The route_transposition_decoder module cracks the scytale, the Caesar box and route ciphers
@@ -325,6 +327,7 @@ use quoted_printable_decoder::QuotedPrintableDecoder;
 use railfence_decoder::RailfenceDecoder;
 use raw_deflate_decoder::RawDeflateDecoder;
 use reverse_decoder::ReverseDecoder;
+use rot18_decoder::Rot18Decoder;
 use rot47_decoder::ROT47Decoder;
 use route_transposition_decoder::RouteTranspositionDecoder;
 use standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder;
@@ -474,6 +477,8 @@ pub enum DecoderType {
     CaesarDecoder(caesar_decoder::CaesarDecoder),
     /// railfence decoder
     RailfenceDecoder(railfence_decoder::RailfenceDecoder),
+    /// ROT5 / ROT18 decoder
+    Rot18Decoder(rot18_decoder::Rot18Decoder),
     /// rot47 decoder
     Rot47Decoder(rot47_decoder::ROT47Decoder),
     /// route transposition cracker
@@ -700,6 +705,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             "railfence",
             DecoderBox::new(Decoder::<RailfenceDecoder>::new()),
         ),
+        ("rot18", DecoderBox::new(Decoder::<Rot18Decoder>::new())),
         ("rot47", DecoderBox::new(Decoder::<ROT47Decoder>::new())),
         (
             "Route Transposition",

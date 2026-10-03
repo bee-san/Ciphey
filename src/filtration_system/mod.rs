@@ -68,6 +68,7 @@ use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
 use crate::decoders::raw_deflate_decoder::RawDeflateDecoder;
 use crate::decoders::reverse_decoder::ReverseDecoder;
+use crate::decoders::rot18_decoder::Rot18Decoder;
 use crate::decoders::rot47_decoder::ROT47Decoder;
 use crate::decoders::route_transposition_decoder::RouteTranspositionDecoder;
 use crate::decoders::standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder;
@@ -297,6 +298,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let playfair = Decoder::<PlayfairDecoder>::new();
     let vigenere_autokey = Decoder::<VigenereAutokeyDecoder>::new();
     let beaufort = Decoder::<BeaufortDecoder>::new();
+    let rot18 = Decoder::<Rot18Decoder>::new();
     let vigenere = Decoder::<VigenereDecoder>::new();
     let xor_repeating_key = Decoder::<XorRepeatingKeyDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
@@ -425,6 +427,14 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // check can accept; Beaufort only answers with a key whose decryption reads as
             // English quadgrams.
             Box::new(beaufort),
+            // Before Vigenere and the classical ciphers: when two decoders find plaintext in
+            // the same step, the search reports the one listed first, and both Vigenere and
+            // Caesar read ROT18 text as English with its digits still rotated
+            // (`Gur zrrgvat vf ng 6785` is `The meeting is at 6785` to them, `at 1230` to
+            // rot18). It only checks its decodings when the rotated digits look more like
+            // ordinary numbers, so ROT13 text with numbers in it (`Ebgngr zr 13 cynprf!`)
+            // still goes to Caesar.
+            Box::new(rot18),
             Box::new(vigenere),
             Box::new(xor_repeating_key),
             Box::new(reversedecoder),

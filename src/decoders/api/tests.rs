@@ -749,6 +749,20 @@ fn reverse_decodes() {
 }
 
 #[test]
+fn rot18_cracks() {
+    let decoded = rot18("V jnf obea va 6430 naq zbirq gb Ybaqba va 7552");
+    assert_plaintext(&decoded, "I was born in 1985 and moved to London in 2007");
+    assert_eq!(plaintext_key(&decoded), "letters 13, digits 5");
+    // ROT5 alone, of an IPv4 address
+    let decoded = decode_with("rot5", "647.613.5.6", &DecodeOptions::default()).unwrap();
+    assert_plaintext(&decoded, "192.168.0.1");
+    assert_eq!(plaintext_key(&decoded), "letters 0, digits 5");
+    // ROT13 with an ordinary number in it is Caesar's: nothing comes back
+    assert!(rot18("Ebgngr zr 13 cynprf!").is_empty());
+    assert!(rot18("Uryyb jbeyq").is_empty());
+}
+
+#[test]
 fn rot47_cracks() {
     assert_plaintext(&rot47("wt{{~ (~#{s"), "HELLO WORLD");
 }

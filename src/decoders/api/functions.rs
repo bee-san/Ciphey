@@ -64,6 +64,7 @@ use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
 use crate::decoders::raw_deflate_decoder::RawDeflateDecoder;
 use crate::decoders::reverse_decoder::ReverseDecoder;
+use crate::decoders::rot18_decoder::Rot18Decoder;
 use crate::decoders::rot47_decoder::ROT47Decoder;
 use crate::decoders::route_transposition_decoder::RouteTranspositionDecoder;
 use crate::decoders::standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder;
@@ -766,6 +767,21 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "cats");
     /// ```
     reverse: ReverseDecoder, aliases [], key None;
+
+    /// Cracks ROT18 (ROT13 on the letters, ROT5 on the digits), ROT5 (the digits only) and
+    /// ROT5 with the Caesar shift that best fits the letters. The key gives the shifts the
+    /// text was encrypted with. Only text whose rotated digits look more like ordinary
+    /// numbers than its own (most numbers start with a small digit) is decrypted: other text
+    /// gives no candidates, since it is likelier to be Caesar or ROT13 with its numbers left
+    /// alone.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::rot18("Gur zrrgvat vf ng 6785 va ebbz 959 ba gur frpbaq sybbe");
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(plaintext.text, "The meeting is at 1230 in room 404 on the second floor");
+    /// assert_eq!(plaintext.key.as_deref(), Some("letters 13, digits 5"));
+    /// ```
+    rot18: Rot18Decoder, aliases ["rot5"], key None;
 
     /// Cracks ROT47 and the other rotations of the 94 printable ASCII characters. To
     /// decrypt with a known rotation, use [`rot47_with_key`](super::rot47_with_key).
