@@ -40,6 +40,7 @@ use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
 use crate::decoders::hexdump_decoder::HexdumpDecoder;
 use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
 use crate::decoders::jwt_decoder::JwtDecoder;
+use crate::decoders::keyboard_shift_decoder::KeyboardShiftDecoder;
 use crate::decoders::leetspeak_decoder::LeetspeakDecoder;
 use crate::decoders::mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
@@ -430,6 +431,19 @@ decoder_functions! {
     /// assert_eq!(payload.key.as_deref(), Some(r#"{"alg":"HS256","typ":"JWT"}"#));
     /// ```
     jwt: JwtDecoder, aliases ["json_web_token"], key None;
+
+    /// Cracks the keyboard shift cipher, where every key was replaced by a neighbouring
+    /// key: one or two to the right or left, or the key above or below, on US QWERTY, or
+    /// one along the letter rows of AZERTY or QWERTZ. The key names the shift that
+    /// encrypted the text.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::keyboard_shift("jr;;p ept;f");
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(plaintext.text, "hello world");
+    /// assert_eq!(plaintext.key.as_deref(), Some("QWERTY right 1"));
+    /// ```
+    keyboard_shift: KeyboardShiftDecoder, aliases [], key None;
 
     /// Decodes leetspeak, letters written as look-alike digits and symbols (`3` for e,
     /// `|<` for k). `1`, `|` and `2` each stand for two letters, and Ciphey picks the one

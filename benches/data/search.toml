@@ -394,6 +394,14 @@ input = "Qccz qc iz zrc alx lwmrzraeuc ihzcp qwxvwmrz ivx npwvm zrc qif, zrc gcy
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# Every key one to the right on US QWERTY
+kind = "single"
+name = "keyboard_shift"
+layers = ["Keyboard shift"]
+input = "<rry ,r sy yjr p;f ;ohjyjpidr sgyrt ,ofmohjy smf ntomh yjr ,s[. yjr lru smf s yptvj/"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "xor_single_byte"
 layers = ["Single-byte XOR", "Hexadecimal"]
@@ -531,6 +539,14 @@ kind = "multi"
 name = "unicode_fancy_text_base64"
 layers = ["Unicode Fancy Text", "Base64"]
 input = "8J2QjPCdkJ7wnZCe8J2QrSDwnZCm8J2QniDwnZCa8J2QrSDwnZCt8J2QofCdkJ4g8J2QqPCdkKXwnZCdIPCdkKXwnZCi8J2QoPCdkKHwnZCt8J2QofCdkKjwnZCu8J2QrPCdkJ4g8J2QmvCdkJ/wnZCt8J2QnvCdkKsg8J2QpvCdkKLwnZCd8J2Qp/CdkKLwnZCg8J2QofCdkK0g8J2QmvCdkKfwnZCdIPCdkJvwnZCr8J2QovCdkKfwnZCgIPCdkK3wnZCh8J2QniDwnZCm8J2QmvCdkKksIPCdkK3wnZCh8J2QniDwnZCk8J2QnvCdkLIg8J2QmvCdkKfwnZCdIPCdkJog8J2QrfCdkKjwnZCr8J2QnPCdkKEu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Python's base64.b64encode of search/single/keyboard_shift
+kind = "multi"
+name = "keyboard_shift_base64"
+layers = ["Keyboard shift", "Base64"]
+input = "PHJyeSAsciBzeSB5anIgcDtmIDtvaGp5anBpZHIgc2d5cnQgLG9mbW9oankgc21mIG50b21oIHlqciAsc1suIHlqciBscnUgc21mIHMgeXB0dmov"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

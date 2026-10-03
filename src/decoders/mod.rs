@@ -148,6 +148,8 @@ pub mod crack_results;
 pub mod gzip_decoder;
 /// The jwt_decoder module decodes JSON Web Tokens (JWT)
 pub mod jwt_decoder;
+/// The keyboard_shift_decoder module cracks the keyboard shift cipher (`jr;;p` for `hello`)
+pub mod keyboard_shift_decoder;
 /// The leetspeak_decoder module decodes leetspeak (1337)
 pub mod leetspeak_decoder;
 /// The mime_encoded_word_decoder module decodes MIME encoded-words (RFC 2047)
@@ -270,6 +272,7 @@ use citrix_ctx1_decoder::CitrixCTX1Decoder;
 use core_socialist_values_decoder::CoreSocialistValuesDecoder;
 use gzip_decoder::GzipDecoder;
 use jwt_decoder::JwtDecoder;
+use keyboard_shift_decoder::KeyboardShiftDecoder;
 use leetspeak_decoder::LeetspeakDecoder;
 use mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
@@ -377,6 +380,8 @@ pub enum DecoderType {
     CoreSocialistValuesDecoder(core_socialist_values_decoder::CoreSocialistValuesDecoder),
     /// jwt decoder
     JwtDecoder(jwt_decoder::JwtDecoder),
+    /// keyboard shift cracker
+    KeyboardShiftDecoder(keyboard_shift_decoder::KeyboardShiftDecoder),
     /// leetspeak decoder
     LeetspeakDecoder(leetspeak_decoder::LeetspeakDecoder),
     /// gzip decoder
@@ -648,5 +653,9 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<MonoalphabeticSubstitutionDecoder>::new()),
         ),
         ("T9", DecoderBox::new(Decoder::<T9Decoder>::new())),
+        (
+            "Keyboard shift",
+            DecoderBox::new(Decoder::<KeyboardShiftDecoder>::new()),
+        ),
     ])
 });

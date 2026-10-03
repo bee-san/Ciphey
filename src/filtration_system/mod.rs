@@ -47,6 +47,7 @@ use crate::decoders::crack_results::CrackResult;
 use crate::decoders::gzip_decoder::GzipDecoder;
 use crate::decoders::interface::{Crack, Decoder};
 use crate::decoders::jwt_decoder::JwtDecoder;
+use crate::decoders::keyboard_shift_decoder::KeyboardShiftDecoder;
 use crate::decoders::leetspeak_decoder::LeetspeakDecoder;
 use crate::decoders::mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
@@ -339,6 +340,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let brainfuck = Decoder::<BrainfuckInterpreter>::new();
     let xor_single_byte = Decoder::<XorSingleByteDecoder>::new();
     let monoalphabetic_substitution = Decoder::<MonoalphabeticSubstitutionDecoder>::new();
+    let keyboard_shift = Decoder::<KeyboardShiftDecoder>::new();
 
     Decoders {
         components: vec![
@@ -468,6 +470,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(brainfuck),
             Box::new(zlib),
             Box::new(monoalphabetic_substitution),
+            Box::new(keyboard_shift),
         ],
     }
 }

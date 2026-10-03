@@ -439,6 +439,17 @@ fn jwt_decodes() {
 }
 
 #[test]
+fn keyboard_shift_cracks() {
+    let decoded = keyboard_shift("<rry ,r sy fsem");
+    assert_plaintext(&decoded, "Meet me at dawn");
+    assert_eq!(plaintext_key(&decoded), "QWERTY right 1");
+    let decoded = keyboard_shift("y3oo9 294oe");
+    assert_plaintext(&decoded, "hello world");
+    assert_eq!(plaintext_key(&decoded), "QWERTY up");
+    assert!(keyboard_shift("😀😀😀😀").is_empty());
+}
+
+#[test]
 fn leetspeak_decodes() {
     assert_plaintext(&leetspeak("l337 5p34k 15 3l173"), "leet speak is elite");
     assert_plaintext(&leetspeak("7|-|3 |<3y 15 |-|3r3"), "the key is here");
