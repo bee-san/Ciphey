@@ -45,6 +45,7 @@ use crate::decoders::crack_results::CrackResult;
 use crate::decoders::gzip_decoder::GzipDecoder;
 use crate::decoders::interface::{Crack, Decoder};
 use crate::decoders::jwt_decoder::JwtDecoder;
+use crate::decoders::leetspeak_decoder::LeetspeakDecoder;
 use crate::decoders::mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
@@ -270,6 +271,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     trace!("Filtering and getting all decoders");
     let jwt = Decoder::<JwtDecoder>::new();
     let zero_width = Decoder::<ZeroWidthDecoder>::new();
+    let leetspeak = Decoder::<LeetspeakDecoder>::new();
     let vigenere = Decoder::<VigenereDecoder>::new();
     let xor_repeating_key = Decoder::<XorRepeatingKeyDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
@@ -344,6 +346,11 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // JKR ...`). The search ranks the codon plaintext first anyway, since it passes
             // the strict English check and the junk doesn't; this order only settles a tie.
             Box::new(dna_codon),
+            // Before Vigenere: results found in the same step tie on checker class and
+            // cost and keep this order, and Vigenere keys can turn the letters of leet
+            // text into something the English checker accepts. Leetspeak only answers when
+            // most of its words are dictionary words.
+            Box::new(leetspeak),
             Box::new(vigenere),
             Box::new(xor_repeating_key),
             Box::new(reversedecoder),

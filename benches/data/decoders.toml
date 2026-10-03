@@ -590,6 +590,23 @@ success = true
 input = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXNzYWdlIjoiQ2lwaGV5IGlzIGFuIGF1dG9tYXRlZCBkZWNvZGluZyB0b29sLiBZb3UgZ2l2ZSBpdCBlbmNyeXB0ZWQgb3IgZW5jb2RlZCB0ZXh0IGFuZCBpdCB0cmllcyB0byB3b3JrIG91dCB3aGF0IHdhcyBkb25lIHRvIGl0LCB3aXRob3V0IHlvdSBoYXZpbmcgdG8ga25vdyB0aGUga2V5IG9yIGV2ZW4gdGhlIGNpcGhlci4gSXQgc2VhcmNoZXMgdGhyb3VnaCBtYW55IHBvc3NpYmxlIGRlY29kaW5ncywgY2hlY2tzIGVhY2ggY2FuZGlkYXRlIHRvIHNlZSB3aGV0aGVyIGl0IGxvb2tzIGxpa2UgRW5nbGlzaCBvciBtYXRjaGVzIGEga25vd24gcGF0dGVybiBzdWNoIGFzIGFuIGVtYWlsIGFkZHJlc3MsIGFuZCBzdG9wcyB3aGVuIGl0IGZpbmRzIHNvbWV0aGluZyB0aGF0IHJlYWRzIGxpa2UgcGxhaW50ZXh0LiBNb3N0IG9mIHRoZSB0aW1lIHRoaXMgdGFrZXMgbGVzcyB0aGFuIGEgc2Vjb25kLCB3aGljaCBtYWtlcyBpdCBoYW5keSBmb3IgY2FwdHVyZSB0aGUgZmxhZyBjaGFsbGVuZ2VzLCBwdXp6bGUgaHVudHMgYW5kIGZvciBhbnlvbmUgd2hvIHN0dW1ibGVzIGFjcm9zcyBhIHN0cmFuZ2Ugc3RyaW5nIGluIGEgbG9nIGZpbGUuIn0.PHWCXgSGDvMV116MHoSrBC8cdz40Yh4-UPAKtvMT8hI"
 expected = "{\"message\":\"Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file.\"}"
 
+# Leetspeak inputs are CyberChef 10.24's "Convert Leet Speak" (To Leet Speak) of the
+# plaintexts: a 4, e 3, i 1, o 0, s 5, t 7. The capitals of "It" and "English" in the long
+# text are lost to 1 and 3, so the decoder returns them in lower case.
+[[case]]
+decoder = "Leetspeak"
+size = "medium"
+success = true
+input = "M337 m3 47 7h3 0ld l1gh7h0u53 4f73r m1dn1gh7 4nd br1ng 7h3 m4p, 7h3 k3y 4nd 4 70rch."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "Leetspeak"
+size = "long"
+success = true
+input = "C1ph3y 15 4n 4u70m473d d3c0d1ng 700l. Y0u g1v3 17 3ncryp73d 0r 3nc0d3d 73x7 4nd 17 7r135 70 w0rk 0u7 wh47 w45 d0n3 70 17, w17h0u7 y0u h4v1ng 70 kn0w 7h3 k3y 0r 3v3n 7h3 c1ph3r. 17 534rch35 7hr0ugh m4ny p0551bl3 d3c0d1ng5, ch3ck5 34ch c4nd1d473 70 533 wh37h3r 17 l00k5 l1k3 3ngl15h 0r m47ch35 4 kn0wn p4773rn 5uch 45 4n 3m41l 4ddr355, 4nd 570p5 wh3n 17 f1nd5 50m37h1ng 7h47 r34d5 l1k3 pl41n73x7. M057 0f 7h3 71m3 7h15 74k35 l355 7h4n 4 53c0nd, wh1ch m4k35 17 h4ndy f0r c4p7ur3 7h3 fl4g ch4ll3ng35, puzzl3 hun75 4nd f0r 4ny0n3 wh0 57umbl35 4cr055 4 57r4ng3 57r1ng 1n 4 l0g f1l3."
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. it searches through many possible decodings, checks each candidate to see whether it looks like english or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
 [[case]]
 decoder = "HTML Entities"
 size = "medium"

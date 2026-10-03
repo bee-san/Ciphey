@@ -144,6 +144,8 @@ pub mod crack_results;
 pub mod gzip_decoder;
 /// The jwt_decoder module decodes JSON Web Tokens (JWT)
 pub mod jwt_decoder;
+/// The leetspeak_decoder module decodes leetspeak (1337)
+pub mod leetspeak_decoder;
 /// The mime_encoded_word_decoder module decodes MIME encoded-words (RFC 2047)
 pub mod mime_encoded_word_decoder;
 /// The multi_tap_decoder module decodes Multi-tap phone keypad text like `44 33 555`
@@ -259,6 +261,7 @@ use caesar_decoder::CaesarDecoder;
 use citrix_ctx1_decoder::CitrixCTX1Decoder;
 use gzip_decoder::GzipDecoder;
 use jwt_decoder::JwtDecoder;
+use leetspeak_decoder::LeetspeakDecoder;
 use mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use morse_code::MorseCodeDecoder;
@@ -360,6 +363,8 @@ pub enum DecoderType {
     CitrixCtx1Decoder(citrix_ctx1_decoder::CitrixCTX1Decoder),
     /// jwt decoder
     JwtDecoder(jwt_decoder::JwtDecoder),
+    /// leetspeak decoder
+    LeetspeakDecoder(leetspeak_decoder::LeetspeakDecoder),
     /// gzip decoder
     GzipDecoder(gzip_decoder::GzipDecoder),
     /// url decoder
@@ -513,6 +518,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<CitrixCTX1Decoder>::new()),
         ),
         ("JWT", DecoderBox::new(Decoder::<JwtDecoder>::new())),
+        (
+            "Leetspeak",
+            DecoderBox::new(Decoder::<LeetspeakDecoder>::new()),
+        ),
         ("Gzip", DecoderBox::new(Decoder::<GzipDecoder>::new())),
         ("URL", DecoderBox::new(Decoder::<URLDecoder>::new())),
         (

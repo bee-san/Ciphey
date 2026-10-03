@@ -261,6 +261,14 @@ input = "Nvvg nv zg gsv low ortsgslfhv zugvi nrwmrtsg zmw yirmt gsv nzk, gsv pvb
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# CyberChef 10.24 "Convert Leet Speak" (To Leet Speak): a 4, e 3, i 1, o 0, s 5, t 7
+kind = "single"
+name = "leetspeak"
+layers = ["Leetspeak"]
+input = "M337 m3 47 7h3 0ld l1gh7h0u53 4f73r m1dn1gh7 4nd br1ng 7h3 m4p, 7h3 k3y 4nd 4 70rch."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "baconian"
 layers = ["Baconian"]
@@ -410,6 +418,13 @@ kind = "multi"
 name = "atbash_base64"
 layers = ["atbash", "Base64"]
 input = "TnZ2ZyBudiB6ZyBnc3YgbG93IG9ydHNnc2xmaHYgenVndmkgbnJ3bXJ0c2cgem13IHlpcm10IGdzdiBuemssIGdzdiBwdmIgem13IHogZ2xpeHMu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "leetspeak_base64"
+layers = ["Leetspeak", "Base64"]
+input = "TTMzNyBtMyA0NyA3aDMgMGxkIGwxZ2g3aDB1NTMgNGY3M3IgbTFkbjFnaDcgNG5kIGJyMW5nIDdoMyBtNHAsIDdoMyBrM3kgNG5kIDQgNzByY2gu"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
