@@ -780,10 +780,8 @@ mod tests {
     #[test]
     fn decodes_utf8() {
         // xxd of `café ☕`
-        assert_eq!(
-            crack("00000000: 6361 66c3 a920 e298 95                   caf.. ...\n").unwrap(),
-            "café ☕"
-        );
+        let dump = "00000000: 6361 66c3 a920 e298 95                   caf.. ...\n"; // codespell:ignore caf
+        assert_eq!(crack(dump).unwrap(), "café ☕");
     }
 
     #[test]
