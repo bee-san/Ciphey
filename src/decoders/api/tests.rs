@@ -638,6 +638,23 @@ fn rot47_cracks() {
 }
 
 #[test]
+fn route_transposition_cracks() {
+    let decoded = route_transposition(
+        "M  ge hbh y eaoh mtret tetltai i haot dhfdanmenr t otnnga dcmhlueid pk heeisrg t,ea.",
+    );
+    assert_plaintext(
+        &decoded,
+        "Meet me at the old lighthouse after midnight and bring the map, the key and a torch.",
+    );
+    assert_eq!(plaintext_key(&decoded), "7 columns");
+    let decoded = decode_with("scytale", "HOLEWDLOLR", &DecodeOptions::default()).unwrap();
+    assert_plaintext(&decoded, "HELLOWORLD");
+    // Already English, and not letters
+    assert!(route_transposition("hello world").is_empty());
+    assert!(route_transposition("4d656c6c6f20776f726c64").is_empty());
+}
+
+#[test]
 fn standard_galactic_alphabet_decodes() {
     assert_plaintext(&standard_galactic_alphabet("⍑ᒷꖎꖎ𝙹 ∴𝙹∷ꖎ↸"), "hello world");
     let decoded = decode_with(

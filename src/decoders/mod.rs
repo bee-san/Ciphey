@@ -202,6 +202,8 @@ pub mod caesar_decoder;
 pub mod railfence_decoder;
 /// For the rot47 decoder
 pub mod rot47_decoder;
+/// The route_transposition_decoder module cracks the scytale, the Caesar box and route ciphers
+pub mod route_transposition_decoder;
 
 /// For the z85 cipher decoder
 pub mod z85_decoder;
@@ -300,6 +302,7 @@ use quoted_printable_decoder::QuotedPrintableDecoder;
 use railfence_decoder::RailfenceDecoder;
 use reverse_decoder::ReverseDecoder;
 use rot47_decoder::ROT47Decoder;
+use route_transposition_decoder::RouteTranspositionDecoder;
 use standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder;
 use substitution_generic_decoder::SubstitutionGenericDecoder;
 use t9_decoder::T9Decoder;
@@ -437,6 +440,8 @@ pub enum DecoderType {
     RailfenceDecoder(railfence_decoder::RailfenceDecoder),
     /// rot47 decoder
     Rot47Decoder(rot47_decoder::ROT47Decoder),
+    /// route transposition cracker
+    RouteTranspositionDecoder(route_transposition_decoder::RouteTranspositionDecoder),
     /// z85 decoder
     Z85Decoder(z85_decoder::Z85Decoder),
     /// zero-width steganography decoder
@@ -639,6 +644,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<RailfenceDecoder>::new()),
         ),
         ("rot47", DecoderBox::new(Decoder::<ROT47Decoder>::new())),
+        (
+            "Route Transposition",
+            DecoderBox::new(Decoder::<RouteTranspositionDecoder>::new()),
+        ),
         ("Z85", DecoderBox::new(Decoder::<Z85Decoder>::new())),
         (
             "Zero-width",

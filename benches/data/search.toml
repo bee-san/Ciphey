@@ -342,6 +342,14 @@ input = "M ahlihetmi  nhatkaaretm tteodlgtos fe ingtadbigtemp h e n  oc.ee   hua
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# The scytale: written in rows of 7 characters, spaces included, and read off by columns
+kind = "single"
+name = "route_transposition"
+layers = ["Route Transposition"]
+input = "M  ge hbh y eaoh mtret tetltai i haot dhfdanmenr t otnnga dcmhlueid pk heeisrg t,ea."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "vigenere"
 layers = ["Vigenere"]
@@ -492,6 +500,13 @@ kind = "multi"
 name = "keyboard_layout_base64"
 layers = ["Keyboard layout", "Base64"]
 input = "TS4ueSBtLiBheSB5ZC4gcm5lIG5jaWR5ZHJnby4gYXV5LnAgbWNlYmNpZHkgYWJlIHhwY2JpIHlkLiBtYWx3IHlkLiB0LmYgYWJlIGEgeXJwamR2"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "route_transposition_base64"
+layers = ["Route Transposition", "Base64"]
+input = "TSAgZ2UgaGJoIHkgZWFvaCBtdHJldCB0ZXRsdGFpIGkgaGFvdCBkaGZkYW5tZW5yIHQgb3RubmdhIGRjbWhsdWVpZCBwayBoZWVpc3JnIHQsZWEu"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

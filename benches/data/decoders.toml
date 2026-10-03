@@ -925,6 +925,25 @@ success = true
 input = "r:A96J :D 2? 2FE@>2E65 564@5:?8 E@@=] *@F 8:G6 :E 6?4CJAE65 @C 6?4@565 E6IE 2?5 :E EC:6D E@ H@C< @FE H92E H2D 5@?6 E@ :E[ H:E9@FE J@F 92G:?8 E@ <?@H E96 <6J @C 6G6? E96 4:A96C] xE D62C496D E9C@F89 >2?J A@DD:3=6 564@5:?8D[ 4964<D 6249 42?5:52E6 E@ D66 H96E96C :E =@@<D =:<6 t?8=:D9 @C >2E496D 2 <?@H? A2EE6C? DF49 2D 2? 6>2:= 255C6DD[ 2?5 DE@AD H96? :E 7:?5D D@>6E9:?8 E92E C625D =:<6 A=2:?E6IE] |@DE @7 E96 E:>6 E9:D E2<6D =6DD E92? 2 D64@?5[ H9:49 >2<6D :E 92?5J 7@C 42AEFC6 E96 7=28 492==6?86D[ AFKK=6 9F?ED 2?5 7@C 2?J@?6 H9@ DEF>3=6D 24C@DD 2 DEC2?86 DEC:?8 :? 2 =@8 7:=6]"
 expected = "#IPHEY IS AN AUTOMATED DECODING TOOLl 9OU GIVE IT ENCRYPTED OR ENCODED TEXT AND IT TRIES TO WORK OUT WHAT WAS DONE TO ITj WITHOUT YOU HAVING TO KNOW THE KEY OR EVEN THE CIPHERl )T SEARCHES THROUGH MANY POSSIBLE DECODINGSj CHECKS EACH CANDIDATE TO SEE WHETHER IT LOOKS LIKE %NGLISH OR MATCHES A KNOWN PATTERN SUCH AS AN EMAIL ADDRESSj AND STOPS WHEN IT FINDS SOMETHING THAT READS LIKE PLAINTEXTl -OST OF THE TIME THIS TAKES LESS THAN A SECONDj WHICH MAKES IT HANDY FOR CAPTURE THE FLAG CHALLENGESj PUZZLE HUNTS AND FOR ANYONE WHO STUMBLES ACROSS A STRANGE STRING IN A LOG FILEl"
 
+# Route Transposition inputs write the plaintext row by row, spaces and punctuation
+# included, into 7 (medium) or 9 (long) columns and read the columns top to bottom: the
+# scytale. Made with the issue's (#997) Python prototype; the medium one decodes back with
+# Python Ciphey's route.py. The long input reads as English to the checker as it is, so
+# it is only a decoder case, not a search one.
+[[case]]
+decoder = "Route Transposition"
+size = "medium"
+success = true
+input = "M  ge hbh y eaoh mtret tetltai i haot dhfdanmenr t otnnga dcmhlueid pk heeisrg t,ea."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "Route Transposition"
+size = "long"
+success = true
+input = "C ad.eyeetots oakkepstabicc h khhwn   s mh ioeil ,aachh,h nurriliati  pnx    iuvnenhehnlnkatele en aaa fealns sea knaea ufemoanopnenYitcttwwdttioy earyegsnoto os sndnwittittt s wedp lpno bsnggh dgoteo roho, nw trro  s d hoEr pu ddhnh ke itsshsytflutrwlsg  ea  u ddairan yg oh.cupd,eisekn aacer edirexoma ei  ulezs he eifyudt e enektewo tre hgoe adersgm thmesnsne tfektccifranz aosa ni teognodds   iuth  Iehscccae  lakt ast  gap.  ehohtoegglan   s liocoicr   owtt oeects sohht ilitneaisois dl ttsan  r  eenysastaesmolvr tituaohh  vi  mide ewtiscorsl,ptotsaMhh ndmh tcs dotctr ."
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
 [[case]]
 decoder = "simplesubstitution"
 size = "medium"

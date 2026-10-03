@@ -59,6 +59,7 @@ use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
 use crate::decoders::reverse_decoder::ReverseDecoder;
 use crate::decoders::rot47_decoder::ROT47Decoder;
+use crate::decoders::route_transposition_decoder::RouteTranspositionDecoder;
 use crate::decoders::standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder;
 use crate::decoders::substitution_generic_decoder::SubstitutionGenericDecoder;
 use crate::decoders::t9_decoder::T9Decoder;
@@ -672,6 +673,22 @@ decoder_functions! {
     /// assert_eq!(decoded.plaintext().unwrap().text, "HELLO WORLD");
     /// ```
     rot47: ROT47Decoder, aliases [], key Some(keys::ROT47);
+
+    /// Cracks route transpositions: the scytale, the Caesar box and the route ciphers,
+    /// which write the text into a grid of columns and read it off by columns, by
+    /// columns alternately down and up, by rows or in a spiral. Ciphey tries 2 to 20
+    /// columns and every route, ranks the readings by English quadgram statistics and
+    /// checks the best few. Text that no reading turns into English gives no candidates.
+    ///
+    /// ```
+    /// // "HELLOWORLD" written in rows of 4 letters and read off column by column
+    /// let decoded = ciphey::decoders::route_transposition("HOLEWDLOLR");
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(plaintext.text, "HELLOWORLD");
+    /// assert_eq!(plaintext.key.as_deref(), Some("4 columns"));
+    /// ```
+    route_transposition: RouteTranspositionDecoder,
+        aliases ["scytale", "caesar_box", "route_cipher"], key None;
 
     /// Decodes the Standard Galactic Alphabet (Commander Keen, Minecraft's enchanting
     /// table) written with look-alike Unicode symbols, as LingoJam's translator and

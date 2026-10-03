@@ -63,6 +63,7 @@ use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
 use crate::decoders::reverse_decoder::ReverseDecoder;
 use crate::decoders::rot47_decoder::ROT47Decoder;
+use crate::decoders::route_transposition_decoder::RouteTranspositionDecoder;
 use crate::decoders::standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder;
 use crate::decoders::substitution_generic_decoder::SubstitutionGenericDecoder;
 use crate::decoders::t9_decoder::T9Decoder;
@@ -283,6 +284,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let leetspeak = Decoder::<LeetspeakDecoder>::new();
     let ook = Decoder::<OokDecoder>::new();
     let jsfuck = Decoder::<JsFuckDecoder>::new();
+    let route_transposition = Decoder::<RouteTranspositionDecoder>::new();
     let vigenere = Decoder::<VigenereDecoder>::new();
     let xor_repeating_key = Decoder::<XorRepeatingKeyDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
@@ -377,6 +379,11 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // step, the search reports the one listed first. Its first check rejects text
             // that isn't JSFuck at the first byte, so running early costs nothing.
             Box::new(jsfuck),
+            // Before Vigenere: results found in the same step tie on checker class and
+            // cost and keep this order, and Vigenere keys turn an unspaced transposition
+            // into English-looking junk that the English checker accepts. Route
+            // Transposition only shows the checker readings that score as English.
+            Box::new(route_transposition),
             Box::new(vigenere),
             Box::new(xor_repeating_key),
             Box::new(reversedecoder),
