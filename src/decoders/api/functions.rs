@@ -43,6 +43,7 @@ use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitu
 use crate::decoders::morse_code::MorseCodeDecoder;
 use crate::decoders::multi_tap_decoder::MultiTapDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
+use crate::decoders::polybius_decoder::PolybiusDecoder;
 use crate::decoders::punycode_decoder::PunycodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
@@ -457,6 +458,19 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "hello world");
     /// ```
     octal: OctalDecoder, aliases ["oct"], key None;
+
+    /// Decodes the Polybius square cipher: each letter as its row and column in a 5×5
+    /// square with I and J in one cell, written as digits (`23` is H) or as letters from
+    /// `ABCDE` or `ADFGX`. Also the 6×6 square of A–Z and 0–9, column-row order and the
+    /// tap code square. The key says which square and order it took.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::polybius("23 15 31 31 34  52 34 42 31 14");
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(plaintext.text, "HELLO WORLD");
+    /// assert_eq!(plaintext.key.as_deref(), Some("5x5 I=J, row-column"));
+    /// ```
+    polybius: PolybiusDecoder, aliases ["polybius_square"], key None;
 
     /// Decodes Punycode (RFC 3492), and the `xn--` labels of internationalised domain names
     /// wherever they are in the text.

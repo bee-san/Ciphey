@@ -463,6 +463,21 @@ fn octal_decodes() {
 }
 
 #[test]
+fn polybius_decodes() {
+    let decoded = polybius("DF AX FA FA FG  XD FG GD FA AG");
+    assert_plaintext(&decoded, "HELLO WORLD");
+    assert_eq!(
+        plaintext_key(&decoded),
+        "5x5 I=J, row-column, letters ADFGX"
+    );
+    // Unidentified: both row-column readings come back, without keys
+    let decoded = polybius("25 45 32 35  34 51 15 42");
+    assert!(decoded.plaintext().is_none(), "{decoded:#?}");
+    let texts: Vec<&str> = decoded.candidates.iter().map(|c| c.text.as_str()).collect();
+    assert_eq!(texts, ["KUMP OVER", "JUMP OVER"]);
+}
+
+#[test]
 fn punycode_decodes() {
     assert_first(&punycode("xn--bcher-kva"), "bücher");
     assert_first(
