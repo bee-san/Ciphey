@@ -205,6 +205,31 @@ fn ascii85_decodes() {
 }
 
 #[test]
+fn ascii_shift_cracks() {
+    let decoded = ascii_shift("olssv'~vysk");
+    assert_plaintext(&decoded, "hello world");
+    assert_eq!(plaintext_key(&decoded), "7 (mod 256)");
+    // Python Ciphey's mod 128 vector
+    let decoded = decode_with(
+        "byte shift",
+        "\"?FFIzGSzH;G?zCMz<??z;H>z#zFCE?z>IAz;H>z;JJF?z;H>zNL??",
+        &DecodeOptions::default(),
+    )
+    .expect("byte shift is an alias");
+    assert_plaintext(
+        &decoded,
+        "Hello my name is bee and I like dog and apple and tree",
+    );
+    assert_eq!(plaintext_key(&decoded), "90 (mod 128)");
+    // dCode's example: Athena doesn't identify ASCII_CODE, but it is the first candidate
+    let decoded = ascii_shift("SeU[[qUaVW");
+    assert_first(&decoded, "ASCII_CODE");
+    assert_eq!(decoded.candidates[0].key.as_deref(), Some("18 (mod 256)"));
+    // English isn't an ASCII shift
+    assert!(ascii_shift("The quick brown fox jumps over the lazy dog").is_empty());
+}
+
+#[test]
 fn atbash_decodes() {
     assert_plaintext(
         &atbash("Draziwh olev zgyzhs kfaaovh"),

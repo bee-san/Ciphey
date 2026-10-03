@@ -6,6 +6,7 @@ use std::sync::mpsc::channel;
 use crate::checkers::CheckerTypes;
 use crate::cli_pretty_printing;
 use crate::decoders::ascii85_decoder::Ascii85Decoder;
+use crate::decoders::ascii_shift_decoder::AsciiShiftDecoder;
 use crate::decoders::atbash_decoder::AtbashDecoder;
 use crate::decoders::backslash_escape_decoder::BackslashEscapeDecoder;
 use crate::decoders::baconian_decoder::BaconianDecoder;
@@ -340,6 +341,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let affine = Decoder::<AffineDecoder>::new();
     let railfencedecoder = Decoder::<RailfenceDecoder>::new();
     let rot47decoder = Decoder::<ROT47Decoder>::new();
+    let ascii_shift = Decoder::<AsciiShiftDecoder>::new();
     let z85 = Decoder::<Z85Decoder>::new();
     let ascii85 = Decoder::<Ascii85Decoder>::new();
     let a1z26decoder = Decoder::<A1Z26Decoder>::new();
@@ -498,6 +500,11 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // first, and rot47 reads `🄷🄴🄻🄻🄾, 🅆🄾🅁🄻🄳!` as `HELLO= WORLD2`.
             Box::new(unicode_fancy_text),
             Box::new(rot47decoder),
+            // After rot47 and Caesar: when no byte leaves `!` to `~` and there are no
+            // spaces, ASCII shift and rot47 give the same text, and on letters alone it can
+            // match a Caesar shift. When two decoders find plaintext in the same step the
+            // search reports the one listed first.
+            Box::new(ascii_shift),
             Box::new(z85),
             Box::new(ascii85),
             Box::new(a1z26decoder),

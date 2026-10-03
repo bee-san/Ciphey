@@ -79,6 +79,8 @@ pub mod aaencode_decoder;
 pub mod affine_decoder;
 /// The ascii85_decoder module decodes Ascii85 (Adobe / btoa Base85)
 pub mod ascii85_decoder;
+/// The ascii_shift_decoder module cracks the ASCII shift cipher (every byte shifted by one key)
+pub mod ascii_shift_decoder;
 /// The atbash_decoder module decodes atbash
 pub mod atbash_decoder;
 /// The backslash_escape_decoder module decodes C, Python and JavaScript string escapes like `\x41` and `\101`
@@ -282,6 +284,7 @@ use interface::{Crack, Decoder};
 use a1z26_decoder::A1Z26Decoder;
 use aaencode_decoder::AAEncodeDecoder;
 use affine_decoder::AffineDecoder;
+use ascii_shift_decoder::AsciiShiftDecoder;
 use base100_decoder::Base100Decoder;
 use base64_alt_decoder::Base64AltDecoder;
 use base64_decoder::Base64Decoder;
@@ -460,6 +463,8 @@ pub enum DecoderType {
     Rot47Decoder(rot47_decoder::ROT47Decoder),
     /// route transposition cracker
     RouteTranspositionDecoder(route_transposition_decoder::RouteTranspositionDecoder),
+    /// ASCII shift cracker
+    AsciiShiftDecoder(ascii_shift_decoder::AsciiShiftDecoder),
     /// z85 decoder
     Z85Decoder(z85_decoder::Z85Decoder),
     /// zero-width steganography decoder
@@ -678,6 +683,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Route Transposition",
             DecoderBox::new(Decoder::<RouteTranspositionDecoder>::new()),
+        ),
+        (
+            "ASCII shift",
+            DecoderBox::new(Decoder::<AsciiShiftDecoder>::new()),
         ),
         ("Z85", DecoderBox::new(Decoder::<Z85Decoder>::new())),
         (

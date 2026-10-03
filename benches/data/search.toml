@@ -459,6 +459,14 @@ input = "M..y m. ay yd. rne ncidydrgo. auy.p mcebcidy abe xpcbi yd. malw yd. t.f
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# CyberChef 10.24 ADD with the key 07 (hex)
+kind = "single"
+name = "ascii_shift"
+layers = ["ASCII shift"]
+input = "Tll{'tl'h{'{ol'vsk'spno{ov|zl'hm{ly'tpkupno{'huk'iypun'{ol'thw3'{ol'rl\u0080'huk'h'{vyjo5"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "xor_single_byte"
 layers = ["Single-byte XOR", "Hexadecimal"]
@@ -727,6 +735,15 @@ kind = "multi"
 name = "base64_xor_base64"
 layers = ["Base64", "Single-byte XOR", "Base64"]
 input = "FhUULiYBADYYEQAqJgEAciMFFyUgcDopCwU6MhhwKnIjBXtzIXAXJRsVGHIYGgslIBUuKSAvLiwjChMlGxV3KQsFCDsjFXcsCwoQLRgRADYbGgMxCwoQLRgRADAYGiklGxV3KQsFByUmBXs7G3AlNw=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# CyberChef 10.24 ADD with the key 07 (hex), then To Hex with no delimiter. The bytes aren't
+# UTF-8, so the Hexadecimal decoder hands them on as Latin-1.
+kind = "multi"
+name = "ascii_shift_hex"
+layers = ["ASCII shift", "Hexadecimal"]
+input = "546c6c7b27746c27687b277b6f6c2776736b2773706e6f7b6f767c7a6c27686d7b6c792774706b75706e6f7b2768756b27697970756e277b6f6c2774687733277b6f6c27726c802768756b2768277b76796a6f35"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

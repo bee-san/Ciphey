@@ -9,6 +9,7 @@ use crate::decoders::a1z26_decoder::A1Z26Decoder;
 use crate::decoders::aaencode_decoder::AAEncodeDecoder;
 use crate::decoders::affine_decoder::AffineDecoder;
 use crate::decoders::ascii85_decoder::Ascii85Decoder;
+use crate::decoders::ascii_shift_decoder::AsciiShiftDecoder;
 use crate::decoders::atbash_decoder::AtbashDecoder;
 use crate::decoders::backslash_escape_decoder::BackslashEscapeDecoder;
 use crate::decoders::baconian_decoder::BaconianDecoder;
@@ -168,6 +169,20 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "hello world");
     /// ```
     ascii85: Ascii85Decoder, aliases ["btoa"], key None;
+
+    /// Cracks the ASCII shift cipher, every byte shifted by the same key: mod 256 like
+    /// CyberChef's ADD, or mod 128 like dCode. The text's characters are read as bytes
+    /// (Latin-1), and Base64 is read too when its bytes aren't UTF-8. The key is reported as
+    /// `7 (mod 256)`.
+    ///
+    /// ```
+    /// // "hello world" with 7 added to every byte
+    /// let decoded = ciphey::decoders::ascii_shift("olssv'~vysk");
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(plaintext.text, "hello world");
+    /// assert_eq!(plaintext.key.as_deref(), Some("7 (mod 256)"));
+    /// ```
+    ascii_shift: AsciiShiftDecoder, aliases ["byte_shift"], key None;
 
     /// Decodes Atbash, which swaps A and Z, B and Y, and so on.
     ///

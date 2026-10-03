@@ -110,6 +110,22 @@ success = true
 input = "<~6YULQAU,D4F!+n/+CTD7Df&p)ARlooARfXhBl7Q+FDl)6/g+;8FWb=2G%De1F<G.4@rcj6FCeu*DfQt3DI[TqARlp*AU&;>@;]TuBlkJ>EbT*++EVNEGAhM;+E)CE+EqL-F<Gd9F!,\"3DIjr4D]ib9/0K.NFD,T8F<GjIFWb@+G%ki,+EVNECMn'7+EV:.+DYP6+E)9CAThX&+EV:.+Cf,)BOu3:+A$YtF(Jd#@q]Fp+EV:;Dfo]++DkP)Gp%'EF)u&)Ch4`\"ARfXhBl7R)/0JG9ARfLs+D\"tkBHUenDIdHl@<?''FDi:CAS!!.BOu:!ATAo-F<GC<DejD:Ch[Zr+@U0\\Ch[s(+E)9CD..NrBOu6-@3B?'Dg-(AE+*j1ATDZ2F*1u++CT=6@;[3!D..-p+CSekEb0<5/0JA=A0>r8DfBb?GA(Q*+DGp?Anc-nF!,OBD.Rg&Bl7Q+FD,*)+ED%%A9/l0Bkq9&E,8rsDKKH7F=n\\1Df^\"CDe:,6BOr<.Bl.E(FD,B0+EV%-ATJu1ATMo8FD,*#+CQC6ARfXrA1SjIBPCsi+DkP&ATJu.F<G7*DIe#8AoD]4@ps=uF`M%9FD,5.Ao(mg+Cf(nCi![#B4Z-8+E2ILH>I.8BQ\\37F!+n/A0>K&EZee.H#IS3+EqL;+EMXID.7<mF!+n$Ec6#?+CQC6FE1f-B4W3,FE2)5B-:o++CQC/DeC2)Bl%?5~>"
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+# ASCII shift inputs are CyberChef 10.24's ADD with the key 07 (hex) of the plaintexts, which
+# its SUB undoes. `x` becomes DEL and `y` to `~` become U+0080 to U+0085, written as \u escapes.
+[[case]]
+decoder = "ASCII shift"
+size = "medium"
+success = true
+input = "Tll{'tl'h{'{ol'vsk'spno{ov|zl'hm{ly'tpkupno{'huk'iypun'{ol'thw3'{ol'rl\u0080'huk'h'{vyjo5"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "ASCII shift"
+size = "long"
+success = true
+input = "Jpwol\u0080'pz'hu'h|{vth{lk'kljvkpun'{vvs5'`v|'np}l'p{'lujy\u0080w{lk'vy'lujvklk'{l\u007F{'huk'p{'{yplz'{v'~vyr'v|{'~oh{'~hz'kvul'{v'p{3'~p{ov|{'\u0080v|'oh}pun'{v'ruv~'{ol'rl\u0080'vy'l}lu'{ol'jpwoly5'P{'zlhyjolz'{oyv|no'thu\u0080'wvzzpisl'kljvkpunz3'joljrz'lhjo'jhukpkh{l'{v'zll'~ol{oly'p{'svvrz'sprl'Lunspzo'vy'th{jolz'h'ruv~u'wh{{lyu'z|jo'hz'hu'lthps'hkkylzz3'huk'z{vwz'~olu'p{'mpukz'zvtl{opun'{oh{'ylhkz'sprl'wshpu{l\u007F{5'Tvz{'vm'{ol'{ptl'{opz'{hrlz'slzz'{ohu'h'zljvuk3'~opjo'thrlz'p{'ohuk\u0080'mvy'jhw{|yl'{ol'mshn'johsslunlz3'w|\u0081\u0081sl'o|u{z'huk'mvy'hu\u0080vul'~ov'z{|tislz'hjyvzz'h'z{yhunl'z{ypun'pu'h'svn'mpsl5"
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
 [[case]]
 decoder = "atbash"
 size = "medium"
