@@ -657,13 +657,14 @@ mod tests {
     #[test]
     fn other_numeric_decoders_reject_dtmf() {
         // DTMF passes Decimal's byte scan, but every number is above 255 and none is
-        // printable ASCII. A1Z26 only reads 1 to 26, and Octal bytes stop at 377, so no
-        // other number decoder returns a result for the same input.
+        // printable ASCII. A1Z26 only reads 1 to 26, and Octal values are at most 3 digits
+        // (or 4 with a leading 0) and 377, so no other number decoder returns a result for
+        // the same input.
         for text in [
             ISSUE_EXAMPLE,
             "8521336770147785212097701336697147794113368521477",
-            // Only the digits 0-7, so Octal reads further
-            "770-1336 770-1477 770-1633",
+            // Only digits 0-7 and spaces, so Octal gets past its byte scan
+            "770 1336 770 1477 770 1633",
         ] {
             let checker = get_athena_checker();
             let decimal = Decoder::<DecimalDecoder>::new().crack(text, &checker);
@@ -673,7 +674,7 @@ mod tests {
             let octal = Decoder::<OctalDecoder>::new().crack(text, &checker);
             assert_eq!(octal.unencrypted_text, None, "Octal decoded {text:?}");
         }
-        assert_eq!(crack("770-1336 770-1477 770-1633").unwrap(), "56B");
+        assert_eq!(crack("770 1336 770 1477 770 1633").unwrap(), "56B");
     }
 
     #[test]
