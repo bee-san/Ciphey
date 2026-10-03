@@ -287,6 +287,7 @@ mod tests {
     use crate::checkers::checker_type::{Check, Checker};
     use crate::checkers::CheckerTypes;
     use crate::decoders::a1z26_decoder::A1Z26Decoder;
+    use crate::decoders::big_integer_decoder::BigIntegerDecoder;
     use crate::decoders::decimal_decoder::DecimalDecoder;
     use crate::decoders::interface::{Crack, Decoder};
     use crate::decoders::octal_decoder::OctalDecoder;
@@ -674,6 +675,14 @@ mod tests {
             let octal = Decoder::<OctalDecoder>::new().crack(text, &checker);
             assert_eq!(octal.unencrypted_text, None, "Octal decoded {text:?}");
         }
+        // Big integer reads one run of digits, like the glued form, as bytes. Those bytes
+        // aren't text.
+        let glued = "8521336770147785212097701336697147794113368521477";
+        let big_integer = Decoder::<BigIntegerDecoder>::new().crack(glued, &get_athena_checker());
+        assert_eq!(
+            big_integer.unencrypted_text, None,
+            "Big integer decoded {glued:?}"
+        );
         assert_eq!(crack("770 1336 770 1477 770 1633").unwrap(), "56B");
     }
 
