@@ -25,7 +25,9 @@
 //! # Ranking
 //!
 //! Ciphey runs every decoder on every text the search expands, so the decodings are
-//! ranked before anything is checked. Each one is scored by the mean English
+//! ranked before anything is checked. Text that can't have been typed on these layouts,
+//! or that changes case inside its words as often as Base64 does (the tables keep each
+//! letter's case), is turned away first. Each decoding is scored by the mean English
 //! log-probability of its adjacent letter pairs, from
 //! `src/storage/ngrams/english_bigrams.txt`: pairs across whitespace are skipped and pairs
 //! with any other character score −10. Only decodings that score more than 0.2 above the
@@ -163,6 +165,19 @@ const TABLES: [Table; 8] = [
 /// Pre-check: the fewest characters other than whitespace worth decoding.
 const MIN_NON_WHITESPACE: usize = 4;
 
+/// Pre-check: with at least [`MIN_PAIRS_FOR_CASE_CHECK`] pairs of adjacent letters, at
+/// most one pair in this many may be a lower-case letter followed by an upper-case one
+/// (`aB`). Every table keeps the case of the letters it maps to letters, so a decoding
+/// changes case inside its words about as often as the text does. English does
+/// it at most one pair in 11 (the Affine cracker's measurement on Project Gutenberg books
+/// and Ciphey's docs), Base64 and its relatives about one pair in four. Without this they
+/// pass the gate under a table or two, which costs two checks for every such search node.
+const MAX_LOWER_UPPER_PAIRS_ONE_IN: usize = 8;
+
+/// Pre-check: the fewest pairs of adjacent letters that [`MAX_LOWER_UPPER_PAIRS_ONE_IN`]
+/// is applied to. Shorter texts are cheap to decode anyway.
+const MIN_PAIRS_FOR_CASE_CHECK: usize = 20;
+
 /// The score of a pair of adjacent characters that aren't both ASCII letters.
 const OTHER_PAIR_SCORE: f32 = -10.0;
 
@@ -282,7 +297,7 @@ impl Crack for Decoder<KeyboardLayoutDecoder> {
 
         let mut ranked = rank_candidates(text);
         if ranked.is_empty() {
-            trace!("Keyboard layout: no layout makes the text more English-like");
+            trace!("Keyboard layout: not worth decoding, or no layout makes it more English-like");
             return results;
         }
 
@@ -373,24 +388,45 @@ fn decode_with(text: &str, map: &LayoutMap) -> String {
 }
 
 /// Whether `text` is worth decoding: every character is printable ASCII, a space, tab or
-/// line break, or one of AZERTY's [`NON_ASCII`] legends, and it has at least one ASCII
-/// letter and at least [`MIN_NON_WHITESPACE`] characters other than whitespace. Stops at
-/// the first character that can't have been typed on these layouts.
+/// line break, or one of AZERTY's [`NON_ASCII`] legends; it has at least one ASCII letter
+/// and at least [`MIN_NON_WHITESPACE`] characters other than whitespace; and it doesn't
+/// change case inside words as often as Base64 does (see
+/// [`MAX_LOWER_UPPER_PAIRS_ONE_IN`]). One pass, which stops at the first character that
+/// can't have been typed on these layouts.
 fn passes_pre_checks(text: &str) -> bool {
     let mut has_letter = false;
     let mut non_whitespace = 0usize;
+    let mut letter_pairs = 0usize;
+    let mut lower_upper_pairs = 0usize;
+    // Whether the previous character is a lower-case letter, if it is a letter
+    let mut previous_letter: Option<bool> = None;
     for c in text.chars() {
-        match c {
-            ' ' | '\t' | '\n' | '\r' => {}
-            '!'..='~' => {
-                non_whitespace += 1;
-                has_letter |= c.is_ascii_alphabetic();
+        let is_letter = match c {
+            ' ' | '\t' | '\n' | '\r' => {
+                previous_letter = None;
+                continue;
             }
-            _ if non_ascii_index(c).is_some() => non_whitespace += 1,
+            '!'..='~' => c.is_ascii_alphabetic(),
+            _ if non_ascii_index(c).is_some() => false,
             _ => return false,
+        };
+        non_whitespace += 1;
+        if !is_letter {
+            previous_letter = None;
+            continue;
         }
+        has_letter = true;
+        if let Some(previous_lowercase) = previous_letter {
+            letter_pairs += 1;
+            if previous_lowercase && c.is_ascii_uppercase() {
+                lower_upper_pairs += 1;
+            }
+        }
+        previous_letter = Some(c.is_ascii_lowercase());
     }
-    has_letter && non_whitespace >= MIN_NON_WHITESPACE
+    let changes_case_like_base64 = letter_pairs >= MIN_PAIRS_FOR_CASE_CHECK
+        && lower_upper_pairs * MAX_LOWER_UPPER_PAIRS_ONE_IN > letter_pairs;
+    has_letter && non_whitespace >= MIN_NON_WHITESPACE && !changes_case_like_base64
 }
 
 /// The mean score of the pairs of adjacent characters in `chars`: `ln P` of the pair from
@@ -845,8 +881,6 @@ mod tests {
     fn gate_skips_other_encodings() {
         let decoder = Decoder::<KeyboardLayoutDecoder>::new();
         for text in [
-            // The decoder benchmarks' miss input (benches/data/decoders.toml)
-            "T00 l3= ox+#G WKyV pajU6j qxH@ %B4+a 5Pn^ 7p_v1q 9sLvu *+36i R5rL&3 mVJZI iO0 Ut8_m COTV",
             // Atbash of `hello world`
             "svool dliow",
             // ROT13 of MEDIUM
@@ -883,6 +917,45 @@ mod tests {
         let result = decoder.crack("Zrrg zr ng gur byq yvtugubhfr", &get_athena_checker());
         assert!(!result.success, "{result:?}");
         assert!(result.unencrypted_text.unwrap().len() <= RETURNED);
+    }
+
+    #[test]
+    fn base64_like_case_changes_are_turned_away() {
+        let decoder = Decoder::<KeyboardLayoutDecoder>::new();
+        for text in [
+            // Base64 of MEDIUM: 23 of 86 letter pairs are `aB`. Without this pre-check it
+            // passes the gate under ABC→QWE and QWE→ABC, which costs two checks
+            "TWVldCBtZSBhdCB0aGUgb2xkIGxpZ2h0aG91c2UgYWZ0ZXIgbWlkbmlnaHQgYW5kIGJyaW5nIHRoZSBtYXAsIHRoZSBrZXkgYW5kIGEgdG9yY2gu",
+            // Base64 of the Dvorak ciphertext of MEDIUM: the search decodes the Base64 first
+            "TS4ueSBtLiBheSB5ZC4gcm5lIG5jaWR5ZHJnby4gYXV5LnAgbWNlYmNpZHkgYWJlIHhwY2JpIHlkLiBtYWx3IHlkLiB0LmYgYWJlIGEgeXJwamR2",
+            // The decoder benchmarks' miss input (benches/data/decoders.toml): 7 of 23
+            "T00 l3= ox+#G WKyV pajU6j qxH@ %B4+a 5Pn^ 7p_v1q 9sLvu *+36i R5rL&3 mVJZI iO0 Ut8_m COTV",
+            // Base58 (Bitcoin) of MEDIUM, the search benchmarks' base58_bitcoin input
+            "6X6FW9Fv3pE3p6JtGkbStCFRnzXNxB2FpZzj3qrCm9DJAyJXHm7eixRZfy9rkN8nTwk8SRHWUDmeoc7qJTrURpjgfxQqR3oSt9wR67mGcrjWXhrx2Zb",
+        ] {
+            assert!(!passes_pre_checks(text), "{text:?} passed the pre-checks");
+            let result = decoder.crack(text, &get_athena_checker());
+            assert!(result.unencrypted_text.is_none(), "{text:?}");
+        }
+        // Short texts aren't checked for it: too few pairs to tell
+        assert!(passes_pre_checks("aGVsbG8gd29ybGQ="));
+        // Ciphertexts of English change case at the start of sentences, and where the
+        // plaintext's punctuation is a capital on the other layout (`:` typed on QWERTY is
+        // `S` on Dvorak), far less often than one pair in eight. The DawgCTF 2020 "Qwerky
+        // Qwerty" ciphertext (tests/keyboard_layout_decoder.rs) has 3 in 122.
+        assert!(passes_pre_checks(LONG_DVORAK));
+        assert!(passes_pre_checks(
+            "Oh no... whays.. ,dats hall.bing yr me... nr br brw ,df M>vv ,df BR<vvvvv Xgy \
+             ,day-o ydcovv yd.p. co a bry. cb mf dabeS U.ap bry e.ap jdcnew ydco co rbnf a \
+             ep.amvv A ep.am yday dao x..b jago.e xf JRKCE[19v Mabf 'g.oycrbo frg dak.w ,dcn. \
+             frg-k. x..b aon..lv D.p.cb ydco bry. nc.o yd. abo,.p frg o..tS Ea,iJYU?L4ydu1be3p+"
+        ));
+        assert!(passes_pre_checks(&MEDIUM.to_uppercase()));
+        // One `aB` pair in eight is allowed (4 in 32 here), more isn't
+        assert!(passes_pre_checks("abcdefghI abcdefghI abcdefghI abcdefghI"));
+        assert!(!passes_pre_checks(
+            "abcdEfghI abcdefghI abcdefghI abcdefghI"
+        ));
     }
 
     #[test]
