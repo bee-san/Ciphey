@@ -14,22 +14,22 @@
 //! Everything else (letters, `_`, braces, punctuation) is copied, so `flag{h3ll0_w0rld}`
 //! is `flag{hello_world}`. Punctuation around a word (`h3ll0!`, `(0d3`) is kept as it is.
 //!
-//! A word with `1`, `|` or `2` in it is read every way (up to 16 ways, see [`readings`])
+//! A word with `1`, `|` or `2` in it is read every way (up to 16 ways, see `readings`)
 //! and the first reading in an English word list wins: `1337` is `leet` and `3l173` is
 //! `elite`. Otherwise `1` reads as `i` (CyberChef's choice), `|` as `l` and `2` as `z`.
 //! The word list is `src/storage/ngrams/english_words.txt` with some leet and computing
-//! words it lacks ([`LEET_WORDS`]), and a few suffixes are stripped (`TESTING` is a word
+//! words it lacks (`LEET_WORDS`), and a few suffixes are stripped (`TESTING` is a word
 //! because `TEST` is). The substituted letters are upper case when the word's own letters
 //! are (`H3LL0` is `HELLO`, `7H3` is `THE`) and lower case otherwise (`M337` is `Meet`).
 //!
 //! The checks run cheapest first, so most text costs one pass over its bytes:
 //! 1. The text is ASCII, has a digit or one of `@ $ | + # < > \ /`, no token (a run of
-//!    characters between whitespace, `_`, `{` and `}`) longer than [`MAX_TOKEN_LEN`]
-//!    (Base64, hex and the other encodings are one long token), and a letter, unless it is
-//!    a single short token such as `1337`.
+//!    characters between whitespace, `_`, `{` and `}`) longer than 24 characters (Base64,
+//!    hex and the other encodings are one long token), and a letter, unless it is a
+//!    single short token such as `1337`.
 //! 2. At least half of the words with a leet symbol in them are dictionary words, and one
-//!    of those has at least [`MIN_WORD_LEN`] letters. This rejects English that merely
-//!    contains numbers (`I have 2 cats`), version numbers, e-mail addresses and the like.
+//!    of those has at least 3 letters. This rejects English that merely contains numbers
+//!    (`I have 2 cats`), version numbers, e-mail addresses and the like.
 //!
 //! Only then is the decoded text given to the checker.
 //!
@@ -91,7 +91,7 @@ const LEET_WORDS: &[&str] = &[
     "PWN",
     "PWNED",
     "OWNED",
-    "HAX",
+    "HAX", // codespell:ignore
     "HAXOR",
     "HACK",
     "HACKED",
