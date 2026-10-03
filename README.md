@@ -256,10 +256,12 @@ cargo install --path . --features mcp --bin ciphey-mcp
 
 The `mcp` feature isn't in a crates.io release yet (0.12.0 is the latest), so until the next one, install from git: `cargo install --git https://github.com/bee-san/Ciphey ciphey --features mcp --bin ciphey-mcp`.
 
-It provides two tools:
+It provides four tools:
 
-- `decode` decodes `text` and returns the `plaintext` and the `path` of decoders used, with keys such as the Caesar shift. Optional arguments: `timeout_secs` (1 to 30, default 10) and `regex`, a crib the plaintext must match, such as `flag\{`.
-- `list_decoders` lists the encodings and ciphers Ciphey supports.
+- `decode` decodes `text` when you don't know how it was encoded, and returns the `plaintext` and the `path` of decoders used, with keys such as the Caesar shift. Optional arguments: `timeout_secs` (1 to 30, default 10) and `regex`, a crib the plaintext must match, such as `flag\{`.
+- `decode_with` runs one decoder you choose on `text`: give it the `decoder`'s id, name or an alias (`base64`, `rot13`, `vigenere`, `xor_single_byte`, ...). Without a `key` it decodes the text, or cracks the cipher by trying every key; with one it decrypts, for ciphers that take a key (`13`, `LEMON`, `a=5, b=8`, `rails=3, offset=1`). It returns every candidate decoding and whether each passes Ciphey's plaintext check. `regex` works as for `decode`.
+- `detect_plaintext` checks whether `text` already is plaintext, without decoding it, and says which checker accepted it, what it took it for and, for LemmeKnow's formats, how sure it is. Optional arguments: `checkers` (any of `lemmeknow`, `password` and `english`, by default all three), `sensitivity` of the English checker (`low`, `medium` or `high`) and a `regex` crib.
+- `list_decoders` lists the encodings and ciphers Ciphey supports, with the ids and aliases `decode_with` takes and the key format of each cipher that takes one.
 
 A `decode` result looks like this. `status` is `decoded`, `not_found` or `timed_out`.
 
@@ -273,7 +275,40 @@ A `decode` result looks like this. `status` is `decoded`, `not_found` or `timed_
 }
 ```
 
-Each decode runs in its own short-lived process. Input is limited to 65,536 characters, the search to 30 seconds and memory to 1 GiB, and at most two decodes run at once. The server doesn't read or write `~/.ciphey`, so there's no config file and no cache.
+`decode_with` with `{"decoder": "rot13", "text": "Uryyb jbeyq"}` gives the result below. `status` is `plaintext_found`, `no_plaintext` (none of the candidates passed the check, so judge them yourself) or `no_candidates` (the text isn't in that decoder's format). A result holds at most 100 candidates and 65,536 characters of their text; `total_candidates` says how many there were, and a candidate cut short has `truncated` set.
+
+```json
+{
+  "decoder": "caesar",
+  "status": "plaintext_found",
+  "candidates": [
+    {
+      "text": "Hello world",
+      "truncated": false,
+      "key": "13",
+      "is_plaintext": true,
+      "detection": { "checker": "english", "description": "Words", "confidence": null }
+    }
+  ],
+  "total_candidates": 1
+}
+```
+
+`detect_plaintext` with `{"text": "192.168.0.1"}` gives:
+
+```json
+{
+  "is_plaintext": true,
+  "detection": {
+    "checker": "lemmeknow",
+    "description": "Internet Protocol (IP) Address Version 4",
+    "confidence": 0.7
+  },
+  "checkers": ["lemmeknow", "password", "english"]
+}
+```
+
+Every call except `list_decoders` runs in its own short-lived process. Input is limited to 65,536 characters (keys too) and regexes to 1,000. A `decode` searches for at most 30 seconds and may use 1 GiB of memory; a `decode_with` call may run for 30 seconds and a `detect_plaintext` call for 10, with 256 MiB each. At most two decodes and four other calls run at once. The server doesn't read or write `~/.ciphey`, so there's no config file and no cache.
 
 ### Claude Desktop
 

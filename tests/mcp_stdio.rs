@@ -154,15 +154,22 @@ fn initialize_list_tools_and_decode() {
         .map(|tool| tool["name"].as_str().unwrap())
         .collect();
     names.sort_unstable();
-    assert_eq!(names, ["decode", "list_decoders"]);
-    let decode = tools.iter().find(|tool| tool["name"] == "decode").unwrap();
     assert_eq!(
-        decode["inputSchema"]["required"],
-        json!(["text"]),
-        "{decode}"
+        names,
+        ["decode", "decode_with", "detect_plaintext", "list_decoders"]
     );
-    assert_eq!(decode["annotations"]["readOnlyHint"], true, "{decode}");
-    assert!(decode["outputSchema"].is_object(), "{decode}");
+    for tool in tools {
+        assert_eq!(tool["annotations"]["readOnlyHint"], true, "{tool}");
+        assert!(tool["outputSchema"].is_object(), "{tool}");
+        assert!(tool["description"].is_string(), "{tool}");
+    }
+    let required = |name: &str| {
+        let tool = tools.iter().find(|tool| tool["name"] == name).unwrap();
+        tool["inputSchema"]["required"].clone()
+    };
+    assert_eq!(required("decode"), json!(["text"]));
+    assert_eq!(required("decode_with"), json!(["decoder", "text"]));
+    assert_eq!(required("detect_plaintext"), json!(["text"]));
 
     let result = client.call_tool("decode", json!({ "text": "aGVsbG8gdGhlcmUgZ2VuZXJhbA==" }));
     assert_eq!(result["isError"], false, "{result}");
@@ -253,29 +260,341 @@ fn list_decoders_describes_each_decoder() {
     let decoders = result["structuredContent"]["decoders"]
         .as_array()
         .unwrap_or_else(|| panic!("no decoders in {result}"));
-    for name in ["Base64", "caesar", "Vigenere", "Morse Code"] {
-        let decoder = decoders
+    let find = |id: &str| {
+        decoders
             .iter()
-            .find(|decoder| decoder["name"] == name)
-            .unwrap_or_else(|| panic!("{name} missing from {result}"));
+            .find(|decoder| decoder["id"] == id)
+            .unwrap_or_else(|| panic!("{id} missing from {result}"))
+    };
+    for (id, name) in [
+        ("base64", "Base64"),
+        ("caesar", "caesar"),
+        ("vigenere", "Vigenere"),
+        ("morse", "Morse Code"),
+    ] {
+        let decoder = find(id);
+        assert_eq!(decoder["name"], name, "{decoder}");
         assert!(decoder["description"].is_string(), "{decoder}");
         assert!(decoder["tags"].is_array(), "{decoder}");
+        assert!(decoder["aliases"].is_array(), "{decoder}");
+    }
+    // What decode_with needs to know: other names, and the key a cipher takes.
+    let caesar = find("caesar");
+    assert!(
+        caesar["aliases"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("rot13")),
+        "{caesar}"
+    );
+    assert!(caesar["key_format"].is_string(), "{caesar}");
+    assert_eq!(find("base64")["key_format"], Value::Null);
+
+    assert_eq!(client.shut_down().code(), Some(0));
+}
+
+/// Calls `decode_with`, expecting success, and returns its structured result.
+fn decode_with(client: &mut McpClient, arguments: Value) -> Value {
+    successful_call(client, "decode_with", arguments)
+}
+
+/// Calls `detect_plaintext`, expecting success, and returns its structured result.
+fn detect(client: &mut McpClient, arguments: Value) -> Value {
+    successful_call(client, "detect_plaintext", arguments)
+}
+
+/// Calls `tool`, checks that it succeeded, and returns its structured result.
+fn successful_call(client: &mut McpClient, tool: &str, arguments: Value) -> Value {
+    let result = client.call_tool(tool, arguments);
+    assert_eq!(result["isError"], false, "{result}");
+    // Clients without structured output support read the same JSON from the text block.
+    let text: Value = serde_json::from_str(result["content"][0]["text"].as_str().unwrap()).unwrap();
+    assert_eq!(text, result["structuredContent"]);
+    text
+}
+
+#[test]
+fn decode_with_cracks_decodes_and_decrypts() {
+    let mut client = initialized_client();
+
+    // Cracked: every shift is tried, and the one that reads as English passes the check.
+    let output = decode_with(
+        &mut client,
+        json!({ "decoder": "rot13", "text": "Uryyb jbeyq" }),
+    );
+    assert_eq!(
+        output,
+        json!({
+            "decoder": "caesar",
+            "status": "plaintext_found",
+            "candidates": [{
+                "text": "Hello world",
+                "truncated": false,
+                "key": "13",
+                "is_plaintext": true,
+                "detection": { "checker": "english", "description": "Words", "confidence": null },
+            }],
+            "total_candidates": 1,
+        })
+    );
+
+    // Decoded, and recognised by LemmeKnow, which says how sure it is.
+    let output = decode_with(
+        &mut client,
+        json!({ "decoder": "hex", "text": "3139322e3136382e302e31" }),
+    );
+    let candidate = &output["candidates"][0];
+    assert_eq!(candidate["text"], "192.168.0.1", "{output}");
+    assert_eq!(
+        candidate["detection"],
+        json!({
+            "checker": "lemmeknow",
+            "description": "Internet Protocol (IP) Address Version 4",
+            "confidence": 0.7,
+        })
+    );
+
+    // Decrypted with a key: a keyword, two parameters, and a shift sent as a number.
+    for (arguments, plaintext, key) in [
+        (
+            json!({ "decoder": "vigenere", "text": "Rijvs uyvjn", "key": "key" }),
+            "Hello world",
+            "KEY",
+        ),
+        (
+            json!({ "decoder": "affine", "text": "IHHWVC SWFRCP", "key": "a=5, b=8" }),
+            "AFFINE CIPHER",
+            "a=5, b=8",
+        ),
+        (
+            json!({ "decoder": "caesar", "text": "Khoor zruog", "key": 23 }),
+            "Hello world",
+            "23",
+        ),
+    ] {
+        let output = decode_with(&mut client, arguments);
+        assert_eq!(output["candidates"][0]["text"], plaintext, "{output}");
+        assert_eq!(output["candidates"][0]["key"], key, "{output}");
     }
 
     assert_eq!(client.shut_down().code(), Some(0));
 }
 
 #[test]
-fn worker_stops_when_over_its_memory_budget() {
-    // Each decode runs in `ciphey-mcp --worker`. A one-byte budget is exceeded at the
-    // watchdog's first check, and this search can't finish within its 20 seconds.
-    let request = json!({
-        "text": random_looking_text(512),
-        "timeout_secs": 20,
-        "regex": "^impossible crib [0-9]{40}$",
-        "max_memory_bytes": 1,
-    });
-    let started = Instant::now();
+fn decode_with_says_whether_each_candidate_is_plaintext() {
+    let mut client = initialized_client();
+
+    // No shift reads as English, so all 25 come back for the caller to judge.
+    let output = decode_with(
+        &mut client,
+        json!({ "decoder": "caesar", "text": "xqzjv kplmw" }),
+    );
+    assert_eq!(output["status"], "no_plaintext", "{output}");
+    assert_eq!(output["total_candidates"], 25, "{output}");
+    let candidates = output["candidates"].as_array().unwrap();
+    assert_eq!(candidates.len(), 25);
+    for candidate in candidates {
+        assert_eq!(candidate["is_plaintext"], false, "{candidate}");
+        assert_eq!(candidate["detection"], Value::Null, "{candidate}");
+    }
+
+    // Not Base64 at all.
+    let output = decode_with(&mut client, json!({ "decoder": "base64", "text": "!!!" }));
+    assert_eq!(output["status"], "no_candidates", "{output}");
+    assert_eq!(output["candidates"], json!([]), "{output}");
+
+    // A crib lets the cracker accept a flag that isn't English...
+    let output = decode_with(
+        &mut client,
+        json!({ "decoder": "caesar", "text": "synt{ebg_guvegrra}", "regex": r"^flag\{" }),
+    );
+    let candidate = &output["candidates"][0];
+    assert_eq!(candidate["text"], "flag{rot_thirteen}", "{output}");
+    assert_eq!(candidate["detection"]["checker"], "regex", "{output}");
+    // ...and only applies to its own call.
+    let output = decode_with(
+        &mut client,
+        json!({ "decoder": "caesar", "text": "Uryyb jbeyq" }),
+    );
+    assert_eq!(
+        output["candidates"][0]["detection"]["checker"], "english",
+        "{output}"
+    );
+
+    assert_eq!(client.shut_down().code(), Some(0));
+}
+
+#[test]
+fn decode_with_keeps_results_small() {
+    let mut client = initialized_client();
+
+    // Cracking ROT47 gives 93 candidates: 93,000 characters for this text. A result holds at
+    // most 65,536 characters of text, so the candidate that crosses the limit is cut short
+    // and the rest are left out.
+    let text: String = "Gur dhvpx oebja sbk whzcf bire gur ynml qbt. "
+        .chars()
+        .cycle()
+        .take(1_000)
+        .collect();
+    let output = decode_with(&mut client, json!({ "decoder": "rot47", "text": text }));
+    assert_eq!(output["total_candidates"], 93, "{}", output["status"]);
+    let candidates = output["candidates"].as_array().unwrap();
+    let (last, whole) = candidates.split_last().unwrap();
+    assert!(whole.len() > 60, "{}", whole.len());
+    assert!(whole
+        .iter()
+        .all(|candidate| candidate["truncated"] == false));
+    assert_eq!(last["truncated"], true);
+    // Counted as JSON writes the text: some rotations contain `"` and `\`, which take two
+    // characters each. The text is ASCII, so this counts bytes.
+    let chars: usize = candidates
+        .iter()
+        .map(|candidate| candidate["text"].to_string().len() - 2)
+        .sum();
+    assert!((65_535..=65_536).contains(&chars), "{chars}");
+
+    assert_eq!(client.shut_down().code(), Some(0));
+}
+
+#[test]
+fn detect_plaintext_identifies_text() {
+    let mut client = initialized_client();
+
+    let output = detect(&mut client, json!({ "text": "192.168.0.1" }));
+    assert_eq!(
+        output,
+        json!({
+            "is_plaintext": true,
+            "detection": {
+                "checker": "lemmeknow",
+                "description": "Internet Protocol (IP) Address Version 4",
+                "confidence": 0.7,
+            },
+            "checkers": ["lemmeknow", "password", "english"],
+        })
+    );
+
+    let output = detect(&mut client, json!({ "text": "hello there general" }));
+    assert_eq!(
+        output["detection"],
+        json!({ "checker": "english", "description": "Words", "confidence": null })
+    );
+
+    // Base64 isn't plaintext until it's decoded.
+    let output = detect(
+        &mut client,
+        json!({ "text": "aGVsbG8gdGhlcmUgZ2VuZXJhbA==" }),
+    );
+    assert_eq!(output["is_plaintext"], false, "{output}");
+    assert_eq!(output["detection"], Value::Null, "{output}");
+
+    // Only the chosen checkers run.
+    let output = detect(
+        &mut client,
+        json!({ "text": "192.168.0.1", "checkers": ["english"] }),
+    );
+    assert_eq!(output["is_plaintext"], false, "{output}");
+    assert_eq!(output["checkers"], json!(["english"]), "{output}");
+
+    // A crib on its own is the only check.
+    let output = detect(
+        &mut client,
+        json!({ "text": "picoCTF{b4s3_64_1s_fun}", "regex": r"^picoCTF\{" }),
+    );
+    assert_eq!(output["detection"]["checker"], "regex", "{output}");
+    assert_eq!(output["checkers"], json!(["regex"]), "{output}");
+
+    // One English word in gibberish: only `high` sensitivity takes it for English.
+    let noisy = "Rcl maocr otmwi lit dnoen oehc 13 iron seah.";
+    for (sensitivity, is_plaintext) in [("low", false), ("high", true)] {
+        let output = detect(
+            &mut client,
+            json!({ "text": noisy, "sensitivity": sensitivity }),
+        );
+        assert_eq!(
+            output["is_plaintext"], is_plaintext,
+            "{sensitivity}: {output}"
+        );
+    }
+
+    assert_eq!(client.shut_down().code(), Some(0));
+}
+
+#[test]
+fn decode_with_and_detect_plaintext_reject_bad_arguments() {
+    let mut client = initialized_client();
+
+    for (tool, arguments, expected) in [
+        (
+            "decode_with",
+            json!({ "decoder": "rot1300", "text": "hi" }),
+            r#"no decoder is called "rot1300""#,
+        ),
+        (
+            "decode_with",
+            json!({ "decoder": "base64", "text": "aGk=", "key": "13" }),
+            "Base64 doesn't take a key",
+        ),
+        // Only the decoder can tell, so this one comes back from a worker.
+        (
+            "decode_with",
+            json!({ "decoder": "affine", "text": "IHHWVC", "key": "a=2, b=8" }),
+            "invalid key for Affine",
+        ),
+        (
+            "decode_with",
+            json!({ "decoder": "base64", "text": "" }),
+            "`text` is empty",
+        ),
+        (
+            "decode_with",
+            json!({ "decoder": "base64", "text": "A".repeat(65_537) }),
+            "the limit is 65536",
+        ),
+        (
+            "decode_with",
+            json!({ "decoder": "base64", "text": "aGk=", "regex": "(unclosed" }),
+            "not a valid regular expression",
+        ),
+        (
+            "decode_with",
+            json!({ "text": "aGk=" }),
+            "missing field `decoder`",
+        ),
+        ("detect_plaintext", json!({ "text": "" }), "`text` is empty"),
+        (
+            "detect_plaintext",
+            json!({ "text": "hi", "checkers": [] }),
+            "no checkers to run",
+        ),
+        (
+            "detect_plaintext",
+            json!({ "text": "hi", "checkers": ["gibberish"] }),
+            "unknown variant `gibberish`",
+        ),
+        (
+            "detect_plaintext",
+            json!({ "text": "hi", "sensitivity": "extreme" }),
+            "unknown variant `extreme`",
+        ),
+        (
+            "detect_plaintext",
+            json!({ "text": "hi", "regex": "a".repeat(1_001) }),
+            "the limit is 1000",
+        ),
+    ] {
+        let result = client.call_tool(tool, arguments);
+        assert_eq!(result["isError"], true, "{tool}: {result}");
+        let message = result["content"][0]["text"].as_str().unwrap();
+        assert!(message.contains(expected), "{tool}: {message}");
+    }
+
+    assert_eq!(client.shut_down().code(), Some(0));
+}
+
+/// Runs `ciphey-mcp --worker` on one request, holding its stdin open as the server does,
+/// and returns its response.
+fn run_worker(request: &Value) -> Value {
     let mut worker = Command::new(env!("CARGO_BIN_EXE_ciphey-mcp"))
         .arg("--worker")
         .stdin(Stdio::piped())
@@ -290,13 +609,67 @@ fn worker_stops_when_over_its_memory_budget() {
     drop(stdin);
 
     assert!(output.status.success(), "{:?}", output.status);
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    serde_json::from_str(stdout.trim()).unwrap()
+}
+
+#[test]
+fn worker_stops_a_call_at_its_time_limit() {
+    // decode_with and detect_plaintext calls have no timer of their own, so the worker stops
+    // them. Cracking the rail fence on 65,536 characters takes seconds, even in a release
+    // build.
+    let request = json!({
+        "job": {
+            "tool": "decode_with",
+            "decoder": "railfence",
+            "text": random_looking_text(65_536),
+            "key": null,
+            "regex": null,
+        },
+        "max_memory_bytes": 1u64 << 30,
+        "time_limit_ms": 200,
+    });
+    let started = Instant::now();
+
+    let response = run_worker(&request);
+
     assert!(
         started.elapsed() < Duration::from_secs(15),
         "{:?}",
         started.elapsed()
     );
-    let stdout = String::from_utf8(output.stdout).unwrap();
-    let response: Value = serde_json::from_str(stdout.trim()).unwrap();
+    let message = response["Err"]
+        .as_str()
+        .unwrap_or_else(|| panic!("{response}"));
+    assert!(
+        message.contains("`decode_with` stopped after 200 ms"),
+        "{message}"
+    );
+}
+
+#[test]
+fn worker_stops_when_over_its_memory_budget() {
+    // Each call runs in `ciphey-mcp --worker`. A one-byte budget is exceeded at the
+    // watchdog's first check, and this search can't finish within its 20 seconds.
+    let request = json!({
+        "job": {
+            "tool": "decode",
+            "text": random_looking_text(512),
+            "timeout_secs": 20,
+            "regex": "^impossible crib [0-9]{40}$",
+        },
+        "max_memory_bytes": 1,
+        "time_limit_ms": null,
+    });
+    let started = Instant::now();
+
+    let response = run_worker(&request);
+
+    assert!(
+        started.elapsed() < Duration::from_secs(15),
+        "{:?}",
+        started.elapsed()
+    );
     let message = response["Err"]
         .as_str()
         .unwrap_or_else(|| panic!("{response}"));
@@ -328,10 +701,14 @@ fn worker_exits_when_the_server_goes_away() {
         .expect("failed to start ciphey-mcp --worker");
     let mut stdin = worker.stdin.take().unwrap();
     let request = json!({
-        "text": random_looking_text(512),
-        "timeout_secs": 30,
-        "regex": "^impossible crib [0-9]{40}$",
+        "job": {
+            "tool": "decode",
+            "text": random_looking_text(512),
+            "timeout_secs": 30,
+            "regex": "^impossible crib [0-9]{40}$",
+        },
         "max_memory_bytes": 1u64 << 30,
+        "time_limit_ms": null,
     });
     writeln!(stdin, "{request}").unwrap();
     thread::sleep(Duration::from_millis(500));

@@ -1,4 +1,5 @@
-//! The MCP tools (`decode`, `list_decoders`), their input limits and their result types.
+//! The MCP server: its tools (`decode`, `decode_with`, `detect_plaintext`, `list_decoders`),
+//! the `decode` tool's arguments and results, and the input limits the tools share.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -6,29 +7,29 @@ use std::sync::Arc;
 
 use ciphey::decoders::crack_results::CrackResult;
 use ciphey::decoders::interface::{Decoder, DefaultDecoder};
-use ciphey::decoders::{DecoderType, DECODER_MAP};
 use ciphey::{CipheyError, DecoderResult};
 use rmcp::handler::server::wrapper::{Json, Parameters};
 use rmcp::service::RequestContext;
 use rmcp::{schemars, tool, tool_handler, tool_router, RoleServer, ServerHandler, ServiceExt};
 use serde::{Deserialize, Serialize};
 
-use crate::worker::{CrackRequest, ProcessCracker};
+use crate::decode_with::{DecodeWithOutput, DecodeWithParams, DecodeWithRequest, DecoderList};
+use crate::detect::{DetectOutput, DetectParams, DetectRequest};
+use crate::worker::{CrackRequest, ProcessRunner};
 
-/// Longest `text` that `decode` accepts, in characters.
+/// Longest `text` the tools accept, in characters.
 pub const MAX_INPUT_CHARS: usize = 65_536;
+/// Longest `regex` the tools accept, in characters.
+pub const MAX_REGEX_CHARS: usize = 1_000;
 /// `timeout_secs` used when the caller doesn't pass one.
 pub const DEFAULT_TIMEOUT_SECS: u32 = 10;
 /// Largest `timeout_secs` that `decode` accepts. Leaves headroom under the ~60 s tool-call
 /// timeout that many MCP clients apply.
 pub const MAX_TIMEOUT_SECS: u32 = 30;
-/// Resident memory a decode may use before it is stopped. A search that finds nothing grows
-/// until its timeout: a few kilobytes of input can otherwise reach several gigabytes.
-pub const MAX_MEMORY_BYTES: u64 = 1 << 30;
 
 /// Runs the MCP server on stdin/stdout until the client disconnects.
 pub fn serve_stdio() -> Result<(), Box<dyn std::error::Error>> {
-    let server = CipheyMcp::new(Arc::new(ProcessCracker::for_current_exe()?));
+    let server = CipheyMcp::new(Arc::new(ProcessRunner::for_current_exe()?));
     // One thread is plenty: the server only moves JSON around and waits on worker processes.
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -40,16 +41,53 @@ pub fn serve_stdio() -> Result<(), Box<dyn std::error::Error>> {
     })
 }
 
-/// A boxed future that can move between threads, as returned by [`Cracker::crack`].
+/// A boxed future that can move between threads, as [`Runner`]'s methods return.
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
-/// Runs a validated decode request to completion.
+/// Runs validated tool calls to completion.
 ///
-/// The server uses [`ProcessCracker`], which runs every request in a worker process. Tests
-/// substitute fakes.
-pub trait Cracker: Send + Sync + 'static {
-    /// Decodes `request`. An `Err` is a message for the caller and becomes a tool error.
-    fn crack(&self, request: CrackRequest) -> BoxFuture<'_, Result<DecodeOutput, String>>;
+/// The server uses [`ProcessRunner`], which runs every call in a worker process. Tests
+/// substitute fakes. An `Err` is a message for the caller and becomes a tool error.
+pub trait Runner: Send + Sync + 'static {
+    /// Runs the whole search on `request`.
+    fn decode(&self, request: CrackRequest) -> BoxFuture<'_, Result<DecodeOutput, String>>;
+    /// Runs one decoder on `request`.
+    fn decode_with(
+        &self,
+        request: DecodeWithRequest,
+    ) -> BoxFuture<'_, Result<DecodeWithOutput, String>>;
+    /// Runs the plaintext checks on `request`.
+    fn detect_plaintext(
+        &self,
+        request: DetectRequest,
+    ) -> BoxFuture<'_, Result<DetectOutput, String>>;
+}
+
+/// Checks that the argument `name` is at most `limit` characters long.
+pub fn check_length(name: &str, value: &str, limit: usize) -> Result<(), String> {
+    let chars = value.chars().count();
+    if chars > limit {
+        return Err(format!(
+            "`{name}` is {chars} characters long; the limit is {limit}"
+        ));
+    }
+    Ok(())
+}
+
+/// Checks an optional `regex` argument: `None` if it's missing or empty (clients often send
+/// "" for an optional argument they don't use), otherwise a valid pattern of at most
+/// [`MAX_REGEX_CHARS`] characters.
+pub fn check_regex(regex: Option<String>) -> Result<Option<String>, String> {
+    let Some(pattern) = regex.filter(|pattern| !pattern.is_empty()) else {
+        return Ok(None);
+    };
+    check_length("regex", &pattern, MAX_REGEX_CHARS)?;
+    if let Err(error) = regex::Regex::new(&pattern) {
+        return Err(format!(
+            "`regex` is not a valid regular expression: {error}"
+        ));
+    }
+    Ok(Some(pattern))
 }
 
 /// Arguments of the `decode` tool.
@@ -61,8 +99,9 @@ pub struct DecodeParams {
     /// Seconds to search before giving up: 1 to 30, default 10.
     #[schemars(range(min = 1, max = MAX_TIMEOUT_SECS))]
     pub timeout_secs: Option<u32>,
-    /// A regex or crib the plaintext must match, such as a flag format like `flag\{`. When set,
-    /// only text matching it is accepted as plaintext.
+    /// A regex or crib the plaintext must match, such as a flag format like `flag\{` (at most
+    /// 1000 characters). When set, only text matching it is accepted as plaintext.
+    #[schemars(length(max = MAX_REGEX_CHARS))]
     pub regex: Option<String>,
 }
 
@@ -72,32 +111,17 @@ impl DecodeParams {
         if self.text.trim().is_empty() {
             return Err("`text` is empty: pass the encoded text to decode".to_string());
         }
-        let chars = self.text.chars().count();
-        if chars > MAX_INPUT_CHARS {
-            return Err(format!(
-                "`text` is {chars} characters long; the limit is {MAX_INPUT_CHARS}"
-            ));
-        }
+        check_length("text", &self.text, MAX_INPUT_CHARS)?;
         let timeout_secs = self.timeout_secs.unwrap_or(DEFAULT_TIMEOUT_SECS);
         if !(1..=MAX_TIMEOUT_SECS).contains(&timeout_secs) {
             return Err(format!(
                 "`timeout_secs` must be between 1 and {MAX_TIMEOUT_SECS}, got {timeout_secs}"
             ));
         }
-        // Clients often send "" for an optional argument they don't use.
-        let regex = self.regex.filter(|pattern| !pattern.is_empty());
-        if let Some(pattern) = &regex {
-            if let Err(error) = regex::Regex::new(pattern) {
-                return Err(format!(
-                    "`regex` is not a valid regular expression: {error}"
-                ));
-            }
-        }
         Ok(CrackRequest {
             text: self.text,
             timeout_secs,
-            regex,
-            max_memory_bytes: MAX_MEMORY_BYTES,
+            regex: check_regex(self.regex)?,
         })
     }
 }
@@ -222,87 +246,73 @@ impl From<&CrackResult> for DecodeStep {
     }
 }
 
-/// Result of the `list_decoders` tool.
-#[derive(Debug, Serialize, Deserialize, schemars::JsonSchema)]
-pub struct DecoderList {
-    /// Every decoder ciphey tries, sorted by name.
-    pub decoders: Vec<DecoderInfo>,
-}
-
-/// A decoder ciphey can apply.
-#[derive(Debug, Serialize, Deserialize, schemars::JsonSchema)]
-pub struct DecoderInfo {
-    /// Name, as used in `decode` paths.
-    pub name: String,
-    /// What the decoder handles.
-    pub description: String,
-    /// Where to read more.
-    pub link: String,
-    /// Categories such as `base` or `cipher`.
-    pub tags: Vec<String>,
-}
-
-impl DecoderList {
-    /// Every decoder in the library's registry.
-    pub fn all() -> Self {
-        let default_decoder = Decoder::<DefaultDecoder>::default().name;
-        let mut decoders: Vec<DecoderInfo> = DECODER_MAP
-            .values()
-            .map(|entry| entry.get::<DecoderType>())
-            .filter(|decoder| decoder.get_name() != default_decoder)
-            .map(|decoder| DecoderInfo {
-                name: decoder.get_name().to_string(),
-                description: decoder.get_description().to_string(),
-                link: decoder.get_link().to_string(),
-                tags: decoder
-                    .get_tags()
-                    .iter()
-                    .map(|tag| tag.to_string())
-                    .collect(),
-            })
-            .collect();
-        decoders.sort_by_key(|decoder| decoder.name.to_lowercase());
-        Self { decoders }
-    }
-}
-
-/// Validates `params`, then decodes until done or until `cancelled` completes (the client
-/// cancelled the request or went away). Dropping the decode future kills its worker.
+/// Validates `params`, then decodes until done or until `cancelled` completes.
 pub async fn run_decode(
-    cracker: &dyn Cracker,
+    runner: &dyn Runner,
     params: DecodeParams,
     cancelled: impl Future<Output = ()>,
 ) -> Result<DecodeOutput, String> {
     let request = params.into_request()?;
+    until_cancelled(runner.decode(request), cancelled).await
+}
+
+/// Validates `params`, then runs the decoder until done or until `cancelled` completes.
+pub async fn run_decode_with(
+    runner: &dyn Runner,
+    params: DecodeWithParams,
+    cancelled: impl Future<Output = ()>,
+) -> Result<DecodeWithOutput, String> {
+    let request = params.into_request()?;
+    until_cancelled(runner.decode_with(request), cancelled).await
+}
+
+/// Validates `params`, then runs the checks until done or until `cancelled` completes.
+pub async fn run_detect(
+    runner: &dyn Runner,
+    params: DetectParams,
+    cancelled: impl Future<Output = ()>,
+) -> Result<DetectOutput, String> {
+    let request = params.into_request()?;
+    until_cancelled(runner.detect_plaintext(request), cancelled).await
+}
+
+/// Waits for `work`, unless `cancelled` completes first (the client cancelled the request
+/// or went away). Dropping `work` kills its worker.
+async fn until_cancelled<T>(
+    work: impl Future<Output = Result<T, String>>,
+    cancelled: impl Future<Output = ()>,
+) -> Result<T, String> {
     tokio::select! {
-        result = cracker.crack(request) => result,
-        () = cancelled => Err("the decode was cancelled".to_string()),
+        result = work => result,
+        () = cancelled => Err("the call was cancelled".to_string()),
     }
 }
 
 /// The MCP server.
 #[derive(Clone)]
 pub struct CipheyMcp {
-    /// Runs `decode` requests.
-    cracker: Arc<dyn Cracker>,
+    /// Runs the tool calls that need a worker.
+    runner: Arc<dyn Runner>,
 }
 
 #[tool_router]
 impl CipheyMcp {
-    /// Creates a server that runs decodes with `cracker`.
-    pub fn new(cracker: Arc<dyn Cracker>) -> Self {
-        Self { cracker }
+    /// Creates a server that runs tool calls with `runner`.
+    pub fn new(runner: Arc<dyn Runner>) -> Self {
+        Self { runner }
     }
 
     #[tool(
         title = "Decode text",
-        description = "Automatically decode or decrypt text without knowing how it was encoded. \
-            ciphey detects and peels layered encodings (for example Base64, then ROT13, then \
-            hex) and breaks classical ciphers without a key (Caesar, Vigenère, rail fence, \
-            Atbash, ...). Returns the plaintext and the decoders applied, in order. `status` is \
-            `decoded`, `not_found` (the search ended without plaintext) or `timed_out` (retry \
-            with a larger `timeout_secs`, or pass a `regex` crib). An empty `path` means the \
-            input already looked like plaintext.",
+        description = "Automatically decode or decrypt text when you don't know how it was \
+            encoded. ciphey detects and peels layered encodings (for example Base64, then \
+            ROT13, then hex) and breaks classical ciphers without a key (Caesar, Vigenère, rail \
+            fence, Atbash, ...). Returns the plaintext and the decoders applied, in order. \
+            `status` is `decoded`, `not_found` (the search ended without plaintext) or \
+            `timed_out` (retry with a larger `timeout_secs`, or pass a `regex` crib). An empty \
+            `path` means the input already looked like plaintext. If you know the encoding or \
+            cipher, or have its key, use `decode_with` instead; to check text without decoding \
+            it, use `detect_plaintext`.",
         annotations(read_only_hint = true, open_world_hint = false)
     )]
     async fn decode(
@@ -310,7 +320,55 @@ impl CipheyMcp {
         Parameters(params): Parameters<DecodeParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<Json<DecodeOutput>, String> {
-        run_decode(self.cracker.as_ref(), params, context.ct.cancelled())
+        run_decode(self.runner.as_ref(), params, context.ct.cancelled())
+            .await
+            .map(Json)
+    }
+
+    #[tool(
+        title = "Decode with a chosen decoder",
+        description = "Run one decoder or cipher that you choose by name, instead of searching. \
+            Use it when you know or suspect how the text was encoded (\"this is Base32\", \"try \
+            ROT47\"), when you have the key (a Vigenère keyword, a Caesar shift, an XOR key, the \
+            number of rails), or to see every decoding a decoder gives. Without `key`, encodings \
+            are decoded and ciphers cracked by trying every key; with `key`, the text is \
+            decrypted with it. Returns the candidate decodings, each with `is_plaintext` \
+            (whether ciphey's plaintext checks accept it) and `detection` (what they \
+            recognised). `status` is `plaintext_found`, `no_plaintext` (judge the candidates \
+            yourself) or `no_candidates` (the text isn't in that decoder's format). It decodes \
+            one layer: for layered or unknown encodings use `decode`. Call `list_decoders` for \
+            the decoder ids, aliases and key formats.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn decode_with(
+        &self,
+        Parameters(params): Parameters<DecodeWithParams>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<Json<DecodeWithOutput>, String> {
+        run_decode_with(self.runner.as_ref(), params, context.ct.cancelled())
+            .await
+            .map(Json)
+    }
+
+    #[tool(
+        title = "Detect plaintext",
+        description = "Check whether text is already plaintext, and identify what it is, \
+            without decoding anything. Runs ciphey's plaintext checks: LemmeKnow, which \
+            recognises over 100 formats (IP and email addresses, URLs, API keys and tokens, \
+            crypto wallets, credit card numbers, CTF flags, ...), a list of common passwords, \
+            and an English checker. Returns `is_plaintext` and the `detection`: which `checker` \
+            accepted the text, its `description` (such as `Internet Protocol (IP) Address \
+            Version 4` or `Words` for English) and, for LemmeKnow, a `confidence` from 0 to 1. \
+            Use it to check a decoding, to choose between candidates, or to see whether text \
+            needs decoding at all.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn detect_plaintext(
+        &self,
+        Parameters(params): Parameters<DetectParams>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<Json<DetectOutput>, String> {
+        run_detect(self.runner.as_ref(), params, context.ct.cancelled())
             .await
             .map(Json)
     }
@@ -318,7 +376,8 @@ impl CipheyMcp {
     #[tool(
         title = "List decoders",
         description = "List the encodings and ciphers ciphey can decode, with a short \
-            description of each.",
+            description of each, the `id` and aliases `decode_with` accepts, and the key format \
+            of the ciphers that take a key.",
         annotations(read_only_hint = true, open_world_hint = false)
     )]
     fn list_decoders(&self) -> Json<DecoderList> {
@@ -328,10 +387,13 @@ impl CipheyMcp {
 
 #[tool_handler(
     name = "ciphey",
-    instructions = "ciphey decodes encoded or encrypted text automatically: call `decode` with \
-        the ciphertext. If you know part of the plaintext, such as a CTF flag format like \
-        `flag\\{`, pass it as `regex`. Call `list_decoders` to see the supported encodings and \
-        ciphers."
+    instructions = "ciphey decodes encoded or encrypted text. Call `decode` with the ciphertext \
+        when you don't know how it was encoded: it searches chains of decoders by itself. If \
+        you know (or want to try) a particular encoding or cipher, or have its key, call \
+        `decode_with`; `list_decoders` lists the decoder ids, aliases and key formats. Call \
+        `detect_plaintext` to check whether text is already plaintext and what it is \
+        (English, an IP address, a URL, an API key, ...). If you know part of the plaintext, \
+        such as a CTF flag format like `flag\\{`, pass it as `regex`."
 )]
 impl ServerHandler for CipheyMcp {}
 
@@ -346,39 +408,82 @@ mod tests {
     use serde_json::{json, Value};
 
     use super::*;
+    use crate::decode_with::DecodeWithStatus;
+    use crate::detect::SensitivityChoice;
+    use crate::worker::Job;
 
-    /// Returns a canned response and records the requests it was given.
-    struct FakeCracker {
-        response: Result<DecodeOutput, String>,
-        requests: Mutex<Vec<CrackRequest>>,
+    /// Returns canned responses and records the calls it was given.
+    #[derive(Default)]
+    struct FakeRunner {
+        decode: Option<Result<DecodeOutput, String>>,
+        decode_with: Option<Result<DecodeWithOutput, String>>,
+        detect: Option<Result<DetectOutput, String>>,
+        jobs: Mutex<Vec<Job>>,
     }
 
-    impl FakeCracker {
-        fn new(response: Result<DecodeOutput, String>) -> Self {
+    impl FakeRunner {
+        fn decoding(response: Result<DecodeOutput, String>) -> Self {
             Self {
-                response,
-                requests: Mutex::new(Vec::new()),
+                decode: Some(response),
+                ..Self::default()
             }
         }
 
-        fn requests(&self) -> Vec<CrackRequest> {
-            self.requests.lock().unwrap().clone()
+        fn jobs(&self) -> Vec<Job> {
+            self.jobs.lock().unwrap().clone()
         }
-    }
 
-    impl Cracker for FakeCracker {
-        fn crack(&self, request: CrackRequest) -> BoxFuture<'_, Result<DecodeOutput, String>> {
-            self.requests.lock().unwrap().push(request);
-            let response = self.response.clone();
+        /// Records `job` and returns `response`, which the test must have set.
+        fn respond<T: Clone + Send + 'static>(
+            &self,
+            job: Job,
+            response: &Option<Result<T, String>>,
+        ) -> BoxFuture<'_, Result<T, String>> {
+            self.jobs.lock().unwrap().push(job);
+            let response = response.clone().expect("unexpected call");
             Box::pin(async move { response })
         }
     }
 
-    /// Never finishes, like a long search.
-    struct StuckCracker;
+    impl Runner for FakeRunner {
+        fn decode(&self, request: CrackRequest) -> BoxFuture<'_, Result<DecodeOutput, String>> {
+            self.respond(Job::Decode(request), &self.decode)
+        }
 
-    impl Cracker for StuckCracker {
-        fn crack(&self, _: CrackRequest) -> BoxFuture<'_, Result<DecodeOutput, String>> {
+        fn decode_with(
+            &self,
+            request: DecodeWithRequest,
+        ) -> BoxFuture<'_, Result<DecodeWithOutput, String>> {
+            self.respond(Job::DecodeWith(request), &self.decode_with)
+        }
+
+        fn detect_plaintext(
+            &self,
+            request: DetectRequest,
+        ) -> BoxFuture<'_, Result<DetectOutput, String>> {
+            self.respond(Job::DetectPlaintext(request), &self.detect)
+        }
+    }
+
+    /// Never finishes, like a long search.
+    struct StuckRunner;
+
+    impl Runner for StuckRunner {
+        fn decode(&self, _: CrackRequest) -> BoxFuture<'_, Result<DecodeOutput, String>> {
+            Box::pin(std::future::pending())
+        }
+
+        fn decode_with(
+            &self,
+            _: DecodeWithRequest,
+        ) -> BoxFuture<'_, Result<DecodeWithOutput, String>> {
+            Box::pin(std::future::pending())
+        }
+
+        fn detect_plaintext(
+            &self,
+            _: DetectRequest,
+        ) -> BoxFuture<'_, Result<DetectOutput, String>> {
             Box::pin(std::future::pending())
         }
     }
@@ -412,7 +517,6 @@ mod tests {
                 text: "aGVsbG8=".to_string(),
                 timeout_secs: DEFAULT_TIMEOUT_SECS,
                 regex: None,
-                max_memory_bytes: MAX_MEMORY_BYTES,
             }
         );
     }
@@ -482,6 +586,25 @@ mod tests {
     }
 
     #[test]
+    fn into_request_limits_regex_length() {
+        let at_limit = DecodeParams {
+            regex: Some("a".repeat(MAX_REGEX_CHARS)),
+            ..params("aGVsbG8=")
+        };
+        assert!(at_limit.into_request().is_ok());
+        let error = DecodeParams {
+            regex: Some("a".repeat(MAX_REGEX_CHARS + 1)),
+            ..params("aGVsbG8=")
+        }
+        .into_request()
+        .unwrap_err();
+        assert!(
+            error.contains("`regex` is 1001 characters long; the limit is 1000"),
+            "{error}"
+        );
+    }
+
+    #[test]
     fn into_request_ignores_empty_regex() {
         let request = DecodeParams {
             regex: Some(String::new()),
@@ -492,51 +615,144 @@ mod tests {
 
     #[tokio::test]
     async fn decode_forwards_the_request_and_returns_the_result() {
-        let cracker = FakeCracker::new(Ok(decoded("hello")));
+        let runner = FakeRunner::decoding(Ok(decoded("hello")));
         let params = DecodeParams {
             timeout_secs: Some(3),
             regex: Some("^h.*o$".to_string()),
             ..params("aGVsbG8=")
         };
 
-        let output = run_decode(&cracker, params, std::future::pending()).await;
+        let output = run_decode(&runner, params, std::future::pending()).await;
 
         assert_eq!(output, Ok(decoded("hello")));
         assert_eq!(
-            cracker.requests(),
-            vec![CrackRequest {
+            runner.jobs(),
+            vec![Job::Decode(CrackRequest {
                 text: "aGVsbG8=".to_string(),
                 timeout_secs: 3,
                 regex: Some("^h.*o$".to_string()),
-                max_memory_bytes: MAX_MEMORY_BYTES,
-            }]
+            })]
         );
     }
 
     #[tokio::test]
     async fn decode_rejects_bad_input_without_cracking() {
-        let cracker = FakeCracker::new(Ok(decoded("unused")));
+        let runner = FakeRunner::decoding(Ok(decoded("unused")));
 
-        let output = run_decode(&cracker, params(""), std::future::pending()).await;
+        let output = run_decode(&runner, params(""), std::future::pending()).await;
 
         assert!(output.unwrap_err().contains("`text` is empty"));
-        assert!(cracker.requests().is_empty());
+        assert!(runner.jobs().is_empty());
     }
 
     #[tokio::test]
-    async fn decode_passes_on_cracker_errors() {
-        let cracker = FakeCracker::new(Err("worker crashed".to_string()));
+    async fn decode_passes_on_runner_errors() {
+        let runner = FakeRunner::decoding(Err("worker crashed".to_string()));
 
-        let output = run_decode(&cracker, params("aGVsbG8="), std::future::pending()).await;
+        let output = run_decode(&runner, params("aGVsbG8="), std::future::pending()).await;
 
         assert_eq!(output, Err("worker crashed".to_string()));
     }
 
     #[tokio::test]
-    async fn decode_stops_when_cancelled() {
-        let output = run_decode(&StuckCracker, params("aGVsbG8="), std::future::ready(())).await;
+    async fn calls_stop_when_cancelled() {
+        let cancelled = || std::future::ready(());
+        let cancelled_message = "the call was cancelled";
 
-        assert_eq!(output, Err("the decode was cancelled".to_string()));
+        let output = run_decode(&StuckRunner, params("aGVsbG8="), cancelled()).await;
+        assert_eq!(output.unwrap_err(), cancelled_message);
+
+        let decode_with = DecodeWithParams {
+            decoder: "base64".to_string(),
+            text: "aGk=".to_string(),
+            ..DecodeWithParams::default()
+        };
+        let output = run_decode_with(&StuckRunner, decode_with, cancelled()).await;
+        assert_eq!(output.unwrap_err(), cancelled_message);
+
+        let detect = DetectParams {
+            text: "hi".to_string(),
+            ..DetectParams::default()
+        };
+        let output = run_detect(&StuckRunner, detect, cancelled()).await;
+        assert_eq!(output.unwrap_err(), cancelled_message);
+    }
+
+    #[tokio::test]
+    async fn decode_with_forwards_the_resolved_decoder() {
+        let response = DecodeWithOutput {
+            decoder: "caesar".to_string(),
+            status: DecodeWithStatus::NoCandidates,
+            candidates: Vec::new(),
+            total_candidates: 0,
+        };
+        let runner = FakeRunner {
+            decode_with: Some(Ok(response.clone())),
+            ..FakeRunner::default()
+        };
+        let params = DecodeWithParams {
+            decoder: "ROT13".to_string(),
+            text: "Uryyb".to_string(),
+            key: Some("13".to_string()),
+            regex: Some(String::new()),
+        };
+
+        let output = run_decode_with(&runner, params, std::future::pending()).await;
+
+        assert_eq!(output, Ok(response));
+        assert_eq!(
+            runner.jobs(),
+            vec![Job::DecodeWith(DecodeWithRequest {
+                decoder: "caesar".to_string(),
+                text: "Uryyb".to_string(),
+                key: Some("13".to_string()),
+                regex: None,
+            })]
+        );
+
+        // Bad arguments never reach a worker.
+        let unknown = DecodeWithParams {
+            decoder: "rot1300".to_string(),
+            text: "Uryyb".to_string(),
+            ..DecodeWithParams::default()
+        };
+        let error = run_decode_with(&runner, unknown, std::future::pending())
+            .await
+            .unwrap_err();
+        assert!(error.starts_with("no decoder is called"), "{error}");
+        assert_eq!(runner.jobs().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn detect_forwards_the_request() {
+        let response = DetectOutput {
+            is_plaintext: false,
+            detection: None,
+            checkers: vec!["english".to_string()],
+        };
+        let runner = FakeRunner {
+            detect: Some(Ok(response.clone())),
+            ..FakeRunner::default()
+        };
+        let params = DetectParams {
+            text: "192.168.0.1".to_string(),
+            checkers: Some(vec![crate::detect::CheckerChoice::English]),
+            sensitivity: Some(SensitivityChoice::Low),
+            regex: None,
+        };
+
+        let output = run_detect(&runner, params, std::future::pending()).await;
+
+        assert_eq!(output, Ok(response));
+        assert_eq!(
+            runner.jobs(),
+            vec![Job::DetectPlaintext(DetectRequest {
+                text: "192.168.0.1".to_string(),
+                checkers: Some(vec![crate::detect::CheckerChoice::English]),
+                sensitivity: SensitivityChoice::Low,
+                regex: None,
+            })]
+        );
     }
 
     #[test]
@@ -647,52 +863,97 @@ mod tests {
     }
 
     #[test]
-    fn list_decoders_lists_the_registry() {
-        let server = CipheyMcp::new(Arc::new(StuckCracker));
+    fn list_decoders_lists_the_library_api() {
+        let server = CipheyMcp::new(Arc::new(StuckRunner));
 
         let Json(list) = server.list_decoders();
 
-        let names: Vec<&str> = list.decoders.iter().map(|d| d.name.as_str()).collect();
-        // Everything in the registry except the placeholder "Default decoder".
-        assert_eq!(names.len(), DECODER_MAP.len() - 1);
-        assert!(!names.contains(&"Default decoder"));
-        for expected in ["Base64", "caesar", "Vigenere", "Morse Code", "Brainfuck"] {
-            assert!(
-                names.contains(&expected),
-                "{expected} missing from {names:?}"
-            );
+        assert_eq!(list.decoders.len(), ciphey::list_decoders().len());
+        let ids: Vec<&str> = list.decoders.iter().map(|d| d.id.as_str()).collect();
+        for expected in ["base64", "caesar", "vigenere", "morse", "brainfuck"] {
+            assert!(ids.contains(&expected), "{expected} missing from {ids:?}");
         }
-        let mut sorted = names.clone();
-        sorted.sort_by_key(|name| name.to_lowercase());
-        assert_eq!(names, sorted);
-        assert!(list.decoders.iter().all(|d| !d.description.is_empty()));
+    }
+
+    /// The advertised tools, by name.
+    fn tools() -> Vec<rmcp::model::Tool> {
+        let mut tools = CipheyMcp::tool_router().list_all();
+        tools.sort_by(|a, b| a.name.cmp(&b.name));
+        tools
+    }
+
+    /// The input schema of the tool called `name`.
+    fn input_schema(name: &str) -> Value {
+        let tool = tools().into_iter().find(|tool| tool.name == name).unwrap();
+        Value::Object((*tool.input_schema).clone())
     }
 
     #[test]
     fn tools_are_advertised_with_schemas_and_annotations() {
-        let tools = CipheyMcp::tool_router().list_all();
-        let mut names: Vec<&str> = tools.iter().map(|tool| tool.name.as_ref()).collect();
-        names.sort_unstable();
-        assert_eq!(names, ["decode", "list_decoders"]);
+        let tools = tools();
+        let names: Vec<&str> = tools.iter().map(|tool| tool.name.as_ref()).collect();
+        assert_eq!(
+            names,
+            ["decode", "decode_with", "detect_plaintext", "list_decoders"]
+        );
 
         for tool in &tools {
             let annotations = tool.annotations.as_ref().expect("annotations");
             assert_eq!(annotations.read_only_hint, Some(true), "{}", tool.name);
             assert_eq!(annotations.open_world_hint, Some(false), "{}", tool.name);
             assert!(tool.output_schema.is_some(), "{}", tool.name);
+            let description = tool.description.as_deref().unwrap_or_default();
+            assert!(description.len() > 80, "{}: {description}", tool.name);
         }
 
-        let decode = tools.iter().find(|tool| tool.name == "decode").unwrap();
-        let input = Value::Object((*decode.input_schema).clone());
-        assert_eq!(input["required"], json!(["text"]));
+        let decode = input_schema("decode");
+        assert_eq!(decode["required"], json!(["text"]));
         assert_eq!(
-            input["properties"]["text"]["maxLength"],
+            decode["properties"]["text"]["maxLength"],
             json!(MAX_INPUT_CHARS)
         );
         assert_eq!(
-            input["properties"]["timeout_secs"]["maximum"],
+            decode["properties"]["timeout_secs"]["maximum"],
             json!(MAX_TIMEOUT_SECS)
         );
-        assert!(input["properties"]["regex"].is_object());
+        assert_eq!(
+            decode["properties"]["regex"]["maxLength"],
+            json!(MAX_REGEX_CHARS)
+        );
+    }
+
+    #[test]
+    fn decode_with_schema_describes_its_arguments() {
+        let schema = input_schema("decode_with");
+        assert_eq!(schema["required"], json!(["decoder", "text"]));
+        let properties = &schema["properties"];
+        assert_eq!(properties["text"]["maxLength"], json!(MAX_INPUT_CHARS));
+        assert_eq!(properties["decoder"]["minLength"], json!(1));
+        assert_eq!(properties["key"]["type"], json!(["string", "null"]));
+        assert_eq!(properties["regex"]["maxLength"], json!(MAX_REGEX_CHARS));
+        for argument in ["decoder", "text", "key", "regex"] {
+            let description = properties[argument]["description"].as_str().unwrap();
+            assert!(!description.is_empty(), "{argument}");
+        }
+        assert!(properties["key"]["description"]
+            .as_str()
+            .unwrap()
+            .contains("key_format"));
+    }
+
+    #[test]
+    fn detect_plaintext_schema_lists_the_checkers() {
+        let schema = input_schema("detect_plaintext");
+        assert_eq!(schema["required"], json!(["text"]));
+        let properties = &schema["properties"];
+        // Plain enums, inlined: no `$ref` or `oneOf` for clients to resolve.
+        let items = &properties["checkers"]["items"];
+        assert_eq!(items["type"], json!("string"));
+        assert_eq!(items["enum"], json!(["lemmeknow", "password", "english"]));
+        assert_eq!(
+            properties["sensitivity"]["enum"],
+            json!(["low", "medium", "high", null])
+        );
+        assert!(schema.get("$defs").is_none(), "{schema}");
     }
 }

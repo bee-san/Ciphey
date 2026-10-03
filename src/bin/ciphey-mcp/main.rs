@@ -1,13 +1,17 @@
 //! `ciphey-mcp`: a [Model Context Protocol](https://modelcontextprotocol.io) server that lets
 //! AI assistants call ciphey. It speaks MCP over stdin/stdout and is only built with
-//! `--features mcp`.
+//! `--features mcp`. Its tools are `decode` (the whole search), `decode_with` (one decoder,
+//! chosen by name), `detect_plaintext` (the plaintext checks) and `list_decoders`.
 //!
 //! The library keeps its settings (timeout, regex, ...) in a process-wide `OnceCell` that can
-//! only be set once, so one process can't run decodes with different settings. Every `decode`
-//! call therefore runs in a short-lived worker: this same executable started with the hidden
-//! `--worker` flag (see [`worker`]). A panic (release builds use `panic = "abort"`) or a search
-//! that overruns its timeout then only takes down the worker, never the server.
+//! only be set once, so one process can't run decodes with different settings. Every call
+//! except `list_decoders` therefore runs in a short-lived worker: this same executable started
+//! with the hidden `--worker` flag (see [`worker`]). A panic (release builds use
+//! `panic = "abort"`) or a call that overruns its time limit then only takes down the worker,
+//! never the server.
 
+mod decode_with;
+mod detect;
 mod server;
 mod worker;
 
@@ -22,7 +26,7 @@ use clap::Parser;
 #[derive(Parser)]
 #[command(name = "ciphey-mcp", version)]
 struct Args {
-    /// Internal: run one decode request read from stdin, print the result and exit.
+    /// Internal: run one tool call read from stdin, print the result and exit.
     #[arg(long, hide = true)]
     worker: bool,
 }
