@@ -63,3 +63,12 @@ fn dtmf_inside_base64_is_cracked() {
     assert_eq!(result.text[0], "8675309");
     assert_eq!(path(&result), ["Base64", "DTMF"]);
 }
+
+#[test]
+fn multi_tap_inside_dtmf_is_cracked() {
+    // The Multi-tap key presses for MEET ME AT DAWN (`0` is a space), one letter per line,
+    // as DTMF. The line breaks become the spaces between Multi-tap's letters.
+    let result = crack("770-1477\n697-1477 697-1477\n697-1477 697-1477\n852-1336\n941-1336\n770-1477\n697-1477 697-1477\n941-1336\n697-1336\n852-1336\n941-1336\n697-1477\n697-1336\n852-1477\n770-1477 770-1477");
+    assert_eq!(result.text[0], "MEET ME AT DAWN");
+    assert_eq!(path(&result), ["DTMF", "Multi-tap"]);
+}
