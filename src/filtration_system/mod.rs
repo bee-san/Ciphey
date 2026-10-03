@@ -54,6 +54,7 @@ use crate::decoders::railfence_decoder::RailfenceDecoder;
 use crate::decoders::reverse_decoder::ReverseDecoder;
 use crate::decoders::rot47_decoder::ROT47Decoder;
 use crate::decoders::substitution_generic_decoder::SubstitutionGenericDecoder;
+use crate::decoders::tap_code_decoder::TapCodeDecoder;
 use crate::decoders::unicode_escape_decoder::UnicodeEscapeDecoder;
 use crate::decoders::url_decoder::URLDecoder;
 use crate::decoders::utf16_decoder::Utf16Decoder;
@@ -298,6 +299,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let uuencode = Decoder::<UuencodeDecoder>::new();
     let reversedecoder = Decoder::<ReverseDecoder>::new();
     let morsecodedecoder = Decoder::<MorseCodeDecoder>::new();
+    let tap_code = Decoder::<TapCodeDecoder>::new();
     let atbashdecoder = Decoder::<AtbashDecoder>::new();
     let baconian = Decoder::<BaconianDecoder>::new();
     let baudot = Decoder::<BaudotDecoder>::new();
@@ -375,6 +377,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // search batch, the first in this list wins a tie, and rot47 turns Base64
             // into strings LemmeKnow takes for URLs.
             Box::new(xor_single_byte),
+            // Before Morse Code, which also reads knocks written with dots (`.. ...` is IS),
+            // and rot47, which turns `5,2 1,1 4,4` into words like `XOU TOT WOW`: when both
+            // find plaintext in the same step, the first in this list is reported.
+            Box::new(tap_code),
             Box::new(morsecodedecoder),
             Box::new(atbashdecoder),
             Box::new(baconian),

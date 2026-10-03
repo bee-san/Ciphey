@@ -50,6 +50,7 @@ use crate::decoders::railfence_decoder::RailfenceDecoder;
 use crate::decoders::reverse_decoder::ReverseDecoder;
 use crate::decoders::rot47_decoder::ROT47Decoder;
 use crate::decoders::substitution_generic_decoder::SubstitutionGenericDecoder;
+use crate::decoders::tap_code_decoder::TapCodeDecoder;
 use crate::decoders::unicode_escape_decoder::UnicodeEscapeDecoder;
 use crate::decoders::url_decoder::URLDecoder;
 use crate::decoders::utf16_decoder::Utf16Decoder;
@@ -528,6 +529,15 @@ decoder_functions! {
     /// assert_eq!(decoded.plaintext().unwrap().text, "hello");
     /// ```
     symbol_substitution: SubstitutionGenericDecoder, aliases ["substitution_generic"], key None;
+
+    /// Decodes tap code (knock code): each letter is its row and column in a 5×5 square with
+    /// K sent as C, written as `row,col` pairs or as knocks such as `.. ...`.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::tap_code("2,3 1,5 3,1 3,1 3,4  5,2 3,4 4,2 3,1 1,4");
+    /// assert_eq!(decoded.candidates[0].text, "HELLO WORLD");
+    /// ```
+    tap_code: TapCodeDecoder, aliases ["knock_code", "knock"], key None;
 
     /// Decodes Unicode escapes: `\u00e9`, `\u{1F600}`, `%u00E9`, `U+00E9` and similar.
     ///

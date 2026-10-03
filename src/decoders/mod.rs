@@ -150,6 +150,8 @@ pub mod multi_tap_decoder;
 pub mod punycode_decoder;
 /// The quoted_printable_decoder module decodes Quoted-Printable (RFC 2045)
 pub mod quoted_printable_decoder;
+/// The tap_code_decoder module decodes tap code (knock code)
+pub mod tap_code_decoder;
 /// The unicode_escape_decoder module decodes Unicode escapes like `\u00e9`, `%u00E9` and `U+00E9`
 pub mod unicode_escape_decoder;
 /// The url_decoder module decodes url
@@ -253,6 +255,7 @@ use railfence_decoder::RailfenceDecoder;
 use reverse_decoder::ReverseDecoder;
 use rot47_decoder::ROT47Decoder;
 use substitution_generic_decoder::SubstitutionGenericDecoder;
+use tap_code_decoder::TapCodeDecoder;
 use unicode_escape_decoder::UnicodeEscapeDecoder;
 use url_decoder::URLDecoder;
 use utf16_decoder::Utf16Decoder;
@@ -357,6 +360,8 @@ pub enum DecoderType {
     MorseCode(morse_code::MorseCodeDecoder),
     /// multi-tap decoder
     MultiTapDecoder(multi_tap_decoder::MultiTapDecoder),
+    /// tap code decoder
+    TapCodeDecoder(tap_code_decoder::TapCodeDecoder),
     /// caesar decoder
     CaesarDecoder(caesar_decoder::CaesarDecoder),
     /// railfence decoder
@@ -509,6 +514,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Multi-tap",
             DecoderBox::new(Decoder::<MultiTapDecoder>::new()),
+        ),
+        (
+            "Tap Code",
+            DecoderBox::new(Decoder::<TapCodeDecoder>::new()),
         ),
         ("atbash", DecoderBox::new(Decoder::<AtbashDecoder>::new())),
         (

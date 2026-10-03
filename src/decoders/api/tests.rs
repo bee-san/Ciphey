@@ -519,6 +519,15 @@ fn symbol_substitution_decodes() {
 }
 
 #[test]
+fn tap_code_decodes() {
+    assert_plaintext(
+        &tap_code(".. ...  . .....  ... .  ... .  ... ...."),
+        "HELLO",
+    );
+    assert_eq!(decoder_info("knock code").unwrap().name, "Tap Code");
+}
+
+#[test]
 fn unicode_escapes_decode() {
     assert_first(
         &unicode_escapes(r"na\u00efve r\u{e9}sum\U000000E9 \U0001F600"),
