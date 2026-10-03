@@ -26,7 +26,9 @@
 //! so they are ranked first, best first, by how English their pairs of adjacent characters
 //! look, and only the best two are checked, with Low sensitivity for gibberish detection.
 //! The key of a result is the name of the shift that encrypted it, such as
-//! `QWERTY right 1`.
+//! `QWERTY right 1`. Ciphey runs every decoder on every text the search expands, so text
+//! that can't be a shift of English (non-ASCII text, Base64 and the other encodings, text
+//! that changes case inside its words) is turned away first, in one pass over its bytes.
 
 use crate::checkers::CheckerTypes;
 use crate::decoders::affine_decoder::BIGRAM_LOG_PROBS;
@@ -133,6 +135,26 @@ const MIN_LETTERS: usize = 1;
 /// can't be ranked, and the search drops results that short anyway.
 const MIN_NON_WHITESPACE: usize = 4;
 
+/// Pre-check: with at least this many pairs of adjacent ASCII letters, at most one pair in
+/// [`MAX_LOWER_UPPER_PAIRS_ONE_IN`] may be a lowercase letter followed by an uppercase one
+/// (`aB`). Fewer pairs say too little to tell.
+const MIN_PAIRS_FOR_CASE_CHECK: usize = 20;
+
+/// A shift keeps the case of every letter, and English almost never changes case inside a
+/// word, so a keyboard shift of English doesn't either: at most one pair in 11 in Project
+/// Gutenberg books and Ciphey's docs (see the Affine cracker, which has the same check).
+/// Base64 and its Caesar and rot47 shifts, the commonest text the search hands every
+/// decoder, do it about one pair in four, and so does the gibberish of the benchmarks.
+const MAX_LOWER_UPPER_PAIRS_ONE_IN: usize = 8;
+
+/// One word at least this long, made only of the characters of Base64 and with a digit in
+/// it (see [`is_encoded_word`]), is far more often Base64, Base32, Base36, Base58 or hex,
+/// which the search sees all the time, than a keyboard shift. Its decodings are still
+/// checked, so a shifted flag or password in one word is found, but the ones the checker
+/// doesn't accept aren't handed back: they would look like encodings too and send the
+/// search down dead ends, which costs far more than the decodings themselves.
+const MIN_ENCODED_WORD_LEN: usize = 16;
+
 /// The score of a pair of adjacent characters that aren't both letters, such as `;` or `[`
 /// inside a word, which a shift that went the wrong way leaves behind. It is about the
 /// `ln P` of a rare English letter pair, so a flag's `_` and `{}` don't drown it.
@@ -226,7 +248,8 @@ impl Crack for Decoder<KeyboardShiftDecoder> {
 
     /// Ranks the 14 decodings, then checks the best `CANDIDATES_CHECKED` in order and stops
     /// at the first one the checker identifies, reporting the name of its shift as the key.
-    /// Otherwise returns the best `CANDIDATES_RETURNED` decodings, unidentified.
+    /// Otherwise returns the best `CANDIDATES_RETURNED` decodings, unidentified, unless the
+    /// text looks like an encoding (see [`MIN_ENCODED_WORD_LEN`]).
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying Keyboard shift with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
@@ -250,6 +273,10 @@ impl Crack for Decoder<KeyboardShiftDecoder> {
             }
         }
 
+        if is_encoded_word(text) {
+            trace!("Keyboard shift: the text looks like an encoding, so nothing is handed on");
+            return results;
+        }
         results.unencrypted_text = Some(
             ranked
                 .into_iter()
@@ -282,12 +309,18 @@ impl Crack for Decoder<KeyboardShiftDecoder> {
 }
 
 /// Whether `text` could be a keyboard shift worth cracking, in one pass over its bytes
-/// without allocating: printable ASCII, tabs and line breaks only (which rejects emoji and
-/// any non-ASCII text), at least [`MIN_LETTERS`] ASCII letters and at least
-/// [`MIN_NON_WHITESPACE`] other characters than whitespace.
+/// without allocating:
+/// * printable ASCII, tabs and line breaks only, which rejects emoji and any non-ASCII text,
+/// * at least [`MIN_LETTERS`] ASCII letters and at least [`MIN_NON_WHITESPACE`] other
+///   characters than whitespace,
+/// * few lowercase letters followed by uppercase ones (see
+///   [`MAX_LOWER_UPPER_PAIRS_ONE_IN`]).
 fn passes_pre_checks(text: &str) -> bool {
     let mut letters = 0usize;
     let mut non_whitespace = 0usize;
+    let mut letter_pairs = 0usize;
+    let mut lower_upper_pairs = 0usize;
+    let mut previous = b' ';
     for &byte in text.as_bytes() {
         match byte {
             b' ' | b'\t' | b'\n' | b'\r' => {}
@@ -295,12 +328,35 @@ fn passes_pre_checks(text: &str) -> bool {
                 non_whitespace += 1;
                 if byte.is_ascii_alphabetic() {
                     letters += 1;
+                    if previous.is_ascii_alphabetic() {
+                        letter_pairs += 1;
+                        if previous.is_ascii_lowercase() && byte.is_ascii_uppercase() {
+                            lower_upper_pairs += 1;
+                        }
+                    }
                 }
             }
             _ => return false,
         }
+        previous = byte;
     }
-    letters >= MIN_LETTERS && non_whitespace >= MIN_NON_WHITESPACE
+    letters >= MIN_LETTERS
+        && non_whitespace >= MIN_NON_WHITESPACE
+        && (letter_pairs < MIN_PAIRS_FOR_CASE_CHECK
+            || lower_upper_pairs * MAX_LOWER_UPPER_PAIRS_ONE_IN <= letter_pairs)
+}
+
+/// Whether `text`, leading and trailing whitespace aside, is one word of at least
+/// [`MIN_ENCODED_WORD_LEN`] characters of Base64's alphabet (`A-Z`, `a-z`, `0-9`, `+`, `/`,
+/// `=`) with a digit in it: Base64, Base32, Base36, Base58 or hex, more likely than a
+/// keyboard shift.
+fn is_encoded_word(text: &str) -> bool {
+    let word = text.trim_matches(|c: char| c.is_ascii_whitespace());
+    word.len() >= MIN_ENCODED_WORD_LEN
+        && word.bytes().any(|byte| byte.is_ascii_digit())
+        && word
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'+' | b'/' | b'='))
 }
 
 /// Decodes `text` with `table`. Bytes that aren't keys of the table, and anything that
@@ -840,6 +896,74 @@ mod tests {
             assert!(passes_pre_checks(text), "{text:?}");
             assert!(!rank_candidates(text).is_empty(), "{text:?}");
         }
+    }
+
+    #[test]
+    fn text_that_changes_case_inside_words_is_rejected() {
+        let decoder = Decoder::<KeyboardShiftDecoder>::new();
+        for text in [
+            // Base64 of "The quick brown fox jumps over the lazy dog": 12 of 49 pairs are `aB`
+            "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw==",
+            // Base64 with spaces in it, as the search meets it after other decoders
+            "VGhl IHF1aWNr IGJyb3du IGZveCBq dW1wcyBv dmVyIHRo ZSBsYXp5 IGRvZw==",
+            // The decoder benchmarks' miss input (benches/data/decoders.toml): 7 of 23
+            "T00 l3= ox+#G WKyV pajU6j qxH@ %B4+a 5Pn^ 7p_v1q 9sLvu *+36i R5rL&3 mVJZI iO0 Ut8_m COTV",
+        ] {
+            assert!(!passes_pre_checks(text), "{text:?}");
+            let result = decoder.crack(text, &get_athena_checker());
+            assert!(!result.success, "{text:?}");
+            assert!(result.unencrypted_text.is_none(), "{text:?}");
+        }
+        // Every vector keeps its case inside words, and so does English with identifiers in
+        // it (7 of 73 pairs here, and a shift keeps them)
+        for (ciphertext, _, _) in VECTORS.iter().chain(CTF_VECTORS.iter()) {
+            assert!(passes_pre_checks(ciphertext), "{ciphertext:?}");
+        }
+        let identifiers = encode(
+            "The CheckerTypes::CheckWaitAthena function returns a ThreadSafePriorityQueue of SearchNodes",
+            "QWERTY right 1",
+        );
+        assert!(passes_pre_checks(&identifiers), "{identifiers:?}");
+        // Short texts aren't checked: too few pairs to tell
+        assert!(passes_pre_checks("aBcDeF gHiJ"));
+    }
+
+    #[test]
+    fn long_encoded_words_are_checked_but_not_handed_on() {
+        for text in [
+            // Base64, hex and Base32 of "hello world", and Base64 of the bench plaintext
+            "aGVsbG8gd29ybGQ=",
+            "68656c6c6f20776f726c64",
+            "NBSWY3DPEB3W64TMMQ======",
+            "TWVldCBtZSBhdCB0aGUgb2xkIGxpZ2h0aG91c2UgYWZ0ZXIgbWlkbmlnaHQgYW5kIGJyaW5nIHRoZSBtYXAsIHRoZSBrZXkgYW5kIGEgdG9yY2gu",
+            " aGVsbG8gd29ybGQ=\n",
+        ] {
+            assert!(is_encoded_word(text), "{text:?}");
+        }
+        for text in [
+            // Shorter than 16 characters, no digit, more than one word, or other characters
+            "aGVsbG8=",
+            "abcdefghijklmnopqrstuvwxyz",
+            "aGVsbG8g d29ybGQ=",
+            "jr;;p ept;f",
+            "g;sh}lrunpstf+djogy+od+rsdu|",
+            "BUH'tdy,|Bim5y~Bdt76yQ",
+            "ykvyg}pp[djp,rtpelru[pdoyopm|",
+        ] {
+            assert!(!is_encoded_word(text), "{text:?}");
+        }
+
+        let decoder = Decoder::<KeyboardShiftDecoder>::new();
+        // Its decodings are ranked and the best checked, but none is handed back
+        let base64 = "aGVsbG8gd29ybGQ=";
+        assert!(!rank_candidates(base64).is_empty());
+        let result = decoder.crack(base64, &get_athena_checker());
+        assert!(!result.success, "{result:?}");
+        assert!(result.unencrypted_text.is_none(), "{result:?}");
+        // A shorter word is handed back as usual
+        let result = decoder.crack("aGVsbG8=", &get_athena_checker());
+        assert!(!result.success, "{result:?}");
+        assert_eq!(result.unencrypted_text.unwrap().len(), CANDIDATES_RETURNED);
     }
 
     #[test]
