@@ -57,6 +57,7 @@ use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitu
 use crate::decoders::morse_code::MorseCodeDecoder;
 use crate::decoders::multi_tap_decoder::MultiTapDecoder;
 use crate::decoders::nato_phonetic_decoder::NatoPhoneticDecoder;
+use crate::decoders::null_cipher_decoder::NullCipherDecoder;
 use crate::decoders::punycode_decoder::PunycodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
@@ -347,6 +348,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let monoalphabetic_substitution = Decoder::<MonoalphabeticSubstitutionDecoder>::new();
     let keyboard_layout = Decoder::<KeyboardLayoutDecoder>::new();
     let keyboard_shift = Decoder::<KeyboardShiftDecoder>::new();
+    let null_cipher = Decoder::<NullCipherDecoder>::new();
 
     Decoders {
         components: vec![
@@ -483,6 +485,9 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(monoalphabetic_substitution),
             Box::new(keyboard_shift),
             Box::new(keyboard_layout),
+            // Last: a hidden message is a rarer answer than any other decoder's, so the
+            // others win ties within a search batch.
+            Box::new(null_cipher),
         ],
     }
 }

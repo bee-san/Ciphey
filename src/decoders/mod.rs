@@ -243,6 +243,9 @@ pub mod t9_decoder;
 /// The yunying_decoder module decodes the 01248 (Yunying) cipher, letters as sums of 1, 2, 4 and 8
 pub mod yunying_decoder;
 
+/// The null_cipher_decoder module finds messages hidden in null ciphers such as acrostics
+pub mod null_cipher_decoder;
+
 use atbash_decoder::AtbashDecoder;
 use backslash_escape_decoder::BackslashEscapeDecoder;
 use baconian_decoder::BaconianDecoder;
@@ -288,6 +291,7 @@ use monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use morse_code::MorseCodeDecoder;
 use multi_tap_decoder::MultiTapDecoder;
 use nato_phonetic_decoder::NatoPhoneticDecoder;
+use null_cipher_decoder::NullCipherDecoder;
 use octal_decoder::OctalDecoder;
 use ook_decoder::OokDecoder;
 use polybius_decoder::PolybiusDecoder;
@@ -465,6 +469,8 @@ pub enum DecoderType {
     ),
     /// T9 predictive text decoder
     T9Decoder(t9_decoder::T9Decoder),
+    /// null cipher (acrostic) decoder
+    NullCipherDecoder(null_cipher_decoder::NullCipherDecoder),
 }
 
 /// Wrapper struct to hold Decoders for DECODER_MAP
@@ -680,6 +686,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Keyboard layout",
             DecoderBox::new(Decoder::<KeyboardLayoutDecoder>::new()),
+        ),
+        (
+            "Null cipher",
+            DecoderBox::new(Decoder::<NullCipherDecoder>::new()),
         ),
     ])
 });
