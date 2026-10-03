@@ -45,7 +45,7 @@ use std::time::{Duration, Instant};
 
 /// Fewer letters than this and the search rarely finds the square: a wrong square can
 /// score as well as the right one, and one run of the annealing finds it in only about a
-/// quarter of 200-letter texts.
+/// fifth of 200-letter texts.
 const MIN_LETTERS: usize = 200;
 
 /// Longer texts are left alone. A Playfair message is rarely this long, and the checks
@@ -55,9 +55,10 @@ const MAX_CHARS: usize = 2_000;
 /// Letter J. The square has no J: it is written as I.
 const J: u8 = 9;
 
-/// Minimum [`chi_squared`] of the letter frequencies against English's. Playfair
-/// ciphertext has 1.9 or more (5th percentile), English and transpositions of it 0.41 or
-/// less (95th percentile) from 80 letters up.
+/// Minimum [`chi_squared`] of the letter frequencies against English's. In the
+/// measurements of the implementation plan (#1006), Playfair ciphertext had 1.9 or more
+/// (5th percentile), and English and transpositions of it 0.41 or less (95th percentile)
+/// from 80 letters up.
 const MIN_CHI_SQUARED: f64 = 1.0;
 
 /// Maximum index of coincidence. Playfair ciphertext has 0.050 (median) and 0.060 or less
@@ -76,8 +77,9 @@ const SEARCH_LETTERS: usize = 400;
 const START_TEMPERATURE: f64 = 10.0;
 
 /// Fitness, the average log10 probability of a decryption's quadgrams, at or above which
-/// the square counts as found. Correct decryptions of English scored -4.1 to -4.7, and
-/// runs that didn't find the square -5.2 to -6.0.
+/// the square counts as found. In 4,560 annealing runs on 192 paragraphs of two Project
+/// Gutenberg books, the runs that found the square scored -4.0 to -4.7, and all but two of
+/// the others below -5.0.
 const SOLVED_FITNESS: f64 = -4.8;
 
 /// Squares one letter swap from a solution whose fitness is within this of it are
@@ -307,10 +309,10 @@ struct Budget {
 }
 
 impl Budget {
-    /// What `crack` uses: up to five runs of 200,000 evaluations each, well under a
-    /// second on 400 letters, and one and a half seconds at most after the first run.
-    /// One run finds the square of about a quarter of 200-letter texts and half of
-    /// 300-letter ones, and the runs are independent.
+    /// What `crack` uses: up to five runs of 200,000 evaluations each, about a quarter
+    /// of a second each on 300 letters, and no run after one and a half seconds (the
+    /// first always finishes). One run finds the square of about a fifth of 200-letter
+    /// texts and half of 300-letter ones, and the runs are independent.
     const DEFAULT: Budget = Budget {
         runs: 5,
         steps: 100,
@@ -742,8 +744,9 @@ fn solve(letters: &[u8], budget: &Budget, stats: &mut Stats) -> Option<(Square, 
 /// words cover most (see [`reading_coverage`]).
 ///
 /// Quadgrams can't always tell the right square from one with two letters swapped that
-/// change only a few pairs, X and Y say: in about 2% of solved texts the annealing ended
-/// one swap from the right square, which scored a little worse. Words can tell them apart.
+/// change only a few pairs, X and Y say: about 2% of the annealing runs that found a
+/// square ended one swap from the right one, which scored a little worse. Words can tell
+/// them apart.
 fn prefer_words(
     letters: &[u8],
     scorer: &Scorer,
