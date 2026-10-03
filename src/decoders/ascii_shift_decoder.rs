@@ -351,7 +351,8 @@ fn numeric_text(text: &str) -> bool {
 /// that wrap some bytes past 0 but not all of them: a mod 128 key that wraps no byte gives the
 /// decryption of the same key mod 256, and one that wraps every byte that of the key + 128 mod
 /// 256, and those are reported mod 256. When at least 5% of the bytes are spaces only the keys
-/// that turn a space into one of [`SPACE_SOURCES`] are kept. Ties keep this order.
+/// that turn a space into one of [`SPACE_SOURCES`] are scored. On a tie mod 256 comes first,
+/// then the lower key.
 fn rank_keys(bytes: &[u8], limit: usize) -> Vec<RankedKey> {
     let mut counts = [0u32; 256];
     for &byte in bytes {
@@ -365,38 +366,38 @@ fn rank_keys(bytes: &[u8], limit: usize) -> Vec<RankedKey> {
         return Vec::new();
     };
     let spaced = counts[usize::from(b' ')] as usize * SPACE_RULE_ONE_IN >= bytes.len();
+    let log_probs = &*UNIGRAM_LOG_PROBS;
 
     let mut ranked = Vec::new();
     for modulus in MODULI {
         if modulus == 128 && highest >= 0x80 {
             continue;
         }
-        let keep = |key: u8| {
-            key != 0
-                && (modulus == 256 || (lowest < key && key <= highest))
-                && (!spaced || SPACE_SOURCES.contains(&shift_byte(b' ', key, modulus)))
-        };
+        // A mod 128 key that wraps no byte, or every byte, gives a mod 256 decryption
+        let tried = |key: u8| key != 0 && (modulus == 256 || (lowest < key && key <= highest));
         if spaced {
-            // At most 9 keys: score them one by one
-            for key in (1..=u8::MAX).take_while(|&key| u16::from(key) < modulus) {
-                if keep(key) {
-                    let score = histogram
-                        .iter()
-                        .map(|&(byte, count)| {
-                            count * UNIGRAM_LOG_PROBS[usize::from(shift_byte(byte, key, modulus))]
-                        })
-                        .sum();
-                    ranked.push(RankedKey {
-                        key,
-                        modulus,
-                        score,
-                    });
-                }
+            // The keys that turn a space back into one of SPACE_SOURCES, scored one by one
+            for key in SPACE_SOURCES
+                .iter()
+                .map(|&source| shift_byte(b' ', source, modulus))
+                .filter(|&key| tried(key))
+            {
+                let score = histogram
+                    .iter()
+                    .map(|&(byte, count)| {
+                        count * log_probs[usize::from(shift_byte(byte, key, modulus))]
+                    })
+                    .sum();
+                ranked.push(RankedKey {
+                    key,
+                    modulus,
+                    score,
+                });
             }
         } else {
             let scores = scores_of_every_key(&histogram, modulus);
             for (key, &score) in (0..=u8::MAX).zip(scores.iter()) {
-                if keep(key) {
+                if tried(key) {
                     ranked.push(RankedKey {
                         key,
                         modulus,
@@ -406,8 +407,7 @@ fn rank_keys(bytes: &[u8], limit: usize) -> Vec<RankedKey> {
             }
         }
     }
-    // Best first; on a tie mod 256 before mod 128, then the lower key: the order they were
-    // pushed in, which `sort_by` (stable) keeps
+    // Best first; on a tie mod 256 before mod 128, then the lower key
     if ranked.len() > limit {
         ranked.select_nth_unstable_by(limit, better);
         ranked.truncate(limit);
