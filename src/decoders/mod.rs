@@ -188,6 +188,10 @@ pub mod z85_decoder;
 /// For the braille decoder
 pub mod braille_decoder;
 
+/// The standard_galactic_alphabet_decoder module decodes the Standard Galactic Alphabet
+/// (Minecraft's enchanting table)
+pub mod standard_galactic_alphabet_decoder;
+
 /// The substitution_generic_decoder module handles generic substitution ciphers
 pub mod substitution_generic_decoder;
 
@@ -254,6 +258,7 @@ use quoted_printable_decoder::QuotedPrintableDecoder;
 use railfence_decoder::RailfenceDecoder;
 use reverse_decoder::ReverseDecoder;
 use rot47_decoder::ROT47Decoder;
+use standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder;
 use substitution_generic_decoder::SubstitutionGenericDecoder;
 use tap_code_decoder::TapCodeDecoder;
 use unicode_escape_decoder::UnicodeEscapeDecoder;
@@ -372,6 +377,10 @@ pub enum DecoderType {
     Z85Decoder(z85_decoder::Z85Decoder),
     /// braille decoder
     BrailleDecoder(braille_decoder::BrailleDecoder),
+    /// standard galactic alphabet decoder
+    StandardGalacticAlphabetDecoder(
+        standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder,
+    ),
     /// substitution decoder
     SubstitutionGenericDecoder(substitution_generic_decoder::SubstitutionGenericDecoder),
     /// brainfuck interpreter
@@ -540,6 +549,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ("Ascii85", DecoderBox::new(Decoder::<Ascii85Decoder>::new())),
         ("a1z26", DecoderBox::new(Decoder::<A1Z26Decoder>::new())),
         ("Braille", DecoderBox::new(Decoder::<BrailleDecoder>::new())),
+        (
+            "Standard Galactic Alphabet",
+            DecoderBox::new(Decoder::<StandardGalacticAlphabetDecoder>::new()),
+        ),
         (
             "simplesubstitution",
             DecoderBox::new(Decoder::<SubstitutionGenericDecoder>::new()),

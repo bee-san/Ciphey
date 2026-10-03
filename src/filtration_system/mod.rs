@@ -53,6 +53,7 @@ use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
 use crate::decoders::reverse_decoder::ReverseDecoder;
 use crate::decoders::rot47_decoder::ROT47Decoder;
+use crate::decoders::standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder;
 use crate::decoders::substitution_generic_decoder::SubstitutionGenericDecoder;
 use crate::decoders::tap_code_decoder::TapCodeDecoder;
 use crate::decoders::unicode_escape_decoder::UnicodeEscapeDecoder;
@@ -312,6 +313,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let ascii85 = Decoder::<Ascii85Decoder>::new();
     let a1z26decoder = Decoder::<A1Z26Decoder>::new();
     let brailledecoder = Decoder::<BrailleDecoder>::new();
+    let standard_galactic_alphabet = Decoder::<StandardGalacticAlphabetDecoder>::new();
     let substitution_generic = Decoder::<SubstitutionGenericDecoder>::new();
     let zlib = Decoder::<ZlibDecoder>::new();
     let gzip = Decoder::<GzipDecoder>::new();
@@ -404,6 +406,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(ascii85),
             Box::new(a1z26decoder),
             Box::new(brailledecoder),
+            Box::new(standard_galactic_alphabet),
             Box::new(substitution_generic),
             Box::new(gzip),
             Box::new(brainfuck),

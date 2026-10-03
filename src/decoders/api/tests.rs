@@ -510,6 +510,18 @@ fn rot47_cracks() {
 }
 
 #[test]
+fn standard_galactic_alphabet_decodes() {
+    assert_plaintext(&standard_galactic_alphabet("⍑ᒷꖎꖎ𝙹 ∴𝙹∷ꖎ↸"), "hello world");
+    let decoded = decode_with(
+        "galactic",
+        "ℸ ̣ ⍑ᒷ ᑑ⚍╎ᓵꖌ ʖ∷𝙹∴リ ⎓𝙹 ̇/",
+        &DecodeOptions::default(),
+    )
+    .expect("galactic is an alias");
+    assert_plaintext(&decoded, "the quick brown fox");
+}
+
+#[test]
 fn symbol_substitution_decodes() {
     // "hello" in binary, with A for 0 and B for 1
     assert_plaintext(

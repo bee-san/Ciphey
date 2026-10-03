@@ -140,6 +140,14 @@ input = "👄👜👜👫🐗👤👜🐗👘👫🐗👫👟👜🐗👦👣�
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# LingoJam's Standard Galactic Alphabet: t is `ℸ ̣ `, p is `!¡`, y is `||`, capitals kept
+kind = "single"
+name = "standard_galactic_alphabet"
+layers = ["Standard Galactic Alphabet"]
+input = "Mᒷᒷℸ ̣  ᒲᒷ ᔑℸ ̣  ℸ ̣ ⍑ᒷ 𝙹ꖎ↸ ꖎ╎⊣⍑ℸ ̣ ⍑𝙹⚍ᓭᒷ ᔑ⎓ℸ ̣ ᒷ∷ ᒲ╎↸リ╎⊣⍑ℸ ̣  ᔑリ↸ ʖ∷╎リ⊣ ℸ ̣ ⍑ᒷ ᒲᔑ!¡, ℸ ̣ ⍑ᒷ ꖌᒷ|| ᔑリ↸ ᔑ ℸ ̣ 𝙹∷ᓵ⍑."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "binary"
 layers = ["Binary"]
@@ -385,6 +393,14 @@ kind = "multi"
 name = "base100_base64"
 layers = ["Base100", "Base64"]
 input = "8J+RhPCfkZzwn5Gc8J+Rq/CfkJfwn5Gk8J+RnPCfkJfwn5GY8J+Rq/CfkJfwn5Gr8J+Rn/CfkZzwn5CX8J+RpvCfkaPwn5Gb8J+Ql/CfkaPwn5Gg8J+RnvCfkZ/wn5Gr8J+Rn/Cfkabwn5Gs8J+RqvCfkZzwn5CX8J+RmPCfkZ3wn5Gr8J+RnPCfkanwn5CX8J+RpPCfkaDwn5Gb8J+RpfCfkaDwn5Ge8J+Rn/Cfkavwn5CX8J+RmPCfkaXwn5Gb8J+Ql/CfkZnwn5Gp8J+RoPCfkaXwn5Ge8J+Ql/Cfkavwn5Gf8J+RnPCfkJfwn5Gk8J+RmPCfkafwn5Cj8J+Ql/Cfkavwn5Gf8J+RnPCfkJfwn5Gi8J+RnPCfkbDwn5CX8J+RmPCfkaXwn5Gb8J+Ql/CfkZjwn5CX8J+Rq/Cfkabwn5Gp8J+RmvCfkZ/wn5Cl"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# base64.b64encode of the UTF-8 of search/single/standard_galactic_alphabet
+kind = "multi"
+name = "standard_galactic_alphabet_base64"
+layers = ["Standard Galactic Alphabet", "Base64"]
+input = "TeGSt+GSt+KEuCDMoyAg4ZKy4ZK3IOGUkeKEuCDMoyAg4oS4IMyjIOKNkeGStyDwnZm56paO4oa4IOqWjuKVjuKKo+KNkeKEuCDMoyDijZHwnZm54pqN4ZOt4ZK3IOGUkeKOk+KEuCDMoyDhkrfiiLcg4ZKy4pWO4oa444Oq4pWO4oqj4o2R4oS4IMyjICDhlJHjg6rihrggypbiiLfilY7jg6riiqMg4oS4IMyjIOKNkeGStyDhkrLhlJEhwqEsIOKEuCDMoyDijZHhkrcg6paM4ZK3fHwg4ZSR44Oq4oa4IOGUkSDihLggzKMg8J2ZueKIt+GTteKNkS4="
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

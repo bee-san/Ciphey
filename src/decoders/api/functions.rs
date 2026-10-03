@@ -49,6 +49,7 @@ use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
 use crate::decoders::reverse_decoder::ReverseDecoder;
 use crate::decoders::rot47_decoder::ROT47Decoder;
+use crate::decoders::standard_galactic_alphabet_decoder::StandardGalacticAlphabetDecoder;
 use crate::decoders::substitution_generic_decoder::SubstitutionGenericDecoder;
 use crate::decoders::tap_code_decoder::TapCodeDecoder;
 use crate::decoders::unicode_escape_decoder::UnicodeEscapeDecoder;
@@ -517,6 +518,17 @@ decoder_functions! {
     /// assert_eq!(decoded.plaintext().unwrap().text, "HELLO WORLD");
     /// ```
     rot47: ROT47Decoder, aliases [], key Some(keys::ROT47);
+
+    /// Decodes the Standard Galactic Alphabet (Commander Keen, Minecraft's enchanting
+    /// table) written with look-alike Unicode symbols, as LingoJam's translator and
+    /// Python Ciphey write it. Capitals, digits and punctuation are kept.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::standard_galactic_alphabet("⍑ᒷꖎꖎ𝙹 ∴𝙹∷ꖎ↸");
+    /// assert_eq!(decoded.candidates[0].text, "hello world");
+    /// ```
+    standard_galactic_alphabet: StandardGalacticAlphabetDecoder,
+        aliases ["galactic", "sga", "enchanting_table"], key None;
 
     /// Decodes Morse code or binary written with other symbols, trying every way of
     /// mapping up to four symbols onto them. Ciphey calls this decoder
