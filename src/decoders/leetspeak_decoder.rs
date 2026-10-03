@@ -41,7 +41,6 @@
 use crate::checkers::CheckerTypes;
 use crate::decoders::interface::check_string_success;
 use once_cell::sync::Lazy;
-use std::collections::HashSet;
 
 use super::crack_results::CrackResult;
 use super::interface::Crack;
@@ -81,53 +80,54 @@ const MIN_INFLECTED_LEN: usize = 5;
 /// See [`SUFFIXES`].
 const MIN_STEM_LEN: usize = 3;
 
-/// Leet, CTF and computing words that the Project Gutenberg word list doesn't have.
+/// Leet, CTF and computing words that the Project Gutenberg word list doesn't have, in
+/// alphabetical order for binary search.
 const LEET_WORDS: &[&str] = &[
-    "LEET",
+    "ACCESS",
+    "ADMIN",
+    "AWESOME",
+    "CIPHER",
+    "CODE",
+    "CODING",
+    "CONGRATS",
+    "CRACKER",
+    "CTF",
+    "DUDE",
     "ELEET",
     "ELITE",
-    "NOOB",
-    "NEWB",
-    "PWN",
-    "PWNED",
-    "OWNED",
-    "HAX", // codespell:ignore
-    "HAXOR",
+    "EPIC",
+    "EXPLOIT",
+    "GAMER",
+    "GAMERS",
+    "GEEK",
     "HACK",
     "HACKED",
     "HACKER",
     "HACKERS",
-    "SKILLZ",
-    "WAREZ",
-    "RULEZ",
-    "SUX",
-    "ROX",
-    "PHREAK",
-    "EXPLOIT",
-    "CRACKER",
+    "HAX", // codespell:ignore
+    "HAXOR",
+    "INTERNET",
+    "LAMER",
+    "LEET",
+    "LINUX",
+    "LOGIN",
+    "NERD",
+    "NEWB",
+    "NOOB",
+    "ONLINE",
+    "OWNED",
     "PASSWORD",
     "PASSWORDS",
-    "ADMIN",
-    "LOGIN",
-    "USER",
-    "CODE",
-    "CODING",
-    "CIPHER",
-    "CTF",
-    "ACCESS",
-    "CONGRATS",
-    "AWESOME",
-    "DUDE",
-    "LAMER",
-    "GAMER",
-    "GAMERS",
-    "EPIC",
-    "GEEK",
-    "NERD",
-    "INTERNET",
-    "ONLINE",
+    "PHREAK",
+    "PWN",
+    "PWNED",
+    "ROX",
+    "RULEZ",
     "SERVER",
-    "LINUX",
+    "SKILLZ",
+    "SUX",
+    "USER",
+    "WAREZ",
 ];
 
 /// Leet symbols of more than one character and the letter each stands for, longest first:
@@ -150,14 +150,15 @@ const MULTI_SYMBOLS: [(&[u8], u8); 15] = [
     (b"><", b'x'),
 ];
 
-/// Upper-case English words: `english_words.txt` (from Project Gutenberg books, see
-/// `gen_quadgrams.py`) and [`LEET_WORDS`].
-static DICTIONARY: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+/// The words of `english_words.txt` (upper case, from Project Gutenberg books, see
+/// `gen_quadgrams.py`) in the file's alphabetical order, for binary search. A sorted list
+/// costs a tenth of a hash set to build, and is only built once a text gets past the
+/// first check.
+static ENGLISH_WORDS: Lazy<Vec<&'static str>> = Lazy::new(|| {
     include_str!("../storage/ngrams/english_words.txt")
         .lines()
         .map(str::trim)
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .chain(LEET_WORDS.iter().copied())
         .collect()
 });
 
@@ -563,20 +564,24 @@ fn substitutes_are_upper_case(core: &[u8]) -> bool {
     }
 }
 
-/// Whether the upper-case ASCII letters `word` are a word: in [`DICTIONARY`], or one of
-/// its words with a suffix from [`SUFFIXES`] or [`SUFFIXES_AFTER_E`].
+/// Whether the upper-case ASCII letters `word` are a word: in [`ENGLISH_WORDS`] or
+/// [`LEET_WORDS`], or one of their words with a suffix from [`SUFFIXES`] or
+/// [`SUFFIXES_AFTER_E`].
 fn is_word(word: &[u8]) -> bool {
     let Ok(word) = std::str::from_utf8(word) else {
         return false;
     };
-    let dictionary = &*DICTIONARY;
-    if dictionary.contains(word) {
+    let english_words = &*ENGLISH_WORDS;
+    let listed = |word: &str| {
+        english_words.binary_search(&word).is_ok() || LEET_WORDS.binary_search(&word).is_ok()
+    };
+    if listed(word) {
         return true;
     }
     if word.len() < MIN_INFLECTED_LEN {
         return false;
     }
-    let is_stem = |stem: &str| stem.len() >= MIN_STEM_LEN && dictionary.contains(stem);
+    let is_stem = |stem: &str| stem.len() >= MIN_STEM_LEN && listed(stem);
     if SUFFIXES
         .iter()
         .filter_map(|suffix| word.strip_suffix(suffix))
@@ -862,7 +867,14 @@ mod tests {
 
     #[test]
     fn dictionary_parses() {
-        assert!(DICTIONARY.len() > 11_000);
+        assert!(ENGLISH_WORDS.len() > 11_000);
+        // Binary search needs both lists in order
+        assert!(ENGLISH_WORDS.windows(2).all(|pair| pair[0] < pair[1]));
+        assert!(LEET_WORDS.windows(2).all(|pair| pair[0] < pair[1]));
+        for word in ENGLISH_WORDS.iter().chain(LEET_WORDS) {
+            assert!(word.bytes().all(|b| b.is_ascii_uppercase()), "{word:?}");
+            assert!(is_word(word.as_bytes()), "{word:?}");
+        }
         assert!(is_word(b"LIGHTHOUSE"));
         assert!(is_word(b"HELLO"));
         // Inflections of dictionary words
@@ -875,9 +887,6 @@ mod tests {
         assert!(!is_word(b"ZOZA"));
         assert!(!is_word(b"IEET"));
         assert!(!is_word(b"leet"));
-        for word in LEET_WORDS {
-            assert!(word.bytes().all(|b| b.is_ascii_uppercase()), "{word:?}");
-        }
     }
 
     #[test]
