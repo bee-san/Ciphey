@@ -24,10 +24,10 @@
 //!
 //! The search takes a fraction of a millisecond for a sentence and a few for a page, so
 //! text that isn't mostly letters is rejected first, in one pass and without allocating:
-//! it needs at least 20 ASCII letters, at most one other character that isn't a word
-//! separator (whitespace, or `_` as in CTF flags) per 12 letters (a digit, punctuation, a
-//! non-ASCII character...), and few changes from lower to upper case inside words. This
-//! rules out Base64, hexadecimal and the other encodings.
+//! it needs at least 20 ASCII letters, 8 of them different, at most one other character
+//! that isn't a word separator (whitespace, or `_` as in CTF flags) per 12 letters (a
+//! digit, punctuation, a non-ASCII character...), and few changes from lower to upper
+//! case inside words. This rules out Base64, hexadecimal and the other encodings.
 
 use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
@@ -40,6 +40,14 @@ use once_cell::sync::Lazy;
 /// Fewer ASCII letters than this and the text isn't searched: there is too little of it
 /// to tell the primer apart from the plaintext.
 const MIN_LETTERS: usize = 20;
+
+/// The fewest different letters worth searching. Autokey ciphertexts of 20 or more
+/// letters of English used at least 8 (with 5,000 random primers of 1 to 15 letters for
+/// each length from 20 to 200 letters), 13 from 40 letters on. A run of one letter, as the
+/// hexadecimal decoder makes of `ffff...`, decrypts to periodic text such as
+/// `foraroforaro...` that the checker can take for English, and the Baconian and DNA
+/// alphabets have 2 and 4 letters.
+const MIN_DISTINCT_LETTERS: u32 = 8;
 
 /// The text is only searched if it has at most one character that is neither an ASCII
 /// letter nor a word separator (whitespace or `_`) per this many letters. English
@@ -252,6 +260,8 @@ struct Census {
     /// Pairs of adjacent ASCII letters that are a lower-case letter followed by an
     /// upper-case one (`aB`).
     lower_upper_pairs: usize,
+    /// Bit `i` is set if the text has letter `i` (A is 0), in either case.
+    seen: u32,
 }
 
 impl Census {
@@ -263,6 +273,7 @@ impl Census {
         for c in text.chars() {
             if c.is_ascii_alphabetic() {
                 census.letters += 1;
+                census.seen |= 1 << (c.to_ascii_uppercase() as u8 - b'A');
                 if let Some(previous_lowercase) = previous_lowercase {
                     census.pairs += 1;
                     if previous_lowercase && c.is_ascii_uppercase() {
@@ -284,11 +295,12 @@ impl Census {
         census
     }
 
-    /// Whether the text could be English enciphered with an autokey: enough letters, few
-    /// characters that are neither letters nor word separators, and few changes from
-    /// lower to upper case inside words.
+    /// Whether the text could be English enciphered with an autokey: enough letters, and
+    /// enough different ones, few characters that are neither letters nor word
+    /// separators, and few changes from lower to upper case inside words.
     fn worth_searching(&self) -> bool {
         self.letters >= MIN_LETTERS
+            && self.seen.count_ones() >= MIN_DISTINCT_LETTERS
             && self.other * LETTERS_PER_OTHER <= self.letters
             && (self.pairs < MIN_PAIRS_FOR_CASE_GATE
                 || self.lower_upper_pairs * LOWER_UPPER_PAIRS_ONE_IN <= self.pairs)
@@ -898,6 +910,16 @@ mod tests {
     }
 
     #[test]
+    fn repeated_letter_is_rejected() {
+        // What the hexadecimal decoder makes of rot47 of a CTF challenge's `--_--___...`
+        // (encryptctf 2019, "Hard Looks"). With primer ARO it decrypts to periodic text,
+        // which the checker took for English at Medium sensitivity.
+        let text = "f".repeat(120);
+        assert_eq!(&decrypt(&text, "ARO")[..12], "foraroforaro");
+        assert!(crack(&text).unencrypted_text.is_none());
+    }
+
+    #[test]
     fn checks_before_the_search() {
         // Enough letters, and few characters that aren't letters or whitespace
         assert!(Census::of(LIGHTHOUSE).worth_searching());
@@ -909,18 +931,19 @@ mod tests {
         assert!(Census::of("abcdefghijkl, mnopqrstuvwx.").worth_searching());
         assert!(!Census::of("abcdefghijkl, mnopqrstuvwx.!").worth_searching());
         // The bench miss input: 46 letters and 25 others
+        let miss = Census::of(BENCH_MISS);
         assert_eq!(
-            Census::of(BENCH_MISS),
-            Census {
-                letters: 46,
-                whitespace: 15,
-                underscores: 2,
-                other: 25,
-                pairs: 23,
-                lower_upper_pairs: 7,
-            }
+            (
+                miss.letters,
+                miss.whitespace,
+                miss.underscores,
+                miss.other,
+                miss.pairs,
+                miss.lower_upper_pairs
+            ),
+            (46, 15, 2, 25, 23, 7)
         );
-        assert!(!Census::of(BENCH_MISS).worth_searching());
+        assert!(!miss.worth_searching());
         // Non-ASCII letters count as other characters
         assert_eq!(Census::of("éÖa ").other, 2);
         // Underscores separate words, like spaces
@@ -937,6 +960,13 @@ mod tests {
         assert!(
             Census::of("McDonald sold an iPhone to MacGregor for his eBay shop").worth_searching()
         );
+        // A run of one letter, which decrypts to periodic text such as `foraroforaro`, and
+        // the two letters of Bacon's cipher have too few different letters
+        assert!(!Census::of(&"f".repeat(120)).worth_searching());
+        assert!(!Census::of(&"AABBA BABAA ".repeat(10)).worth_searching());
+        assert_eq!(Census::of("abcdefgh abcdefgh abcd").seen.count_ones(), 8);
+        assert!(Census::of("abcdefgh abcdefgh abcd").worth_searching());
+        assert!(!Census::of("abcdefga abcdefga abcd").worth_searching());
     }
 
     #[test]
