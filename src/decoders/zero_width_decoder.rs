@@ -6,22 +6,23 @@
 //!
 //! Every tool does the same thing: drop the visible text, turn each invisible character
 //! into a digit and group the digits. They differ in the characters, the digits and the
-//! grouping. The decoder reads these, and the key says which one it found:
+//! grouping. The decoder reads these, in this order, and the key says which one it found:
 //!
 //! | Scheme | Characters and digits | Grouping | Key |
 //! | --- | --- | --- | --- |
-//! | Binary with a separator: the issue's example, [Steganographr], Endrem | any 3: a 0, a 1 and one between the bytes | 1 to 8 bits per UTF-8 byte (Steganographr drops leading zeros) | `separator U+200D, U+200B=0` |
-//! | Plain binary | any 2: a 0 and a 1 | 8 bits per UTF-8 byte | `binary U+200B=0` |
 //! | [330k]'s text mode | U+200C, U+200D, U+202C, U+FEFF = 0 to 3 | 8 digits per UTF-16 code unit | `330k text` |
 //! | 330k's binary mode | the same | 4 digits per UTF-8 byte | `330k binary` |
 //! | [zwsp-steg] `MODE_FULL` | U+200B to U+200F = 0 to 4 | 7 digits per UTF-16 code unit | `zwsp-steg full` |
 //! | zwsp-steg `MODE_ZWSP` | U+200B, U+200C, U+200D = 0 to 2 | 11 digits per UTF-16 code unit | `zwsp-steg zwsp` |
 //! | [zero-width-lib] | U+200E, U+200F, U+200C, U+200D, U+FEFF = 0 to 4 | one code point per group, U+200B between groups | `zero-width-lib` |
+//! | Plain binary | any 2: a 0 and a 1 | 8 bits per UTF-8 byte | `binary U+200B=0` |
+//! | Binary with a separator: the issue's example, [Steganographr], Endrem | any 3: a 0, a 1 and one between the bytes | 1 to 8 bits per UTF-8 byte (Steganographr drops leading zeros) | `separator U+200D, U+200B=0` |
 //!
-//! Steganographr also puts a U+FEFF before and after the message; the decoder drops them.
-//! The digit orders are the tools' own, so there are at most 13 readings of a text and
-//! no search over permutations. Readings that aren't valid UTF-8 or UTF-16, or that
-//! contain control characters, are dropped before the checker sees them; on real
+//! Binary is tried with either character as 0, and with each of the three as the
+//! separator. Steganographr also puts a U+FEFF before and after the message; the decoder
+//! drops them. The digit orders are the tools' own, so there are at most 13 readings of
+//! a text and no search over permutations. Readings that aren't valid UTF-8 or UTF-16,
+//! or that contain control characters, are dropped before the checker sees them; on real
 //! payloads one or two are left. StegCloak (encrypted and compressed) is not read.
 //!
 //! The zero-width characters are U+200B to U+200F, U+202A to U+202E, U+2060 to U+2064
@@ -70,9 +71,9 @@ use log::{debug, trace};
 /// ```
 pub struct ZeroWidthDecoder;
 
-/// Texts with fewer zero-width characters than this hide nothing. One hidden byte takes
-/// at least 8 of them in every scheme except Steganographr's, and a stray byte order mark
-/// or the joiners of a few emoji are not a message.
+/// Texts with fewer zero-width characters than this hide nothing. Eight are one byte in
+/// plain binary and two in 330k's binary mode, and a stray byte order mark or the joiners
+/// of a few emoji are not a message.
 const MIN_HIDDEN: usize = 8;
 
 /// Texts with more distinct zero-width characters than this hide nothing. zero-width-lib
@@ -147,7 +148,8 @@ impl Crack for Decoder<ZeroWidthDecoder> {
             }
         }
 
-        // Several schemes' keys can't be told apart once joined: theirs contain ", "
+        // A key per reading only works for one reading: the library splits a key on ", "
+        // to give each candidate its own, and the separator schemes' keys contain ", "
         if let [reading] = readings.as_slice() {
             results.key = Some(reading.key.clone());
         }

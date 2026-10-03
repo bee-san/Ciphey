@@ -154,9 +154,9 @@ fn should_try_decoder(decoder: &(dyn Crack + Sync), last: Option<&crate::CrackRe
 }
 
 /// Whether the decoder of `step` is tagged `program`: its output can be a tiny part of its
-/// input by design. A steganography decoder returns the message without its cover text
-/// (Zero-width: at most one hidden character per 7 to 9 zero-width characters, in a
-/// cover of any length), and an interpreter prints less than its program.
+/// input by design. A steganography decoder (Zero-width) returns the hidden message
+/// without its cover text, which can be any length, and an interpreter prints less than
+/// its program.
 fn shrinks_by_design(step: &crate::CrackResult) -> bool {
     DECODER_MAP
         .get(step.decoder)
