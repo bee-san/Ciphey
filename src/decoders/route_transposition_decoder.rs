@@ -28,12 +28,16 @@
 //! 1. At most 5,000 characters, at least 10 ASCII letters, and letters make up at least
 //!    80% of the characters that aren't whitespace. This rules out hexadecimal, binary,
 //!    Morse code and most gibberish in one pass over the text.
-//! 2. The text doesn't read as English already (by its quadgram score): then there is
+//! 2. English letter frequencies. A transposition moves the letters but doesn't change
+//!    them, so Base64, Caesar, Vigenère and other substitutions of English, whose letters
+//!    are not English's, can't be one.
+//! 3. The text doesn't read as English already (by its quadgram score): then there is
 //!    nothing to undo.
 
 use super::crack_results::CrackResult;
 use super::interface::{check_string_success, Crack, Decoder};
 use crate::checkers::CheckerTypes;
+use crate::storage::ENGLISH_FREQS;
 use gibberish_or_not::Sensitivity;
 use log::{debug, trace};
 use once_cell::sync::Lazy;
@@ -49,6 +53,23 @@ const MAX_CHARS: usize = 5_000;
 
 /// Fewer ASCII letters than this and a wrong reading scores as well as the right one.
 const MIN_LETTERS: usize = 10;
+
+/// The mean log10 English frequency of the letters of English text, from
+/// [`ENGLISH_FREQS`]: Σ p·log10 p is -1.257, and windows of 10 to 400 letters of Ciphey's
+/// docs have a median of -1.26 at every length.
+const ENGLISH_LETTER_FIT: f64 = -1.26;
+
+/// How far below [`ENGLISH_LETTER_FIT`], times the square root of the number of letters,
+/// a transposition of English may score. No window of 10 to 400 letters of Ciphey's docs
+/// (594 paragraphs, 88,000 letters) is more than 1.63 below. Base64 of English is always
+/// further from 66 letters on, and ROT13 of English 94% of the time; Atbash, other shifts,
+/// Vigenère and random letters are in between. Pangrams that use each letter once are just
+/// outside, the issue's `SPHINXOFBLACKQUARTZJUDGEMYVOW` among them.
+const LETTER_FIT_SPREAD: f64 = 2.0;
+
+/// Texts with more letters than this are held to the bound for this many: their letter
+/// frequencies vary with the subject more than by chance.
+const LETTER_FIT_LETTERS: usize = 200;
 
 /// Most columns tried. Puzzles rarely use more, and every extra width adds readings that
 /// can outscore the right one by chance.
@@ -93,6 +114,9 @@ static QUADGRAMS: Lazy<Box<[f32]>> =
 /// Upper-case English words.
 static DICTIONARY: Lazy<Dictionary> =
     Lazy::new(|| Dictionary::parse(include_str!("../storage/ngrams/english_words.txt")));
+
+/// log10 of the English frequency of each letter A to Z.
+static LETTER_LOG10: Lazy<[f64; 26]> = Lazy::new(|| ENGLISH_FREQS.map(f64::log10));
 
 /// The route transposition cracker. Call:
 /// `let decoder = Decoder::<RouteTranspositionDecoder>::new()` to create one,
@@ -221,6 +245,8 @@ enum Reason {
     TooFewLetters,
     /// Under 80% of the characters that aren't whitespace are ASCII letters.
     NotLetters,
+    /// The letters aren't English letters in another order, see [`fits_english_letters`].
+    LetterFrequencies,
     /// It reads as English already.
     AlreadyEnglish,
     /// No reading reads like English, or the checker rejected the ones that do.
@@ -243,8 +269,12 @@ fn crack_text<T>(
     stats: &mut Stats,
     confirm: &mut dyn FnMut(&str, Sensitivity) -> Option<T>,
 ) -> Outcome<T> {
-    if let Err(reason) = check_letters(text) {
-        return Outcome::Failed(reason);
+    let counts = match check_letters(text) {
+        Ok(counts) => counts,
+        Err(reason) => return Outcome::Failed(reason),
+    };
+    if !fits_english_letters(&counts) {
+        return Outcome::Failed(Reason::LetterFrequencies);
     }
     let ciphertext = Ciphertext::new(text);
     if ciphertext.fitness(0..ciphertext.chars.len()) >= ENGLISH_FITNESS {
@@ -304,21 +334,23 @@ fn crack_text<T>(
 }
 
 /// The first cheap check, in one pass over `text` and without allocating: at most
-/// [`MAX_CHARS`] characters, at least [`MIN_LETTERS`] ASCII letters, and letters make up
-/// at least 80% of the characters that aren't whitespace. Hexadecimal (11% letters),
-/// binary, Morse code and the benchmark's gibberish (63%) fail; Base64 (86 to 88%) passes
-/// and is left to the ranking.
-fn check_letters(text: &str) -> Result<(), Reason> {
+/// [`MAX_CHARS`] characters, at least [`MIN_LETTERS`] ASCII letters, and letters make up at
+/// least 80% of the characters that aren't whitespace. Hexadecimal (11% letters), binary,
+/// Morse code and the benchmark's gibberish (63%) fail; Base64 (86 to 88%) passes and is
+/// left to [`fits_english_letters`]. Returns how often each letter occurs.
+fn check_letters(text: &str) -> Result<[usize; 26], Reason> {
     // A character takes at most four bytes
     if text.len() > 4 * MAX_CHARS {
         return Err(Reason::TooLong);
     }
+    let mut counts = [0; 26];
     let mut chars = 0;
     let mut letters = 0;
     let mut visible = 0;
     for c in text.chars() {
         chars += 1;
         if c.is_ascii_alphabetic() {
+            counts[usize::from(c.to_ascii_uppercase() as u8 - b'A')] += 1;
             letters += 1;
             visible += 1;
         } else if !c.is_whitespace() {
@@ -332,8 +364,26 @@ fn check_letters(text: &str) -> Result<(), Reason> {
     } else if letters * 5 < visible * 4 {
         Err(Reason::NotLetters)
     } else {
-        Ok(())
+        Ok(counts)
     }
+}
+
+/// Whether letters occurring `counts` times could be English letters in another order:
+/// their mean log10 English frequency is at most [`LETTER_FIT_SPREAD`] / √letters below
+/// [`ENGLISH_LETTER_FIT`]. A transposition doesn't change the letters, so this rejects
+/// the Base64, Caesar and Vigenère texts a search mostly sees without making a reading.
+fn fits_english_letters(counts: &[usize; 26]) -> bool {
+    let letters: usize = counts.iter().sum();
+    if letters == 0 {
+        return false;
+    }
+    let total: f64 = counts
+        .iter()
+        .zip(LETTER_LOG10.iter())
+        .map(|(&count, log_freq)| count as f64 * log_freq)
+        .sum();
+    let bound = LETTER_FIT_SPREAD / (letters.min(LETTER_FIT_LETTERS) as f64).sqrt();
+    total / letters as f64 >= ENGLISH_LETTER_FIT - bound
 }
 
 /// The characters that are transposed.
@@ -606,15 +656,16 @@ impl Key {
 }
 
 /// Fills `order` as [`Key::order`] does for a spiral over a full grid of `rows` by
-/// `columns` cells: the route walks from `corner` along the edge, turning whenever the
-/// next cell is outside the grid or already read.
+/// `columns` cells: the route starts at `corner`, runs along the edge and turns at each
+/// corner, then does the same on the grid inside. Each run but the first two is one cell
+/// shorter than the run two before it: a route that starts along a row runs `columns`,
+/// `rows - 1`, `columns - 1`, `rows - 2`, ... cells, until a run would be empty.
 fn spiral(rows: usize, columns: usize, corner: Corner, clockwise: bool, order: &mut Vec<usize>) {
     let len = rows * columns;
-    // usize::MAX marks the cells the route hasn't reached yet
-    order.resize(len, usize::MAX);
+    order.resize(len, 0);
     // The start, and the first direction as an index into STEPS. Clockwise from the top
     // left goes right, counter-clockwise goes down, and so on.
-    let (mut row, mut column, mut direction) = match (corner, clockwise) {
+    let (start_row, start_column, mut direction) = match (corner, clockwise) {
         (Corner::TopLeft, true) => (0, 0, 0),
         (Corner::TopLeft, false) => (0, 0, 1),
         (Corner::TopRight, true) => (0, columns - 1, 1),
@@ -625,31 +676,30 @@ fn spiral(rows: usize, columns: usize, corner: Corner, clockwise: bool, order: &
         (Corner::BottomLeft, false) => (rows - 1, 0, 0),
     };
     let turn = if clockwise { 1 } else { 3 };
-    for step in 0..len {
-        order[row * columns + column] = step;
-        if step + 1 == len {
-            break;
+    // Cells in this run, and in the run before it
+    let (mut run, mut previous) = if STEPS[direction].0 == 0 {
+        (columns, rows)
+    } else {
+        (rows, columns)
+    };
+    // One step before the start, so that every run steps onto its first cell
+    let (row_step, column_step) = STEPS[direction];
+    let mut row = start_row as isize - row_step;
+    let mut column = start_column as isize - column_step;
+    let mut step = 0;
+    while run > 0 {
+        let (row_step, column_step) = STEPS[direction];
+        for _ in 0..run {
+            row += row_step;
+            column += column_step;
+            order[row as usize * columns + column as usize] = step;
+            step += 1;
         }
-        // One turn is always enough on a spiral, but stop rather than loop if not
-        let next = (0..4).find_map(|_| {
-            let (row_step, column_step) = STEPS[direction];
-            let next_row = row.wrapping_add_signed(row_step);
-            let next_column = column.wrapping_add_signed(column_step);
-            if next_row < rows
-                && next_column < columns
-                && order[next_row * columns + next_column] == usize::MAX
-            {
-                Some((next_row, next_column))
-            } else {
-                direction = (direction + turn) % 4;
-                None
-            }
-        });
-        match next {
-            Some((next_row, next_column)) => (row, column) = (next_row, next_column),
-            None => break,
-        }
+        direction = (direction + turn) % 4;
+        // `previous` is at least 1: the grid's other side, or the run before this one
+        (run, previous) = (previous - 1, run);
     }
+    debug_assert_eq!(step, len);
 }
 
 impl Corner {
@@ -829,6 +879,9 @@ mod tests {
 
     /// [`LIGHTHOUSE`] in hexadecimal, the bench `medium` input of that decoder.
     const HEX: &str = "4d656574206d6520617420746865206f6c64206c69676874686f757365206166746572206d69646e6967687420616e64206272696e6720746865206d61702c20746865206b657920616e64206120746f7263682e";
+
+    /// [`LIGHTHOUSE`] in Base64, the bench `medium` input of that decoder.
+    const BASE64: &str = "TWVldCBtZSBhdCB0aGUgb2xkIGxpZ2h0aG91c2UgYWZ0ZXIgbWlkbmlnaHQgYW5kIGJyaW5nIHRoZSBtYXAsIHRoZSBrZXkgYW5kIGEgdG9yY2gu";
 
     /// [`LIGHTHOUSE`] in ROT13, Atbash and Vigenère (key KEY), the bench `medium` inputs
     /// of those decoders.
@@ -1104,18 +1157,27 @@ mod tests {
     #[test]
     fn issue_pangram_is_ranked_first_but_not_confirmed() {
         // 5 columns. Athena rejects this pangram at every sensitivity, and dictionary
-        // words cover only 76% of it, so it is never checked.
+        // words cover only 76% of it, so it would never be checked. Its letters, one of
+        // each, are too far from English frequencies for crack to rank it at all.
         let ranked = rank_candidates(SPHINX_5_COLUMNS);
         assert_eq!(ranked[0].key, key(Route::Columns, 5));
         assert_eq!(ranked[0].text, SPHINX);
         assert!((ranked[0].fitness + 5.72).abs() < 0.01, "{ranked:?}");
         assert!(word_coverage(SPHINX) < MIN_COVERAGE);
 
-        let (outcome, stats, asked) = crack_counted(SPHINX_5_COLUMNS);
-        assert!(matches!(outcome, Outcome::Failed(Reason::NotFound)));
-        assert_eq!(stats.built, 39);
-        assert!(asked.is_empty());
+        assert_rejected_early(SPHINX_5_COLUMNS, Reason::LetterFrequencies);
         assert_fails(SPHINX_5_COLUMNS);
+    }
+
+    #[test]
+    fn pangram_with_common_letters_is_cracked() {
+        // Unlike the issue's pangram, this one repeats THE and passes the letter check
+        let plaintext = "THEQUICKBROWNFOXJUMPSOVERTHELAZYDOG";
+        assert_cracks(
+            &encrypt(plaintext, key(Route::Columns, 5)),
+            plaintext,
+            "5 columns",
+        );
     }
 
     #[test]
@@ -1279,6 +1341,7 @@ mod tests {
         );
         assert_rejected_early(HEX, Reason::NotLetters);
         assert_rejected_early(MISS, Reason::NotLetters);
+        assert_rejected_early(BASE64, Reason::LetterFrequencies);
         assert_rejected_early("hello world", Reason::AlreadyEnglish);
         assert_rejected_early(LIGHTHOUSE, Reason::AlreadyEnglish);
         assert_rejected_early(LIGHTHOUSE_LETTERS, Reason::AlreadyEnglish);
@@ -1308,11 +1371,37 @@ mod tests {
     }
 
     #[test]
-    fn base64_is_ranked_out_without_a_check() {
-        let (outcome, stats, asked) = crack_counted("aGVsbG8gdGhlcmUgZ2VuZXJhbA==");
+    fn letters_of_other_ciphers_are_rejected_before_any_reading() {
+        // Base64, ROT13, Atbash and Vigenère of the lighthouse sentence: the letters of a
+        // transposition of English are English letters, and these aren't
+        assert_rejected_early(BASE64, Reason::LetterFrequencies);
+        for text in SUBSTITUTIONS {
+            assert_rejected_early(text, Reason::LetterFrequencies);
+        }
+        // Base64 of a short text can get through, and is ranked out without a check
+        let short = "dGhlIGtleSBpcyBoZXJl";
+        assert!(fits_english_letters(&check_letters(short).unwrap()));
+        let (outcome, stats, asked) = crack_counted(short);
         assert!(matches!(outcome, Outcome::Failed(Reason::NotFound)));
         assert!(stats.built > 0);
         assert!(asked.is_empty());
+    }
+
+    #[test]
+    fn english_letters_fit() {
+        let fits = |text: &str| fits_english_letters(&check_letters(text).unwrap());
+        for text in [
+            LIGHTHOUSE,
+            LIGHTHOUSE_LETTERS,
+            LIGHTHOUSE_7_COLUMNS,
+            "HOLEWDLOLR",
+            "EJXCTEDECDAEWRIORFEONALEVSE",
+            CIPHEY,
+        ] {
+            assert!(fits(text), "{text:?}");
+        }
+        assert!(!fits(BASE64));
+        assert!(!fits("XYZZYQUUXJAZZ"));
     }
 
     #[test]
