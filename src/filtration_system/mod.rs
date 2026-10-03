@@ -22,6 +22,7 @@ use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
 use crate::decoders::hexdump_decoder::HexdumpDecoder;
 use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
+use crate::decoders::polybius_decoder::PolybiusDecoder;
 use crate::DecoderResult;
 
 use crate::decoders::base58_flickr_decoder::Base58FlickrDecoder;
@@ -300,6 +301,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let atbashdecoder = Decoder::<AtbashDecoder>::new();
     let baconian = Decoder::<BaconianDecoder>::new();
     let baudot = Decoder::<BaudotDecoder>::new();
+    let polybius = Decoder::<PolybiusDecoder>::new();
     let caesardecoder = Decoder::<CaesarDecoder>::new();
     let affine = Decoder::<AffineDecoder>::new();
     let railfencedecoder = Decoder::<RailfenceDecoder>::new();
@@ -379,6 +381,9 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // After Baconian: both read groups of five 0s and 1s, and when two decoders
             // find plaintext in the same step the search reports the one listed first.
             Box::new(baudot),
+            // Before rot47, which shifts digits to other digits that LemmeKnow can take for
+            // a number it knows, and so can win a tie in the same search step
+            Box::new(polybius),
             Box::new(caesardecoder),
             Box::new(affine),
             Box::new(railfencedecoder),

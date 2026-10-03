@@ -109,6 +109,8 @@ pub mod hexdump_decoder;
 pub mod html_entity_decoder;
 /// The octal_decoder module decodes octal
 pub mod octal_decoder;
+/// The polybius_decoder module decodes the Polybius square cipher
+pub mod polybius_decoder;
 
 /// The base58_ripple_decoder module decodes base58 ripple
 pub mod base58_ripple_decoder;
@@ -244,6 +246,7 @@ use monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use morse_code::MorseCodeDecoder;
 use multi_tap_decoder::MultiTapDecoder;
 use octal_decoder::OctalDecoder;
+use polybius_decoder::PolybiusDecoder;
 use punycode_decoder::PunycodeDecoder;
 use quoted_printable_decoder::QuotedPrintableDecoder;
 use railfence_decoder::RailfenceDecoder;
@@ -282,6 +285,8 @@ pub enum DecoderType {
     BaconianDecoder(baconian_decoder::BaconianDecoder),
     /// baudot (ITA2) decoder
     BaudotDecoder(baudot_decoder::BaudotDecoder),
+    /// Polybius square decoder
+    PolybiusDecoder(polybius_decoder::PolybiusDecoder),
     /// base32 decoder
     Base32Decoder(base32_decoder::Base32Decoder),
     /// base36 decoder
@@ -511,6 +516,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<BaconianDecoder>::new()),
         ),
         ("Baudot", DecoderBox::new(Decoder::<BaudotDecoder>::new())),
+        (
+            "Polybius Square",
+            DecoderBox::new(Decoder::<PolybiusDecoder>::new()),
+        ),
         ("caesar", DecoderBox::new(Decoder::<CaesarDecoder>::new())),
         ("Affine", DecoderBox::new(Decoder::<AffineDecoder>::new())),
         (

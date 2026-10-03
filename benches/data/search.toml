@@ -249,6 +249,14 @@ input = "11100 00001 00001 10000 00100 11100 00001 00100 00011 10000 00100 10000
 expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP, THE KEY AND A TORCH."
 
 [[case]]
+# pycipher 0.5.2 PolybiusSquare, standard 5x5 square, one word at a time
+kind = "single"
+name = "polybius"
+layers = ["Polybius Square"]
+input = "32 15 15 44  32 15  11 44  44 23 15  34 31 14  31 24 22 23 44 23 34 45 43 15  11 21 44 15 42  32 24 14 33 24 22 23 44  11 33 14  12 42 24 33 22  44 23 15  32 11 35  44 23 15  25 15 54  11 33 14  11  44 34 42 13 23"
+expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP THE KEY AND A TORCH"
+
+[[case]]
 kind = "single"
 name = "railfence"
 layers = ["railfence"]
