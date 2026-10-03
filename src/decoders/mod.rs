@@ -228,10 +228,10 @@ pub mod zero_width_decoder;
 /// The monoalphabetic_substitution_decoder module cracks simple substitution ciphers
 pub mod monoalphabetic_substitution_decoder;
 
-/// The yunying_decoder module decodes the 01248 (Yunying) cipher, letters as sums of 1, 2, 4 and 8
-pub mod yunying_decoder;
 /// The t9_decoder module decodes T9 predictive text (phone keypad digits)
 pub mod t9_decoder;
+/// The yunying_decoder module decodes the 01248 (Yunying) cipher, letters as sums of 1, 2, 4 and 8
+pub mod yunying_decoder;
 
 use atbash_decoder::AtbashDecoder;
 use backslash_escape_decoder::BackslashEscapeDecoder;
