@@ -353,6 +353,16 @@ fn hexadecimal_decodes() {
 }
 
 #[test]
+fn hexdump_decodes() {
+    assert_plaintext(
+        &hexdump(
+            "00000000  48 65 6c 6c 6f 2c 20 57  6f 72 6c 64 21           |Hello, World!|\n0000000d",
+        ),
+        "Hello, World!",
+    );
+}
+
+#[test]
 fn html_entities_decode() {
     assert_first(
         &html_entities("&#72;&#101;&#108;&#108;&#111;&#32;&#38;&#97;&#109;&#112;&#59;&#32;&#103;&#111;&#111;&#100;&#98;&#121;&#101;"),

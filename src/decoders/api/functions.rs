@@ -33,6 +33,7 @@ use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
 use crate::decoders::decimal_decoder::DecimalDecoder;
 use crate::decoders::gzip_decoder::GzipDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
+use crate::decoders::hexdump_decoder::HexdumpDecoder;
 use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
 use crate::decoders::jwt_decoder::JwtDecoder;
 use crate::decoders::mime_encoded_word_decoder::MimeEncodedWordDecoder;
@@ -341,6 +342,17 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "hello world");
     /// ```
     hexadecimal: HexadecimalDecoder, aliases ["hex", "base16"], key None;
+
+    /// Decodes a hex dump back to the bytes that were dumped: the output of `xxd`,
+    /// `hexdump -C`, `od` and similar. The offsets and the ASCII column are ignored.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::hexdump(
+    ///     "00000000: 4865 6c6c 6f2c 2057 6f72 6c64 21         Hello, World!",
+    /// );
+    /// assert_eq!(decoded.candidates[0].text, "Hello, World!");
+    /// ```
+    hexdump: HexdumpDecoder, aliases ["xxd", "od"], key None;
 
     /// Decodes HTML entities such as `&lt;`, `&#233;` and `&#x2615;`.
     ///
