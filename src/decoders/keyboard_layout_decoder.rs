@@ -52,7 +52,7 @@
 //!   keys, so text with them can't have been typed on it, and reading as AZERTY leaves
 //!   them as they are.
 //! * Typing one key to the side on the same layout (`jr;;p ept;f`) is a different cipher,
-//!   the keyboard shift (<https://github.com/bee-san/Ciphey/issues/976>).
+//!   the keyboard shift, which the Keyboard shift decoder cracks.
 //!
 //! References: <https://www.dcode.fr/keyboard-change-cipher>,
 //! <https://en.wikipedia.org/wiki/Dvorak_keyboard_layout>, <https://colemak.com/> and
