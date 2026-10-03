@@ -292,6 +292,20 @@ fn baudot_decodes() {
 }
 
 #[test]
+fn big_integer_decodes() {
+    assert_plaintext(
+        &big_integer(
+            "flag = 50937517511040843800057610630687734629648772740622533002167079526478786571835272839786109",
+        ),
+        "flag{long_to_bytes_is_not_encryption}",
+    );
+    assert_eq!(
+        decoder_info("long_to_bytes").unwrap().name,
+        "Big integer to bytes"
+    );
+}
+
+#[test]
 fn binary_decodes() {
     assert_plaintext(
         &binary("01010011011100000110100001101001011011100111100000100000011011110110011000100000011000100110110001100001011000110110101100100000011100010111010101100001011100100111010001111010"),

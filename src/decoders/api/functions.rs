@@ -25,6 +25,7 @@ use crate::decoders::base85_decoder::Base85Decoder;
 use crate::decoders::base91_decoder::Base91Decoder;
 use crate::decoders::base92_decoder::Base92Decoder;
 use crate::decoders::baudot_decoder::BaudotDecoder;
+use crate::decoders::big_integer_decoder::BigIntegerDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::braille_decoder::BrailleDecoder;
 use crate::decoders::brainfuck_interpreter::BrainfuckInterpreter;
@@ -266,6 +267,16 @@ decoder_functions! {
     /// assert_eq!(plaintext.key.as_deref(), Some("MSB-first, US-TTY"));
     /// ```
     baudot: BaudotDecoder, aliases ["ita2", "murray"], key None;
+
+    /// Decodes a big integer: the bytes of the text read as one big-endian number and
+    /// written in decimal, as PyCryptodome's `long_to_bytes` decodes it. An optional
+    /// `name =` prefix (`m = 4149…`) and Python 2's trailing `L` are accepted.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::big_integer("126207244316550804821666916");
+    /// assert_eq!(decoded.candidates[0].text, "hello world");
+    /// ```
+    big_integer: BigIntegerDecoder, aliases ["long_to_bytes", "bigint"], key None;
 
     /// Decodes character codes written in binary, trying every code length from 1 to 24
     /// bits.
