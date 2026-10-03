@@ -137,6 +137,8 @@ pub mod base91_decoder;
 pub mod base92_decoder;
 /// The citrix_ctx1_decoder module decodes citrix ctx1
 pub mod citrix_ctx1_decoder;
+/// The core_socialist_values_decoder module decodes the Core Socialist Values encoding (社会主义核心价值观)
+pub mod core_socialist_values_decoder;
 /// The crack_results module defines the CrackResult
 /// Each and every decoder return same CrackResult
 pub mod crack_results;
@@ -259,6 +261,7 @@ use base92_decoder::Base92Decoder;
 use braille_decoder::BrailleDecoder;
 use caesar_decoder::CaesarDecoder;
 use citrix_ctx1_decoder::CitrixCTX1Decoder;
+use core_socialist_values_decoder::CoreSocialistValuesDecoder;
 use gzip_decoder::GzipDecoder;
 use jwt_decoder::JwtDecoder;
 use leetspeak_decoder::LeetspeakDecoder;
@@ -361,6 +364,8 @@ pub enum DecoderType {
     Base92Decoder(base92_decoder::Base92Decoder),
     /// citrix ctx1 decoder
     CitrixCtx1Decoder(citrix_ctx1_decoder::CitrixCTX1Decoder),
+    /// core socialist values decoder
+    CoreSocialistValuesDecoder(core_socialist_values_decoder::CoreSocialistValuesDecoder),
     /// jwt decoder
     JwtDecoder(jwt_decoder::JwtDecoder),
     /// leetspeak decoder
@@ -516,6 +521,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Citrix Ctx1",
             DecoderBox::new(Decoder::<CitrixCTX1Decoder>::new()),
+        ),
+        (
+            "Core Socialist Values",
+            DecoderBox::new(Decoder::<CoreSocialistValuesDecoder>::new()),
         ),
         ("JWT", DecoderBox::new(Decoder::<JwtDecoder>::new())),
         (

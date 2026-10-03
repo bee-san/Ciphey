@@ -343,6 +343,18 @@ fn citrix_ctx1_decodes() {
 }
 
 #[test]
+fn core_socialist_values_decodes() {
+    assert_plaintext(
+        &core_socialist_values("公正爱国公正平等公正友善公正公正友善公正公正诚信平等文明富强法治法治公正诚信平等法治文明公正诚信文明公正自由"),
+        "hello world",
+    );
+    assert_eq!(
+        decoder_info("社会主义核心价值观").unwrap().name,
+        "Core Socialist Values"
+    );
+}
+
+#[test]
 fn decimal_decodes() {
     assert_plaintext(
         &decimal("String.fromCharCode(102,108,97,103,123,100,101,99,105,109,97,108,125)"),

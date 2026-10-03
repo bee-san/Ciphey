@@ -247,6 +247,14 @@ input = "OIENINCIOIENJMDJLMBJNBHELEBBJEDBPFFAIBCEKBAENFHALNBINIHNPIFNJHDCPLFOJPD
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# valuesEncode from sym233/core-values-encoder@a419ea5, every A to F written with 诚信 (10)
+kind = "single"
+name = "core_socialist_values"
+layers = ["Core Socialist Values"]
+input = "自由诚信和谐公正平等公正平等法治自由文明富强公正诚信和谐公正平等文明富强公正民主法治自由文明富强法治自由公正爱国公正平等文明富强公正诚信平等公正诚信文明公正自由文明富强公正诚信文明公正敬业公正法治公正爱国法治自由公正爱国公正诚信平等法治平等法治和谐公正平等文明富强公正民主公正公正法治自由公正平等法治文明文明富强公正诚信和谐公正敬业公正自由公正诚信自由公正敬业公正法治公正爱国法治自由文明富强公正民主公正诚信自由公正自由文明富强公正文明法治文明公正敬业公正诚信自由公正法治文明富强法治自由公正爱国公正平等文明富强公正诚信和谐公正民主法治富强文明诚信文明文明富强法治自由公正爱国公正平等文明富强公正诚信民主公正平等法治敬业文明富强公正民主公正诚信自由公正自由文明富强公正民主文明富强法治自由公正诚信平等法治文明公正和谐公正爱国文明诚信自由"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "rot13"
 layers = ["caesar"]

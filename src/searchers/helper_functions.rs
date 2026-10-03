@@ -85,6 +85,8 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         "Base92",
         "Base65536",
         "Base100",
+        // Chinese CTFs wrap it in Base64 or hex, and hide Base64 inside it
+        "Core Socialist Values",
         "Z85",
         "Ascii85",
         "Uuencode",

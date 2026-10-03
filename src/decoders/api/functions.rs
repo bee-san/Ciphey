@@ -31,6 +31,7 @@ use crate::decoders::braille_decoder::BrailleDecoder;
 use crate::decoders::brainfuck_interpreter::BrainfuckInterpreter;
 use crate::decoders::caesar_decoder::CaesarDecoder;
 use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
+use crate::decoders::core_socialist_values_decoder::CoreSocialistValuesDecoder;
 use crate::decoders::decimal_decoder::DecimalDecoder;
 use crate::decoders::dna_codon_decoder::DnaCodonDecoder;
 use crate::decoders::dtmf_decoder::DtmfDecoder;
@@ -336,6 +337,18 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "hello world");
     /// ```
     citrix_ctx1: CitrixCTX1Decoder, aliases ["ctx1"], key None;
+
+    /// Decodes the Core Socialist Values encoding (社会主义核心价值观编码): the UTF-8
+    /// bytes of the text as base-12 digits, each written as one of the twelve
+    /// two-character values from 富强 (0) to 友善 (11).
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::core_socialist_values(
+    ///     "公正爱国公正平等公正友善公正公正友善公正公正诚信平等文明富强法治法治公正诚信平等法治文明公正诚信文明公正自由",
+    /// );
+    /// assert_eq!(decoded.candidates[0].text, "hello world");
+    /// ```
+    core_socialist_values: CoreSocialistValuesDecoder, aliases ["core_values", "社会主义核心价值观"], key None;
 
     /// Decodes character codes written in decimal, also as `String.fromCharCode(...)`.
     ///

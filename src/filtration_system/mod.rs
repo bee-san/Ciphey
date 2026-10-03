@@ -41,6 +41,7 @@ use crate::decoders::base92_decoder::Base92Decoder;
 use crate::decoders::braille_decoder::BrailleDecoder;
 use crate::decoders::caesar_decoder::CaesarDecoder;
 use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
+use crate::decoders::core_socialist_values_decoder::CoreSocialistValuesDecoder;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::gzip_decoder::GzipDecoder;
 use crate::decoders::interface::{Crack, Decoder};
@@ -293,6 +294,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let base85 = Decoder::<Base85Decoder>::new();
     let base91 = Decoder::<Base91Decoder>::new();
     let base92 = Decoder::<Base92Decoder>::new();
+    let core_socialist_values = Decoder::<CoreSocialistValuesDecoder>::new();
     let base65536 = Decoder::<Base65536Decoder>::new();
     let base100 = Decoder::<Base100Decoder>::new();
     let citrix_ctx1 = Decoder::<CitrixCTX1Decoder>::new();
@@ -366,6 +368,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(base91),
             Box::new(base92),
             Box::new(base85),
+            // Before Base65536, whose alphabet has some of the same Han characters and which
+            // decodes this encoding to junk: when two decoders find plaintext in the same
+            // step, the search reports the one listed first.
+            Box::new(core_socialist_values),
             Box::new(base65536),
             // Before rot47, which reads each emoji as its low byte and so turns Base100 of
             // printable ASCII back into the ASCII with a shift of 9
