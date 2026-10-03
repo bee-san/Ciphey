@@ -473,7 +473,7 @@ fn decompress_with(
 /// bzip2 (`BZh` and a block size digit) or zlib (`78` and a valid RFC 1950 header, the
 /// first byte the Zlib decoder's raw view wants).
 fn is_compressed(bytes: &[u8]) -> bool {
-    let is_bzip2 = bytes.len() > 3 && bytes.starts_with(b"BZh") && bytes[3].is_ascii_digit();
+    let is_bzip2 = bytes.len() > 3 && bytes.starts_with(b"BZh") && matches!(bytes[3], b'1'..=b'9');
     let is_zlib = bytes.len() >= 8
         && bytes[0] == 0x78
         && u16::from_be_bytes([bytes[0], bytes[1]]).is_multiple_of(31)
@@ -872,6 +872,8 @@ mod tests {
         for binary in [
             &b"\x00\x01\x02\x03\x04\x05\x06\x07"[..],
             b"BZh",
+            // bzip2 block sizes are 1 to 9
+            b"BZh01AY&SY",
             b"x\x9c",
             // 78 9D fails the RFC 1950 header check
             b"x\x9d\x00\x00\x00\x00\x00\x00",
