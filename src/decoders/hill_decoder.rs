@@ -22,11 +22,12 @@
 //! 3. Up to three that read like English go to the checker.
 //!
 //! Ciphey runs every decoder on every text the search expands, so cheap checks first turn
-//! away, in one pass over the bytes and without allocating, text that can't be the Hill
-//! ciphertext of English (see [`ciphertext_letters`]): too few letters, too many other
-//! characters (Base64, hex), a letter count that isn't a multiple of 2 or 3, or a long text
-//! with English letter frequencies. Text that reads as English already is turned away
-//! before the key search.
+//! away text that can't be the Hill ciphertext of English (see [`ciphertext_letters`]):
+//! too few letters, too many other characters (Base64, hex), a letter count that isn't a
+//! multiple of 2 or 3, English's letter frequencies (English, rearranged or substituted),
+//! letter pairs that an Affine key (Caesar and Atbash included) makes English, or text
+//! that reads as English already. Most of them cost one pass over the bytes, without
+//! allocating.
 
 use super::affine_decoder::{inverse_mod_26, BIGRAM_LOG_PROBS};
 use super::crack_results::CrackResult;
@@ -64,6 +65,31 @@ const IOC_MIN_LETTERS: usize = 100;
 /// A key that is a permutation matrix times a number keeps the IoC of English, but such a
 /// key only rearranges an Affine encryption within each block.
 const MAX_IOC: f64 = 0.062;
+
+/// The letter frequencies are only checked from this many letters (see
+/// [`MAX_LETTER_SCORE`]): in shorter texts they vary too much.
+const LETTER_SCORE_MIN_LETTERS: usize = 60;
+
+/// Highest mean [`LETTER_SCORES`] (100 · log10 of the English frequency of each letter) of a
+/// Hill ciphertext of at least [`LETTER_SCORE_MIN_LETTERS`] letters. A Hill key spreads the
+/// letters out, while English and every rearrangement of it (Reverse, rail fence) keep
+/// English's letter frequencies. On 1,000 windows per length of two books outside the
+/// quadgram corpus (Project Gutenberg 98 and 2600), random 2×2 Hill encryptions scored at
+/// most -137.1 (at 80 letters) and 3×3 ones -145.8, while English scored above this in
+/// 98.7% of windows of 60 letters and 99.7% of 100.
+const MAX_LETTER_SCORE: i32 = -133;
+
+/// Affine keys are only tried on texts of at least this many letters (see
+/// [`AFFINE_PAIR_SCORE`]): on shorter ones Hill ciphertexts can score like English.
+const AFFINE_MIN_LETTERS: usize = 40;
+
+/// Lowest mean [`PAIR_SCORES`] (100 · ln P) per pair of consecutive letters that an Affine
+/// key (Caesar shifts and Atbash included) must give a text, from [`AFFINE_MIN_LETTERS`]
+/// letters on, for it to be left to the Caesar, Atbash and Affine decoders as an Affine
+/// encryption of English. On the same windows, Affine encryptions of English scored at
+/// least this under their own key in 94.5% of windows of 40 letters, 97.7% of 60 and 99.4%
+/// of 100, while 2×2 and 3×3 Hill encryptions never scored above -612 under any key.
+const AFFINE_PAIR_SCORE: i32 = -580;
 
 /// Quadgram fitness (the mean log10 probability of a text's quadgrams) at or above which a
 /// text reads as English. Input that does is not decrypted, and a decryption that doesn't
@@ -396,8 +422,8 @@ struct Ciphertext {
     try_3x3: bool,
 }
 
-/// The ASCII letters of `text`, if it could be the Hill ciphertext of English. Every check
-/// but the last runs on the counts of one pass over the bytes:
+/// The ASCII letters of `text`, if it could be the Hill ciphertext of English. The first
+/// checks run on the counts of one pass over the bytes:
 /// 1. At least [`MIN_LETTERS`] ASCII letters.
 /// 2. At most one character that isn't an ASCII letter or whitespace (non-ASCII included)
 ///    per [`OTHER_ONE_IN`] letters.
@@ -406,7 +432,14 @@ struct Ciphertext {
 /// 4. With at least [`IOC_MIN_LETTERS`] letters, an index of coincidence of at most
 ///    [`MAX_IOC`]: English, and any Caesar, Atbash, Affine or other substitution of it,
 ///    has more repeated letters.
-/// 5. The letters don't read as English already (see [`ENGLISH_FITNESS`]).
+/// 5. With at least [`LETTER_SCORE_MIN_LETTERS`] letters, letter frequencies unlike
+///    English's (see [`MAX_LETTER_SCORE`]), as in English rearranged by Reverse or rail
+///    fence.
+///
+/// Then, on the letters:
+/// 6. With at least [`AFFINE_MIN_LETTERS`] letters, no Affine key, Caesar and Atbash
+///    included, decrypts them to English letter pairs (see [`AFFINE_PAIR_SCORE`]).
+/// 7. They don't read as English already (see [`ENGLISH_FITNESS`]).
 fn ciphertext_letters(text: &str) -> Option<Ciphertext> {
     let mut counts = [0u32; 26];
     let mut letters = 0usize;
@@ -447,9 +480,25 @@ fn ciphertext_letters(text: &str) -> Option<Ciphertext> {
             return None;
         }
     }
+    if letters >= LETTER_SCORE_MIN_LETTERS {
+        let total: i64 = counts
+            .iter()
+            .zip(LETTER_SCORES.iter())
+            .map(|(&count, &score)| i64::from(count) * i64::from(score))
+            .sum();
+        if total > i64::from(MAX_LETTER_SCORE) * letters as i64 {
+            trace!("Hill: the letters have English's frequencies");
+            return None;
+        }
+    }
 
     let letters = letters_of(text);
-    let fitness = fitness(&letters[..letters.len().min(SCORE_LETTERS)]);
+    let scored = &letters[..letters.len().min(SCORE_LETTERS)];
+    if letters.len() >= AFFINE_MIN_LETTERS && affine_reads_as_english(scored, &counts) {
+        trace!("Hill: an Affine key decrypts the text");
+        return None;
+    }
+    let fitness = fitness(scored);
     if fitness >= ENGLISH_FITNESS {
         trace!("Hill: the text reads as English already (fitness {fitness:.2})");
         return None;
@@ -458,6 +507,60 @@ fn ciphertext_letters(text: &str) -> Option<Ciphertext> {
         letters,
         try_2x2,
         try_3x3,
+    })
+}
+
+/// How many of the 312 Affine keys, the best by the letter frequencies they give, are
+/// scored by letter pairs in [`affine_reads_as_english`]. On 2,000 Affine encryptions of
+/// English per length (40, 60 and 80 letters), the best 4 found a key that reads as
+/// English as often as trying all 312 did.
+const AFFINE_KEYS_TRIED: usize = 8;
+
+/// The 312 Affine decryption tables `p = a(c - b) mod 26`, Caesar shifts (`a = 1`, the
+/// identity first) and Atbash included.
+static AFFINE_KEYS: Lazy<Vec<[u8; 26]>> = Lazy::new(|| {
+    [1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25]
+        .into_iter()
+        .flat_map(|a: usize| {
+            (0..26).map(move |b| {
+                let mut key = [0u8; 26];
+                for (c, plain) in key.iter_mut().enumerate() {
+                    *plain = (a * (c + 26 - b) % 26) as u8;
+                }
+                key
+            })
+        })
+        .collect()
+});
+
+/// Whether some Affine key, the identity, a Caesar shift or Atbash included, turns the
+/// pairs of consecutive `letters` (at least 2) into English ones: a mean [`PAIR_SCORES`]
+/// of at least [`AFFINE_PAIR_SCORE`]. Only the [`AFFINE_KEYS_TRIED`] keys whose
+/// decryptions have the most English letter frequencies, by `counts` (how often each
+/// letter occurs in the text), are tried.
+fn affine_reads_as_english(letters: &[u8], counts: &[u32; 26]) -> bool {
+    let letter_scores = &*LETTER_SCORES;
+    let mut best = Best::new(AFFINE_KEYS_TRIED);
+    for (index, key) in AFFINE_KEYS.iter().enumerate() {
+        let score: i64 = counts
+            .iter()
+            .zip(key)
+            .map(|(&count, &plain)| i64::from(count) * i64::from(letter_scores[usize::from(plain)]))
+            .sum();
+        best.offer(score, index);
+    }
+    let needed = AFFINE_PAIR_SCORE * (letters.len() as i32 - 1);
+    let pair_scores = &*PAIR_SCORES;
+    best.items.iter().any(|&(_, index)| {
+        let key = &AFFINE_KEYS[index];
+        let score: i32 = letters
+            .windows(2)
+            .map(|pair| {
+                pair_scores[usize::from(key[usize::from(pair[0])])]
+                    [usize::from(key[usize::from(pair[1])])]
+            })
+            .sum();
+        score >= needed
     })
 }
 
@@ -544,32 +647,13 @@ fn rank_matrices(letters: &[u8], search: &Search, ranked: &mut Vec<Ranked>) {
         .map(|row| row_letters(&row[..size], scored))
         .collect();
 
-    // within[i][j]: the letter pairs row i then row j make inside each of the first
-    // PAIR_LETTERS letters' blocks, and across[i][j]: row i at the end of a block followed
-    // by row j at the start of the next. A matrix with a row twice is singular, so i == j
-    // is never needed.
-    let pairs = &*BIGRAM_LOG_PROBS;
-    let paired_blocks = PAIR_LETTERS.min(scored.len()) / size;
+    // Letter pairs are scored on the first PAIR_LETTERS letters. A matrix with the same
+    // row twice is singular, so pairs of a row with itself are never needed.
+    let blocks = PAIR_LETTERS.min(scored.len()) / size;
     let count = rows.len();
-    let mut within = vec![0.0f32; count * count];
-    let mut across = vec![0.0f32; count * count];
-    for (i, first) in decrypted.iter().enumerate() {
-        let first = &first[..paired_blocks];
-        for (j, second) in decrypted.iter().enumerate() {
-            if i == j {
-                continue;
-            }
-            let second = &second[..paired_blocks];
-            let pair = |(&a, &b): (&u8, &u8)| pairs[usize::from(a)][usize::from(b)];
-            within[i * count + j] = first.iter().zip(second).map(pair).sum();
-            across[i * count + j] = first.iter().zip(&second[1..]).map(pair).sum();
-        }
-    }
-    let pair_score = |table: &[f32], i: usize, j: usize| table[i * count + j];
 
-    // The matrices, in the order of their rows' ranks, with the most English letter pairs.
-    // On equal scores the first offered is kept, so the result doesn't depend on anything
-    // but the scores.
+    // The matrices with the most English letter pairs. On equal scores the first offered
+    // is kept, so the result only depends on the scores.
     let mut shortlist = Best::new(QUADGRAM_SCORED);
     let entries: Vec<[i32; 3]> = rows.iter().map(|row| row.map(i32::from)).collect();
     if size == 2 {
@@ -577,27 +661,44 @@ fn rank_matrices(letters: &[u8], search: &Search, ranked: &mut Vec<Ranked>) {
             for (j, b) in entries.iter().enumerate() {
                 let determinant = (a[0] * b[1] - a[1] * b[0]).rem_euclid(26);
                 let diagonal = a[1] == 0 && b[0] == 0;
-                if is_unit(determinant) && !diagonal {
-                    let score = pair_score(&within, i, j) + pair_score(&across, j, i);
+                if i != j && is_unit(determinant) && !diagonal {
+                    let (first, second) = (&decrypted[i], &decrypted[j]);
+                    let score =
+                        pairs_within(first, second, blocks) + pairs_across(second, first, blocks);
                     shortlist.offer(score, [i, j, 0]);
                 }
             }
         }
     } else {
+        // within[i][j]: row i then row j inside a block; across[i][j]: row i at the end of
+        // a block, then row j at the start of the next
+        let mut within = vec![0i32; count * count];
+        let mut across = vec![0i32; count * count];
+        for i in 0..count {
+            for j in (0..count).filter(|&j| j != i) {
+                within[i * count + j] = pairs_within(&decrypted[i], &decrypted[j], blocks);
+                across[i * count + j] = pairs_across(&decrypted[i], &decrypted[j], blocks);
+            }
+        }
         for (i, a) in entries.iter().enumerate() {
             for (j, b) in entries.iter().enumerate() {
+                if i == j {
+                    continue;
+                }
+                let upper_diagonal = a[1] == 0 && a[2] == 0 && b[0] == 0 && b[2] == 0;
                 for (k, c) in entries.iter().enumerate() {
+                    if k == i || k == j {
+                        continue;
+                    }
                     // Expanded along the first row
                     let determinant = (a[0] * (b[1] * c[2] - b[2] * c[1])
                         + a[1] * (b[2] * c[0] - b[0] * c[2])
                         + a[2] * (b[0] * c[1] - b[1] * c[0]))
                         .rem_euclid(26);
-                    let diagonal = a[1] == 0 && a[2] == 0 && b[0] == 0 && b[2] == 0;
-                    let diagonal = diagonal && c[0] == 0 && c[1] == 0;
+                    let diagonal = upper_diagonal && c[0] == 0 && c[1] == 0;
                     if is_unit(determinant) && !diagonal {
-                        let score = pair_score(&within, i, j)
-                            + pair_score(&within, j, k)
-                            + pair_score(&across, k, i);
+                        let score =
+                            within[i * count + j] + within[j * count + k] + across[k * count + i];
                         shortlist.offer(score, [i, j, k]);
                     }
                 }
@@ -627,6 +728,36 @@ fn rank_matrices(letters: &[u8], search: &Search, ranked: &mut Vec<Ranked>) {
 /// Whether `determinant`, 0 to 25, is coprime with 26, so a matrix with it is invertible.
 fn is_unit(determinant: i32) -> bool {
     determinant % 2 == 1 && determinant != 13
+}
+
+/// The score of every letter pair, `round(100 · ln P)` of the Affine decoder's
+/// [`BIGRAM_LOG_PROBS`] (from `english_bigrams.txt`): whole numbers, so that adding them up
+/// is fast and the shortlist of [`rank_matrices`] has no rounding.
+static PAIR_SCORES: Lazy<[[i32; 26]; 26]> = Lazy::new(|| {
+    BIGRAM_LOG_PROBS.map(|row| row.map(|log_probability| (100.0 * log_probability).round() as i32))
+});
+
+/// The score of the letter pairs `first[b]`, `second[b]` for each of the first `blocks`
+/// blocks: two rows' letters, the second right after the first in each block.
+fn pairs_within(first: &[u8], second: &[u8], blocks: usize) -> i32 {
+    let table = &*PAIR_SCORES;
+    first[..blocks]
+        .iter()
+        .zip(&second[..blocks])
+        .map(|(&a, &b)| table[usize::from(a)][usize::from(b)])
+        .sum()
+}
+
+/// The score of the letter pairs `first[b]`, `second[b + 1]` for each of the first `blocks`
+/// blocks: two rows' letters, the first at the end of a block and the second at the start
+/// of the next.
+fn pairs_across(first: &[u8], second: &[u8], blocks: usize) -> i32 {
+    let table = &*PAIR_SCORES;
+    first[..blocks.saturating_sub(1)]
+        .iter()
+        .zip(&second[1..blocks])
+        .map(|(&a, &b)| table[usize::from(a)][usize::from(b)])
+        .sum()
 }
 
 /// The `keep` best-scoring items offered so far, best first. On equal scores the item
@@ -714,10 +845,10 @@ fn best_rows(letters: &[u8], search: &Search) -> Vec<[u8; 3]> {
         for second in 0..if size == 2 { 1 } else { 26u8 } {
             if second > 0 {
                 for (partial, &letter) in partials.iter_mut().zip(&seconds) {
-                    *partial += letter;
-                    if *partial >= 26 {
-                        *partial -= 26;
-                    }
+                    // Both are below 26, so the sum is below 52: if it is 26 or more,
+                    // `sum - 26` doesn't wrap and is the smaller of the two
+                    let sum = *partial + letter;
+                    *partial = sum.min(sum.wrapping_sub(26));
                 }
             }
             let mut totals = [0i16; 32];
@@ -726,6 +857,10 @@ fn best_rows(letters: &[u8], search: &Search) -> Vec<[u8; 3]> {
                 for (total, &score) in totals.iter_mut().zip(scores) {
                     *total = total.saturating_add(score);
                 }
+            }
+            let best_total = totals[..26].iter().copied().max().unwrap_or(i16::MIN);
+            if !best.wants(best_total) {
+                continue;
             }
             for (last, &score) in (0..26u8).zip(&totals) {
                 if !best.wants(score) {
@@ -1253,6 +1388,42 @@ mod tests {
         // Below IOC_MIN_LETTERS letters the IoC isn't checked
         let letters = ciphertext_letters(&encrypt(LIGHTHOUSE, &KEY_3_3_2_5)).unwrap();
         assert!(letters.try_2x2 && letters.try_3x3);
+    }
+
+    #[test]
+    fn pre_checks_turn_away_rearranged_and_substituted_english() {
+        use crate::decoders::{affine_decoder, caesar_decoder, railfence_decoder};
+        // English rearranged keeps English's letter frequencies
+        let reversed: String = LIGHTHOUSE.chars().rev().collect();
+        let rail_fence = railfence_decoder::railfence_decoder(LIGHTHOUSE, 3, 0);
+        // Caesar, Atbash and Affine keys turn the letter pairs back into English ones
+        let caesar = caesar_decoder::caesar(LIGHTHOUSE, 3);
+        let atbash = affine_decoder::decrypt(LIGHTHOUSE, 25, 25);
+        let affine = affine_decoder::decrypt(LIGHTHOUSE, 7, 3);
+        for text in [&reversed, &rail_fence, &caesar, &atbash, &affine] {
+            assert!(ciphertext_letters(text).is_none(), "{text}");
+        }
+        // Shorter than the checks need: left to the key search, which finds nothing
+        let short_caesar = caesar_decoder::caesar(&LIGHTHOUSE[..38], 3);
+        assert!(ciphertext_letters(&short_caesar).is_some());
+        assert!(rank(&ciphertext_letters(&short_caesar).unwrap()).is_empty());
+    }
+
+    #[test]
+    fn every_hill_vector_passes_the_pre_checks() {
+        for text in [
+            "XTPJPUOUCKEGFCURFTYH",
+            "pgQVJFCohpccuyBSbwxcxpVZCAATRT",
+            "WSRZWSFRAVCAQLFKNVAVYYOEPZRGJQHFLONVFMWPCJLDXDHIKYYVHIQOUWWPFRPJBN",
+            "QAEQLUHAKWJCTPURKDKFHKQMJKGCCDDWQRKDXNDHRUCIDAJNJUXAJNYSEDEGCCNBLL",
+            "VLFTLWVGACOCLZKHLVVMPBKIIZJRWFPZGXANTUCLBXVTJSYNVGAPEXUSPNCLOMNNNCARIS",
+            LONG_CIPHERTEXT,
+            &encrypt(DICKENS, &KEY_2_4_5),
+            &encrypt(DICKENS, &[[11, 8], [3, 7]]),
+            &encrypt(LIGHTHOUSE_SPACED, &KEY_3_3_2_5),
+        ] {
+            assert!(ciphertext_letters(text).is_some(), "{text}");
+        }
     }
 
     #[test]
