@@ -421,8 +421,9 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(backslash_escape),
             Box::new(utf16),
             // Before rot47: when two decoders find plaintext in the same step the search
-            // reports the one listed first, and rot47 shifts 01248 digits into strings
-            // LemmeKnow takes for Litecoin addresses (`88421…` to `LLHFE…`).
+            // reports the one listed first, and rot47 can shift 01248 digits into strings
+            // LemmeKnow takes for Litecoin addresses (the issue example `88421…` becomes
+            // `LLHFE…`).
             Box::new(yunying),
             Box::new(rot47decoder),
             Box::new(z85),
