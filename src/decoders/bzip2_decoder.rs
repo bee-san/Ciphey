@@ -536,6 +536,27 @@ mod tests {
     }
 
     #[test]
+    fn decodes_and_identifies_the_benchmark_texts() {
+        // benches/data/decoders.toml: base64.b64encode(bz2.compress(text)) of the 84 and
+        // 576 character texts
+        let medium = "QlpoOTFBWSZTWWMBlygAAAkVgEAFAAI/794gIABIap5TNE9IwmyBEGQaGgDSU96PsiI3NPoK9qUAyQVg2dJPrHtnqvgZALhY1snmgBge3nckj1SElkwWxL4u5IpwoSDGAy5Q";
+        let result = crack(medium);
+        assert!(result.success, "Athena should identify the plaintext");
+        assert_eq!(
+            result.unencrypted_text.unwrap(),
+            ["Meet me at the old lighthouse after midnight and bring the map, the key and a torch."]
+        );
+
+        let long = "QlpoOTFBWSZTWV1uyQEAADiXgEAFCiIAID/v3/AwAXWCQanoImFB5J6RppoET1J5MoNAeoNABpkKZNNNExENMml1UONSBOIUWjyEXOvQMSyYLFJe9GDQ4qzNygdIGlhJJTbelG6SE61osm0dzZX53RyHKJOCLQmbQ2awd6duAAiC/6TPAlh5VZiKLbITY+pj1Djx1Di91p0WySIJJyeB2ghXiB4vuT7T977RTGFnenVNQqhKYuhRxkVcLbWLRrWoeu0MNlgNvCHLX2VpPKQDuuXDouCRE3423GPFaqac1FL/dcrINfFuhmJbPiDrv7+Td6tpZD6LW71RlpxhM7SZKCAIvC+QdHGYYOIW7VDbPniLjI0he+efs2j19hMAjvG6qBknq2r3YRjipTU1pI+GBmHiwumy2g7JaAQmHyQJt8dbBTlDW1fsQ2gNCGqbAmaqugRz3KEznZ4zZiXGCLB+POv+LuSKcKEgut2SAg==";
+        let result = crack(long);
+        assert!(result.success, "Athena should identify the plaintext");
+        let text = &result.unencrypted_text.unwrap()[0];
+        assert_eq!(text.len(), 576);
+        assert!(text.starts_with("Ciphey is an automated decoding tool."));
+        assert!(text.ends_with("a strange string in a log file."));
+    }
+
+    #[test]
     fn decodes_and_identifies_a_ctf_flag() {
         // base64.b64encode(bz2.compress(b"flag{bzip2_block_sorting}"))
         let result = crack("QlpoOTFBWSZTWWimefAAAAOLgBAAAAC5rdwaIAAxTJiZBkYUABso2o0tbq4WS6BPmU+BXUPi7kinChINFM8+AA==");
