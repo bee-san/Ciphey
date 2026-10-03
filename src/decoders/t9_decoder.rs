@@ -21,8 +21,9 @@
 //! 1. The text starts with a digit and has nothing but digits, whitespace and `-,;:./|*#`.
 //! 2. It has at least 3 digits from 2 to 9, the digits that are letters.
 //! 3. Not every word is one digit repeated, like Multi-tap's `44 33 555`.
-//!
-//! Then at most one word in four may be missing from the dictionary.
+//! 4. At most one word in four may be missing from the dictionary. Words of 1 or 2 digits
+//!    are checked first, against a table built at compile time, so Decimal, Octal and A1Z26
+//!    text (`77 101 101 116` splits into `77 6`) fails without loading the dictionary.
 
 use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
@@ -97,6 +98,46 @@ static WORDS: Lazy<HashMap<u64, Vec<Word>>> = Lazy::new(|| {
         include_str!("../storage/ngrams/english_quadgrams.txt"),
     )
 });
+
+/// Whether each key string of 1 or 2 digits (8 to 15 and 64 to 127, see [`word_key`]) has a
+/// dictionary word, read from the same word lists at compile time. Decimal, Octal and A1Z26
+/// text splits into numbers like these at its `0`s and `1`s, so it can be rejected without
+/// building [`WORDS`].
+static SHORT_WORDS: [bool; 128] = mark_short_words(
+    mark_short_words(
+        [false; 128],
+        include_bytes!("../storage/ngrams/english_words.txt"),
+    ),
+    EXTRA_WORDS.as_bytes(),
+);
+
+/// Marks the key strings of the words of 1 or 2 letters in `words` in `table`. Words are
+/// runs of upper-case letters, and lines that start with `#` are skipped.
+const fn mark_short_words(mut table: [bool; 128], words: &[u8]) -> [bool; 128] {
+    let mut i = 0;
+    while i < words.len() {
+        if words[i] == b'#' && (i == 0 || words[i - 1] == b'\n') {
+            while i < words.len() && words[i] != b'\n' {
+                i += 1;
+            }
+            continue;
+        }
+        let start = i;
+        let mut key = 1;
+        while i < words.len() && words[i].is_ascii_uppercase() {
+            if i - start < 2 {
+                key = (key << 3) | LETTER_KEYS[(words[i] - b'A') as usize] as usize;
+            }
+            i += 1;
+        }
+        match i - start {
+            0 => i += 1,
+            1 | 2 => table[key] = true,
+            _ => {}
+        }
+    }
+    table
+}
 
 /// The T9 decoder, call:
 /// `let t9_decoder = Decoder::<T9Decoder>::new()` to create a new instance
@@ -185,6 +226,9 @@ impl Crack for Decoder<T9Decoder> {
 pub(crate) fn candidates(text: &str) -> Option<Vec<String>> {
     let text = text.trim();
     let tokens = tokenize(text.as_bytes())?;
+    if too_many_unknown_short_words(&tokens) {
+        return None;
+    }
     let words = look_up(&tokens)?;
 
     // Only the tokens with more than one word make a choice
@@ -268,6 +312,21 @@ fn is_separator(byte: u8) -> bool {
             byte,
             b'-' | b',' | b';' | b':' | b'.' | b'/' | b'|' | b'*' | b'#'
         )
+}
+
+/// Whether the tokens that certainly aren't words, those of 1 or 2 digits that no word has
+/// and those longer than every word, are already more than one token in four, so
+/// [`look_up`] would fail too. This needs no dictionary: Decimal (`77 101 101 116`), Octal
+/// and A1Z26 text fails here without building it.
+fn too_many_unknown_short_words(tokens: &[Token]) -> bool {
+    let unknown = tokens
+        .iter()
+        .filter(|token| match token.key {
+            Some(key) => key < 128 && !SHORT_WORDS[key as usize],
+            None => true,
+        })
+        .count();
+    unknown * 4 > tokens.len()
 }
 
 /// The dictionary words of each token, `None` for tokens that aren't a word. Returns `None`
@@ -375,12 +434,32 @@ fn best_sentences(choices: &[&[Word]], count: usize) -> Vec<Vec<Pick>> {
     }]);
     let mut seen: HashSet<Vec<Pick>> = HashSet::new();
 
-    while let Some(sentence) = queue.pop() {
-        if best.len() + 1 == count {
-            best.push(sentence.picks);
+    while best.len() < count {
+        let Some(sentence) = queue.pop() else {
             break;
+        };
+        // The last sentence needs no successors
+        if best.len() + 1 < count {
+            for next in successors(&sentence, choices) {
+                if seen.insert(next.picks.clone()) {
+                    queue.push(next);
+                }
+            }
         }
-        for (choice, words) in choices.iter().enumerate() {
+        best.push(sentence.picks);
+    }
+    best
+}
+
+/// The sentences that differ from `sentence` by picking the next word for one token.
+fn successors<'a>(
+    sentence: &'a Pending,
+    choices: &'a [&[Word]],
+) -> impl Iterator<Item = Pending> + 'a {
+    choices
+        .iter()
+        .enumerate()
+        .filter_map(move |(choice, words)| {
             let at = sentence.picks.partition_point(|pick| pick.choice < choice);
             let current = match sentence.picks.get(at) {
                 Some(pick) if pick.choice == choice => pick.alternative,
@@ -388,7 +467,7 @@ fn best_sentences(choices: &[&[Word]], count: usize) -> Vec<Vec<Pick>> {
             };
             let next = current + 1;
             if next == words.len() {
-                continue;
+                return None;
             }
             let mut picks = sentence.picks.clone();
             if current == 0 {
@@ -402,15 +481,10 @@ fn best_sentences(choices: &[&[Word]], count: usize) -> Vec<Vec<Pick>> {
             } else {
                 picks[at].alternative = next;
             }
-            if seen.insert(picks.clone()) {
-                let score =
-                    sentence.score + i64::from(words[next].score) - i64::from(words[current].score);
-                queue.push(Pending { score, picks });
-            }
-        }
-        best.push(sentence.picks);
-    }
-    best
+            let score =
+                sentence.score + i64::from(words[next].score) - i64::from(words[current].score);
+            Some(Pending { score, picks })
+        })
 }
 
 /// A dictionary word and how likely it is.
@@ -514,6 +588,9 @@ impl QuadgramCounts {
     ///
     /// `None` if the word has characters other than A to Z.
     fn score(&self, word: &[u8]) -> Option<i32> {
+        if !word.iter().all(u8::is_ascii_uppercase) {
+            return None;
+        }
         let total = self.total.max(1) as f64;
         let log10_probability = |count: f64| (count / total).log10();
         let score = match word.len() {
@@ -546,8 +623,9 @@ fn ngram_index(letters: &[u8]) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::{
-        best_sentences, build_dictionary, candidates, tokenize, word_key, Pick, QuadgramCounts,
-        T9Decoder, Word, EXTRA_WORDS, KEYPAD, MAX_WORD_LEN, SCORE_SCALE, WORDS,
+        best_sentences, build_dictionary, candidates, mark_short_words, tokenize,
+        too_many_unknown_short_words, word_key, Pick, QuadgramCounts, T9Decoder, Word, EXTRA_WORDS,
+        KEYPAD, MAX_WORD_LEN, SCORE_SCALE, SHORT_WORDS, WORDS,
     };
     use crate::checkers::athena::Athena;
     use crate::checkers::checker_type::{Check, Checker};
@@ -919,6 +997,8 @@ mod tests {
             score((3.0 / total).log10() + (0.5 / total).log10())
         );
         assert_eq!(counts.score(b"ABcD"), None);
+        assert_eq!(counts.score(b"a"), None);
+        assert_eq!(counts.score(b"A-"), None);
     }
 
     #[test]
@@ -939,6 +1019,59 @@ mod tests {
         assert_eq!(texts("GOODS"), ["GOODS"]);
         assert_eq!(texts("A"), ["A"]);
         assert_eq!(dictionary.len(), 4);
+    }
+
+    #[test]
+    fn short_word_table_matches_the_dictionary() {
+        for key in 0..128u64 {
+            assert_eq!(
+                SHORT_WORDS[key as usize],
+                WORDS.contains_key(&key),
+                "key string {key:#b}"
+            );
+        }
+        // A, I; AM, AN, ...; HI and OK are among EXTRA_WORDS
+        assert_eq!(SHORT_WORDS.iter().filter(|&&word| word).count(), 23);
+        assert!(SHORT_WORDS[word_key(b"HI").unwrap() as usize]);
+        assert!(!SHORT_WORDS[word_key(b"D").unwrap() as usize]);
+        // Comment lines and words of 3 or more letters don't count
+        let table = mark_short_words([false; 128], b"# AB CD\nTHE\nOK\n\nX Y-Z#B");
+        let marked: Vec<u64> = (0..128).filter(|&key| table[key as usize]).collect();
+        let mut expected: Vec<u64> = ["OK", "X", "Y", "Z", "B"]
+            .iter()
+            .map(|word| word_key(word.as_bytes()).unwrap())
+            .collect();
+        expected.sort_unstable();
+        // X, Y and Z are all on key 9, B on key 2
+        expected.dedup();
+        assert_eq!(marked, expected);
+    }
+
+    #[test]
+    fn rejects_short_numbers_without_the_dictionary() {
+        // Decimal, Octal and A1Z26 `Meet me at...`, split at their 0s and 1s
+        for text in [
+            "77 101 101 116 32 109 101 32 97 116 32 116 104 101",
+            "115 145 145 164 40 155 145 40 141 164 40 164 150 145",
+            "13-5-5-20 13-5 1-20 20-8-5 15-12-4 12-9-7-8-20-8-15-21-19-5 11-5-25",
+            "8675309",
+            "192.168.0.1",
+            // A token longer than every word
+            "99999999999999999999 843",
+        ] {
+            let tokens = tokenize(text.as_bytes()).expect(text);
+            assert!(too_many_unknown_short_words(&tokens), "for {text:?}");
+        }
+        // T9 text passes, even when most of its words are short
+        for text in [
+            "43556 96753",
+            "4 5683 968 76 6824",
+            "47 48 843",
+            "2 247439 2 2",
+        ] {
+            let tokens = tokenize(text.as_bytes()).expect(text);
+            assert!(!too_many_unknown_short_words(&tokens), "for {text:?}");
+        }
     }
 
     #[test]
@@ -1012,6 +1145,7 @@ mod tests {
         assert_eq!(best_sentences(&ties(2), 20), expected);
         assert_eq!(best_sentences(&ties(1), 5).len(), 3);
         assert_eq!(best_sentences(&[], 5), [Vec::<Pick>::new()]);
+        assert!(best_sentences(&ties(2), 0).is_empty());
     }
 
     #[test]
