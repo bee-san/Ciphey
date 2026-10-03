@@ -639,4 +639,17 @@ mod tests {
         assert!(result_passes_sanity(&path(&["Base64", "AAEncode"]), 1405));
         assert!(!result_passes_sanity(&path(&["Base64", "Base64"]), 1405));
     }
+
+    #[test]
+    fn sanity_lets_jsfuck_shrink_text() {
+        // jsfuck.js 0.4.0 writes `hello world` in 4,103 characters: 11 * 20 < 4,103
+        assert!(result_passes_sanity(
+            &result_node("hello world", "JSFuck", "English Checker"),
+            4103
+        ));
+        assert!(!result_passes_sanity(
+            &result_node("hello world", "Base64", "English Checker"),
+            4103
+        ));
+    }
 }

@@ -40,6 +40,7 @@ use crate::decoders::gzip_decoder::GzipDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
 use crate::decoders::hexdump_decoder::HexdumpDecoder;
 use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
+use crate::decoders::jsfuck_decoder::JsFuckDecoder;
 use crate::decoders::jwt_decoder::JwtDecoder;
 use crate::decoders::keyboard_shift_decoder::KeyboardShiftDecoder;
 use crate::decoders::leetspeak_decoder::LeetspeakDecoder;
@@ -451,6 +452,16 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "<b>Tom & Jerry</b>");
     /// ```
     html_entities: HtmlEntityDecoder, aliases ["html", "html_entity"], key None;
+
+    /// Evaluates JSFuck, JavaScript written with only `[]()!+`, with a small built-in
+    /// evaluator: no JavaScript is run. A program wrapped in `Function(...)()` comes back
+    /// as its source.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::jsfuck("(![]+[])[+[]]+([][[]]+[])[+[]]+([][[]]+[])[+!+[]]");
+    /// assert_eq!(decoded.candidates[0].text, "fun");
+    /// ```
+    jsfuck: JsFuckDecoder, aliases [], key None;
 
     /// Decodes the payload of a JSON Web Token. The signature isn't checked. The key is the
     /// decoded header.

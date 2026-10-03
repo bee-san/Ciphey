@@ -47,6 +47,7 @@ use crate::decoders::core_socialist_values_decoder::CoreSocialistValuesDecoder;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::gzip_decoder::GzipDecoder;
 use crate::decoders::interface::{Crack, Decoder};
+use crate::decoders::jsfuck_decoder::JsFuckDecoder;
 use crate::decoders::jwt_decoder::JwtDecoder;
 use crate::decoders::keyboard_shift_decoder::KeyboardShiftDecoder;
 use crate::decoders::leetspeak_decoder::LeetspeakDecoder;
@@ -279,6 +280,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let zero_width = Decoder::<ZeroWidthDecoder>::new();
     let leetspeak = Decoder::<LeetspeakDecoder>::new();
     let ook = Decoder::<OokDecoder>::new();
+    let jsfuck = Decoder::<JsFuckDecoder>::new();
     let vigenere = Decoder::<VigenereDecoder>::new();
     let xor_repeating_key = Decoder::<XorRepeatingKeyDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
@@ -367,6 +369,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // text the English checker accepts, in the same step as this runs it: on a tie
             // the first in this list is reported.
             Box::new(ook),
+            // Before the classical ciphers: when two decoders find plaintext in the same
+            // step, the search reports the one listed first. Its first check rejects text
+            // that isn't JSFuck at the first byte, so running early costs nothing.
+            Box::new(jsfuck),
             Box::new(vigenere),
             Box::new(xor_repeating_key),
             Box::new(reversedecoder),

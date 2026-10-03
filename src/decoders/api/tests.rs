@@ -345,6 +345,17 @@ fn brainfuck_runs() {
 }
 
 #[test]
+fn jsfuck_evaluates() {
+    // "false"[0] + "undefined"[0] + "undefined"[1]
+    // (https://github.com/bee-san/Ciphey/issues/987)
+    assert_first(
+        &jsfuck("(![]+[])[+[]]+([][[]]+[])[+[]]+([][[]]+[])[+!+[]]"),
+        "fun",
+    );
+    assert_eq!(decoder_info("JSFuck").unwrap().function, "jsfuck");
+}
+
+#[test]
 fn caesar_cracks() {
     let decoded = caesar("Ijkjsi ymj jfxy bfqq tk ymj hfxyqj");
     assert_plaintext(&decoded, "Defend the east wall of the castle");

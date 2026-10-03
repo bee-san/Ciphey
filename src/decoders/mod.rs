@@ -111,6 +111,8 @@ pub mod hexadecimal_decoder;
 pub mod hexdump_decoder;
 /// The html_entity_decoder module decodes HTML entities
 pub mod html_entity_decoder;
+/// The jsfuck_decoder module evaluates JSFuck, JavaScript written with only `[]()!+`
+pub mod jsfuck_decoder;
 /// The octal_decoder module decodes octal
 pub mod octal_decoder;
 /// The ook_decoder module runs Ook! programs (Brainfuck written as `Ook.` `Ook?` `Ook!`)
@@ -274,6 +276,7 @@ use caesar_decoder::CaesarDecoder;
 use citrix_ctx1_decoder::CitrixCTX1Decoder;
 use core_socialist_values_decoder::CoreSocialistValuesDecoder;
 use gzip_decoder::GzipDecoder;
+use jsfuck_decoder::JsFuckDecoder;
 use jwt_decoder::JwtDecoder;
 use keyboard_shift_decoder::KeyboardShiftDecoder;
 use leetspeak_decoder::LeetspeakDecoder;
@@ -441,6 +444,8 @@ pub enum DecoderType {
     BrainfuckInterpreter(brainfuck_interpreter::BrainfuckInterpreter),
     /// Ook! interpreter
     OokDecoder(ook_decoder::OokDecoder),
+    /// JSFuck decoder
+    JsFuckDecoder(jsfuck_decoder::JsFuckDecoder),
     /// vigenere decoder
     VigenereDecoder(vigenere_decoder::VigenereDecoder),
     /// zlib decoder
@@ -652,6 +657,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             "AAEncode",
             DecoderBox::new(Decoder::<AAEncodeDecoder>::new()),
         ),
+        ("JSFuck", DecoderBox::new(Decoder::<JsFuckDecoder>::new())),
         ("Zlib", DecoderBox::new(Decoder::<ZlibDecoder>::new())),
         (
             "Single-byte XOR",
