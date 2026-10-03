@@ -80,6 +80,11 @@ const START_TEMPERATURE: f64 = 10.0;
 /// runs that didn't find the square -5.2 to -6.0.
 const SOLVED_FITNESS: f64 = -4.8;
 
+/// Squares one letter swap from a solution whose fitness is within this of it are
+/// compared on dictionary words too (see [`prefer_words`]). The wrong squares the
+/// annealing ended on scored 0.007 to 0.04 better than the right ones.
+const NEAR_FITNESS: f64 = 0.05;
+
 /// A decryption is only shown to the checker if dictionary words can cover this share of
 /// its letters, as they are or with every X removed (the fillers break up words). The
 /// checker reads unspaced text as one long word, and is only asked at High sensitivity.
@@ -434,13 +439,17 @@ fn index_of_coincidence(counts: &[usize; 26], total: usize) -> f64 {
     pairs as f64 / (total * (total - 1)) as f64
 }
 
-/// Whether dictionary words cover at least [`MIN_COVERAGE`] of `plaintext`, upper-case
-/// letters, as it is or without its Xs.
+/// Whether dictionary words cover at least [`MIN_COVERAGE`] of `plaintext` (see
+/// [`reading_coverage`]).
 fn reads_as_words(plaintext: &str) -> bool {
-    word_coverage(plaintext.as_bytes()) >= MIN_COVERAGE || {
-        let without_x: Vec<u8> = plaintext.bytes().filter(|&b| b != b'X').collect();
-        word_coverage(&without_x) >= MIN_COVERAGE
-    }
+    reading_coverage(plaintext) >= MIN_COVERAGE
+}
+
+/// The share of `plaintext`, upper-case letters, that dictionary words cover, as it is or
+/// with its Xs removed, whichever is more: the fillers break up words.
+fn reading_coverage(plaintext: &str) -> f64 {
+    let without_x: Vec<u8> = plaintext.bytes().filter(|&b| b != b'X').collect();
+    word_coverage(plaintext.as_bytes()).max(word_coverage(&without_x))
 }
 
 /// The share of `letters`, upper-case ASCII letters, that dictionary words can cover,
@@ -720,10 +729,45 @@ fn solve(letters: &[u8], budget: &Budget, stats: &mut Stats) -> Option<(Square, 
         let fitness = f64::from(score) / scorer.window_count() as f64;
         trace!("Playfair annealing run {run}: fitness {fitness:.3}");
         if fitness >= SOLVED_FITNESS {
+            let square = prefer_words(letters, &scorer, square, score, stats);
+            let fitness = f64::from(scorer.score(&square)) / scorer.window_count() as f64;
             return Some((square, fitness));
         }
     }
     None
+}
+
+/// Of `square`, whose score is `score`, and the squares one swap of two letters away that
+/// score within [`NEAR_FITNESS`] of it, the one whose decryption of `letters` dictionary
+/// words cover most (see [`reading_coverage`]).
+///
+/// Quadgrams can't always tell the right square from one with two letters swapped that
+/// change only a few pairs, X and Y say: in about 2% of solved texts the annealing ended
+/// one swap from the right square, which scored a little worse. Words can tell them apart.
+fn prefer_words(
+    letters: &[u8],
+    scorer: &Scorer,
+    square: Square,
+    score: f32,
+    stats: &mut Stats,
+) -> Square {
+    let near = (NEAR_FITNESS * scorer.window_count() as f64) as f32;
+    let mut best = (reading_coverage(&decipher(letters, &square)), square);
+    for a in 0..25 {
+        for b in a + 1..25 {
+            let mut candidate = square;
+            candidate.swap(a, b);
+            if scorer.score(&candidate) < score - near {
+                continue;
+            }
+            let coverage = reading_coverage(&decipher(letters, &candidate));
+            if coverage > best.0 {
+                best = (coverage, candidate);
+            }
+        }
+    }
+    stats.evaluations += 300;
+    best.1
 }
 
 /// The orders of five rows (or columns) that start with the first: the other orders only
@@ -989,10 +1033,10 @@ mod tests {
     };
 
     // Test vectors from the implementation plan in
-    // https://github.com/bee-san/Ciphey/issues/1006. The ciphertexts were made with pycipher
-    // 0.5.2 `Playfair(square).encipher` from the prepared plaintexts (pycipher doesn't add
-    // the fillers itself) and decrypted back with its `decipher`;
-    // `vectors_match_their_squares` re-encrypts them here.
+    // https://github.com/bee-san/Ciphey/issues/1006, and one more from the same book. The
+    // ciphertexts were made with pycipher 0.5.2 `Playfair(square).encipher` from the
+    // prepared plaintexts (pycipher doesn't add the fillers itself) and decrypted back with
+    // its `decipher`; `vectors_match_their_squares` re-encrypts them here.
 
     /// Wikipedia's example and the issue's: "Hide the gold in the tree stump", keyword
     /// PLAYFAIR EXAMPLE.
@@ -1021,6 +1065,17 @@ mod tests {
     const LIGHTHOUSE_SOURCE: &str = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file.";
     /// The square of LIGHTHOUSE.
     const LIGHTHOUSE_SQUARE: &str = "LIGHTOUSEABCDFKMNPQRVWXYZ";
+
+    /// 300 letters of Treasure Island (chapter 15), keyword TAMPERING, made the same way.
+    /// The square with X and Y swapped scores better on quadgrams than the right one, and
+    /// the annealing runs end on it.
+    const TAMPERING_CIPHERTEXT: &str = "ZPAMPMGNAVPORDQLOCIQOQGBTBKBNGOWZKAMIULEPCMANRPBMIALBTDTQVOVDPARDPFKTMICQDDTFMGNIEOUDAPOADPCNGMITDAUHDTOORGBDQGCTUEGLEPCTPTBMKTDMVPCMAKPAIOPPMGFWATZTBADOCDPHOQAAZDPRCTMQYULBTFATMIFPXKMTIQDOGVTTBKBIPRMLITZRWABGMILASCRDWGNLPQWWOLPROVRKPBTDQBTMIFDPOAMIULEDQGLQATPTADSOWKMLHMETMIFPODAPOUQPCNGDBGBPCTBTKQO";
+    /// Its prepared plaintext.
+    const TAMPERING_PLAINTEXT: &str = "YETAMANITWASICOULDNOLONGERBEINDOUBTABOUTTHATIBEGANTORECALXLWHATIHADHEARDOFCANXNIBALSIWASWITHINANACEOFCALLINGFORHELPBUTTHEMEREFACTXTHATHEWASAMANHOWEVERWILDHADSOMEWHATREASXSUREDMEANDMYFEAROFSILVERBEGANTOREVIVEINPROPORTIONISTOXODSTILLTHEREFOREANDCASTABOUTFORSOMEMETHODOFESCAPEANDASIWASSOTHINKINGTHERECOL";
+    /// The source of [`TAMPERING_PLAINTEXT`]: its first 300 prepared letters.
+    const TAMPERING_SOURCE: &str = "Yet a man it was, I could no longer be in doubt about that. I began to recall what I had heard of cannibals. I was within an ace of calling for help. But the mere fact that he was a man, however wild, had somewhat reassured me, and my fear of Silver began to revive in proportion. I stood still, therefore, and cast about for some method of escape; and as I was so thinking, the recollection";
+    /// The square of TAMPERING.
+    const TAMPERING_SQUARE: &str = "TAMPERINGBCDFHKLOQSUVWXYZ";
 
     /// The `miss` input of `benches/data/decoders.toml`, gibberish no decoder accepts.
     const MISS: &str =
@@ -1124,10 +1179,12 @@ mod tests {
     fn vectors_match_their_squares() {
         assert_eq!(prepare("Hide the gold in the tree stump"), ISSUE_PLAINTEXT);
         assert_eq!(&prepare(TREASURE_SOURCE)[..300], TREASURE_PLAINTEXT);
+        assert_eq!(&prepare(TAMPERING_SOURCE)[..300], TAMPERING_PLAINTEXT);
         assert_eq!(prepare(LIGHTHOUSE_SOURCE), LIGHTHOUSE_PLAINTEXT);
         for (ciphertext, plaintext, key) in [
             (ISSUE_CIPHERTEXT, ISSUE_PLAINTEXT, ISSUE_SQUARE),
             (TREASURE_CIPHERTEXT, TREASURE_PLAINTEXT, TREASURE_SQUARE),
+            (TAMPERING_CIPHERTEXT, TAMPERING_PLAINTEXT, TAMPERING_SQUARE),
             (
                 LIGHTHOUSE_CIPHERTEXT,
                 LIGHTHOUSE_PLAINTEXT,
@@ -1399,6 +1456,52 @@ mod tests {
         assert_eq!(decipher(&letters, &polished), TREASURE_PLAINTEXT);
         assert_eq!(canonical(&polished), right);
         assert!(polished_score > score);
+    }
+
+    #[test]
+    fn words_settle_swaps_the_quadgrams_cannot() {
+        let letters = letters(TAMPERING_CIPHERTEXT);
+        let scorer = Scorer::new(&letters);
+        let right = square(TAMPERING_SQUARE);
+        let mut wrong = right;
+        // X and Y
+        wrong.swap(22, 23);
+        let (right_score, wrong_score) = (scorer.score(&right), scorer.score(&wrong));
+        // The quadgrams prefer the wrong square, by less than NEAR_FITNESS
+        assert!(wrong_score > right_score, "{wrong_score} {right_score}");
+        let near = (NEAR_FITNESS * scorer.window_count() as f64) as f32;
+        assert!(right_score >= wrong_score - near);
+        assert_ne!(decipher(&letters, &wrong), TAMPERING_PLAINTEXT);
+
+        let prefer = |letters: &[u8], square: Square| {
+            let scorer = Scorer::new(letters);
+            prefer_words(
+                letters,
+                &scorer,
+                square,
+                scorer.score(&square),
+                &mut Stats::default(),
+            )
+        };
+        assert_eq!(prefer(&letters, wrong), right);
+        // A right square stays
+        assert_eq!(prefer(&letters, right), right);
+        let treasure = square(TREASURE_SQUARE);
+        assert_eq!(
+            prefer(&self::letters(TREASURE_CIPHERTEXT), treasure),
+            treasure
+        );
+    }
+
+    #[test]
+    fn cracks_a_text_the_quadgrams_alone_get_wrong() {
+        match crack_fresh(TAMPERING_CIPHERTEXT).0 {
+            Outcome::Confirmed { plaintext, key, .. } => {
+                assert_eq!(plaintext, TAMPERING_PLAINTEXT);
+                assert_eq!(key, TAMPERING_SQUARE);
+            }
+            other => panic!("not cracked: {other:?}"),
+        }
     }
 
     #[test]
