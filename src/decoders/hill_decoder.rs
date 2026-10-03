@@ -1479,6 +1479,31 @@ mod tests {
     }
 
     #[test]
+    fn other_classical_ciphers_get_nothing() {
+        // Ciphertexts of the crackers listed after Hill in the search (the Playfair,
+        // Vigenère Autokey and Route Transposition decoders' test and bench vectors):
+        // Hill hands nothing on, so it can't beat them when both run in one step
+        let texts = [
+            "BMODZBXDNABEKUDMUIXMMOUVIF",
+            "RGROSKIQDSTFCYCAMRIREAYRTSRETOROCPFTCEQKQEOXOPCQSRLRRPCPRGAEOPLEATRGCIKRHERPUARDIS\
+             XRMRMXAEHOSKGVYDFISTINLFRASICQIZIQXRKDPBRGROEDAWQCYDHORPUAIRORVEHOTRRPEGTSRHKSDICP\
+             HKQBFGQLGKHIRSPBRGCIDYRSHOINSGAYBTTFHOHUMENRGEKBESRWDBSGSTTATSPBRGSCNEOTETREASOGMH\
+             FHXEPCBSPNRGSISCRTINFGCAEHFTRSEVRGACXENERGCIDYRSHOEKOT",
+            "NUQGFHGUUROSLAROHAPGFSBUCGPILABOVESILWUHHAWNQZRGSFAMUQBUFSKGSYAKPCGLAZHUAGUVAMBAAI\
+             YIKAZUDPUMAHULIZGLLEAIVEEIOZUWHLABMUZIEFFAVEQAYORIEFNUQGAQGLEAKZFIAELTMASILQURXQUE\
+             UGMOSFUFSBUWSDFIUFDAAOF",
+            "Wicf qi tf xhx hsh ztjsbnvnzs uxxew fmuzqjub guw belox buk fht, fht dlc krb a grrvv.",
+            "M  ge hbh y eaoh mtret tetltai i haot dhfdanmenr t otnnga dcmhlueid pk heeisrg t,ea.",
+        ];
+        for text in texts {
+            assert_fails(text);
+            if let Some(ciphertext) = ciphertext_letters(text) {
+                assert!(rank(&ciphertext).is_empty(), "{text}");
+            }
+        }
+    }
+
+    #[test]
     fn affine_keeps_its_ciphertexts() {
         // Multiplying by a number is a diagonal key, which Hill leaves to Affine
         let ciphertext = encrypt(LIGHTHOUSE, &[[5, 0], [0, 5]]);
