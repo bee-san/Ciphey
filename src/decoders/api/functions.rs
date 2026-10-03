@@ -32,6 +32,7 @@ use crate::decoders::brainfuck_interpreter::BrainfuckInterpreter;
 use crate::decoders::caesar_decoder::CaesarDecoder;
 use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
 use crate::decoders::decimal_decoder::DecimalDecoder;
+use crate::decoders::dtmf_decoder::DtmfDecoder;
 use crate::decoders::gzip_decoder::GzipDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
 use crate::decoders::hexdump_decoder::HexdumpDecoder;
@@ -335,6 +336,16 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "hello world");
     /// ```
     decimal: DecimalDecoder, aliases ["charcode"], key None;
+
+    /// Decodes DTMF (touch-tone) frequency pairs, one low and one high frequency per
+    /// telephone key in either order, so `852-1336` is `8`. The output is the keys 0 to 9,
+    /// `*`, `#` and A to D.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::dtmf("852-1336 770-1477 852-1209 770-1336 697-1477 941-1336 852-1477");
+    /// assert_eq!(decoded.candidates[0].text, "8675309");
+    /// ```
+    dtmf: DtmfDecoder, aliases ["touch_tone"], key None;
 
     /// Decompresses gzip written as Base64 or hex. The key is the file name stored in the
     /// archive, if it has one.

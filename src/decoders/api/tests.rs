@@ -351,6 +351,20 @@ fn decimal_decodes() {
 }
 
 #[test]
+fn dtmf_decodes() {
+    // LemmeKnow takes the keys for a phone number
+    assert_plaintext(
+        &dtmf("697-1209 852-1336 941-1336 941-1336 770-1336 770-1336 770-1336 697-1209 697-1336 697-1477 770-1209"),
+        "18005551234",
+    );
+    // dCode's example: the keys aren't identified, but they are still the first candidate
+    assert_first(
+        &dtmf("1633-941/1633-852/1336-941/1633-941/1477-697"),
+        "DC0D3",
+    );
+}
+
+#[test]
 fn gzip_decompresses() {
     assert_plaintext(
         &gzip("1f8b08000000000002ff0bc94855484ecc4e55c82c564854c8c94cd551482a2d5128c900f2535293f35332f3d2417245a98939004bd5f6822c000000"),
