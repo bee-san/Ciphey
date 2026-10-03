@@ -39,6 +39,7 @@ use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
 use crate::decoders::hexdump_decoder::HexdumpDecoder;
 use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
 use crate::decoders::jwt_decoder::JwtDecoder;
+use crate::decoders::leetspeak_decoder::LeetspeakDecoder;
 use crate::decoders::mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
@@ -413,6 +414,17 @@ decoder_functions! {
     /// assert_eq!(payload.key.as_deref(), Some(r#"{"alg":"HS256","typ":"JWT"}"#));
     /// ```
     jwt: JwtDecoder, aliases ["json_web_token"], key None;
+
+    /// Decodes leetspeak, letters written as look-alike digits and symbols (`3` for e,
+    /// `|<` for k). `1`, `|` and `2` each stand for two letters, and Ciphey picks the one
+    /// that makes an English word. Text where fewer than half of the words with a digit or
+    /// symbol in them read as words returns no candidates.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::leetspeak("l337 5p34k 15 3l173");
+    /// assert_eq!(decoded.plaintext().unwrap().text, "leet speak is elite");
+    /// ```
+    leetspeak: LeetspeakDecoder, aliases ["leet", "1337"], key None;
 
     /// Decodes MIME encoded-words (RFC 2047), the `=?charset?B?...?=` and
     /// `=?charset?Q?...?=` of email headers.

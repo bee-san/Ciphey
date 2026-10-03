@@ -427,6 +427,14 @@ fn jwt_decodes() {
 }
 
 #[test]
+fn leetspeak_decodes() {
+    assert_plaintext(&leetspeak("l337 5p34k 15 3l173"), "leet speak is elite");
+    assert_plaintext(&leetspeak("7|-|3 |<3y 15 |-|3r3"), "the key is here");
+    // English with numbers in it isn't leet
+    assert!(leetspeak("I have 2 cats and 3 dogs").is_empty());
+}
+
+#[test]
 fn mime_encoded_word_decodes() {
     assert_first(
         &mime_encoded_word("=?utf-8?b?Q2Fmw6kgb2zDqSDigJMgcsOpc3Vtw6k=?="),
