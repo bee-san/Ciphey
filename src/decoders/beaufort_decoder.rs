@@ -111,9 +111,9 @@ const VIGENERE_GATE_LETTERS: usize = 100;
 /// columns fit English better as Caesar shifts than as reflected (Beaufort) shifts by more
 /// than this many nats per letter, divided by the square root of the number of letters
 /// (see [`reflection_preference`]). On windows of 100 to 576 letters of 17 English
-/// paragraphs, every Beaufort ciphertext the cracker solved scored above −0.087 (100 to
-/// 149 letters), −0.045 (150 to 199) and 0.002 (200 or more), and their Vigenère
-/// ciphertexts below −0.05 in 74%, 92% and all but one of 258 cases.
+/// paragraphs this rejected none of 1,080 Beaufort ciphertexts, and 51% of their Vigenère
+/// ciphertexts of 100 to 149 letters, 77% of 150 to 199, 97% of 200 to 299 and all longer
+/// ones.
 const VIGENERE_PREFERENCE_SCALE: f64 = 1.1;
 
 /// The shortest key searched. A key of one letter is Atbash or Affine.
