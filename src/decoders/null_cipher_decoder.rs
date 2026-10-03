@@ -1027,6 +1027,16 @@ mod tests {
     }
 
     #[test]
+    fn messages_of_short_words_dont_reach_the_checker() {
+        // By design: two of the three pieces are short, which ordinary English produces
+        // by chance too
+        let (spaced, coverage, short) = segment("DOITATONE");
+        assert_eq!(spaced, "DO IT ATONE");
+        assert_eq!(coverage, 1.0);
+        assert!(short > MAX_SHORT_SHARE, "short {short}");
+    }
+
+    #[test]
     fn ranking_drops_readings_that_dont_read_as_words() {
         let reading = |rule, message: &str, coverage, short| Reading {
             rule,
