@@ -106,6 +106,7 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         // Compressed data is usually wrapped in one of the above, and can be nested
         "Zlib",
         "Gzip",
+        "Raw DEFLATE",
     ];
     STACKABLE.contains(&prev_decoder) && STACKABLE.contains(&current_cipher)
 }

@@ -628,6 +628,24 @@ fn railfence_cracks() {
 }
 
 #[test]
+fn raw_deflate_inflates() {
+    // Python: zlib.compressobj(9, zlib.DEFLATED, -15), as Base64 and as hex
+    let fox = "The quick brown fox jumps over the lazy dog";
+    assert_plaintext(
+        &raw_deflate("C8lIVSgszUzOVkgqyi/PU0jLr1DIKs0tKFbIL0stUigBSuckVlUqpOSnAwA="),
+        fox,
+    );
+    assert_plaintext(
+        &raw_deflate(
+            "0bc94855282ccd4cce56482aca2fcf5348cbaf50c82acd2d2856c82f4b2d5228014ae72456552aa4e4a70300",
+        ),
+        fox,
+    );
+    assert!(raw_deflate("hello world").is_empty());
+    assert_eq!(decoder_info("raw_inflate").unwrap().name, "Raw DEFLATE");
+}
+
+#[test]
 fn reverse_decodes() {
     assert_plaintext(&reverse("sdrawkcab si siht"), "this is backwards");
 }

@@ -364,6 +364,15 @@ layers = ["Zlib"]
 input = "eJwditERgDAIxVZ5A3hu4hBosXCW1kP8cHuVv1yShTlgDAqEMEYraFolZNzXZ/dgh2npvwP1gtW113yNzinh4CcTIYZvMr/7+h2x"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
+# Base64 of raw DEFLATE (zlib.compressobj(9, zlib.DEFLATED, -15)): Raw DEFLATE reads the
+# Base64 itself, so it is one step
+[[case]]
+kind = "single"
+name = "raw_deflate"
+layers = ["Raw DEFLATE", "Base64"]
+input = "HYrREYAwCMVWeQN4buIQaLFwltZD/HB7lb9ckoU5YAwKhDBGK2haJWTc12f3YIdp6b8D9YLVtdd8jc4p4eAnEyGGbzK/"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
 [[case]]
 # The issue scheme of #973 without a cover text (a cover is accepted as plaintext first)
 kind = "single"
@@ -670,6 +679,14 @@ kind = "multi"
 name = "rot13_zlib"
 layers = ["caesar", "Zlib"]
 input = "eJwdisENgDAMxFa5ARAD8WtROB4o0NBUNNMD/Vm2FzMiDErQDbkX9FadnvftszdNEK2k30FTwSkt1fGGrtOAx46RFMxy+fwCLvgetQ=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Base64 of the stream's hex. Raw DEFLATE reads the hex itself: Base64 -> Raw DEFLATE
+kind = "multi"
+name = "raw_deflate_hex_base64"
+layers = ["Raw DEFLATE", "Hexadecimal", "Base64"]
+input = "MWQ4YWQxMTE4MDMwMDhjNTU2NzkwMzc4NmVlMjEwNjhiMTcwOTZkNjQzZmM3MDdiOTViZjVjOTI4NTM5NjAwYzBhODQzMDQ2MmI2ODVhMjU2NGRjZDc2N2Y3NjA4NzY5ZTliZjAzZjU4MmQ1YjVkNzdjOGRjZTI5ZTFlMDI3MTMyMTg2NmYzMmJm"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

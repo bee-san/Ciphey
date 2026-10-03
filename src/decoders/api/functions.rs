@@ -57,6 +57,7 @@ use crate::decoders::polybius_decoder::PolybiusDecoder;
 use crate::decoders::punycode_decoder::PunycodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
+use crate::decoders::raw_deflate_decoder::RawDeflateDecoder;
 use crate::decoders::reverse_decoder::ReverseDecoder;
 use crate::decoders::rot47_decoder::ROT47Decoder;
 use crate::decoders::route_transposition_decoder::RouteTranspositionDecoder;
@@ -656,6 +657,18 @@ decoder_functions! {
     /// assert_eq!(decoded.plaintext().unwrap().text, "Hello, World!");
     /// ```
     railfence: RailfenceDecoder, aliases ["zigzag"], key Some(keys::RAILFENCE);
+
+    /// Inflates raw DEFLATE (RFC 1951), the compressed data inside zlib and gzip without
+    /// their header and checksum, written as Base64 or hex. PHP's `gzdeflate`, .NET's
+    /// `DeflateStream` and CyberChef's Raw Deflate write it.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::raw_deflate(
+    ///     "C8lIVSgszUzOVkgqyi/PU0jLr1DIKs0tKFbIL0stUigBSuckVlUqpOSnAwA=",
+    /// );
+    /// assert_eq!(decoded.candidates[0].text, "The quick brown fox jumps over the lazy dog");
+    /// ```
+    raw_deflate: RawDeflateDecoder, aliases ["raw_inflate", "deflate"], key None;
 
     /// Reverses the text.
     ///

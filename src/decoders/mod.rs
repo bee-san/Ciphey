@@ -228,6 +228,9 @@ use ascii85_decoder::Ascii85Decoder;
 /// The zlib_decoder module inflates zlib (RFC 1950) streams
 pub mod zlib_decoder;
 
+/// The raw_deflate_decoder module inflates raw DEFLATE (RFC 1951) streams
+pub mod raw_deflate_decoder;
+
 /// The xor_single_byte_decoder module cracks single-byte XOR
 pub mod xor_single_byte_decoder;
 
@@ -300,6 +303,7 @@ use polybius_decoder::PolybiusDecoder;
 use punycode_decoder::PunycodeDecoder;
 use quoted_printable_decoder::QuotedPrintableDecoder;
 use railfence_decoder::RailfenceDecoder;
+use raw_deflate_decoder::RawDeflateDecoder;
 use reverse_decoder::ReverseDecoder;
 use rot47_decoder::ROT47Decoder;
 use route_transposition_decoder::RouteTranspositionDecoder;
@@ -464,6 +468,8 @@ pub enum DecoderType {
     VigenereDecoder(vigenere_decoder::VigenereDecoder),
     /// zlib decoder
     ZlibDecoder(zlib_decoder::ZlibDecoder),
+    /// raw DEFLATE decoder
+    RawDeflateDecoder(raw_deflate_decoder::RawDeflateDecoder),
     /// single-byte xor cracker
     XorSingleByteDecoder(xor_single_byte_decoder::XorSingleByteDecoder),
     /// repeating-key XOR cracker
@@ -679,6 +685,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ),
         ("JSFuck", DecoderBox::new(Decoder::<JsFuckDecoder>::new())),
         ("Zlib", DecoderBox::new(Decoder::<ZlibDecoder>::new())),
+        (
+            "Raw DEFLATE",
+            DecoderBox::new(Decoder::<RawDeflateDecoder>::new()),
+        ),
         (
             "Single-byte XOR",
             DecoderBox::new(Decoder::<XorSingleByteDecoder>::new()),

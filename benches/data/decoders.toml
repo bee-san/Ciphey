@@ -10,6 +10,8 @@
 # decimal (medium) or hexadecimal (long) character reference, like CyberChef's "To HTML
 # Entity" with "Convert all characters". Zlib inputs are Python's
 # base64.b64encode(zlib.compress(text)); the Zlib decoder reads the Base64 itself.
+# Raw DEFLATE inputs are the Base64 of Python's raw DEFLATE at level 9,
+# zlib.compressobj(9, zlib.DEFLATED, -15); the decoder reads the Base64 itself too.
 # Single-byte XOR uses key 0x2a written as hex (medium) and key 0xc3 written as Base64
 # (long). Repeating-key XOR uses the key Ciphey, shown as hex (medium) and Base64 (long).
 #
@@ -1186,4 +1188,18 @@ decoder = "Zlib"
 size = "long"
 success = true
 input = "eJw9kUGS3DAIRa/CAab6EqksspgDZEkk2qIsC5fA7XGffj5OKhvZKuD/x9cP3ZtcpE48iI+wjUMqVSlWdSwUZv1Bv+2gRV9CGiSjzGvPJpt5sYrfkK+AQs2GmCqOQTptrmRH0NkYBztVG5IVjQ86NVoWL2g3fv01o3XYSdGEVlClwUvGfS8JOh/0K8iFZ2np0aYdS6ONx0W7ueufLv/Z/YPQVVYn4dKoAE8rtksbFwGVQHgmcjdDW9dV6OdYunpLb0Rx2/BNNWjnCJmD/IAc34nJxtqJa53i8MsEPGz3FB+p/NRRndw2eN0rZhRTuP6z2zvryPQe9GkeZM9729ANR8OzBK9A6JDPWbwR2IuNigCbltw963BCsV70BHfhPY4pt9Cz84IYuHcZiwBxP95vhNSOEX7z5gTyy5c5G5KJY0OKqJWJRNMvJmM2v7mBJkO3Bat1eXwDiyDQ/g=="
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
+[[case]]
+decoder = "Raw DEFLATE"
+size = "medium"
+success = true
+input = "HYrREYAwCMVWeQN4buIQaLFwltZD/HB7lb9ckoU5YAwKhDBGK2haJWTc12f3YIdp6b8D9YLVtdd8jc4p4eAnEyGGbzK/"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "Raw DEFLATE"
+size = "long"
+success = true
+input = "PZFBktwwCEWvwgGm+hKpLLKYA2RJJNqiLAuXwO1xn34+Tiob2Srg/8fXD92bXKROPIiPsI1DKlUpVnUsFGb9Qb/toEVfQhoko8xrzyabebGK35CvgELNhpgqjkE6ba5kR9DZGAc7VRuSFY0POjVaFi9oN379NaN12EnRhFZQpcFLxn0vCTof9CvIhWdp6dGmHUujjcdFu7nrny7/2f2D0FVWJ+HSqABPK7ZLGxcBlUB4JnI3Q1vXVejnWLp6S29EcdvwTTVo5wiZg/yAHN+JycbaiWud4vDLBDxs9xQfqfzUUZ3cNnjdK2YUU7j+s9s768j0HvRpHmTPe9vQDUfDswSvQOiQz1m8EdiLjYoAm5bcPetwQrFe9AR34T2OKbfQs/OCGLh3GYsAcT/eb4TUjhF+8+YE8suXORuSiWNDiqiViUTTLyZjNr+5gSZDtwWrdXl8Aw=="
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."

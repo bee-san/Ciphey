@@ -61,6 +61,7 @@ use crate::decoders::null_cipher_decoder::NullCipherDecoder;
 use crate::decoders::punycode_decoder::PunycodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
+use crate::decoders::raw_deflate_decoder::RawDeflateDecoder;
 use crate::decoders::reverse_decoder::ReverseDecoder;
 use crate::decoders::rot47_decoder::ROT47Decoder;
 use crate::decoders::route_transposition_decoder::RouteTranspositionDecoder;
@@ -342,6 +343,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let standard_galactic_alphabet = Decoder::<StandardGalacticAlphabetDecoder>::new();
     let substitution_generic = Decoder::<SubstitutionGenericDecoder>::new();
     let zlib = Decoder::<ZlibDecoder>::new();
+    let raw_deflate = Decoder::<RawDeflateDecoder>::new();
     let gzip = Decoder::<GzipDecoder>::new();
 
     let brainfuck = Decoder::<BrainfuckInterpreter>::new();
@@ -489,6 +491,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(brainfuck),
             Box::new(aaencode),
             Box::new(zlib),
+            Box::new(raw_deflate),
             Box::new(monoalphabetic_substitution),
             Box::new(keyboard_shift),
             Box::new(keyboard_layout),
