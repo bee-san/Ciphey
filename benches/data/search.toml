@@ -390,6 +390,14 @@ input = "HYrREYAwCMVWeQN4buIQaLFwltZD/HB7lb9ckoU5YAwKhDBGK2haJWTc12f3YIdp6b8D9YL
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# Base64 of Python's lzma.compress(text). XZ reads the Base64 itself, so it is one step.
+kind = "single"
+name = "xz"
+layers = ["XZ", "Base64"]
+input = "/Td6WFoAAATm1rRGAgAhARYAAAB0L+Wj4ABTAEpdACaZbOggNplzov9xgoqk/LcqCEHcBaaF/V9XatyFem4QukOy3e++ZSRkk2d2OD8p9MbyvtJXkkg5fXT5gLesThztSoIpxURIAM0AAAAAxd7IaPdknIIAAWZU5+wnfx+2830BAAAAAARZWg=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 # The issue scheme of #973 without a cover text (a cover is accepted as plaintext first)
 kind = "single"
 name = "zero_width"
@@ -728,6 +736,15 @@ kind = "multi"
 name = "bzip2_hex_base64"
 layers = ["Bzip2", "Hexadecimal", "Base64"]
 input = "NDI1YTY4MzkzMTQxNTkyNjUzNTk2MzAxOTcyODAwMDAwOTE1ODA0MDA1MDAwMjNmZWZkZTIwMjAwMDQ4NmE5ZTUzMzQ0ZjQ4YzI2YzgxMTA2NDFhMWEwMGQyNTNkZThmYjIyMjM3MzRmYTBhZjZhNTAwYzkwNTYwZDlkMjRmYWM3YjY3YWFmODE5MDBiODU4ZDZjOWU2ODAxODFlZGU3NzI0OGY1NDg0OTY0YzE2YzRiZTJlZTQ4YTcwYTEyMGM2MDMyZTUw"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# base64.b64encode(lzma.compress(text).hex().encode()): Base64 decodes to the hex, which
+# XZ reads itself, so the search path is Base64 -> XZ
+kind = "multi"
+name = "xz_hex_base64"
+layers = ["XZ", "Hexadecimal", "Base64"]
+input = "ZmQzNzdhNTg1YTAwMDAwNGU2ZDZiNDQ2MDIwMDIxMDExNjAwMDAwMDc0MmZlNWEzZTAwMDUzMDA0YTVkMDAyNjk5NmNlODIwMzY5OTczYTJmZjcxODI4YWE0ZmNiNzJhMDg0MWRjMDVhNjg1ZmQ1ZjU3NmFkYzg1N2E2ZTEwYmE0M2IyZGRlZmJlNjUyNDY0OTM2Nzc2MzgzZjI5ZjRjNmYyYmVkMjU3OTI0ODM5N2Q3NGY5ODBiN2FjNGUxY2VkNGE4MjI5YzU0NDQ4MDBjZDAwMDAwMDAwYzVkZWM4NjhmNzY0OWM4MjAwMDE2NjU0ZTdlYzI3N2YxZmI2ZjM3ZDAxMDAwMDAwMDAwNDU5NWE="
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

@@ -1193,6 +1193,22 @@ success = true
 input = "Nmbvrj me oa lyfczlxqr qpgarvyk fcbw. Cai ttzq wg proflaxqr bc izqboip hrix mbq tx ffvpw fc jzvw che atog hee rbyi fc ve, auhuzyf mbf lmjvyk fc xysi hup oqm bc ihsa elq qvalqf. Ve wqoenlqg gsvaits qmbl asegvmpq rrnspwarw, ovrnoe snnl ooaompogp xa grp atsgsid wg wsayf wmws Rykxwfs sd anegtsf l ozcjy tmhgpvz ghnl mg ny iyovw eprepwe, oao wfccd atsa tx rwaow eczpxtwar xtog cimrf wmws cweubgpbf. Abdx at gsi fwzp xtwf eewsf wieg gsez o fpgabq, hluqu xewsf tx toaoc rce nebhhci fvr qpmu psexzrykqg, cfdlzr syzhf lrp tbc ezmbyi ivb dxgaowie opcseg n dxdoari ehetrs wa l pau stpq."
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+# XZ: Python's base64.b64encode(lzma.compress(text)), CRC-64 and preset 6 (an 8 MiB
+# dictionary). The XZ decoder reads the Base64 itself.
+[[case]]
+decoder = "XZ"
+size = "medium"
+success = true
+input = "/Td6WFoAAATm1rRGAgAhARYAAAB0L+Wj4ABTAEpdACaZbOggNplzov9xgoqk/LcqCEHcBaaF/V9XatyFem4QukOy3e++ZSRkk2d2OD8p9MbyvtJXkkg5fXT5gLesThztSoIpxURIAM0AAAAAxd7IaPdknIIAAWZU5+wnfx+2830BAAAAAARZWg=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "XZ"
+size = "long"
+success = true
+input = "/Td6WFoAAATm1rRGAgAhARYAAAB0L+Wj4AI/AYpdACGaSgaaBPSSrwUlfTYMMlqj8gadtZMHjDuea5rwCXA8FZMzy0ZJMWtngQHOjXO9SnZaqSQnzYGbzEp+yy4lj9JYHpX9t1oEtMarr5xwLXLeyRuMULN4Bw3ril86XUD5ISXiZvXKkR6W8ZLyG6wjNHT9F8H+h2UopsD2PMePhxMG9yoYugvfZwoVqhlalxWiQnWUbu1xI8BsOxqRJBt5zi1Ty8+i3tZV8BNskhKspC/ynR29uak/Hyf7BfMDHLh52DISAz8eDDWSwwwsr5ae/qq/LmJdHS3iDTWbkg8s79uFwZ9UI7sJ8/ROjvS0PMBWvGt1FQCE33Rwgr1yHtynESZKwbUBfQVe8Q3Tj175JNNMyC19ZKE1q3sKhcaWA2SaMevC/xrNHSWCXt5/s+CX/RK7ltGy/QEtsuCL5nPh+UHgzYXi8on3tsiGmHglpZ96LYENBowmiI+1EmrAm27bvaZOVq5tZxS7Bc6pK2QUgcRuvN2TOuSrAs4qigJIU2ix9/Q2GrUfc3FrwAgAAAA52yQQDP76KQABpgPABAAAJBr0OrHEZ/sCAAAAAARZWg=="
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
 [[case]]
 # Primer KEY. The autokey vectors were checked against pycipher 0.5.2's Autokey, on the
 # letters (it drops everything else).

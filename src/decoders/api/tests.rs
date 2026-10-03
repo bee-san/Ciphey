@@ -867,6 +867,21 @@ fn xor_single_byte_cracks() {
 }
 
 #[test]
+fn xz_decompresses() {
+    // Python's base64.b64encode(lzma.compress(text))
+    assert_plaintext(
+        &xz("/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAjQ2lwaGV5IGRlY29tcHJlc3NlcyB4eiBmaWxlcyBmb3IgeW91ANWdCe2kvED8AAE8JAUodm8ftvN9AQAAAAAEWVo="),
+        "Ciphey decompresses xz files for you",
+    );
+    // The same with format=lzma.FORMAT_ALONE: the key says it was a .lzma file
+    let decoded =
+        xz("XQAAgAD//////////wAhmkoGmgT0kqaVxNRi4D4s2W7dv/JFvLMypcYxoDq43Wq7wlr//wRQAAA=");
+    assert_plaintext(&decoded, "Ciphey decompresses lzma files too");
+    assert_eq!(plaintext_key(&decoded), "LZMA-alone");
+    assert_eq!(decoder_info("lzma").unwrap().name, "XZ");
+}
+
+#[test]
 fn yunying_decodes() {
     assert_plaintext(
         &yunying("21084210842042108820108840884108401088408108421084208821"),

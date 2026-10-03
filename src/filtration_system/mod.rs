@@ -81,6 +81,7 @@ use crate::decoders::vigenere_autokey_decoder::VigenereAutokeyDecoder;
 use crate::decoders::vigenere_decoder::VigenereDecoder;
 use crate::decoders::xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use crate::decoders::xor_single_byte_decoder::XorSingleByteDecoder;
+use crate::decoders::xz_decoder::XzDecoder;
 use crate::decoders::yunying_decoder::YunyingDecoder;
 use crate::decoders::z85_decoder::Z85Decoder;
 use crate::decoders::zero_width_decoder::ZeroWidthDecoder;
@@ -353,6 +354,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let raw_deflate = Decoder::<RawDeflateDecoder>::new();
     let gzip = Decoder::<GzipDecoder>::new();
     let bzip2 = Decoder::<Bzip2Decoder>::new();
+    let xz = Decoder::<XzDecoder>::new();
 
     let brainfuck = Decoder::<BrainfuckInterpreter>::new();
     let aaencode = Decoder::<AAEncodeDecoder>::new();
@@ -517,6 +519,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(aaencode),
             Box::new(zlib),
             Box::new(raw_deflate),
+            Box::new(xz),
             Box::new(monoalphabetic_substitution),
             Box::new(keyboard_shift),
             Box::new(keyboard_layout),

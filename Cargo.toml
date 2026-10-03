@@ -87,6 +87,9 @@ html-escape = "0.2.15"
 flate2 = "1.1.10"
 # Only idna::punycode is used. 1.0.3 is the version gibberish-or-not already pulls in.
 idna = "1.0.3"
+# XZ and .lzma decompression, pure Rust. Only the decoders: no encoder, no lzip, and no
+# `optimization` (it turns on unsafe architecture-specific code paths).
+lzma-rust2 = { version = "0.21.0", default-features = false, features = ["std", "xz"] }
 urlencoding = "2.1.3"
 z85 = "3.0.7"
 brainfuck-exe = { version = "0.2.4", default-features = false }
@@ -100,6 +103,8 @@ winapi-util = "0.1.9"
 [dev-dependencies]
 cargo-nextest = "0.9.117"
 criterion = "0.8.2"
+# The XZ decoder's tests build their own .xz and .lzma files (bombs, size limits)
+lzma-rust2 = { version = "0.21.0", default-features = false, features = ["std", "xz", "encoder"] }
 
 [profile.release]
 lto = "fat"

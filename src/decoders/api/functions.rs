@@ -77,6 +77,7 @@ use crate::decoders::vigenere_autokey_decoder::VigenereAutokeyDecoder;
 use crate::decoders::vigenere_decoder::VigenereDecoder;
 use crate::decoders::xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use crate::decoders::xor_single_byte_decoder::XorSingleByteDecoder;
+use crate::decoders::xz_decoder::XzDecoder;
 use crate::decoders::yunying_decoder::YunyingDecoder;
 use crate::decoders::z85_decoder::Z85Decoder;
 use crate::decoders::zero_width_decoder::ZeroWidthDecoder;
@@ -916,6 +917,18 @@ decoder_functions! {
     /// assert_eq!(plaintext.key.as_deref(), Some("0x58"));
     /// ```
     xor_single_byte: XorSingleByteDecoder, aliases [], key Some(keys::XOR_SINGLE_BYTE);
+
+    /// Decompresses an XZ file, or a legacy `.lzma` (LZMA-alone) one, written as Base64,
+    /// hex or raw bytes. For a `.lzma` file the key is `LZMA-alone`.
+    ///
+    /// ```
+    /// // Python: base64.b64encode(lzma.compress(b"The quick brown fox jumps over the lazy dog"))
+    /// let decoded = ciphey::decoders::xz(
+    ///     "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAqVGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZwAAxKFK5cK4XlsAAUMrrVBuVx+2830BAAAAAARZWg==",
+    /// );
+    /// assert_eq!(decoded.candidates[0].text, "The quick brown fox jumps over the lazy dog");
+    /// ```
+    xz: XzDecoder, aliases ["lzma"], key None;
 
     /// Decodes the 01248 (Yunying, 云影) cipher: each letter is digits 1, 2, 4 and 8 that add
     /// up to its place in the alphabet, and `0` separates the letters. The output is

@@ -184,6 +184,8 @@ pub mod url_decoder;
 pub mod utf16_decoder;
 /// The uuencode_decoder module decodes Uuencode (Unix-to-Unix encoding)
 pub mod uuencode_decoder;
+/// The xz_decoder module decompresses XZ and legacy LZMA (`.lzma`) files
+pub mod xz_decoder;
 
 /// The interface module defines the interface for decoders
 /// Each and every decoder has the same struct & traits
@@ -332,6 +334,7 @@ use vigenere_autokey_decoder::VigenereAutokeyDecoder;
 use vigenere_decoder::VigenereDecoder;
 use xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use xor_single_byte_decoder::XorSingleByteDecoder;
+use xz_decoder::XzDecoder;
 use yunying_decoder::YunyingDecoder;
 use z85_decoder::Z85Decoder;
 use zero_width_decoder::ZeroWidthDecoder;
@@ -427,6 +430,8 @@ pub enum DecoderType {
     GzipDecoder(gzip_decoder::GzipDecoder),
     /// bzip2 decoder
     Bzip2Decoder(bzip2_decoder::Bzip2Decoder),
+    /// xz and lzma-alone decoder
+    XzDecoder(xz_decoder::XzDecoder),
     /// url decoder
     UrlDecoder(url_decoder::URLDecoder),
     /// punycode decoder
@@ -610,6 +615,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ),
         ("Gzip", DecoderBox::new(Decoder::<GzipDecoder>::new())),
         ("Bzip2", DecoderBox::new(Decoder::<Bzip2Decoder>::new())),
+        ("XZ", DecoderBox::new(Decoder::<XzDecoder>::new())),
         ("URL", DecoderBox::new(Decoder::<URLDecoder>::new())),
         (
             "Punycode",
