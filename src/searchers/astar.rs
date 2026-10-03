@@ -165,8 +165,8 @@ fn shrinks_by_design(step: &crate::CrackResult) -> bool {
 
 /// Reject results no correct answer could look like: under 3 chars, mostly non-printable,
 /// under 5% of the input length (no decoder shrinks text that much, except the ones in
-/// [`shrinks_by_design`]), or an English-checker hit that is more than a third
-/// punctuation.
+/// [`shrinks_by_design`], wherever they are in the path), or an English-checker hit that
+/// is more than a third punctuation.
 fn result_passes_sanity(node: &AStarNode, original_input_len: usize) -> bool {
     let Some(text) = node.state.text.first() else {
         return false;
@@ -174,9 +174,11 @@ fn result_passes_sanity(node: &AStarNode, original_input_len: usize) -> bool {
     if check_if_string_cant_be_decoded(text) {
         return false;
     }
+    // The steps after a program-tagged one can't undo its shrinking: in
+    // AAEncode -> Base64 the answer is a fraction of the Base64 the program printed.
     if original_input_len >= 40
         && text.chars().count() * 20 < original_input_len
-        && !node.state.path.last().is_some_and(shrinks_by_design)
+        && !node.state.path.iter().any(shrinks_by_design)
     {
         return false;
     }
@@ -611,5 +613,30 @@ mod tests {
             &result_node("hi", "Ook!", "English Checker"),
             299
         ));
+    }
+
+    #[test]
+    fn sanity_lets_steps_after_a_program_decoder_shrink_text() {
+        // An 11-character answer from a 1,405-character AAEncode program: 11 * 20 < 1,405
+        let path = |decoders: &[&'static str]| {
+            let mut node = result_node("hello world", "AAEncode", "English Checker");
+            node.state.path = decoders
+                .iter()
+                .map(|&decoder| {
+                    let mut step =
+                        crate::CrackResult::new(&crate::Decoder::default(), String::new());
+                    step.decoder = decoder;
+                    step.checker_name = "English Checker";
+                    step
+                })
+                .collect();
+            node
+        };
+        assert!(result_passes_sanity(&path(&["AAEncode"]), 1405));
+        assert!(!result_passes_sanity(&path(&["Base64"]), 1405));
+        // The program printed Base64, which the next step decoded
+        assert!(result_passes_sanity(&path(&["AAEncode", "Base64"]), 1405));
+        assert!(result_passes_sanity(&path(&["Base64", "AAEncode"]), 1405));
+        assert!(!result_passes_sanity(&path(&["Base64", "Base64"]), 1405));
     }
 }

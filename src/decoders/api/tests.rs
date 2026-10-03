@@ -167,6 +167,24 @@ fn a1z26_decodes() {
 }
 
 #[test]
+fn aaencode_decodes() {
+    // aaencode("hello world") in the utf-8.jp and npm aaencode-cli spellings
+    let programs: Vec<&str> = [
+        include_str!("../../../tests/test_fixtures/aaencode_utf8jp.tsv"),
+        include_str!("../../../tests/test_fixtures/aaencode_npm.tsv"),
+    ]
+    .iter()
+    .flat_map(|file| file.lines())
+    .filter_map(|line| line.strip_prefix("hello world\t"))
+    .collect();
+    assert_eq!(programs.len(), 2);
+    for program in programs {
+        assert_plaintext(&aaencode(program), "hello world");
+    }
+    assert_eq!(decoder_info("aadecode").unwrap().name, "AAEncode");
+}
+
+#[test]
 fn affine_cracks() {
     let decoded = affine("Jffg jf dmgfs gaf gxtd edsgp");
     assert_plaintext(&decoded, "Meet me after the toga party");

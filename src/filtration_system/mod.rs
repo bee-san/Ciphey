@@ -31,6 +31,7 @@ use crate::decoders::base58_flickr_decoder::Base58FlickrDecoder;
 use crate::decoders::base58_ripple_decoder::Base58RippleDecoder;
 
 use crate::decoders::a1z26_decoder::A1Z26Decoder;
+use crate::decoders::aaencode_decoder::AAEncodeDecoder;
 use crate::decoders::affine_decoder::AffineDecoder;
 use crate::decoders::base100_decoder::Base100Decoder;
 use crate::decoders::base64_alt_decoder::Base64AltDecoder;
@@ -338,6 +339,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let gzip = Decoder::<GzipDecoder>::new();
 
     let brainfuck = Decoder::<BrainfuckInterpreter>::new();
+    let aaencode = Decoder::<AAEncodeDecoder>::new();
     let xor_single_byte = Decoder::<XorSingleByteDecoder>::new();
     let monoalphabetic_substitution = Decoder::<MonoalphabeticSubstitutionDecoder>::new();
     let keyboard_shift = Decoder::<KeyboardShiftDecoder>::new();
@@ -468,6 +470,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(substitution_generic),
             Box::new(gzip),
             Box::new(brainfuck),
+            Box::new(aaencode),
             Box::new(zlib),
             Box::new(monoalphabetic_substitution),
             Box::new(keyboard_shift),

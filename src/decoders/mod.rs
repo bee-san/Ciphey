@@ -73,6 +73,8 @@ pub use api::*;
 
 /// The a1z26_decoder module decodes A1Z26
 pub mod a1z26_decoder;
+/// The aaencode_decoder module decodes AAEncode (JavaScript written as Japanese emoticons)
+pub mod aaencode_decoder;
 /// The affine_decoder module cracks the affine cipher
 pub mod affine_decoder;
 /// The ascii85_decoder module decodes Ascii85 (Adobe / btoa Base85)
@@ -258,6 +260,7 @@ use html_entity_decoder::HtmlEntityDecoder;
 use interface::{Crack, Decoder};
 
 use a1z26_decoder::A1Z26Decoder;
+use aaencode_decoder::AAEncodeDecoder;
 use affine_decoder::AffineDecoder;
 use base100_decoder::Base100Decoder;
 use base64_alt_decoder::Base64AltDecoder;
@@ -318,6 +321,8 @@ pub enum DecoderType {
     A1z26Decoder(a1z26_decoder::A1Z26Decoder),
     /// 01248 (Yunying) decoder
     YunyingDecoder(yunying_decoder::YunyingDecoder),
+    /// AAEncode decoder
+    AAEncodeDecoder(aaencode_decoder::AAEncodeDecoder),
     /// ascii85 decoder
     Ascii85Decoder(ascii85_decoder::Ascii85Decoder),
     /// affine decoder
@@ -643,6 +648,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<BrainfuckInterpreter>::new()),
         ),
         ("Ook!", DecoderBox::new(Decoder::<OokDecoder>::new())),
+        (
+            "AAEncode",
+            DecoderBox::new(Decoder::<AAEncodeDecoder>::new()),
+        ),
         ("Zlib", DecoderBox::new(Decoder::<ZlibDecoder>::new())),
         (
             "Single-byte XOR",
