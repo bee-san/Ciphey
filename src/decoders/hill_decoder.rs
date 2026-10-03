@@ -550,14 +550,13 @@ fn affine_reads_as_english(letters: &[u8], counts: &[u32; 26]) -> bool {
         best.offer(score, index);
     }
     let needed = AFFINE_PAIR_SCORE * (letters.len() as i32 - 1);
-    let pair_scores = &*PAIR_SCORES;
+    let pair_scores = &**PAIR_SCORES;
     best.items.iter().any(|&(_, index)| {
         let key = &AFFINE_KEYS[index];
         let score: i32 = letters
             .windows(2)
             .map(|pair| {
-                pair_scores[usize::from(key[usize::from(pair[0])])]
-                    [usize::from(key[usize::from(pair[1])])]
+                pair_scores[pair_index(key[usize::from(pair[0])], key[usize::from(pair[1])])]
             })
             .sum();
         score >= needed
@@ -690,6 +689,15 @@ fn rank_matrices(letters: &[u8], search: &Search, ranked: &mut Vec<Ranked>) {
                     if k == i || k == j {
                         continue;
                     }
+                    // The score is three lookups, cheaper than the determinant, and most
+                    // matrices don't score well enough to be kept: an item that isn't wanted
+                    // wouldn't be kept whatever its determinant, so this skips no matrix
+                    // that would have been
+                    let score =
+                        within[i * count + j] + within[j * count + k] + across[k * count + i];
+                    if !shortlist.wants(score) {
+                        continue;
+                    }
                     // Expanded along the first row
                     let determinant = (a[0] * (b[1] * c[2] - b[2] * c[1])
                         + a[1] * (b[2] * c[0] - b[0] * c[2])
@@ -697,8 +705,6 @@ fn rank_matrices(letters: &[u8], search: &Search, ranked: &mut Vec<Ranked>) {
                         .rem_euclid(26);
                     let diagonal = upper_diagonal && c[0] == 0 && c[1] == 0;
                     if is_unit(determinant) && !diagonal {
-                        let score =
-                            within[i * count + j] + within[j * count + k] + across[k * count + i];
                         shortlist.offer(score, [i, j, k]);
                     }
                 }
@@ -732,19 +738,32 @@ fn is_unit(determinant: i32) -> bool {
 
 /// The score of every letter pair, `round(100 · ln P)` of the Affine decoder's
 /// [`BIGRAM_LOG_PROBS`] (from `english_bigrams.txt`): whole numbers, so that adding them up
-/// is fast and the shortlist of [`rank_matrices`] has no rounding.
-static PAIR_SCORES: Lazy<[[i32; 26]; 26]> = Lazy::new(|| {
-    BIGRAM_LOG_PROBS.map(|row| row.map(|log_probability| (100.0 * log_probability).round() as i32))
+/// is fast and the shortlist of [`rank_matrices`] has no rounding. Pair `a`, `b` is at
+/// [`pair_index`]`(a, b)`; the table has room for any two values below 32, so looking a pair
+/// up needs no bounds check.
+static PAIR_SCORES: Lazy<Box<[i32; 1024]>> = Lazy::new(|| {
+    let mut table = Box::new([0i32; 1024]);
+    for (first, row) in (0u8..).zip(BIGRAM_LOG_PROBS.iter()) {
+        for (second, &log_probability) in (0u8..).zip(row) {
+            table[pair_index(first, second)] = (100.0 * log_probability).round() as i32;
+        }
+    }
+    table
 });
+
+/// Where the pair of letters `first`, `second` (0 to 25) is in [`PAIR_SCORES`].
+fn pair_index(first: u8, second: u8) -> usize {
+    (usize::from(first & 31) << 5) | usize::from(second & 31)
+}
 
 /// The score of the letter pairs `first[b]`, `second[b]` for each of the first `blocks`
 /// blocks: two rows' letters, the second right after the first in each block.
 fn pairs_within(first: &[u8], second: &[u8], blocks: usize) -> i32 {
-    let table = &*PAIR_SCORES;
+    let table = &**PAIR_SCORES;
     first[..blocks]
         .iter()
         .zip(&second[..blocks])
-        .map(|(&a, &b)| table[usize::from(a)][usize::from(b)])
+        .map(|(&a, &b)| table[pair_index(a, b)])
         .sum()
 }
 
@@ -752,11 +771,11 @@ fn pairs_within(first: &[u8], second: &[u8], blocks: usize) -> i32 {
 /// blocks: two rows' letters, the first at the end of a block and the second at the start
 /// of the next.
 fn pairs_across(first: &[u8], second: &[u8], blocks: usize) -> i32 {
-    let table = &*PAIR_SCORES;
+    let table = &**PAIR_SCORES;
     first[..blocks.saturating_sub(1)]
         .iter()
         .zip(&second[1..blocks])
-        .map(|(&a, &b)| table[usize::from(a)][usize::from(b)])
+        .map(|(&a, &b)| table[pair_index(a, b)])
         .sum()
 }
 
