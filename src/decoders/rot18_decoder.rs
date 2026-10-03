@@ -52,7 +52,7 @@
 //! three times per text. Decodings it doesn't identify aren't handed on to the search: the
 //! search would expand them, and their Caesar shifts, as well as the plain Caesar
 //! readings, for little gain (it cost up to 19% more work in the `search` benchmarks, mostly
-//! on Base64 and hex nodes), so ROT18 is only found as the last layer.
+//! on Base64 and hex nodes), so ROT18 is only found as the last decoding step.
 //!
 //! # Known limits
 //!
@@ -61,9 +61,9 @@
 //!   reading, `Call me on 000 5644 before 4 tonight`.
 //! * ROT13 or Caesar text whose own numbers mostly start with 6 to 9 is taken for ROT18:
 //!   `We have 654 apples and 751 oranges` comes back as `109 apples and 206 oranges`.
-//! * ROT18 has to be the last layer: ROT18 of Base64, say, isn't found, since the decodings
-//!   aren't handed on (and the digits of Base64 don't count, so it is turned away anyway).
-//!   Base64 of ROT18 is found.
+//! * ROT18 has to be the last decoding step: Base64 of ROT18 text is found (Base64, then
+//!   rot18), ROT18 of Base64 isn't, since the decodings aren't handed on (and the digits
+//!   of Base64 don't count, so it is turned away anyway).
 //! * ROT5 alone, with the letters untouched, can't be found by the search when the letters
 //!   are English: such text is taken for plaintext before any decoder runs, and the English
 //!   checker can't tell `1234` from `6789`.
