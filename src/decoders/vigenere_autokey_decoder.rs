@@ -110,7 +110,9 @@ const UNCONFIRMED_FITNESS: f32 = -4.6;
 const QUADGRAM_COUNT: usize = 26 * 26 * 26 * 26;
 
 /// log10 probability of every quadgram, indexed by [`quadgram_at`]. Built on first use.
-static QUADGRAMS: Lazy<Box<[f32]>> =
+/// The Beaufort cracker scores its decryptions with it too. Almost every text it searches
+/// passes this cracker's checks as well, so sharing the table saves building it twice.
+pub(crate) static QUADGRAMS: Lazy<Box<[f32]>> =
     Lazy::new(|| parse_quadgrams(include_str!("../storage/ngrams/english_quadgrams.txt")));
 
 /// `CLASS_SCORES[parity][s][k]`: log10 of the English frequency of the letter that a

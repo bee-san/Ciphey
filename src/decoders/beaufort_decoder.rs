@@ -22,16 +22,17 @@
 //!    than reflected ones is Vigenère, and is left to the Vigenère decoder,
 //! 2. find a key of each length with the Vigenère key search on the Atbash of the letters,
 //! 3. score each decryption by how often its quadgrams (runs of four letters) occur in
-//!    English, less a penalty for long keys, and refine the best five keys a letter at
+//!    English, less a penalty for long keys, and refine the best three keys a letter at
 //!    a time,
 //! 4. show the best three distinct keys of two or more letters to the checker. A key of
 //!    one letter is Atbash (Z) or an Affine key with a = 25, which those decoders crack.
 //!
 //! On 810 test texts (9 English paragraphs, prefixes of 30 to 200 letters, 10 keys of 2
 //! to 15 letters) it finds 98% of the keys with 15 or more letters of text per key letter,
-//! 90% with 10 to 14 and 61% with 6 to 9. The quadgram counts are in
-//! `src/storage/ngrams/english_quadgrams.txt`, shared with the monoalphabetic
-//! substitution cracker.
+//! 89% with 10 to 14 and 59% with 6 to 9. The quadgram counts are in
+//! `src/storage/ngrams/english_quadgrams.txt`, and the table is the Vigenère autokey
+//! cracker's: almost every text that gets as far as the key search here is scored there
+//! too, so it is only built once.
 //!
 //! References: <https://en.wikipedia.org/wiki/Beaufort_cipher>,
 //! <https://www.dcode.fr/beaufort-cipher>,
@@ -40,7 +41,7 @@
 use super::affine_decoder::BIGRAM_LOG_PROBS;
 use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
-use super::monoalphabetic_substitution_decoder::QUADGRAMS;
+use super::vigenere_autokey_decoder::QUADGRAMS;
 use super::vigenere_decoder::{break_vigenere_letters, cipher_letters};
 use crate::checkers::CheckerTypes;
 use crate::storage::ENGLISH_FREQS;
@@ -133,8 +134,11 @@ const MIN_LETTERS_PER_KEY_LETTER: usize = 6;
 /// 810 test texts) and takes twice as long.
 const KEY_LENGTHS_SEARCHED: usize = 6;
 
-/// How many of the best-scoring keys are refined.
-const KEYS_REFINED: usize = 5;
+/// How many of the best-scoring keys are refined. Refining is most of the cost of a search
+/// that finds nothing, as on short Vigenère and Vigenère autokey ciphertexts, which pass
+/// the gates. Refining five keys instead found 4 more of the 810 test keys (578) and took
+/// 1.7 times as long on such text.
+const KEYS_REFINED: usize = 3;
 
 /// The most rounds of refinement. Each round tries every letter at every key position,
 /// and stops early once a round changes nothing. Four rounds find 23 more keys than two
