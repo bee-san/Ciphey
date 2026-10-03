@@ -50,6 +50,7 @@ use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitu
 use crate::decoders::morse_code::MorseCodeDecoder;
 use crate::decoders::multi_tap_decoder::MultiTapDecoder;
 use crate::decoders::nato_phonetic_decoder::NatoPhoneticDecoder;
+use crate::decoders::null_cipher_decoder::NullCipherDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
 use crate::decoders::ook_decoder::OokDecoder;
 use crate::decoders::polybius_decoder::PolybiusDecoder;
@@ -576,6 +577,22 @@ decoder_functions! {
     /// assert_eq!(decoded.plaintext().unwrap().text, "hello world");
     /// ```
     nato_phonetic: NatoPhoneticDecoder, aliases ["nato", "phonetic_alphabet", "spelling_alphabet"], key None;
+
+    /// Finds a message hidden in a null cipher: the first or last letters of the words or
+    /// lines of a cover text (an acrostic), every n-th letter, the capital letters, or the
+    /// letters after punctuation. The message comes back in capitals without spaces, and
+    /// the key names the rule that found it. Ciphey's checks only see messages that split
+    /// into dictionary words, unless `Config::regex` is set.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::null_cipher(
+    ///     "Help Everyone Love Lots Of Wildlife: Observe Raptors, Lizards, Deer.",
+    /// );
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(plaintext.text, "HELLOWORLD");
+    /// assert_eq!(plaintext.key.as_deref(), Some("first letter of each word"));
+    /// ```
+    null_cipher: NullCipherDecoder, aliases ["acrostic", "concealment_cipher"], key None;
 
     /// Decodes character codes written in octal.
     ///

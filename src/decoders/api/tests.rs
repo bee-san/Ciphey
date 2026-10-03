@@ -551,6 +551,27 @@ fn nato_phonetic_decodes() {
 }
 
 #[test]
+fn null_cipher_decodes() {
+    let decoded =
+        null_cipher("Help Everyone Love Lots Of Wildlife: Observe Raptors, Lizards, Deer.");
+    assert_plaintext(&decoded, "HELLOWORLD");
+    assert_eq!(plaintext_key(&decoded), "first letter of each word");
+    // Every 3rd letter
+    assert_plaintext(
+        &null_cipher("Hat ebbl idla powl waro rero tlot dog"),
+        "HELLOWORLD",
+    );
+    // English with nothing hidden in it, and text with too few words
+    assert!(null_cipher(
+        "The quick brown fox jumps over the lazy dog while the cat sleeps on the warm windowsill."
+    )
+    .is_empty());
+    assert!(null_cipher("hello world").is_empty());
+    let found = decoder_info("acrostic").expect("an alias");
+    assert_eq!(found.name, "Null cipher");
+}
+
+#[test]
 fn octal_decodes() {
     assert_plaintext(
         &octal("124 150 145 40 161 165 151 143 153 40 142 162 157 167 156 40 146 157 170 40 152 165 155 160 163 40 157 166 145 162 40 164 150 145 40 154 141 172 171 40 144 157 147"),
