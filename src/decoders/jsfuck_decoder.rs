@@ -805,9 +805,10 @@ impl<'a> Evaluator<'a> {
                     None | Some(Value::Undefined) => Vec::new(),
                     Some(pattern) => self.string_of(pattern)?,
                 };
-                Ok(Value::RegExp(
-                    regexp_source(&pattern).ok_or(Error::Unsupported)?,
-                ))
+                // Escaping can make the source up to six times as long as the pattern
+                self.fits(6 * pattern.len())?;
+                let source = regexp_source(&pattern).ok_or(Error::Unsupported)?;
+                Ok(Value::RegExp(self.made(source)?))
             }
             (Builtin::Object, _) => match argument {
                 None | Some(Value::Undefined) => Ok(Value::Object),
@@ -1865,6 +1866,12 @@ mod tests {
         // A long run of unary operators is no deeper than one
         let unary = format!("{}[]", "!".repeat(100_001));
         assert_eq!(decode(&unary).as_deref(), Ok("false"));
+        // The deepest nesting the first check allows evaluates without running out of
+        // stack, in a debug build too, and one level more is rejected
+        let deepest = format!("{}[]{}+[]", "([".repeat(31), "])".repeat(31));
+        assert_eq!(decode(&deepest).as_deref(), Ok(""));
+        let deeper = format!("([{deepest}])+[]");
+        assert_eq!(decode(&deeper), Err(Error::NotJsFuck));
     }
 
     #[test]
