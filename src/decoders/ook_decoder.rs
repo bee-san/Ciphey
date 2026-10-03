@@ -307,6 +307,40 @@ mod tests {
         Ook. Ook? Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. \
         Ook. Ook. Ook? Ook. Ook! Ook! Ook? Ook! Ook. Ook? Ook. Ook. Ook! Ook.";
 
+    /// Pragyan CTF 2016, "K": short Ook! in 29 lines, from
+    /// <https://raw.githubusercontent.com/shiltemann/CTF-writeups-public/master/Pragyan_2016/writeup.md>.
+    /// It prints the flag Caesar-shifted by 14, `hvstzouwgccywgbchgcsogm`.
+    const PRAGYAN_CTF_2016_K: &str = "\
+        . . . . . . . . . . . . . . .\n\
+        . . . . . ! ? ! ! . ? . . . .\n\
+        . . . . . . . . . . . . . . .\n\
+        . ? . ? ! . ? . . . . . . . .\n\
+        ! . ? . . . . . . . ! ? ! ! .\n\
+        ? . . . . . . ? . ? ! . ? . .\n\
+        . . . . . . . . ! . ! ! ! ! !\n\
+        ! ! . . . ! . . . . . . . . .\n\
+        . . . . ! . ? . . . . . . . !\n\
+        ? ! ! . ? ! ! ! ! ! ! ? . ? !\n\
+        . ? ! ! ! ! ! . . . . . . . .\n\
+        . . . . . ! . . . . . ! . ? .\n\
+        . . . . . . . . ! ? ! ! . ? !\n\
+        ! ! ! ! ! ! ! ? . ? ! . ? ! .\n\
+        ! ! ! ! ! ! ! ! ! . ! . ? . .\n\
+        . . . . . . . ! ? ! ! . ? . .\n\
+        . . . . . . ? . ? ! . ? . . .\n\
+        . . . . . . . . . ! . ! ! ! !\n\
+        ! . ? . . . . . . . . . ! ? !\n\
+        ! . ? ! ! ! ! ! ! ! ! ? . ? !\n\
+        . ? ! . ! ! ! ! ! ! ! ! ! ! !\n\
+        . . . ! . . . . . . . . . . .\n\
+        ! . ! ! ! . ! ! ! ! ! ! ! ! !\n\
+        . ? . . . . . . . . . ! ? ! !\n\
+        . ? . . . . . . . . ? . ? ! .\n\
+        ? ! . ! ! ! ! ! ! ! ! ! . ! !\n\
+        ! ! ! ! ! ! ! ! ! ! ! ! ! ! !\n\
+        . . . . . . . . . . . . . ! .\n\
+        ? .";
+
     /// The text the decoder benchmarks use for every decoder's miss
     const BENCH_MISS: &str =
         "T00 l3= ox+#G WKyV pajU6j qxH@ %B4+a 5Pn^ 7p_v1q 9sLvu *+36i R5rL&3 mVJZI iO0 Ut8_m COTV";
@@ -494,6 +528,20 @@ mod tests {
     }
 
     #[test]
+    fn pragyan_ctf_2016_k_prints_the_shifted_flag() {
+        // The flag is `theflagisookisnotsoeasy`; the Caesar shift is another decoder's job
+        assert_eq!(
+            decode(PRAGYAN_CTF_2016_K).as_deref(),
+            Some("hvstzouwgccywgbchgcsogm")
+        );
+        // The challenge file has CRLF line endings
+        assert_eq!(
+            decode(&PRAGYAN_CTF_2016_K.replace('\n', "\r\n")).as_deref(),
+            Some("hvstzouwgccywgbchgcsogm")
+        );
+    }
+
+    #[test]
     fn cells_above_127_are_latin_1() {
         // c a f, then cell 233: é
         let brainfuck = format!("{}.--.+++++.{}.", "+".repeat(99), "+".repeat(233 - 102));
@@ -538,6 +586,7 @@ mod tests {
 
     #[test]
     fn morse_and_brainfuck_are_not_decoded() {
+        assert_not_decoded(".... . .-.. .-.. ---");
         assert_not_decoded(".... . .-.. .-.. --- / .-- --- .-. .-.. -..");
         assert_not_decoded("... . ...");
         assert_not_decoded(".... ....");
@@ -552,6 +601,8 @@ mod tests {
 
     #[test]
     fn bad_tokens_are_not_decoded() {
+        // `Ook. Ook, Ook. Ook. ...`
+        assert_not_decoded(&ISSUE_EXAMPLE.replacen("Ook. Ook.", "Ook. Ook,", 1));
         assert_not_decoded(&ISSUE_EXAMPLE.replacen("Ook.", "Ook,", 2));
         assert_not_decoded(&ISSUE_EXAMPLE.replacen("Ook.", "Oak.", 1));
         assert_not_decoded(&format!("{ISSUE_EXAMPLE} banana"));

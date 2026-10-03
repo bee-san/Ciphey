@@ -121,6 +121,7 @@ fn esolangs_hello_world_is_cracked() {
 #[test]
 #[serial]
 fn ook_inside_base64_is_cracked() {
+    // On master the search returned Vigenère's reading of the decoded Ook! program
     let result = crack(HELLO_IN_BASE64);
     assert_eq!(result.text[0], "hello!");
     assert_eq!(path(&result), ["Base64", "Ook!"]);
