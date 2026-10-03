@@ -65,6 +65,7 @@ use crate::decoders::vigenere_decoder::VigenereDecoder;
 use crate::decoders::xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use crate::decoders::xor_single_byte_decoder::XorSingleByteDecoder;
 use crate::decoders::z85_decoder::Z85Decoder;
+use crate::decoders::zero_width_decoder::ZeroWidthDecoder;
 use crate::decoders::zlib_decoder::ZlibDecoder;
 
 use crate::decoders::brainfuck_interpreter::BrainfuckInterpreter;
@@ -266,6 +267,7 @@ pub fn get_all_decoders() -> Decoders {
 pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     trace!("Filtering and getting all decoders");
     let jwt = Decoder::<JwtDecoder>::new();
+    let zero_width = Decoder::<ZeroWidthDecoder>::new();
     let vigenere = Decoder::<VigenereDecoder>::new();
     let xor_repeating_key = Decoder::<XorRepeatingKeyDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
@@ -330,6 +332,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // path cost, then keeps this order. Railfence rearranges a JWT into strings the
             // LemmeKnow checker takes for URLs, which must not beat the decoded JWT.
             Box::new(jwt),
+            // Before every decoder that reads the cover text around a hidden message
+            // (Vigenere, Reverse, the classical ciphers, simplesubstitution): when two find
+            // plaintext in the same step, the search reports the one listed first.
+            Box::new(zero_width),
             Box::new(vigenere),
             Box::new(xor_repeating_key),
             Box::new(reversedecoder),

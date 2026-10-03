@@ -11,6 +11,7 @@
 
 use crate::cli_pretty_printing::decoded_how_many_times;
 use crate::decoders::interface::Crack;
+use crate::decoders::DECODER_MAP;
 use crate::filtration_system::get_all_decoders;
 use crossbeam::channel::Sender;
 
@@ -152,9 +153,20 @@ fn should_try_decoder(decoder: &(dyn Crack + Sync), last: Option<&crate::CrackRe
     is_common_sequence(last.decoder, name)
 }
 
+/// Whether the decoder of `step` is tagged `program`: its output can be a tiny part of its
+/// input by design. A steganography decoder returns the message without its cover text
+/// (Zero-width: at most one hidden character per 7 to 9 zero-width characters, in a
+/// cover of any length), and an interpreter prints less than its program.
+fn shrinks_by_design(step: &crate::CrackResult) -> bool {
+    DECODER_MAP
+        .get(step.decoder)
+        .is_some_and(|decoder| decoder.get::<()>().get_tags().contains(&"program"))
+}
+
 /// Reject results no correct answer could look like: under 3 chars, mostly non-printable,
-/// under 5% of the input length (no decoder shrinks text that much), or an English-checker
-/// hit that is more than a third punctuation.
+/// under 5% of the input length (no decoder shrinks text that much, except the ones in
+/// [`shrinks_by_design`]), or an English-checker hit that is more than a third
+/// punctuation.
 fn result_passes_sanity(node: &AStarNode, original_input_len: usize) -> bool {
     let Some(text) = node.state.text.first() else {
         return false;
@@ -162,7 +174,10 @@ fn result_passes_sanity(node: &AStarNode, original_input_len: usize) -> bool {
     if check_if_string_cant_be_decoded(text) {
         return false;
     }
-    if original_input_len >= 40 && text.chars().count() * 20 < original_input_len {
+    if original_input_len >= 40
+        && text.chars().count() * 20 < original_input_len
+        && !node.state.path.last().is_some_and(shrinks_by_design)
+    {
         return false;
     }
     // gibberish_or_not at Medium passes strings like `-t{)-+&it|{})h"#/,")isoe'$h` on bigrams.
@@ -527,5 +542,55 @@ mod tests {
             is_result: true,
         };
         assert!(result_passes_sanity(&node, 16));
+    }
+
+    /// A result node whose path is one step by `decoder`, checked by `checker_name`
+    fn result_node(text: &str, decoder: &'static str, checker_name: &'static str) -> AStarNode {
+        let mut step = crate::CrackResult::new(&crate::Decoder::default(), String::new());
+        step.decoder = decoder;
+        step.checker_name = checker_name;
+        AStarNode {
+            state: DecoderResult {
+                text: vec![text.to_string()],
+                path: vec![step],
+            },
+            depth: 1,
+            cost: 1.0,
+            total_cost: 0.0,
+            is_result: true,
+        }
+    }
+
+    #[test]
+    fn sanity_lets_program_decoders_shrink_text() {
+        // A 23-character flag hidden in a 615-character cover: 23 * 20 < 615
+        let flag = "flag{zero_width_is_fun}";
+        assert!(result_passes_sanity(
+            &result_node(flag, "Zero-width", "LemmeKnow Checker"),
+            615
+        ));
+        // The same result from a decoder without the tag is still too short
+        assert!(!result_passes_sanity(
+            &result_node(flag, "Base64", "LemmeKnow Checker"),
+            615
+        ));
+        // The tag only skips the length rule: unprintable and tiny results are still
+        // rejected, and so is an English-checker hit that is mostly punctuation
+        assert!(!result_passes_sanity(
+            &result_node("\u{2}\u{3}\u{4}\u{5}", "Zero-width", "LemmeKnow Checker"),
+            615
+        ));
+        assert!(!result_passes_sanity(
+            &result_node("hi", "Zero-width", "LemmeKnow Checker"),
+            615
+        ));
+        assert!(!result_passes_sanity(
+            &result_node(
+                "-t{)-+&it|{})h\"#/,\")isoe'$h",
+                "Zero-width",
+                "English Checker"
+            ),
+            615
+        ));
     }
 }

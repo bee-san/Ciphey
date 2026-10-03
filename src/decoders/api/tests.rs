@@ -620,6 +620,25 @@ fn z85_decodes() {
 }
 
 #[test]
+fn zero_width_decodes() {
+    // The bits of each byte, U+200B for 0 and U+200C for 1, with U+200D between the
+    // bytes, hidden in a cover text (https://github.com/bee-san/Ciphey/issues/973)
+    let hidden = "hello world"
+        .bytes()
+        .map(|byte| {
+            format!("{byte:08b}")
+                .replace('0', "\u{200b}")
+                .replace('1', "\u{200c}")
+        })
+        .collect::<Vec<_>>()
+        .join("\u{200d}");
+    let decoded = zero_width(&format!("Nothing{hidden} to see here"));
+    assert_plaintext(&decoded, "hello world");
+    assert_eq!(plaintext_key(&decoded), "separator U+200D, U+200B=0");
+    assert_eq!(decoder_info("zwsp").unwrap().name, "Zero-width");
+}
+
+#[test]
 fn zlib_inflates() {
     assert_plaintext(
         &zlib("eJxzzizISK1UyMxLy0ksSS1WqMrJTFIoLilKTcwtVkjLL1KozC8FAPwuDa0="),

@@ -214,6 +214,9 @@ pub mod xor_single_byte_decoder;
 /// The xor_repeating_key_decoder module cracks XOR with a repeating multi-byte key
 pub mod xor_repeating_key_decoder;
 
+/// The zero_width_decoder module reads messages hidden as zero-width Unicode characters
+pub mod zero_width_decoder;
+
 /// The monoalphabetic_substitution_decoder module cracks simple substitution ciphers
 pub mod monoalphabetic_substitution_decoder;
 
@@ -273,6 +276,7 @@ use vigenere_decoder::VigenereDecoder;
 use xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use xor_single_byte_decoder::XorSingleByteDecoder;
 use z85_decoder::Z85Decoder;
+use zero_width_decoder::ZeroWidthDecoder;
 use zlib_decoder::ZlibDecoder;
 
 use brainfuck_interpreter::BrainfuckInterpreter;
@@ -381,6 +385,8 @@ pub enum DecoderType {
     Rot47Decoder(rot47_decoder::ROT47Decoder),
     /// z85 decoder
     Z85Decoder(z85_decoder::Z85Decoder),
+    /// zero-width steganography decoder
+    ZeroWidthDecoder(zero_width_decoder::ZeroWidthDecoder),
     /// braille decoder
     BrailleDecoder(braille_decoder::BrailleDecoder),
     /// standard galactic alphabet decoder
@@ -556,6 +562,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ),
         ("rot47", DecoderBox::new(Decoder::<ROT47Decoder>::new())),
         ("Z85", DecoderBox::new(Decoder::<Z85Decoder>::new())),
+        (
+            "Zero-width",
+            DecoderBox::new(Decoder::<ZeroWidthDecoder>::new()),
+        ),
         ("Ascii85", DecoderBox::new(Decoder::<Ascii85Decoder>::new())),
         ("a1z26", DecoderBox::new(Decoder::<A1Z26Decoder>::new())),
         ("Braille", DecoderBox::new(Decoder::<BrailleDecoder>::new())),

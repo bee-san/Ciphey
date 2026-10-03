@@ -61,6 +61,7 @@ use crate::decoders::vigenere_decoder::VigenereDecoder;
 use crate::decoders::xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use crate::decoders::xor_single_byte_decoder::XorSingleByteDecoder;
 use crate::decoders::z85_decoder::Z85Decoder;
+use crate::decoders::zero_width_decoder::ZeroWidthDecoder;
 use crate::decoders::zlib_decoder::ZlibDecoder;
 
 /// Defines `pub fn <function>(text: &str) -> Decoded` for each decoder, which decodes or
@@ -655,6 +656,22 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "Hello World!");
     /// ```
     z85: Z85Decoder, aliases [], key None;
+
+    /// Reads a message hidden as zero-width Unicode characters in a cover text, or in a
+    /// bare run of them: binary with or without a byte separator (as Steganographr
+    /// writes it), 330k's Unicode steganography, zwsp-steg and zero-width-lib. Only the
+    /// hidden message comes back, and the key names the scheme.
+    ///
+    /// ```
+    /// // The bits of "hi", U+200B for 0 and U+200C for 1, with U+200D between the bytes
+    /// let decoded = ciphey::decoders::zero_width(
+    ///     "Nothing\u{200b}\u{200c}\u{200c}\u{200b}\u{200c}\u{200b}\u{200b}\u{200b}\u{200d}\
+    ///      \u{200b}\u{200c}\u{200c}\u{200b}\u{200c}\u{200b}\u{200b}\u{200c} to see here",
+    /// );
+    /// assert_eq!(decoded.candidates[0].text, "hi");
+    /// assert_eq!(decoded.candidates[0].key.as_deref(), Some("separator U+200D, U+200B=0"));
+    /// ```
+    zero_width: ZeroWidthDecoder, aliases ["zero_width_steganography", "zwsp"], key None;
 
     /// Inflates a zlib stream (RFC 1950) written as Base64 or hex, including git objects
     /// and Flask session cookies. For a git object the key is its type, such as
