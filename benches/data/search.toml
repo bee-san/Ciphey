@@ -356,6 +356,14 @@ layers = ["Vigenere"]
 input = "Nmbvrj me oa lyfczlxqr qpgarvyk fcbw. Cai ttzq wg proflaxqr bc izqboip hrix mbq tx ffvpw fc jzvw che atog hee rbyi fc ve, auhuzyf mbf lmjvyk fc xysi hup oqm bc ihsa elq qvalqf. Ve wqoenlqg gsvaits qmbl asegvmpq rrnspwarw, ovrnoe snnl ooaompogp xa grp atsgsid wg wsayf wmws Rykxwfs sd anegtsf l ozcjy tmhgpvz ghnl mg ny iyovw eprepwe, oao wfccd atsa tx rwaow eczpxtwar xtog cimrf wmws cweubgpbf. Abdx at gsi fwzp xtwf eewsf wieg gsez o fpgabq, hluqu xewsf tx toaoc rce nebhhci fvr qpmu psexzrykqg, cfdlzr syzhf lrp tbc ezmbyi ivb dxgaowie opcseg n dxdoari ehetrs wa l pau stpq."
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+[[case]]
+# Primer KEY (pycipher 0.5.2's Autokey, on the letters)
+kind = "single"
+name = "vigenere_autokey"
+layers = ["Vigenere Autokey"]
+input = "Wicf qi tf xhx hsh ztjsbnvnzs uxxew fmuzqjub guw belox buk fht, fht dlc krb a grrvv."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
 # base64(zlib(plaintext)): the Zlib decoder reads the Base64 itself, so it is one step
 [[case]]
 kind = "single"
@@ -516,6 +524,14 @@ kind = "multi"
 name = "route_transposition_base64"
 layers = ["Route Transposition", "Base64"]
 input = "TSAgZ2UgaGJoIHkgZWFvaCBtdHJldCB0ZXRsdGFpIGkgaGFvdCBkaGZkYW5tZW5yIHQgb3RubmdhIGRjbWhsdWVpZCBwayBoZWVpc3JnIHQsZWEu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# base64.b64encode of search/single/vigenere_autokey
+kind = "multi"
+name = "vigenere_autokey_base64"
+layers = ["Vigenere Autokey", "Base64"]
+input = "V2ljZiBxaSB0ZiB4aHggaHNoIHp0anNibnZuenMgdXh4ZXcgZm11enFqdWIgZ3V3IGJlbG94IGJ1ayBmaHQsIGZodCBkbGMga3JiIGEgZ3JydnYu"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

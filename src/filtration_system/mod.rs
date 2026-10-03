@@ -75,6 +75,7 @@ use crate::decoders::unicode_fancy_text_decoder::UnicodeFancyTextDecoder;
 use crate::decoders::url_decoder::URLDecoder;
 use crate::decoders::utf16_decoder::Utf16Decoder;
 use crate::decoders::uuencode_decoder::UuencodeDecoder;
+use crate::decoders::vigenere_autokey_decoder::VigenereAutokeyDecoder;
 use crate::decoders::vigenere_decoder::VigenereDecoder;
 use crate::decoders::xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use crate::decoders::xor_single_byte_decoder::XorSingleByteDecoder;
@@ -288,6 +289,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let jsfuck = Decoder::<JsFuckDecoder>::new();
     let route_transposition = Decoder::<RouteTranspositionDecoder>::new();
     let playfair = Decoder::<PlayfairDecoder>::new();
+    let vigenere_autokey = Decoder::<VigenereAutokeyDecoder>::new();
     let vigenere = Decoder::<VigenereDecoder>::new();
     let xor_repeating_key = Decoder::<XorRepeatingKeyDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
@@ -394,6 +396,11 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // class and cost when both are found in the same step, and the first in this
             // list is reported.
             Box::new(playfair),
+            // Before Vigenere: on unspaced text both can return an English hit at Medium
+            // sensitivity from the same step, which ties on checker class and cost and
+            // keeps this order, and Vigenere keys can turn an autokey ciphertext into text
+            // the English checker accepts.
+            Box::new(vigenere_autokey),
             Box::new(vigenere),
             Box::new(xor_repeating_key),
             Box::new(reversedecoder),

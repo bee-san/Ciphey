@@ -64,6 +64,11 @@ const VIGENERE_CRYPTII: &str = "Ck jdp tqiyr, p vib'u gsebta gonpgl bq tmkxz uqj
     rnima qw adgm kgcjh, hxbkdgoxl nqi qtgaqvztxmg bq sjjx ivf pcaewekjf vkmmp; zrh tjqnzrn \
     mw lkjrxgockjf qxbegvl gxl ipu egxmv kj jxfqbgu.";
 
+/// English enciphered with the Vigenère autokey primer HELLO (pycipher's `Autokey`, on the
+/// letters)
+const VIGENERE_AUTOKEY_HELLO: &str = "Kiqpbg xmi rdla aeld hb tsp qflapg al wlan tqd dblq la \
+    iywqe nux zpepiw gztyrp ocluiej, kpzr xtsp ofcv ep tjo dsxw.";
+
 // Every decoder
 
 #[test]
@@ -150,6 +155,7 @@ fn crackers_with_keys_take_keys() {
             "railfence",
             "rot47",
             "vigenere",
+            "vigenere_autokey",
             "xor_repeating_key",
             "xor_single_byte",
         ]
@@ -785,6 +791,20 @@ fn vigenere_cracks() {
 }
 
 #[test]
+fn vigenere_autokey_cracks() {
+    let decoded = vigenere_autokey(VIGENERE_AUTOKEY_HELLO);
+    assert_plaintext(
+        &decoded,
+        "Defend the east wall of the castle at dawn and hold it until the relief column \
+         arrives, then fall back to the keep.",
+    );
+    assert_eq!(plaintext_key(&decoded), "HELLO");
+    assert_eq!(decoder_info("autoclave").unwrap().name, "Vigenere Autokey");
+    // Wikipedia's example is too short to crack: 12 letters for a 7 letter primer
+    assert!(vigenere_autokey("QNXEPVYTWTWP").is_empty());
+}
+
+#[test]
 fn xor_repeating_key_cracks() {
     let decoded = xor_repeating_key(
         "32111713061f530417520115040b4f52041a174501000c1a1445171a00541e041301451b1545171a00541d0a11060d11010b430204070045141b111c531c0c074b",
@@ -885,6 +905,33 @@ fn vigenere_decrypts_with_a_key() {
                 vigenere_with_key("text", key),
                 Err(CipheyError::InvalidKey {
                     decoder: "Vigenere",
+                    ..
+                })
+            ),
+            "{key:?}"
+        );
+    }
+}
+
+#[test]
+fn vigenere_autokey_decrypts_with_a_key() {
+    // Wikipedia's example: too short to crack, but the primer decrypts it
+    let decoded = vigenere_autokey_with_key("QNXEPVYTWTWP", "queenly").unwrap();
+    assert_first(&decoded, "ATTACKATDAWN");
+    assert_eq!(decoded.candidates[0].key.as_deref(), Some("QUEENLY"));
+    let decoded = vigenere_autokey_with_key(VIGENERE_AUTOKEY_HELLO, "Hello").unwrap();
+    assert_plaintext(
+        &decoded,
+        "Defend the east wall of the castle at dawn and hold it until the relief column \
+         arrives, then fall back to the keep.",
+    );
+    assert_eq!(plaintext_key(&decoded), "HELLO");
+    for key in ["", "que enly", "qu33nly", "quéénly"] {
+        assert!(
+            matches!(
+                vigenere_autokey_with_key("text", key),
+                Err(CipheyError::InvalidKey {
+                    decoder: "Vigenere Autokey",
                     ..
                 })
             ),
@@ -1109,6 +1156,13 @@ fn decode_with_reads_every_key_format() {
     );
     assert!(key_error("vigenere", text, "lemon2").contains("letters"));
 
+    // Vigenère autokey: letters
+    assert_first(
+        &with_key("autokey", "QNXEPVYTWTWP", " Queenly "),
+        "ATTACKATDAWN",
+    );
+    assert!(key_error("vigenere_autokey", text, "queenly7").contains("letters"));
+
     // Affine: a and b, in order or by name
     let text = "Jffg jf dmgfs gaf gxtd edsgp";
     for key in [
@@ -1198,6 +1252,7 @@ fn cracked_keys_decrypt_again() {
         ("caesar", "Ijkjsi ymj jfxy bfqq tk ymj hfxyqj"),
         ("affine", "Jffg jf dmgfs gaf gxtd edsgp"),
         ("vigenere", VIGENERE_CRYPTII),
+        ("vigenere_autokey", VIGENERE_AUTOKEY_HELLO),
         ("xor_single_byte", "Z09PXgpHTwpIUwpeQk8KRUZOCkVLQQpeWE9PCkteCkRFRUQ="),
         (
             "xor_repeating_key",

@@ -226,6 +226,9 @@ pub mod brainfuck_interpreter;
 /// The vigenere_decoder module decodes Vigenère cipher text
 pub mod vigenere_decoder;
 
+/// The vigenere_autokey_decoder module cracks the Vigenère autokey (autoclave) cipher
+pub mod vigenere_autokey_decoder;
+
 use ascii85_decoder::Ascii85Decoder;
 /// The zlib_decoder module inflates zlib (RFC 1950) streams
 pub mod zlib_decoder;
@@ -319,6 +322,7 @@ use unicode_fancy_text_decoder::UnicodeFancyTextDecoder;
 use url_decoder::URLDecoder;
 use utf16_decoder::Utf16Decoder;
 use uuencode_decoder::UuencodeDecoder;
+use vigenere_autokey_decoder::VigenereAutokeyDecoder;
 use vigenere_decoder::VigenereDecoder;
 use xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use xor_single_byte_decoder::XorSingleByteDecoder;
@@ -471,6 +475,8 @@ pub enum DecoderType {
     JsFuckDecoder(jsfuck_decoder::JsFuckDecoder),
     /// vigenere decoder
     VigenereDecoder(vigenere_decoder::VigenereDecoder),
+    /// vigenere autokey cracker
+    VigenereAutokeyDecoder(vigenere_autokey_decoder::VigenereAutokeyDecoder),
     /// zlib decoder
     ZlibDecoder(zlib_decoder::ZlibDecoder),
     /// raw DEFLATE decoder
@@ -520,6 +526,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Vigenere",
             DecoderBox::new(Decoder::<VigenereDecoder>::new()),
+        ),
+        (
+            "Vigenere Autokey",
+            DecoderBox::new(Decoder::<VigenereAutokeyDecoder>::new()),
         ),
         (
             "Repeating-key XOR",

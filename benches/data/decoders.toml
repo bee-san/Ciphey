@@ -4,7 +4,8 @@
 # plaintext (576 chars) encoded with that decoder, encoded by the same crates the
 # decoder itself uses (base64, data-encoding, bs58, base91, base65536, z85,
 # urlencoding) or by the textbook algorithm for ciphers (ROT13 for caesar, 3 rails
-# for railfence, key KEY/LEMON for Vigenere, etc). Base85 (RFC 1924) has no crate, so its
+# for railfence, key KEY/LEMON for Vigenere, primer KEY/FORTIFICATION for Vigenere
+# Autokey, etc). Base85 (RFC 1924) has no crate, so its
 # inputs come from Python's base64.b85encode. Ascii85 is hand-rolled, so its inputs come
 # from Python's base64.a85encode(adobe=True). HTML Entities writes every character as a
 # decimal (medium) or hexadecimal (long) character reference, like CyberChef's "To HTML
@@ -1158,6 +1159,23 @@ decoder = "Vigenere"
 size = "long"
 success = true
 input = "Nmbvrj me oa lyfczlxqr qpgarvyk fcbw. Cai ttzq wg proflaxqr bc izqboip hrix mbq tx ffvpw fc jzvw che atog hee rbyi fc ve, auhuzyf mbf lmjvyk fc xysi hup oqm bc ihsa elq qvalqf. Ve wqoenlqg gsvaits qmbl asegvmpq rrnspwarw, ovrnoe snnl ooaompogp xa grp atsgsid wg wsayf wmws Rykxwfs sd anegtsf l ozcjy tmhgpvz ghnl mg ny iyovw eprepwe, oao wfccd atsa tx rwaow eczpxtwar xtog cimrf wmws cweubgpbf. Abdx at gsi fwzp xtwf eewsf wieg gsez o fpgabq, hluqu xewsf tx toaoc rce nebhhci fvr qpmu psexzrykqg, cfdlzr syzhf lrp tbc ezmbyi ivb dxgaowie opcseg n dxdoari ehetrs wa l pau stpq."
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
+[[case]]
+# Primer KEY. The autokey vectors were checked against pycipher 0.5.2's Autokey, on the
+# letters (it drops everything else).
+decoder = "Vigenere Autokey"
+size = "medium"
+success = true
+input = "Wicf qi tf xhx hsh ztjsbnvnzs uxxew fmuzqjub guw belox buk fht, fht dlc krb a grrvv."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Primer FORTIFICATION
+decoder = "Vigenere Autokey"
+size = "long"
+success = true
+input = "Hwgamd qu ag iigqupaib lwcbdcgu fohp. Bry iwym vz xbqcwdnkl jv mggbfvb ixbw oeh vv humhl xl poen wnm npel poo rfxs nh ea, wbphgxh lsn vioevz ac egmk noe fml uk sfrb pal gstfsi. Mo wrtygjmh aliwnyl mrpf tglzzpfk kqcbbxbyk, kipgnw gofp pgffphcdw xo ulg wuhbkek mm zgsoo smdl Ieoetgv yj xidglry l sfvke bamvlvf sepv wf pn xfezy sxfyeks, nrp sbzpv zyif at slfwg hgilxuqgl budl jsmhl sqxk isabexeal. Xwcx dq tpr mmjx fval hfdlw emew moif t soggyh, ozbjh zaciu wg kwula mar mehbnye gkc kzri cwtfcignix, aufbse sfrgy efs znq lrfiax ohb vyidbycg ngnvgk t mfslrye ukfafg ag r lbm jaev."
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
 [[case]]

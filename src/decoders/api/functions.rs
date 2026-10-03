@@ -71,6 +71,7 @@ use crate::decoders::unicode_fancy_text_decoder::UnicodeFancyTextDecoder;
 use crate::decoders::url_decoder::URLDecoder;
 use crate::decoders::utf16_decoder::Utf16Decoder;
 use crate::decoders::uuencode_decoder::UuencodeDecoder;
+use crate::decoders::vigenere_autokey_decoder::VigenereAutokeyDecoder;
 use crate::decoders::vigenere_decoder::VigenereDecoder;
 use crate::decoders::xor_repeating_key_decoder::XorRepeatingKeyDecoder;
 use crate::decoders::xor_single_byte_decoder::XorSingleByteDecoder;
@@ -835,6 +836,27 @@ decoder_functions! {
     /// assert_eq!(plaintext.key.as_deref(), Some("HELLO"));
     /// ```
     vigenere: VigenereDecoder, aliases ["vigenère"], key Some(keys::VIGENERE);
+
+    /// Cracks the Vigenère autokey (autoclave) cipher, whose key is a short primer
+    /// followed by the plaintext itself. Ciphey finds primers of 1 to 15 letters from the
+    /// letter statistics, given at least 20 letters and about 6 per primer letter. The key
+    /// is the primer. To decrypt with a known primer, use
+    /// [`vigenere_autokey_with_key`](super::vigenere_autokey_with_key).
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::vigenere_autokey(
+    ///     "Wicf qi tf xhx hsh ztjsbnvnzs uxxew fmuzqjub guw belox buk fht, fht dlc krb a grrvv.",
+    /// );
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(
+    ///     plaintext.text,
+    ///     "Meet me at the old lighthouse after midnight and bring the map, the key and a torch.",
+    /// );
+    /// assert_eq!(plaintext.key.as_deref(), Some("KEY"));
+    /// ```
+    vigenere_autokey: VigenereAutokeyDecoder,
+        aliases ["vigenère_autokey", "autokey", "autoclave"],
+        key Some(keys::VIGENERE_AUTOKEY);
 
     /// Cracks XOR with a repeating key of 2 to 40 bytes, given as hex, Base64 or raw bytes.
     /// To decrypt with a known key, use

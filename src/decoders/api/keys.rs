@@ -11,6 +11,7 @@ use crate::decoders::monoalphabetic_substitution_decoder::{
 use crate::decoders::playfair_decoder::{self, PlayfairDecoder};
 use crate::decoders::railfence_decoder::{self, RailfenceDecoder};
 use crate::decoders::rot47_decoder::{self, ROT47Decoder};
+use crate::decoders::vigenere_autokey_decoder::{self, VigenereAutokeyDecoder};
 use crate::decoders::vigenere_decoder::{self, VigenereDecoder};
 use crate::decoders::xor_repeating_key_decoder::{self, XorRepeatingKeyDecoder};
 use crate::decoders::xor_single_byte_decoder::{self, XorSingleByteDecoder};
@@ -82,6 +83,37 @@ pub fn vigenere_with_key(text: &str, key: &str) -> Result<Decoded, CipheyError> 
     Ok(decrypted::<VigenereDecoder>(vec![(
         vigenere_decoder::decrypt(text, &key),
         key,
+    )]))
+}
+
+/// Decrypts the Vigenère autokey (autoclave) cipher with a known primer.
+///
+/// The primer is ASCII letters in either case, such as `QUEENLY`. The text's first letters
+/// are decrypted with the primer's letters, and the rest with the plaintext's own letters
+/// from the first on. Anything that isn't an ASCII letter is copied and uses up no key
+/// letter.
+///
+/// ```
+/// // Wikipedia's example
+/// let decoded = ciphey::decoders::vigenere_autokey_with_key("QNXEPVYTWTWP", "queenly")?;
+/// assert_eq!(decoded.candidates[0].text, "ATTACKATDAWN");
+/// assert_eq!(decoded.candidates[0].key.as_deref(), Some("QUEENLY"));
+/// # Ok::<(), ciphey::CipheyError>(())
+/// ```
+///
+/// # Errors
+///
+/// [`CipheyError::InvalidKey`] if the primer is empty or has anything but ASCII letters.
+pub fn vigenere_autokey_with_key(text: &str, primer: &str) -> Result<Decoded, CipheyError> {
+    if primer.is_empty() || !primer.bytes().all(|byte| byte.is_ascii_alphabetic()) {
+        return Err(invalid_key::<VigenereAutokeyDecoder>(format!(
+            "{primer:?} isn't a primer: it must be one or more letters, such as QUEENLY"
+        )));
+    }
+    let primer = primer.to_ascii_uppercase();
+    Ok(decrypted::<VigenereAutokeyDecoder>(vec![(
+        vigenere_autokey_decoder::decrypt(text, &primer),
+        primer,
     )]))
 }
 
@@ -328,6 +360,12 @@ pub(super) const VIGENERE: KeySupport = KeySupport {
     decrypt: vigenere_key,
 };
 
+/// The Vigenère autokey's key for [`decode_with`](super::decode_with).
+pub(super) const VIGENERE_AUTOKEY: KeySupport = KeySupport {
+    format: "The primer, in letters: QUEENLY.",
+    decrypt: vigenere_autokey_key,
+};
+
 /// Affine's key for [`decode_with`](super::decode_with).
 pub(super) const AFFINE: KeySupport = KeySupport {
     format: "a and b of E(x) = (a*x + b) mod 26, as the cracker reports them: a=5, b=8 \
@@ -383,6 +421,11 @@ fn rot47_key(text: &str, key: &str) -> Result<Decoded, CipheyError> {
 /// [`vigenere_with_key`] with the key written as [`VIGENERE`] says.
 fn vigenere_key(text: &str, key: &str) -> Result<Decoded, CipheyError> {
     vigenere_with_key(text, key.trim())
+}
+
+/// [`vigenere_autokey_with_key`] with the key written as [`VIGENERE_AUTOKEY`] says.
+fn vigenere_autokey_key(text: &str, key: &str) -> Result<Decoded, CipheyError> {
+    vigenere_autokey_with_key(text, key.trim())
 }
 
 /// [`affine_with_key`] with the key written as [`AFFINE`] says.
