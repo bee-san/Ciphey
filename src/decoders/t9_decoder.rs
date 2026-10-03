@@ -23,7 +23,9 @@
 //! 3. Not every word is one digit repeated, like Multi-tap's `44 33 555`.
 //! 4. At most one word in four may be missing from the dictionary. Words of 1 or 2 digits
 //!    are checked first, against a table built at compile time, so Decimal, Octal and A1Z26
-//!    text (`77 101 101 116` splits into `77 6`) fails without loading the dictionary.
+//!    text (`77 101 101 116` splits into `77 6`) fails without loading anything. Then every
+//!    word is checked against the dictionary's key strings, which are much cheaper to load
+//!    than the scored dictionary, so big integers and other long runs of digits fail there.
 
 use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
@@ -89,20 +91,37 @@ const EXTRA_WORDS: &str = "\
 /// The dictionary words of every key string (see [`word_key`]), most likely first. Built on
 /// first use, which only happens once some text has passed the cheap checks.
 static WORDS: Lazy<HashMap<u64, Vec<Word>>> = Lazy::new(|| {
-    let listed = include_str!("../storage/ngrams/english_words.txt")
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty() && !line.starts_with('#'));
     build_dictionary(
-        listed.chain(EXTRA_WORDS.split_ascii_whitespace()),
+        listed_words(),
         include_str!("../storage/ngrams/english_quadgrams.txt"),
     )
 });
 
+/// Every key string that has a dictionary word, sorted. Much cheaper to build than
+/// [`WORDS`], which also parses and scores the quadgrams, so text that is mostly not words,
+/// like a big integer, is rejected with it first.
+static KEYS: Lazy<Box<[u64]>> = Lazy::new(|| {
+    let mut keys: Vec<u64> = listed_words()
+        .filter_map(|word| word_key(word.as_bytes()))
+        .collect();
+    keys.sort_unstable();
+    keys.dedup();
+    keys.into_boxed_slice()
+});
+
+/// The words of `english_words.txt` and [`EXTRA_WORDS`].
+fn listed_words() -> impl Iterator<Item = &'static str> {
+    include_str!("../storage/ngrams/english_words.txt")
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .chain(EXTRA_WORDS.split_ascii_whitespace())
+}
+
 /// Whether each key string of 1 or 2 digits (8 to 15 and 64 to 127, see [`word_key`]) has a
 /// dictionary word, read from the same word lists at compile time. Decimal, Octal and A1Z26
 /// text splits into numbers like these at its `0`s and `1`s, so it can be rejected without
-/// building [`WORDS`].
+/// building [`KEYS`] or [`WORDS`].
 static SHORT_WORDS: [bool; 128] = mark_short_words(
     mark_short_words(
         [false; 128],
@@ -226,7 +245,11 @@ impl Crack for Decoder<T9Decoder> {
 pub(crate) fn candidates(text: &str) -> Option<Vec<String>> {
     let text = text.trim();
     let tokens = tokenize(text.as_bytes())?;
-    if too_many_unknown_short_words(&tokens) {
+    // Words of 1 or 2 digits are checked against a table built at compile time, then every
+    // word against the key strings, before the scored dictionary is built
+    if too_many_unknown(&tokens, |key| key >= 128 || SHORT_WORDS[key as usize])
+        || too_many_unknown(&tokens, |key| KEYS.binary_search(&key).is_ok())
+    {
         return None;
     }
     let words = look_up(&tokens)?;
@@ -314,17 +337,12 @@ fn is_separator(byte: u8) -> bool {
         )
 }
 
-/// Whether the tokens that certainly aren't words, those of 1 or 2 digits that no word has
-/// and those longer than every word, are already more than one token in four, so
-/// [`look_up`] would fail too. This needs no dictionary: Decimal (`77 101 101 116`), Octal
-/// and A1Z26 text fails here without building it.
-fn too_many_unknown_short_words(tokens: &[Token]) -> bool {
+/// Whether more than one token in four is longer than every word or has a key string that
+/// `might_be_a_word` rules out, so that [`look_up`] would fail too.
+fn too_many_unknown(tokens: &[Token], might_be_a_word: impl Fn(u64) -> bool) -> bool {
     let unknown = tokens
         .iter()
-        .filter(|token| match token.key {
-            Some(key) => key < 128 && !SHORT_WORDS[key as usize],
-            None => true,
-        })
+        .filter(|token| !token.key.is_some_and(&might_be_a_word))
         .count();
     unknown * 4 > tokens.len()
 }
@@ -623,9 +641,9 @@ fn ngram_index(letters: &[u8]) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::{
-        best_sentences, build_dictionary, candidates, mark_short_words, tokenize,
-        too_many_unknown_short_words, word_key, Pick, QuadgramCounts, T9Decoder, Word, EXTRA_WORDS,
-        KEYPAD, MAX_WORD_LEN, SCORE_SCALE, SHORT_WORDS, WORDS,
+        best_sentences, build_dictionary, candidates, mark_short_words, tokenize, too_many_unknown,
+        word_key, Pick, QuadgramCounts, T9Decoder, Word, EXTRA_WORDS, KEYPAD, KEYS, MAX_WORD_LEN,
+        SCORE_SCALE, SHORT_WORDS, WORDS,
     };
     use crate::checkers::athena::Athena;
     use crate::checkers::checker_type::{Check, Checker};
@@ -1068,6 +1086,18 @@ mod tests {
         assert_eq!(marked, expected);
     }
 
+    // The pre-check against the compile-time table of 1 and 2 letter words
+    fn short_words_rule_out(text: &str) -> bool {
+        let tokens = tokenize(text.as_bytes()).expect(text);
+        too_many_unknown(&tokens, |key| key >= 128 || SHORT_WORDS[key as usize])
+    }
+
+    // The pre-check against every key string
+    fn keys_rule_out(text: &str) -> bool {
+        let tokens = tokenize(text.as_bytes()).expect(text);
+        too_many_unknown(&tokens, |key| KEYS.binary_search(&key).is_ok())
+    }
+
     #[test]
     fn rejects_short_numbers_without_the_dictionary() {
         // Decimal, Octal and A1Z26 `Meet me at...`, split at their 0s and 1s
@@ -1080,8 +1110,7 @@ mod tests {
             // A token longer than every word
             "99999999999999999999 843",
         ] {
-            let tokens = tokenize(text.as_bytes()).expect(text);
-            assert!(too_many_unknown_short_words(&tokens), "for {text:?}");
+            assert!(short_words_rule_out(text), "for {text:?}");
         }
         // T9 text passes, even when most of its words are short
         for text in [
@@ -1090,9 +1119,30 @@ mod tests {
             "47 48 843",
             "2 247439 2 2",
         ] {
-            let tokens = tokenize(text.as_bytes()).expect(text);
-            assert!(!too_many_unknown_short_words(&tokens), "for {text:?}");
+            assert!(!short_words_rule_out(text), "for {text:?}");
+            assert!(!keys_rule_out(text), "for {text:?}");
         }
+    }
+
+    #[test]
+    fn rejects_long_numbers_without_the_scored_dictionary() {
+        // The big integer of `Meet me at the old lighthouse...` (the search bench's
+        // big_integer case) splits into 35 words at its 0s and 1s. Only 5 are short
+        // non-words, so it passes the first check, but 27 have no dictionary word.
+        let big_integer = "5924286894360222175456110753752027428824911406952436191673549997864792617447030598048630620176057525265340209895115724741248167312932204479423391834119139432169971560672548040885900086328";
+        assert!(!short_words_rule_out(big_integer));
+        assert!(keys_rule_out(big_integer));
+        assert_fails(big_integer);
+        // A phone number with its area code
+        assert!(keys_rule_out("2025550143"));
+    }
+
+    #[test]
+    fn key_set_matches_the_dictionary() {
+        let mut keys: Vec<u64> = WORDS.keys().copied().collect();
+        keys.sort_unstable();
+        assert_eq!(&KEYS[..], &keys[..]);
+        assert_eq!(KEYS.len(), 11_102);
     }
 
     #[test]
