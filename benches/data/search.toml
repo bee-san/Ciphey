@@ -284,6 +284,16 @@ input = "32 15 15 44  32 15  11 44  44 23 15  34 31 14  31 24 22 23 44 23 34 45 
 expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP THE KEY AND A TORCH"
 
 [[case]]
+# DNA codons: each letter as its alphabetically first codon in the standard genetic code,
+# each space as the stop codon TAA. The codon alphabet has no O, U or B, so the usual
+# plaintext loses letters; this one doesn't.
+kind = "single"
+name = "dna_codon"
+layers = ["DNA Codon"]
+input = "ACA CAC ATA AGC TAA ATA AGC TAA GCA TAA AGC GAA TGC AGA GAA ACA TAA ATG GAA AGC AGC GCA GGA GAA"
+expected = "THIS IS A SECRET MESSAGE"
+
+[[case]]
 kind = "single"
 name = "railfence"
 layers = ["railfence"]

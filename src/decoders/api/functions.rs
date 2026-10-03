@@ -32,6 +32,7 @@ use crate::decoders::brainfuck_interpreter::BrainfuckInterpreter;
 use crate::decoders::caesar_decoder::CaesarDecoder;
 use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
 use crate::decoders::decimal_decoder::DecimalDecoder;
+use crate::decoders::dna_codon_decoder::DnaCodonDecoder;
 use crate::decoders::dtmf_decoder::DtmfDecoder;
 use crate::decoders::gzip_decoder::GzipDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
@@ -341,6 +342,15 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "hello world");
     /// ```
     decimal: DecimalDecoder, aliases ["charcode"], key None;
+
+    /// Decodes DNA or RNA codons, triplets of `ACGT` or `ACGU`, to one-letter amino-acid
+    /// codes with the standard genetic code. Stop codons become spaces.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::dna_codon("ATG GAA GAA ACA TAA ATG GAA TAA GCA ACA TAA GAC GCA TGG AAC");
+    /// assert_eq!(decoded.plaintext().unwrap().text, "MEET ME AT DAWN");
+    /// ```
+    dna_codon: DnaCodonDecoder, aliases ["dna", "codon", "codons"], key None;
 
     /// Decodes DTMF (touch-tone) frequency pairs, one low and one high frequency per
     /// telephone key in either order, so `852-1336` is `8`. The output is the keys 0 to 9,

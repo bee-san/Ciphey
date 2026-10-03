@@ -17,6 +17,7 @@ use crate::decoders::baudot_decoder::BaudotDecoder;
 use crate::decoders::big_integer_decoder::BigIntegerDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::decimal_decoder::DecimalDecoder;
+use crate::decoders::dna_codon_decoder::DnaCodonDecoder;
 use crate::decoders::dtmf_decoder::DtmfDecoder;
 use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
 use crate::decoders::hexdump_decoder::HexdumpDecoder;
@@ -275,6 +276,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let multi_tap = Decoder::<MultiTapDecoder>::new();
     let big_integer = Decoder::<BigIntegerDecoder>::new();
     let dtmf = Decoder::<DtmfDecoder>::new();
+    let dna_codon = Decoder::<DnaCodonDecoder>::new();
     let hexadecimal = Decoder::<HexadecimalDecoder>::new();
     let hexdump = Decoder::<HexdumpDecoder>::new();
     let octal = Decoder::<OctalDecoder>::new();
@@ -336,6 +338,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // (Vigenere, Reverse, the classical ciphers, simplesubstitution): when two find
             // plaintext in the same step, the search reports the one listed first.
             Box::new(zero_width),
+            // Before Vigenere, which turns codon inputs into English-looking junk (`AOT HBR
+            // JKR ...`). The search ranks the codon plaintext first anyway, since it passes
+            // the strict English check and the junk doesn't; this order only settles a tie.
+            Box::new(dna_codon),
             Box::new(vigenere),
             Box::new(xor_repeating_key),
             Box::new(reversedecoder),

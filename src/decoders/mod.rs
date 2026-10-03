@@ -99,6 +99,8 @@ pub mod big_integer_decoder;
 pub mod binary_decoder;
 /// The decimal_decoder module decodes decimal character codes
 pub mod decimal_decoder;
+/// The dna_codon_decoder module decodes DNA/RNA codons to one-letter amino-acid codes
+pub mod dna_codon_decoder;
 /// The dtmf_decoder module decodes DTMF (touch-tone) frequency pairs
 pub mod dtmf_decoder;
 /// The hexadecimal_decoder module decodes hexadecimal
@@ -233,6 +235,7 @@ use baudot_decoder::BaudotDecoder;
 use big_integer_decoder::BigIntegerDecoder;
 use binary_decoder::BinaryDecoder;
 use decimal_decoder::DecimalDecoder;
+use dna_codon_decoder::DnaCodonDecoder;
 use dtmf_decoder::DtmfDecoder;
 use hexadecimal_decoder::HexadecimalDecoder;
 use hexdump_decoder::HexdumpDecoder;
@@ -317,6 +320,8 @@ pub enum DecoderType {
     BinaryDecoder(binary_decoder::BinaryDecoder),
     /// decimal decoder
     DecimalDecoder(decimal_decoder::DecimalDecoder),
+    /// DNA codon decoder
+    DnaCodonDecoder(dna_codon_decoder::DnaCodonDecoder),
     /// DTMF decoder
     DtmfDecoder(dtmf_decoder::DtmfDecoder),
     /// hexadecimal decoder
@@ -453,6 +458,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Big integer to bytes",
             DecoderBox::new(Decoder::<BigIntegerDecoder>::new()),
+        ),
+        (
+            "DNA Codon",
+            DecoderBox::new(Decoder::<DnaCodonDecoder>::new()),
         ),
         (
             "Hexadecimal",

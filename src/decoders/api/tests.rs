@@ -351,6 +351,23 @@ fn decimal_decodes() {
 }
 
 #[test]
+fn dna_codon_decodes() {
+    // RNA, unspaced: the stop codons UAA are spaces
+    assert_plaintext(
+        &dna_codon("ACACACAUAAGCUAAAUAAGCUAAGCAUAAAGCGAAUGCAGAGAAACAUAAAUGGAAAGCAGCGCAGGAGAA"),
+        "THIS IS A SECRET MESSAGE",
+    );
+    // The issue example has no stop codons; Athena doesn't identify CIPHEYISFAST, but it
+    // is still the one candidate
+    assert_first(
+        &dna_codon("TGC ATA CCA CAC GAA TAC ATA AGC TTC GCA AGC ACA"),
+        "CIPHEYISFAST",
+    );
+    let found = decoder_info("codons").expect("an alias");
+    assert_eq!(found.name, "DNA Codon");
+}
+
+#[test]
 fn dtmf_decodes() {
     // LemmeKnow takes the keys for a phone number
     assert_plaintext(
