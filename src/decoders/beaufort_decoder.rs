@@ -12,10 +12,14 @@
 //! turned back with Atbash. "Variant Beaufort" (P = C + K) is Vigenère with a negated key,
 //! which the Vigenère decoder already cracks, so it isn't handled here.
 //!
-//! The search, after cheap checks that turn most text away in under a microsecond
-//! (see `passes_gates`):
+//! The search, after cheap checks that turn most text away in microseconds (see
+//! `passes_gates`: too few letters, other symbols or changes of case inside words, an
+//! index of coincidence or letter frequencies like English's, or a Caesar, Atbash or
+//! Affine key that reads it as English):
 //! 1. rank the key lengths from 2 to 20 letters (and at most a sixth of the text) by
-//!    the index of coincidence of their columns, and keep the best six,
+//!    the index of coincidence of their columns, and keep the best six. From 100 letters
+//!    on, text whose columns at the best length read as Caesar shifts of English rather
+//!    than reflected ones is Vigenère, and is left to the Vigenère decoder,
 //! 2. find a key of each length with the Vigenère key search on the Atbash of the letters,
 //! 3. score each decryption by how often its quadgrams (runs of four letters) occur in
 //!    English, less a penalty for long keys, and refine the best five keys a letter at
@@ -33,11 +37,13 @@
 //! <https://www.dcode.fr/beaufort-cipher>,
 //! <http://practicalcryptography.com/ciphers/classical-era/beaufort/>
 
+use super::affine_decoder::BIGRAM_LOG_PROBS;
 use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
 use super::monoalphabetic_substitution_decoder::QUADGRAMS;
 use super::vigenere_decoder::{break_vigenere_letters, cipher_letters};
 use crate::checkers::CheckerTypes;
+use crate::storage::ENGLISH_FREQS;
 use gibberish_or_not::Sensitivity;
 use log::{debug, trace};
 
@@ -71,6 +77,44 @@ const IOC_GATE_LETTERS: usize = 100;
 /// 0.066 (and so do its Caesar, Atbash and Affine encryptions), Beaufort ciphertexts of it
 /// with keys of two or more letters at most 0.057.
 const MAX_IOC: f64 = 0.060;
+
+/// Gate 5: the highest mean natural log of the English frequency of each letter. Below 100
+/// letters gate 4 lets English through, and transpositions of it (reversed text, rail
+/// fence) keep its letters. On windows of 20 to 200 letters of 17 English paragraphs, 90%
+/// score above −3.13 (and every window of 100 or more letters above −3.15); their
+/// Beaufort ciphertexts never scored above −3.20.
+const MAX_ENGLISH_LETTER_LOG_PROB: f64 = -3.15;
+
+/// Gate 6: the highest mean `ln P` per pair of consecutive letters (across word breaks)
+/// that the best Caesar, Atbash or Affine key may give, below 40 pairs. With that key the
+/// text reads as English letter pairs, and the decoder of that key is cheaper. On windows
+/// of 17 English paragraphs: the best key for their affine encryptions scored at least
+/// −6.81 (20 to 39 letters, 90% above −5.84), the best key for their Beaufort ciphertexts
+/// at most −5.49 (90% below −6.27).
+const MAX_AFFINE_PAIR_LOG_PROB_SHORT: f32 = -6.0;
+
+/// Gate 6, from 40 pairs on. The best key for affine encryptions scored at least −6.40
+/// (40 to 59 letters), −6.01 (60 to 99) and −5.78 (100 to 200), for Beaufort ciphertexts
+/// at most −6.13, −6.68 and −6.93.
+const MAX_AFFINE_PAIR_LOG_PROB: f32 = -6.3;
+
+/// Gate 6 only scores this many letters: more don't tell the keys apart any better, and
+/// scoring 312 keys on every distinct letter pair of a long text takes a few hundred
+/// microseconds.
+const AFFINE_GATE_MAX_LETTERS: usize = 150;
+
+/// Gate 7 applies from this many letters on: below it a column is too short to tell a
+/// Caesar shift of English from a reflected one.
+const VIGENERE_GATE_LETTERS: usize = 100;
+
+/// Gate 7: a text is left to the Vigenère decoder if, at the best-ranked key length, its
+/// columns fit English better as Caesar shifts than as reflected (Beaufort) shifts by more
+/// than this many nats per letter, divided by the square root of the number of letters
+/// (see [`reflection_preference`]). On windows of 100 to 576 letters of 17 English
+/// paragraphs, every Beaufort ciphertext the cracker solved scored above −0.087 (100 to
+/// 149 letters), −0.045 (150 to 199) and 0.002 (200 or more), and their Vigenère
+/// ciphertexts below −0.05 in 74%, 92% and all but one of 258 cases.
+const VIGENERE_PREFERENCE_SCALE: f64 = 1.1;
 
 /// The shortest key searched. A key of one letter is Atbash or Affine.
 const MIN_KEY_LENGTH: usize = 2;
@@ -281,11 +325,23 @@ fn rank_keys(text: &str) -> Vec<(f32, String)> {
     if !passes_gates(text) {
         return Vec::new();
     }
+    search_keys(text)
+}
+
+/// [`rank_keys`] without the gates. `text` has at least [`MIN_LETTERS`] ASCII letters.
+fn search_keys(text: &str) -> Vec<(f32, String)> {
     let letters = cipher_letters(text);
+    let lengths = likely_key_lengths(&letters);
+    if let Some(&best) = lengths.first() {
+        if looks_like_vigenere(&letters, best) {
+            trace!("Beaufort: the columns at key length {best} read as Vigenère");
+            return Vec::new();
+        }
+    }
     let atbash: Vec<usize> = letters.iter().map(|&letter| 25 - letter).collect();
     let scorer = Scorer::new(letters.iter().map(|&letter| letter as u8).collect());
 
-    let mut keys: Vec<(f32, Vec<u8>)> = likely_key_lengths(&letters)
+    let mut keys: Vec<(f32, Vec<u8>)> = lengths
         .into_iter()
         .filter_map(|length| {
             let key = from_vigenere_key(&break_vigenere_letters(&atbash, length))?;
@@ -322,11 +378,14 @@ fn rank_keys(text: &str) -> Vec<(f32, String)> {
         .collect()
 }
 
-/// The cheap checks, one pass over the text without allocating: at least
-/// [`MIN_LETTERS`] ASCII letters, at most one other character (not whitespace) per
-/// [`LETTERS_PER_OTHER`] letters, few changes from lower to upper case between adjacent
-/// letters (see [`LOWER_UPPER_PAIRS_ONE_IN`]), and from [`IOC_GATE_LETTERS`] letters on
-/// an index of coincidence of at most [`MAX_IOC`], below English's.
+/// The cheap checks, in one pass over the text: at least [`MIN_LETTERS`] ASCII letters,
+/// at most one other character (not whitespace) per [`LETTERS_PER_OTHER`] letters, few
+/// changes from lower to upper case between adjacent letters (see
+/// [`LOWER_UPPER_PAIRS_ONE_IN`]), and from [`IOC_GATE_LETTERS`] letters on an index of
+/// coincidence of at most [`MAX_IOC`], below English's. Shorter texts must not have
+/// English letter frequencies already ([`MAX_ENGLISH_LETTER_LOG_PROB`]), and no Caesar,
+/// Atbash or Affine key may turn them into English letter pairs (see
+/// [`reads_as_affine_english`]).
 fn passes_gates(text: &str) -> bool {
     let mut counts = [0u32; 26];
     let mut letters = 0usize;
@@ -360,8 +419,79 @@ fn passes_gates(text: &str) -> bool {
     if pairs >= MIN_PAIRS_FOR_CASE_GATE && lower_upper_pairs * LOWER_UPPER_PAIRS_ONE_IN > pairs {
         return false;
     }
-    letters < IOC_GATE_LETTERS || index_of_coincidence(&counts, letters) <= MAX_IOC
+    if letters >= IOC_GATE_LETTERS && index_of_coincidence(&counts, letters) > MAX_IOC {
+        return false;
+    }
+    english_letter_log_prob(&counts, letters) <= MAX_ENGLISH_LETTER_LOG_PROB
+        && !reads_as_affine_english(text)
 }
+
+/// The mean natural log of the English frequency of each of the `total` letters counted
+/// in `counts`.
+fn english_letter_log_prob(counts: &[u32; 26], total: usize) -> f64 {
+    let sum: f64 = counts
+        .iter()
+        .zip(ENGLISH_FREQS)
+        .map(|(&count, frequency)| f64::from(count) * frequency.ln())
+        .sum();
+    sum / total.max(1) as f64
+}
+
+/// Whether the identity, a Caesar shift, Atbash or another Affine key turns the pairs of
+/// consecutive ASCII letters of `text` (across word breaks, the first
+/// [`AFFINE_GATE_MAX_LETTERS`] letters) into pairs that are as likely in English as
+/// [`MAX_AFFINE_PAIR_LOG_PROB`] says, scored with the Affine decoder's letter-pair table.
+/// Such text is plain English or one of those ciphers, which their own decoders crack, and
+/// not worth a Beaufort key search. Stops at the first key that does, so English and its
+/// Caesar shifts take a few microseconds and Beaufort ciphertexts, which try all 312 keys,
+/// a few dozen.
+fn reads_as_affine_english(text: &str) -> bool {
+    let mut pair_counts = [[0u16; 26]; 26];
+    let mut previous: Option<usize> = None;
+    let mut total = 0usize;
+    let letters = text
+        .bytes()
+        .filter(u8::is_ascii_alphabetic)
+        .take(AFFINE_GATE_MAX_LETTERS);
+    for byte in letters {
+        let letter = usize::from(byte.to_ascii_uppercase() - b'A');
+        if let Some(first) = previous {
+            pair_counts[first][letter] = pair_counts[first][letter].saturating_add(1);
+            total += 1;
+        }
+        previous = Some(letter);
+    }
+    let pairs: Vec<(usize, usize, f32)> = pair_counts
+        .iter()
+        .enumerate()
+        .flat_map(|(first, row)| {
+            row.iter()
+                .enumerate()
+                .filter(|(_, &count)| count > 0)
+                .map(move |(second, &count)| (first, second, f32::from(count)))
+        })
+        .collect();
+    let limit = if total < 40 {
+        MAX_AFFINE_PAIR_LOG_PROB_SHORT
+    } else {
+        MAX_AFFINE_PAIR_LOG_PROB
+    } * total as f32;
+    let log_probs = &*BIGRAM_LOG_PROBS;
+    // The identity and Caesar shifts first, then Atbash and its shifts: the likeliest
+    AFFINE_MULTIPLIERS.iter().any(|&a| {
+        (0..26).any(|b| {
+            let table: [usize; 26] = std::array::from_fn(|c| (a * c + b) % 26);
+            let score: f32 = pairs
+                .iter()
+                .map(|&(first, second, count)| count * log_probs[table[first]][table[second]])
+                .sum();
+            score >= limit
+        })
+    })
+}
+
+/// The multipliers of the Affine keys p = a·c + b, the identity's first and Atbash's next.
+const AFFINE_MULTIPLIERS: [usize; 12] = [1, 25, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23];
 
 /// Whether `byte` continues a multi-byte UTF-8 character.
 fn is_utf8_continuation(byte: u8) -> bool {
@@ -414,6 +544,46 @@ fn mean_column_coincidence(letters: &[usize], length: usize) -> f64 {
         })
         .sum();
     total / length as f64
+}
+
+/// Gate 7: whether, from [`VIGENERE_GATE_LETTERS`] letters on, the columns of `letters`
+/// for a key of `length` letters fit English letter frequencies so much better as Caesar
+/// shifts (Vigenère) than as reflected shifts (Beaufort) that the text is a Vigenère
+/// ciphertext, which the Vigenère decoder cracks. See [`VIGENERE_PREFERENCE_SCALE`].
+fn looks_like_vigenere(letters: &[usize], length: usize) -> bool {
+    letters.len() >= VIGENERE_GATE_LETTERS
+        && reflection_preference(letters, length)
+            < -VIGENERE_PREFERENCE_SCALE / (letters.len() as f64).sqrt()
+}
+
+/// How much better, in nats per letter, the columns of `letters` for a key of `length`
+/// letters fit English letter frequencies as reflected shifts, `k − c` (Beaufort), than
+/// as Caesar shifts, `c − k` (Vigenère), each with its best key letter. Positive for
+/// Beaufort ciphertexts, negative for Vigenère ones, near 0 for random letters.
+fn reflection_preference(letters: &[usize], length: usize) -> f64 {
+    let log_freqs = ENGLISH_FREQS.map(f64::ln);
+    let mut total = 0.0;
+    for column in 0..length {
+        let mut counts = [0u32; 26];
+        for &letter in letters[column..].iter().step_by(length) {
+            counts[letter] += 1;
+        }
+        let mut best_reflected = f64::NEG_INFINITY;
+        let mut best_shifted = f64::NEG_INFINITY;
+        for key in 0..26 {
+            let mut reflected = 0.0;
+            let mut shifted = 0.0;
+            for (cipher, &count) in counts.iter().enumerate() {
+                let count = f64::from(count);
+                reflected += count * log_freqs[(key + 26 - cipher) % 26];
+                shifted += count * log_freqs[(cipher + 26 - key) % 26];
+            }
+            best_reflected = best_reflected.max(reflected);
+            best_shifted = best_shifted.max(shifted);
+        }
+        total += best_reflected - best_shifted;
+    }
+    total / letters.len().max(1) as f64
 }
 
 /// The Beaufort key, as 0 to 25, for a key the Vigenère key search found on the Atbash
@@ -817,13 +987,75 @@ mod tests {
         assert!(!passes_gates(DICKENS));
         assert!(!passes_gates(&caesar(DICKENS, 3)));
         assert!(!passes_gates(LONG_PLAINTEXT));
-        // Shorter English passes them, and the key search finds nothing
-        assert!(passes_gates(LIGHTHOUSE));
-        assert!(rank_keys(LIGHTHOUSE).is_empty());
+        // Shorter English has English letter frequencies, and so do its transpositions
+        let reversed: String = LIGHTHOUSE.chars().rev().collect();
+        for text in [LIGHTHOUSE, &reversed, DICKENS_UNSPACED] {
+            let (counts, letters) = letter_counts(text);
+            assert!(english_letter_log_prob(&counts, letters) > MAX_ENGLISH_LETTER_LOG_PROB);
+            assert!(!passes_gates(text), "{text:?}");
+        }
         // Every vector passes them
         for (ciphertext, key, _) in SOLVED {
             assert!(passes_gates(ciphertext), "{key}");
         }
+    }
+
+    #[test]
+    fn leaves_caesar_atbash_and_affine_to_their_decoders() {
+        // Shorter than 100 letters, so their index of coincidence doesn't give them away,
+        // but a Caesar, Atbash or Affine key turns them into English letter pairs
+        let rot13 = caesar(LIGHTHOUSE, 13);
+        for text in [rot13.as_str(), ATBASH_CIPHERTEXT, KEY_D_CIPHERTEXT] {
+            let (counts, letters) = letter_counts(text);
+            assert!(letters < IOC_GATE_LETTERS);
+            assert!(english_letter_log_prob(&counts, letters) <= MAX_ENGLISH_LETTER_LOG_PROB);
+            assert!(reads_as_affine_english(text), "{text:?}");
+            assert!(!passes_gates(text), "{text:?}");
+        }
+        // No such key reads a Beaufort ciphertext as English
+        for (ciphertext, key, _) in SOLVED {
+            assert!(!reads_as_affine_english(ciphertext), "{key}");
+        }
+        // Should one get through anyway, the key search finds Z and D, keys of one
+        // letter, and drops them
+        for text in [ATBASH_CIPHERTEXT, KEY_D_CIPHERTEXT] {
+            assert!(search_keys(text).is_empty(), "{:?}", search_keys(text));
+        }
+    }
+
+    #[test]
+    fn leaves_long_vigenere_to_the_vigenere_decoder() {
+        // The Vigenère benchmarks' long input passes the gates, but its columns read as
+        // Caesar shifts of English, not as reflected ones
+        assert!(passes_gates(VIGENERE_LONG));
+        let letters = cipher_letters(VIGENERE_LONG);
+        let length = likely_key_lengths(&letters)[0];
+        assert!(reflection_preference(&letters, length) < -0.1);
+        assert!(looks_like_vigenere(&letters, length));
+        assert!(search_keys(VIGENERE_LONG).is_empty());
+        // Every Beaufort vector of 100 letters or more leans the other way
+        for (ciphertext, key, _) in SOLVED {
+            let letters = cipher_letters(ciphertext);
+            if letters.len() < VIGENERE_GATE_LETTERS {
+                continue;
+            }
+            let length = likely_key_lengths(&letters)[0];
+            assert!(reflection_preference(&letters, length) > 0.0, "{key}");
+            assert!(!looks_like_vigenere(&letters, length), "{key}");
+        }
+        // Too short to tell
+        let letters = cipher_letters(VIGENERE_MEDIUM);
+        assert!(!looks_like_vigenere(&letters, 3));
+    }
+
+    /// The letter counts and the number of ASCII letters of `text`.
+    fn letter_counts(text: &str) -> ([u32; 26], usize) {
+        let mut counts = [0u32; 26];
+        let letters = cipher_letters(text);
+        for &letter in &letters {
+            counts[letter] += 1;
+        }
+        (counts, letters.len())
     }
 
     #[test]
@@ -860,15 +1092,6 @@ mod tests {
         // Too few pairs to tell: 20 letters are 19 pairs
         assert!(passes_gates("aBcDeFgHiJkLmNoPqRsT"));
         assert!(!passes_gates("aBcDeFgHiJkLmNoPqRsTu"));
-    }
-
-    #[test]
-    fn leaves_atbash_and_affine_to_their_decoders() {
-        // The key search finds Z and D, keys of one letter, and drops them
-        for text in [ATBASH_CIPHERTEXT, KEY_D_CIPHERTEXT] {
-            assert!(passes_gates(text));
-            assert!(rank_keys(text).is_empty(), "{:?}", rank_keys(text));
-        }
     }
 
     #[test]
