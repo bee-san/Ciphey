@@ -704,6 +704,23 @@ success = true
 input = "Vo[jru od sm siyp,syrf frvpfomh ypp;/ Upi hobr oy rmvtu[yrf pt rmvpfrf yrcy smf oy ytord yp eptl piy ejsy esd fpmr yp oy. eoyjpiy upi jsbomh yp lmpe yjr lru pt rbrm yjr vo[jrt/ Oy drstvjrd yjtpihj ,smu [pddon;r frvpfomhd. vjrvld rsvj vsmfofsyr yp drr ejryjrt oy ;ppld ;olr Rmh;odj pt ,syvjrd s lmpem [syyrtm divj sd sm r,so; sfftrdd. smf dyp[d ejrm oy gomfd dp,ryjomh yjsy trsfd ;olr [;somyrcy/ <pdy pg yjr yo,r yjod yslrd ;rdd yjsm s drvpmf. ejovj ,slrd oy jsmfu gpt vs[yitr yjr g;sh vjs;;rmhrd. [ixx;r jimyd smf gpt smupmr ejp dyi,n;rd svtpdd s dytsmhr dytomh om s ;ph go;r/"
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+# Keyboard layout inputs are the texts typed on QWERTY keys and read as Dvorak
+# (xkeyboard-config 2.41's us(basic) and us(dvorak) legends), from a Python 3 prototype of
+# the decoder's tables.
+[[case]]
+decoder = "Keyboard layout"
+size = "medium"
+success = true
+input = "M..y m. ay yd. rne ncidydrgo. auy.p mcebcidy abe xpcbi yd. malw yd. t.f abe a yrpjdv"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "Keyboard layout"
+size = "long"
+success = true
+input = "Jcld.f co ab agyrmay.e e.jrecbi yrrnv Frg ick. cy .bjpfly.e rp .bjre.e y.qy abe cy ypc.o yr ,rpt rgy ,day ,ao erb. yr cyw ,cydrgy frg dakcbi yr tbr, yd. t.f rp .k.b yd. jcld.pv Cy o.apjd.o ydprgid mabf lroocxn. e.jrecbiow jd.jto .ajd jabeceay. yr o.. ,d.yd.p cy nrrto nct. >bincod rp mayjd.o a tbr,b layy.pb ogjd ao ab .macn aeep.oow abe oyrlo ,d.b cy ucbeo orm.ydcbi yday p.aeo nct. lnacby.qyv Mroy ru yd. ycm. ydco yat.o n.oo ydab a o.jrbew ,dcjd mat.o cy dabef urp jalygp. yd. unai jdann.bi.ow lg;;n. dgbyo abe urp abfrb. ,dr oygmxn.o ajproo a oypabi. oypcbi cb a nri ucn.v"
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
 [[case]]
 decoder = "Morse Code"
 size = "medium"

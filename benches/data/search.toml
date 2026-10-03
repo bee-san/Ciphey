@@ -418,6 +418,14 @@ input = "<rry ,r sy yjr p;f ;ohjyjpidr sgyrt ,ofmohjy smf ntomh yjr ,s[. yjr lru
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# Typed on QWERTY keys, read as Dvorak
+kind = "single"
+name = "keyboard_layout"
+layers = ["Keyboard layout"]
+input = "M..y m. ay yd. rne ncidydrgo. auy.p mcebcidy abe xpcbi yd. malw yd. t.f abe a yrpjdv"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "xor_single_byte"
 layers = ["Single-byte XOR", "Hexadecimal"]
@@ -476,6 +484,14 @@ kind = "multi"
 name = "atbash_base64"
 layers = ["atbash", "Base64"]
 input = "TnZ2ZyBudiB6ZyBnc3YgbG93IG9ydHNnc2xmaHYgenVndmkgbnJ3bXJ0c2cgem13IHlpcm10IGdzdiBuemssIGdzdiBwdmIgem13IHogZ2xpeHMu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Python 3 base64.b64encode of the keyboard_layout input
+kind = "multi"
+name = "keyboard_layout_base64"
+layers = ["Keyboard layout", "Base64"]
+input = "TS4ueSBtLiBheSB5ZC4gcm5lIG5jaWR5ZHJnby4gYXV5LnAgbWNlYmNpZHkgYWJlIHhwY2JpIHlkLiBtYWx3IHlkLiB0LmYgYWJlIGEgeXJwamR2"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

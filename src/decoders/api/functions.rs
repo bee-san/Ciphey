@@ -42,6 +42,7 @@ use crate::decoders::hexdump_decoder::HexdumpDecoder;
 use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
 use crate::decoders::jsfuck_decoder::JsFuckDecoder;
 use crate::decoders::jwt_decoder::JwtDecoder;
+use crate::decoders::keyboard_layout_decoder::KeyboardLayoutDecoder;
 use crate::decoders::keyboard_shift_decoder::KeyboardShiftDecoder;
 use crate::decoders::leetspeak_decoder::LeetspeakDecoder;
 use crate::decoders::mime_encoded_word_decoder::MimeEncodedWordDecoder;
@@ -475,6 +476,20 @@ decoder_functions! {
     /// assert_eq!(payload.key.as_deref(), Some(r#"{"alg":"HS256","typ":"JWT"}"#));
     /// ```
     jwt: JwtDecoder, aliases ["json_web_token"], key None;
+
+    /// Decodes text typed on one keyboard layout and read as another: QWERTY, Dvorak,
+    /// Colemak and AZERTY, each way, and the keyboard cipher that writes the alphabet in
+    /// QWERTY key order (A is Q, B is W, ...). The key names the layouts, as
+    /// `typed→read`.
+    ///
+    /// ```
+    /// // `hello world` typed on QWERTY keys and read as Dvorak
+    /// let decoded = ciphey::decoders::keyboard_layout("d.nnr ,rpne");
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(plaintext.text, "hello world");
+    /// assert_eq!(plaintext.key.as_deref(), Some("QWERTY→Dvorak"));
+    /// ```
+    keyboard_layout: KeyboardLayoutDecoder, aliases ["keyboard_change"], key None;
 
     /// Cracks the keyboard shift cipher, where every key was replaced by a neighbouring
     /// key: one or two to the right or left, or the key above or below, on US QWERTY, or

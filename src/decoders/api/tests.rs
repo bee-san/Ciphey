@@ -468,6 +468,15 @@ fn jwt_decodes() {
 }
 
 #[test]
+fn keyboard_layout_decodes() {
+    let decoded = keyboard_layout("itssg vgksr");
+    assert_plaintext(&decoded, "hello world");
+    assert_eq!(plaintext_key(&decoded), "ABC→QWE");
+    // No layout makes plain English more English-like, so nothing comes back
+    assert!(keyboard_layout("hello world").is_empty());
+}
+
+#[test]
 fn keyboard_shift_cracks() {
     let decoded = keyboard_shift("<rry ,r sy fsem");
     assert_plaintext(&decoded, "Meet me at dawn");

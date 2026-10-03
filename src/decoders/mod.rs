@@ -113,6 +113,8 @@ pub mod hexdump_decoder;
 pub mod html_entity_decoder;
 /// The jsfuck_decoder module evaluates JSFuck, JavaScript written with only `[]()!+`
 pub mod jsfuck_decoder;
+/// The keyboard_layout_decoder module decodes text typed on one keyboard layout and read as another
+pub mod keyboard_layout_decoder;
 /// The octal_decoder module decodes octal
 pub mod octal_decoder;
 /// The ook_decoder module runs Ook! programs (Brainfuck written as `Ook.` `Ook?` `Ook!`)
@@ -278,6 +280,7 @@ use core_socialist_values_decoder::CoreSocialistValuesDecoder;
 use gzip_decoder::GzipDecoder;
 use jsfuck_decoder::JsFuckDecoder;
 use jwt_decoder::JwtDecoder;
+use keyboard_layout_decoder::KeyboardLayoutDecoder;
 use keyboard_shift_decoder::KeyboardShiftDecoder;
 use leetspeak_decoder::LeetspeakDecoder;
 use mime_encoded_word_decoder::MimeEncodedWordDecoder;
@@ -388,6 +391,8 @@ pub enum DecoderType {
     CoreSocialistValuesDecoder(core_socialist_values_decoder::CoreSocialistValuesDecoder),
     /// jwt decoder
     JwtDecoder(jwt_decoder::JwtDecoder),
+    /// keyboard layout decoder
+    KeyboardLayoutDecoder(keyboard_layout_decoder::KeyboardLayoutDecoder),
     /// keyboard shift cracker
     KeyboardShiftDecoder(keyboard_shift_decoder::KeyboardShiftDecoder),
     /// leetspeak decoder
@@ -671,6 +676,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Keyboard shift",
             DecoderBox::new(Decoder::<KeyboardShiftDecoder>::new()),
+        ),
+        (
+            "Keyboard layout",
+            DecoderBox::new(Decoder::<KeyboardLayoutDecoder>::new()),
         ),
     ])
 });
