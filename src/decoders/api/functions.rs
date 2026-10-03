@@ -42,6 +42,7 @@ use crate::decoders::mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
 use crate::decoders::multi_tap_decoder::MultiTapDecoder;
+use crate::decoders::nato_phonetic_decoder::NatoPhoneticDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
 use crate::decoders::polybius_decoder::PolybiusDecoder;
 use crate::decoders::punycode_decoder::PunycodeDecoder;
@@ -452,6 +453,16 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "HELLO WORLD");
     /// ```
     multi_tap: MultiTapDecoder, aliases ["multitap", "phone_keypad"], key None;
+
+    /// Decodes text spelled with the NATO phonetic alphabet, the first letter of each code
+    /// word: `Hotel Echo Lima Lima Oscar` is `hello`. Words are two spaces apart, as
+    /// CyberChef writes them, or their code words are joined with `-`, `/` or `|`.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::nato_phonetic("Hotel-Echo-Lima-Lima-Oscar Whiskey-Oscar-Romeo-Lima-Delta");
+    /// assert_eq!(decoded.plaintext().unwrap().text, "hello world");
+    /// ```
+    nato_phonetic: NatoPhoneticDecoder, aliases ["nato", "phonetic_alphabet", "spelling_alphabet"], key None;
 
     /// Decodes character codes written in octal.
     ///

@@ -185,6 +185,17 @@ input = "6 33 33 8 0 6 33 0 2 8 0 8 44 33 0 666 555 3 0 555 444 4 44 8 44 666 88
 expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP THE KEY AND A TORCH"
 
 [[case]]
+# Each word's NATO code words joined with `-`, a space between words, `Comma` and `Stop`
+# for the punctuation. CyberChef's layout, code words separated by spaces, is English
+# words, so the search would return it unchanged as plaintext. It does that with the long
+# plaintext in this layout too, and joined with `/` or `|`, so there is no long case.
+kind = "single"
+name = "nato_phonetic"
+layers = ["NATO Phonetic Alphabet"]
+input = "Mike-Echo-Echo-Tango Mike-Echo Alfa-Tango Tango-Hotel-Echo Oscar-Lima-Delta Lima-India-Golf-Hotel-Tango-Hotel-Oscar-Uniform-Sierra-Echo Alfa-Foxtrot-Tango-Echo-Romeo Mike-India-Delta-November-India-Golf-Hotel-Tango Alfa-November-Delta Bravo-Romeo-India-November-Golf Tango-Hotel-Echo Mike-Alfa-Papa-Comma Tango-Hotel-Echo Kilo-Echo-Yankee Alfa-November-Delta Alfa Tango-Oscar-Romeo-Charlie-Hotel-Stop"
+expected = "meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "url"
 layers = ["URL"]
@@ -534,6 +545,14 @@ name = "uuencode_base64"
 layers = ["Uuencode", "Base64"]
 input = "TTM2NUU9IiFNOTIhQT0iIVQ6JjRAO1ZRRCgmUUk5VkFUOiZdVTxWNEA4NjlUOTcoQDs2RUQ7RkVHOicwQApHODZZRCgmKVI6NllHKCcxSDkyIU04N2BMKCcxSDkyIUs5N0RAODZZRCgmJEA9Jl1SOFZATgo="
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Base64 of the single-layer nato_phonetic input
+kind = "multi"
+name = "nato_phonetic_base64"
+layers = ["NATO Phonetic Alphabet", "Base64"]
+input = "TWlrZS1FY2hvLUVjaG8tVGFuZ28gTWlrZS1FY2hvIEFsZmEtVGFuZ28gVGFuZ28tSG90ZWwtRWNobyBPc2Nhci1MaW1hLURlbHRhIExpbWEtSW5kaWEtR29sZi1Ib3RlbC1UYW5nby1Ib3RlbC1Pc2Nhci1Vbmlmb3JtLVNpZXJyYS1FY2hvIEFsZmEtRm94dHJvdC1UYW5nby1FY2hvLVJvbWVvIE1pa2UtSW5kaWEtRGVsdGEtTm92ZW1iZXItSW5kaWEtR29sZi1Ib3RlbC1UYW5nbyBBbGZhLU5vdmVtYmVyLURlbHRhIEJyYXZvLVJvbWVvLUluZGlhLU5vdmVtYmVyLUdvbGYgVGFuZ28tSG90ZWwtRWNobyBNaWtlLUFsZmEtUGFwYS1Db21tYSBUYW5nby1Ib3RlbC1FY2hvIEtpbG8tRWNoby1ZYW5rZWUgQWxmYS1Ob3ZlbWJlci1EZWx0YSBBbGZhIFRhbmdvLU9zY2FyLVJvbWVvLUNoYXJsaWUtSG90ZWwtU3RvcA=="
+expected = "meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
 kind = "no_solution"

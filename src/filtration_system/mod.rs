@@ -48,6 +48,7 @@ use crate::decoders::mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use crate::decoders::monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
 use crate::decoders::multi_tap_decoder::MultiTapDecoder;
+use crate::decoders::nato_phonetic_decoder::NatoPhoneticDecoder;
 use crate::decoders::punycode_decoder::PunycodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
 use crate::decoders::railfence_decoder::RailfenceDecoder;
@@ -301,6 +302,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let reversedecoder = Decoder::<ReverseDecoder>::new();
     let morsecodedecoder = Decoder::<MorseCodeDecoder>::new();
     let tap_code = Decoder::<TapCodeDecoder>::new();
+    let nato_phonetic = Decoder::<NatoPhoneticDecoder>::new();
     let atbashdecoder = Decoder::<AtbashDecoder>::new();
     let baconian = Decoder::<BaconianDecoder>::new();
     let baudot = Decoder::<BaudotDecoder>::new();
@@ -384,6 +386,9 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // find plaintext in the same step, the first in this list is reported.
             Box::new(tap_code),
             Box::new(morsecodedecoder),
+            // Before the classical ciphers too: railfence rearranges `Hotel/Echo/Lima/...`
+            // into text the English checker accepts, in the same step as this finds it.
+            Box::new(nato_phonetic),
             Box::new(atbashdecoder),
             Box::new(baconian),
             // After Baconian: both read groups of five 0s and 1s, and when two decoders

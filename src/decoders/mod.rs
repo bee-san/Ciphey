@@ -174,6 +174,9 @@ pub mod reverse_decoder;
 /// It is public as we use it in some tests.
 pub mod morse_code;
 
+/// The nato_phonetic_decoder module decodes text spelled with the NATO phonetic alphabet
+pub mod nato_phonetic_decoder;
+
 /// For the caesar cipher decoder
 pub mod caesar_decoder;
 
@@ -251,6 +254,7 @@ use mime_encoded_word_decoder::MimeEncodedWordDecoder;
 use monoalphabetic_substitution_decoder::MonoalphabeticSubstitutionDecoder;
 use morse_code::MorseCodeDecoder;
 use multi_tap_decoder::MultiTapDecoder;
+use nato_phonetic_decoder::NatoPhoneticDecoder;
 use octal_decoder::OctalDecoder;
 use polybius_decoder::PolybiusDecoder;
 use punycode_decoder::PunycodeDecoder;
@@ -367,6 +371,8 @@ pub enum DecoderType {
     MultiTapDecoder(multi_tap_decoder::MultiTapDecoder),
     /// tap code decoder
     TapCodeDecoder(tap_code_decoder::TapCodeDecoder),
+    /// NATO phonetic alphabet decoder
+    NatoPhoneticDecoder(nato_phonetic_decoder::NatoPhoneticDecoder),
     /// caesar decoder
     CaesarDecoder(caesar_decoder::CaesarDecoder),
     /// railfence decoder
@@ -527,6 +533,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Tap Code",
             DecoderBox::new(Decoder::<TapCodeDecoder>::new()),
+        ),
+        (
+            "NATO Phonetic Alphabet",
+            DecoderBox::new(Decoder::<NatoPhoneticDecoder>::new()),
         ),
         ("atbash", DecoderBox::new(Decoder::<AtbashDecoder>::new())),
         (

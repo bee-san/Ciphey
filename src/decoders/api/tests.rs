@@ -455,6 +455,16 @@ fn multi_tap_decodes() {
 }
 
 #[test]
+fn nato_phonetic_decodes() {
+    assert_plaintext(
+        &nato_phonetic("Hotel Echo Lima Lima Oscar  Whiskey Oscar Romeo Lima Delta "),
+        "hello world",
+    );
+    assert_first(&nato_phonetic("Delta-Hotel-Niner-Eight"), "dh98");
+    assert!(nato_phonetic("hello world").is_empty());
+}
+
+#[test]
 fn octal_decodes() {
     assert_plaintext(
         &octal("124 150 145 40 161 165 151 143 153 40 142 162 157 167 156 40 146 157 170 40 152 165 155 160 163 40 157 166 145 162 40 164 150 145 40 154 141 172 171 40 144 157 147"),
