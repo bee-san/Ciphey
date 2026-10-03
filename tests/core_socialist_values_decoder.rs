@@ -55,7 +55,8 @@ fn issue_example_is_cracked() {
 #[test]
 #[serial]
 fn fox_pangram_is_cracked() {
-    // The reference's random choice of escape, as it is. On master the search timed out.
+    // The reference's random choice of escape, as it is. On master the search returned
+    // Vigenère junk (rot47 → atbash → Hexadecimal → Vigenere).
     let result = crack("平等自由公正爱国公正平等文明富强法治民主法治平等公正敬业公正和谐公正诚信民主文明富强公正文明法治文明公正友善敬业法治法治公正诚信自由文明富强公正公正公正友善敬业法治爱国文明富强公正诚信富强法治平等公正友善法治法治富强法治和谐文明富强公正诚信平等法治公正公正平等法治文明文明富强法治自由公正爱国公正平等文明富强公正诚信文明公正民主法治诚信富强法治敬业文明富强公正自由公正诚信平等公正法治");
     assert_eq!(
         result.text[0],
