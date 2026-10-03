@@ -68,6 +68,17 @@ fn hill_inside_base64_is_cracked() {
 }
 
 #[test]
+fn ctf_flag_is_cracked() {
+    // JerseyCTF III "jack-and-jill" (https://ctftime.org/writeup/36829). The challenge gave
+    // the key, but 30 letters are enough to find it. The letters keep the ciphertext's
+    // case, as the submitted flag jctf{hiTHEREwelcomeTOlinearALGEBRAZ} did.
+    let result = crack("pgQVJFCohpccuyBSbwxcxpVZCAATRT");
+    assert_eq!(result.text[0], "hiTHEREwelcomeTOlinearALGEBRAZ");
+    assert_eq!(path(&result), ["Hill"]);
+    assert_eq!(result.path[0].key.as_deref(), Some("[[3,9],[4,7]]"));
+}
+
+#[test]
 fn spaced_hill_ciphertext_keeps_its_layout() {
     // The bench plaintext encrypted with [[3,3],[2,5]], keeping its case, spaces and
     // punctuation

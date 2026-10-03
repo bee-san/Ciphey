@@ -1295,6 +1295,21 @@ mod tests {
     }
 
     #[test]
+    fn ctf_flag_with_mixed_case() {
+        // JerseyCTF III "jack-and-jill" (https://ctftime.org/writeup/36829): 30 letters,
+        // key [[3,9],[4,7]], and each letter keeps its case
+        assert_cracks(
+            "pgQVJFCohpccuyBSbwxcxpVZCAATRT",
+            "hiTHEREwelcomeTOlinearALGEBRAZ",
+            "[[3,9],[4,7]]",
+        );
+        assert_eq!(
+            decrypt("pgQVJFCohpccuyBSbwxcxpVZCAATRT", &[[3, 9], [4, 7]]),
+            Ok("hiTHEREwelcomeTOlinearALGEBRAZ".to_string())
+        );
+    }
+
+    #[test]
     fn long_3x3_is_found_but_not_identified() {
         // The checker doesn't accept 465 letters of unspaced English at Medium, so the
         // decryption comes back unconfirmed, with its key
