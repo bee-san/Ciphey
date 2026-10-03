@@ -107,6 +107,7 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         "Zlib",
         "Gzip",
         "Raw DEFLATE",
+        "Bzip2",
     ];
     STACKABLE.contains(&prev_decoder) && STACKABLE.contains(&current_cipher)
 }

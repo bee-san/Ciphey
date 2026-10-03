@@ -99,6 +99,8 @@ pub mod baudot_decoder;
 pub mod big_integer_decoder;
 /// The binary_decoder module decodes binary
 pub mod binary_decoder;
+/// The bzip2_decoder module decompresses bzip2 given as Base64, hex or raw bytes
+pub mod bzip2_decoder;
 /// The decimal_decoder module decodes decimal character codes
 pub mod decimal_decoder;
 /// The dna_codon_decoder module decodes DNA/RNA codons to one-letter amino-acid codes
@@ -268,6 +270,7 @@ use base58_ripple_decoder::Base58RippleDecoder;
 use baudot_decoder::BaudotDecoder;
 use big_integer_decoder::BigIntegerDecoder;
 use binary_decoder::BinaryDecoder;
+use bzip2_decoder::Bzip2Decoder;
 use decimal_decoder::DecimalDecoder;
 use dna_codon_decoder::DnaCodonDecoder;
 use dtmf_decoder::DtmfDecoder;
@@ -419,6 +422,8 @@ pub enum DecoderType {
     LeetspeakDecoder(leetspeak_decoder::LeetspeakDecoder),
     /// gzip decoder
     GzipDecoder(gzip_decoder::GzipDecoder),
+    /// bzip2 decoder
+    Bzip2Decoder(bzip2_decoder::Bzip2Decoder),
     /// url decoder
     UrlDecoder(url_decoder::URLDecoder),
     /// punycode decoder
@@ -599,6 +604,7 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
             DecoderBox::new(Decoder::<LeetspeakDecoder>::new()),
         ),
         ("Gzip", DecoderBox::new(Decoder::<GzipDecoder>::new())),
+        ("Bzip2", DecoderBox::new(Decoder::<Bzip2Decoder>::new())),
         ("URL", DecoderBox::new(Decoder::<URLDecoder>::new())),
         (
             "Punycode",

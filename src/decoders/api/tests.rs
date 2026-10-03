@@ -352,6 +352,24 @@ fn brainfuck_runs() {
 }
 
 #[test]
+fn bzip2_decompresses() {
+    // Python: base64.b64encode(bz2.compress(b"flag{bzip2_block_sorting}"))
+    assert_plaintext(
+        &bzip2("QlpoOTFBWSZTWWimefAAAAOLgBAAAAC5rdwaIAAxTJiZBkYUABso2o0tbq4WS6BPmU+BXUPi7kinChINFM8+AA=="),
+        "flag{bzip2_block_sorting}",
+    );
+    // bz2.compress(b"The quick brown fox jumps over the lazy dog").hex(), by its alias
+    let decoded = decode_with(
+        "bz2",
+        "425a6839314159265359459dee610000041380400004003ffffff0200031468680000031e9a9a64c8611b46d4762620849ed7aa1536565b125e3e260b1f89839dd4c096f9ce85dc914e142411677b984",
+        &DecodeOptions::default(),
+    )
+    .unwrap();
+    assert_plaintext(&decoded, "The quick brown fox jumps over the lazy dog");
+    assert!(bzip2("hello").is_empty());
+}
+
+#[test]
 fn jsfuck_evaluates() {
     // "false"[0] + "undefined"[0] + "undefined"[1]
     // (https://github.com/bee-san/Ciphey/issues/987)

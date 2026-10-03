@@ -16,6 +16,7 @@ use crate::decoders::base58_monero_decoder::Base58MoneroDecoder;
 use crate::decoders::baudot_decoder::BaudotDecoder;
 use crate::decoders::big_integer_decoder::BigIntegerDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
+use crate::decoders::bzip2_decoder::Bzip2Decoder;
 use crate::decoders::decimal_decoder::DecimalDecoder;
 use crate::decoders::dna_codon_decoder::DnaCodonDecoder;
 use crate::decoders::dtmf_decoder::DtmfDecoder;
@@ -349,6 +350,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let zlib = Decoder::<ZlibDecoder>::new();
     let raw_deflate = Decoder::<RawDeflateDecoder>::new();
     let gzip = Decoder::<GzipDecoder>::new();
+    let bzip2 = Decoder::<Bzip2Decoder>::new();
 
     let brainfuck = Decoder::<BrainfuckInterpreter>::new();
     let aaencode = Decoder::<AAEncodeDecoder>::new();
@@ -503,6 +505,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(standard_galactic_alphabet),
             Box::new(substitution_generic),
             Box::new(gzip),
+            Box::new(bzip2),
             Box::new(brainfuck),
             Box::new(aaencode),
             Box::new(zlib),

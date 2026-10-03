@@ -30,6 +30,7 @@ use crate::decoders::big_integer_decoder::BigIntegerDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::braille_decoder::BrailleDecoder;
 use crate::decoders::brainfuck_interpreter::BrainfuckInterpreter;
+use crate::decoders::bzip2_decoder::Bzip2Decoder;
 use crate::decoders::caesar_decoder::CaesarDecoder;
 use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
 use crate::decoders::core_socialist_values_decoder::CoreSocialistValuesDecoder;
@@ -361,6 +362,17 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "Hello, World!");
     /// ```
     brainfuck: BrainfuckInterpreter, aliases ["bf"], key None;
+
+    /// Decompresses bzip2 written as Base64 (`QlpoOTFBWSZTW…`), as hex (`425a68…`) or as
+    /// raw bytes, including files with several streams.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::bzip2(
+    ///     "QlpoOTFBWSZTWUWd7mEAAAQTgEAABAA////wIAAxRoaAAAAx6ammTIYRtG1HYmIISe16oVNlZbEl4+JgsfiYOd1MCW+c6F3JFOFCQRZ3uYQ=",
+    /// );
+    /// assert_eq!(decoded.candidates[0].text, "The quick brown fox jumps over the lazy dog");
+    /// ```
+    bzip2: Bzip2Decoder, aliases ["bz2"], key None;
 
     /// Cracks the Caesar cipher, ROT13 included: the shift that Ciphey's checks accept
     /// comes back as the plaintext, with the shift as its key. To decrypt with a known

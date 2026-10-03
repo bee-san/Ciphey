@@ -519,6 +519,22 @@ success = true
 input = "H4sIAAAAAAAC/z2RQZLcMAhFr8IBpvoSqSyymANkSSTaoiwLl8DtcZ9+Pk4qG9kq4P/H1w/dm1ykTjyIj7CNQypVKVZ1LBRm/UG/7aBFX0IaJKPMa88mm3mxit+Qr4BCzYaYKo5BOm2uZEfQ2RgHO1UbkhWNDzo1WhYvaDd+/TWjddhJ0YRWUKXBS8Z9Lwk6H/QryIVnaenRph1Lo43HRbu5658u/9n9g9BVVifh0qgATyu2SxsXAZVAeCZyN0Nb11Xo51i6ektvRHHb8E01aOcImYP8gBzficnG2olrneLwywQ8bPcUH6n81FGd3DZ43StmFFO4/rPbO+vI9B70aR5kz3vb0A1Hw7MEr0DokM9ZvBHYi42KAJuW3D3rcEKxXvQEd+E9jim30LPzghi4dxmLAHE/3m+E1I4RfvPmBPLLlzkbkoljQ4qolYlE0y8mYza/uYEmQ7cFq3V5fAPoU3AAQAIAAA=="
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+# Bzip2: Python's base64.b64encode(bz2.compress(text)) (level 9). The Bzip2 decoder reads the
+# Base64 itself.
+[[case]]
+decoder = "Bzip2"
+size = "medium"
+success = true
+input = "QlpoOTFBWSZTWWMBlygAAAkVgEAFAAI/794gIABIap5TNE9IwmyBEGQaGgDSU96PsiI3NPoK9qUAyQVg2dJPrHtnqvgZALhY1snmgBge3nckj1SElkwWxL4u5IpwoSDGAy5Q"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "Bzip2"
+size = "long"
+success = true
+input = "QlpoOTFBWSZTWV1uyQEAADiXgEAFCiIAID/v3/AwAXWCQanoImFB5J6RppoET1J5MoNAeoNABpkKZNNNExENMml1UONSBOIUWjyEXOvQMSyYLFJe9GDQ4qzNygdIGlhJJTbelG6SE61osm0dzZX53RyHKJOCLQmbQ2awd6duAAiC/6TPAlh5VZiKLbITY+pj1Djx1Di91p0WySIJJyeB2ghXiB4vuT7T977RTGFnenVNQqhKYuhRxkVcLbWLRrWoeu0MNlgNvCHLX2VpPKQDuuXDouCRE3423GPFaqac1FL/dcrINfFuhmJbPiDrv7+Td6tpZD6LW71RlpxhM7SZKCAIvC+QdHGYYOIW7VDbPniLjI0he+efs2j19hMAjvG6qBknq2r3YRjipTU1pI+GBmHiwumy2g7JaAQmHyQJt8dbBTlDW1fsQ2gNCGqbAmaqugRz3KEznZ4zZiXGCLB+POv+LuSKcKEgut2SAg=="
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
 [[case]]
 decoder = "Decimal"
 size = "medium"

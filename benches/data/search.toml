@@ -73,6 +73,14 @@ input = "H4sIAAAAAAAC/x2K0RGAMAjFVnkDeG7iEGixcJbWQ/xwe5W/XJKFOWAMCoQwRitoWiVk3Nd
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# Base64 of bz2.compress(text). Bzip2 reads the Base64 itself, so it is one step.
+kind = "single"
+name = "bzip2"
+layers = ["Bzip2", "Base64"]
+input = "QlpoOTFBWSZTWWMBlygAAAkVgEAFAAI/794gIABIap5TNE9IwmyBEGQaGgDSU96PsiI3NPoK9qUAyQVg2dJPrHtnqvgZALhY1snmgBge3nckj1SElkwWxL4u5IpwoSDGAy5Q"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "decimal"
 layers = ["Decimal"]
@@ -703,6 +711,15 @@ kind = "multi"
 name = "raw_deflate_hex_base64"
 layers = ["Raw DEFLATE", "Hexadecimal", "Base64"]
 input = "MWQ4YWQxMTE4MDMwMDhjNTU2NzkwMzc4NmVlMjEwNjhiMTcwOTZkNjQzZmM3MDdiOTViZjVjOTI4NTM5NjAwYzBhODQzMDQ2MmI2ODVhMjU2NGRjZDc2N2Y3NjA4NzY5ZTliZjAzZjU4MmQ1YjVkNzdjOGRjZTI5ZTFlMDI3MTMyMTg2NmYzMmJm"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Base64 of the hex of bz2.compress(text). Bzip2 reads the hex itself, so the search's
+# path is Base64 -> Bzip2.
+kind = "multi"
+name = "bzip2_hex_base64"
+layers = ["Bzip2", "Hexadecimal", "Base64"]
+input = "NDI1YTY4MzkzMTQxNTkyNjUzNTk2MzAxOTcyODAwMDAwOTE1ODA0MDA1MDAwMjNmZWZkZTIwMjAwMDQ4NmE5ZTUzMzQ0ZjQ4YzI2YzgxMTA2NDFhMWEwMGQyNTNkZThmYjIyMjM3MzRmYTBhZjZhNTAwYzkwNTYwZDlkMjRmYWM3YjY3YWFmODE5MDBiODU4ZDZjOWU2ODAxODFlZGU3NzI0OGY1NDg0OTY0YzE2YzRiZTJlZTQ4YTcwYTEyMGM2MDMyZTUw"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
