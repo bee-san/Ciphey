@@ -119,6 +119,23 @@ static UNIGRAM_LOG_PROBS: Lazy<[f32; 256]> = Lazy::new(|| {
     weights.map(f32::ln)
 });
 
+/// [`UNIGRAM_LOG_PROBS`] by negated index, twice over: entry `j` is the weight of the byte
+/// `-j mod 256`, for `j` in `0..512`. Under the key `k` the byte `b` decrypts to `b - k`, whose
+/// weight is entry `k - b + 256`, so the weights of one byte under every key are 256
+/// consecutive entries (see [`scores_of_every_key`]).
+static NEGATED_LOG_PROBS_256: Lazy<Vec<f32>> = Lazy::new(|| negated_log_probs(256));
+
+/// [`NEGATED_LOG_PROBS_256`] for keys mod 128: entry `j` is the weight of `-j mod 128`, for `j`
+/// in `0..256`.
+static NEGATED_LOG_PROBS_128: Lazy<Vec<f32>> = Lazy::new(|| negated_log_probs(128));
+
+/// The weight of the byte `-j mod modulus` for every `j` in `0..2 * modulus`.
+fn negated_log_probs(modulus: usize) -> Vec<f32> {
+    (0..2 * modulus)
+        .map(|j| UNIGRAM_LOG_PROBS[(modulus - j % modulus) % modulus])
+        .collect()
+}
+
 /// The ASCII shift cracker, call:
 /// `let ascii_shift_decoder = Decoder::<AsciiShiftDecoder>::new()` to create a new instance
 /// And then call:
@@ -277,9 +294,8 @@ fn best_candidates(text: &str) -> Vec<Candidate> {
 /// the same modulus shift every byte to different bytes, and [`rank_keys`] leaves out the mod
 /// 128 keys that give a mod 256 decryption.
 fn view_candidates(bytes: &[u8]) -> Vec<Candidate> {
-    rank_keys(bytes)
+    rank_keys(bytes, KEYS_DECRYPTED)
         .into_iter()
-        .take(KEYS_DECRYPTED)
         .filter_map(|ranked| {
             let decrypted = shift(bytes, ranked.key, ranked.modulus);
             looks_like_text(&decrypted).then(|| Candidate {
@@ -327,16 +343,16 @@ fn numeric_text(text: &str) -> bool {
         .all(|c| c.is_ascii_hexdigit() || c.is_ascii_whitespace() || ",;:.-".contains(c))
 }
 
-/// Every key this cracker tries on `bytes`, best first, with its score: [`UNIGRAM_LOG_PROBS`]
-/// summed over the bytes of the decryption. The scores come from the byte histogram, so
-/// ranking costs `keys × distinct bytes` additions whatever the length, and decrypts nothing.
+/// The `limit` best keys for `bytes`, best first, with their scores: [`UNIGRAM_LOG_PROBS`]
+/// summed over the bytes of the decryption. The scores come from the byte histogram, so ranking
+/// costs `keys × distinct bytes` additions whatever the length, and decrypts nothing.
 ///
 /// The keys are 1 to 255 mod 256, then, if every byte is below 0x80, the keys 1 to 127 mod 128
 /// that wrap some bytes past 0 but not all of them: a mod 128 key that wraps no byte gives the
 /// decryption of the same key mod 256, and one that wraps every byte that of the key + 128 mod
 /// 256, and those are reported mod 256. When at least 5% of the bytes are spaces only the keys
 /// that turn a space into one of [`SPACE_SOURCES`] are kept. Ties keep this order.
-fn rank_keys(bytes: &[u8]) -> Vec<RankedKey> {
+fn rank_keys(bytes: &[u8], limit: usize) -> Vec<RankedKey> {
     let mut counts = [0u32; 256];
     for &byte in bytes {
         counts[usize::from(byte)] += 1;
@@ -349,36 +365,87 @@ fn rank_keys(bytes: &[u8]) -> Vec<RankedKey> {
         return Vec::new();
     };
     let spaced = counts[usize::from(b' ')] as usize * SPACE_RULE_ONE_IN >= bytes.len();
-    let log_probs = &*UNIGRAM_LOG_PROBS;
 
     let mut ranked = Vec::new();
     for modulus in MODULI {
         if modulus == 128 && highest >= 0x80 {
             continue;
         }
-        for key in (1..=u8::MAX).take_while(|&key| u16::from(key) < modulus) {
-            if modulus == 128 && (key <= lowest || key > highest) {
-                continue;
+        let keep = |key: u8| {
+            key != 0
+                && (modulus == 256 || (lowest < key && key <= highest))
+                && (!spaced || SPACE_SOURCES.contains(&shift_byte(b' ', key, modulus)))
+        };
+        if spaced {
+            // At most 9 keys: score them one by one
+            for key in (1..=u8::MAX).take_while(|&key| u16::from(key) < modulus) {
+                if keep(key) {
+                    let score = histogram
+                        .iter()
+                        .map(|&(byte, count)| {
+                            count * UNIGRAM_LOG_PROBS[usize::from(shift_byte(byte, key, modulus))]
+                        })
+                        .sum();
+                    ranked.push(RankedKey {
+                        key,
+                        modulus,
+                        score,
+                    });
+                }
             }
-            if spaced && !SPACE_SOURCES.contains(&shift_byte(b' ', key, modulus)) {
-                continue;
+        } else {
+            let scores = scores_of_every_key(&histogram, modulus);
+            for (key, &score) in (0..=u8::MAX).zip(scores.iter()) {
+                if keep(key) {
+                    ranked.push(RankedKey {
+                        key,
+                        modulus,
+                        score,
+                    });
+                }
             }
-            let score = histogram
-                .iter()
-                .map(|&(byte, count)| {
-                    count * log_probs[usize::from(shift_byte(byte, key, modulus))]
-                })
-                .sum();
-            ranked.push(RankedKey {
-                key,
-                modulus,
-                score,
-            });
         }
     }
-    // A stable sort, so the ranking is deterministic
-    ranked.sort_by(|a, b| b.score.total_cmp(&a.score));
+    // Best first; on a tie mod 256 before mod 128, then the lower key: the order they were
+    // pushed in, which `sort_by` (stable) keeps
+    if ranked.len() > limit {
+        ranked.select_nth_unstable_by(limit, better);
+        ranked.truncate(limit);
+    }
+    ranked.sort_by(better);
     ranked
+}
+
+/// Orders ranked keys best first: higher score, then mod 256 before mod 128, then the lower
+/// key.
+fn better(a: &RankedKey, b: &RankedKey) -> std::cmp::Ordering {
+    b.score
+        .total_cmp(&a.score)
+        .then(b.modulus.cmp(&a.modulus))
+        .then(a.key.cmp(&b.key))
+}
+
+/// The score of every key 0 to `modulus - 1` at once, from the histogram of the ciphertext.
+/// Under the key `k` the byte `b` decrypts to `(b - k) mod modulus`, so the weights of one
+/// byte under keys `0, 1, 2, ...` are consecutive entries of [`NEGATED_LOG_PROBS_256`] (or
+/// `_128`), starting at `modulus - b mod modulus`. Each byte value adds one such run, scaled
+/// by its count, to all the scores: a loop the compiler vectorises.
+fn scores_of_every_key(histogram: &[(u8, f32)], modulus: u16) -> Vec<f32> {
+    let modulus = usize::from(modulus);
+    let negated = if modulus == 256 {
+        &*NEGATED_LOG_PROBS_256
+    } else {
+        &*NEGATED_LOG_PROBS_128
+    };
+    let mut scores = vec![0.0f32; modulus];
+    for &(byte, count) in histogram {
+        let start = modulus - usize::from(byte) % modulus;
+        let weights = &negated[start..start + modulus];
+        for (score, &weight) in scores.iter_mut().zip(weights) {
+            *score += count * weight;
+        }
+    }
+    scores
 }
 
 /// Decrypts `bytes` with `key` mod `modulus` (256 or 128): `(byte - key) mod modulus`.
@@ -540,9 +607,14 @@ mod tests {
         bytes.iter().map(|&byte| char::from(byte)).collect()
     }
 
+    /// Every key `rank_keys` tries on `bytes`, best first
+    fn all_keys(bytes: &[u8]) -> Vec<RankedKey> {
+        rank_keys(bytes, usize::MAX)
+    }
+
     /// The `(key, modulus)` pairs `rank_keys` returns, in order
     fn ranked_keys(bytes: &[u8]) -> Vec<(u8, u16)> {
-        rank_keys(bytes)
+        all_keys(bytes)
             .iter()
             .map(|ranked| (ranked.key, ranked.modulus))
             .collect()
@@ -672,7 +744,7 @@ mod tests {
                 .chain(keys_128.iter().map(|&key| (key, 128)));
             for (key, modulus) in tests {
                 let ciphertext = encrypt(plaintext.as_bytes(), key, modulus);
-                let best = rank_keys(&ciphertext)[0];
+                let best = all_keys(&ciphertext)[0];
                 assert_eq!(
                     shift(&ciphertext, best.key, best.modulus),
                     plaintext.as_bytes(),
@@ -797,7 +869,7 @@ mod tests {
             "The quick brown fox jumps over the lazy dog",
             MISS,
         ] {
-            let ranked = rank_keys(text.as_bytes());
+            let ranked = all_keys(text.as_bytes());
             assert!(!ranked.is_empty() && ranked.len() <= 18, "{text:?}");
             for key in ranked {
                 let source = shift_byte(b' ', key.key, key.modulus);
@@ -813,10 +885,10 @@ mod tests {
     #[test]
     fn unspaced_text_is_scored_on_every_key() {
         // Bytes 0x80 and above: mod 256 only
-        assert_eq!(rank_keys(&latin1(LATIN1)).len(), 255);
+        assert_eq!(all_keys(&latin1(LATIN1)).len(), 255);
         // ASCII: the mod 128 keys that wrap some bytes but not all, here 0x2c < k <= 0x7e
         let bytes = b"0-447-?7:4,~";
-        let ranked = rank_keys(bytes);
+        let ranked = all_keys(bytes);
         assert_eq!(ranked.len(), 255 + (0x7e - 0x2c));
         assert!(ranked
             .iter()
@@ -828,11 +900,11 @@ mod tests {
     fn decryptions_are_all_different() {
         for text in [DCODE, ISSUE, "SGVsbG8gV29ybGQhIEhvdyBhcmUgeW91Pw=="] {
             let bytes = text.as_bytes();
-            let decryptions: std::collections::HashSet<Vec<u8>> = rank_keys(bytes)
+            let decryptions: std::collections::HashSet<Vec<u8>> = all_keys(bytes)
                 .iter()
                 .map(|key| shift(bytes, key.key, key.modulus))
                 .collect();
-            assert_eq!(decryptions.len(), rank_keys(bytes).len(), "{text:?}");
+            assert_eq!(decryptions.len(), all_keys(bytes).len(), "{text:?}");
         }
     }
 
@@ -851,10 +923,59 @@ mod tests {
     }
 
     #[test]
+    fn scores_of_every_key_are_the_sums_of_the_weights() {
+        // Spaceless texts are scored for every key at once; the result has to be the sum of
+        // the weights of the decrypted bytes, key by key
+        for text in [
+            JULIUS,
+            LATIN1,
+            WRAP,
+            "SGVsbG8gV29ybGQhIEhvdyBhcmUgeW91Pw==",
+            "\u{1}\u{7f}\u{0}",
+        ] {
+            let bytes = latin1(text);
+            let ranked = all_keys(&bytes);
+            assert!(!ranked.is_empty(), "{text:?}");
+            for key in ranked {
+                let direct: f32 = shift(&bytes, key.key, key.modulus)
+                    .iter()
+                    .map(|&byte| UNIGRAM_LOG_PROBS[usize::from(byte)])
+                    .sum();
+                assert!(
+                    (direct - key.score).abs() <= 1e-3 * direct.abs().max(1.0),
+                    "{text:?} {key:?}: {direct}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_best_keys_are_the_start_of_the_full_ranking() {
+        for text in [
+            ISSUE,
+            LATIN1,
+            WRAP,
+            LEGACY,
+            DCODE,
+            JULIUS,
+            MISS,
+            "hello world",
+        ] {
+            let bytes = latin1(text);
+            let all = all_keys(&bytes);
+            for limit in [0, 1, 3, 10] {
+                let best = rank_keys(&bytes, limit);
+                assert_eq!(best.len(), limit.min(all.len()), "{text:?}");
+                assert_eq!(best, all[..best.len()], "{text:?}");
+            }
+        }
+    }
+
+    #[test]
     fn ties_go_to_mod_256_then_the_lower_key() {
         // Two control characters: most keys turn them into bytes with the same weight, so
         // many keys of both moduli tie
-        let ranked = rank_keys(b"\x01\x7f\x01\x7f\x01\x7f");
+        let ranked = all_keys(b"\x01\x7f\x01\x7f\x01\x7f");
         assert!(ranked.iter().any(|key| key.modulus == 128));
         let mut ties = 0;
         for pair in ranked.windows(2) {
