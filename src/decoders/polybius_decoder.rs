@@ -700,24 +700,18 @@ mod tests {
 
     #[test]
     fn both_row_column_readings_are_returned() {
-        // JUMP OVER in the tap code square. The column-row reading is checked but not
+        // JUMP OVER in the tap code square. The checker accepts none of the readings, so
+        // both row-column ones go to the search; the column-row one is checked but not
         // returned.
         let text = "25 45 32 35  34 51 15 42";
         assert_eq!(reading_texts(text), ["KUMP OVER", "JUMP OVER", "WYHX SEVI"]);
         let result = crack(text);
-        if result.success {
-            assert_eq!(result.unencrypted_text, Some(vec!["JUMP OVER".to_string()]));
-            assert_eq!(
-                result.key.as_deref(),
-                Some("5x5 C=K (tap code), row-column")
-            );
-        } else {
-            assert_eq!(
-                result.unencrypted_text,
-                Some(vec!["KUMP OVER".to_string(), "JUMP OVER".to_string()])
-            );
-            assert_eq!(result.key, None);
-        }
+        assert!(!result.success, "{result:?}");
+        assert_eq!(
+            result.unencrypted_text,
+            Some(vec!["KUMP OVER".to_string(), "JUMP OVER".to_string()])
+        );
+        assert_eq!(result.key, None);
     }
 
     #[test]
