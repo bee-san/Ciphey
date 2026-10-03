@@ -183,7 +183,7 @@ fn break_vigenere(text: &str, key_length: usize) -> String {
 }
 
 /// The ASCII letters of `text` as 0..26, which is what the key search works on.
-fn cipher_letters(text: &str) -> Vec<usize> {
+pub(crate) fn cipher_letters(text: &str) -> Vec<usize> {
     // Must be ASCII: `is_alphabetic` also accepts e.g. 'À', whose
     // `to_ascii_uppercase() as u8 - b'A'` lands outside the 26-entry
     // VIGENERE_SQUARE and panics. `decrypt` below uses the same filter.
@@ -203,7 +203,7 @@ fn cipher_letters(text: &str) -> Vec<usize> {
 /// `key_ch1` are summed together, one bigram at a time, from a slice of
 /// [`KeySearchTables::scores`]. The sums are exact integers, so the scores and the key
 /// are the same as summing each pair separately.
-fn break_vigenere_letters(cipher_text: &[usize], key_length: usize) -> String {
+pub(crate) fn break_vigenere_letters(cipher_text: &[usize], key_length: usize) -> String {
     let tables = &*KEY_SEARCH_TABLES;
     // (first, second) ciphertext letters of the bigrams scored at one key position.
     let mut bigrams: Vec<(usize, usize)> = Vec::with_capacity(cipher_text.len() / key_length + 1);

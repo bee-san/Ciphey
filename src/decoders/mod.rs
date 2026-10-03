@@ -97,6 +97,8 @@ pub mod base58_bitcoin_decoder;
 pub mod base58_monero_decoder;
 /// The baudot_decoder module decodes Baudot code (ITA2 and US-TTY, 5-bit teleprinter code)
 pub mod baudot_decoder;
+/// The beaufort_decoder module cracks the Beaufort cipher, the reciprocal Vigenère variant
+pub mod beaufort_decoder;
 /// The big_integer_decoder module decodes a big decimal integer to its bytes (long_to_bytes)
 pub mod big_integer_decoder;
 /// The binary_decoder module decodes binary
@@ -274,6 +276,7 @@ use base58_flickr_decoder::Base58FlickrDecoder;
 use base58_monero_decoder::Base58MoneroDecoder;
 use base58_ripple_decoder::Base58RippleDecoder;
 use baudot_decoder::BaudotDecoder;
+use beaufort_decoder::BeaufortDecoder;
 use big_integer_decoder::BigIntegerDecoder;
 use binary_decoder::BinaryDecoder;
 use bzip2_decoder::Bzip2Decoder;
@@ -369,6 +372,8 @@ pub enum DecoderType {
     BaconianDecoder(baconian_decoder::BaconianDecoder),
     /// baudot (ITA2) decoder
     BaudotDecoder(baudot_decoder::BaudotDecoder),
+    /// Beaufort cracker
+    BeaufortDecoder(beaufort_decoder::BeaufortDecoder),
     /// Polybius square decoder
     PolybiusDecoder(polybius_decoder::PolybiusDecoder),
     /// Playfair cracker
@@ -550,6 +555,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Vigenere Autokey",
             DecoderBox::new(Decoder::<VigenereAutokeyDecoder>::new()),
+        ),
+        (
+            "Beaufort",
+            DecoderBox::new(Decoder::<BeaufortDecoder>::new()),
         ),
         (
             "Repeating-key XOR",

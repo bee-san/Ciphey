@@ -15,6 +15,7 @@ use crate::decoders::base36_decoder::Base36Decoder;
 use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
 use crate::decoders::base58_monero_decoder::Base58MoneroDecoder;
 use crate::decoders::baudot_decoder::BaudotDecoder;
+use crate::decoders::beaufort_decoder::BeaufortDecoder;
 use crate::decoders::big_integer_decoder::BigIntegerDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::bzip2_decoder::Bzip2Decoder;
@@ -295,6 +296,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let route_transposition = Decoder::<RouteTranspositionDecoder>::new();
     let playfair = Decoder::<PlayfairDecoder>::new();
     let vigenere_autokey = Decoder::<VigenereAutokeyDecoder>::new();
+    let beaufort = Decoder::<BeaufortDecoder>::new();
     let vigenere = Decoder::<VigenereDecoder>::new();
     let xor_repeating_key = Decoder::<XorRepeatingKeyDecoder>::new();
     let binary = Decoder::<BinaryDecoder>::new();
@@ -417,6 +419,12 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // keeps this order, and Vigenere keys can turn an autokey ciphertext into text
             // the English checker accepts.
             Box::new(vigenere_autokey),
+            // Before Vigenere: on text without spaces both can find plaintext the Medium
+            // English check accepts in the same step, where they tie on checker class and
+            // cost and keep this order. Vigenere turns a Beaufort ciphertext into junk that
+            // check can accept; Beaufort only answers with a key whose decryption reads as
+            // English quadgrams.
+            Box::new(beaufort),
             Box::new(vigenere),
             Box::new(xor_repeating_key),
             Box::new(reversedecoder),

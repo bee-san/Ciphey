@@ -372,6 +372,14 @@ layers = ["Vigenere Autokey"]
 input = "Wicf qi tf xhx hsh ztjsbnvnzs uxxew fmuzqjub guw belox buk fht, fht dlc krb a grrvv."
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
+# Beaufort, key LEMON (https://github.com/bee-san/Ciphey/issues/1002)
+[[case]]
+kind = "single"
+name = "beaufort"
+layers = ["Beaufort"]
+input = "Zaiv bh et vgh qbl cdyfvgxkuk nglix bdbzghel mbk knebh sxi cnw, lfk dhg mbk l lyxle."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
 # base64(zlib(plaintext)): the Zlib decoder reads the Base64 itself, so it is one step
 [[case]]
 kind = "single"
@@ -564,6 +572,14 @@ kind = "multi"
 name = "vigenere_autokey_base64"
 layers = ["Vigenere Autokey", "Base64"]
 input = "V2ljZiBxaSB0ZiB4aHggaHNoIHp0anNibnZuenMgdXh4ZXcgZm11enFqdWIgZ3V3IGJlbG94IGJ1ayBmaHQsIGZodCBkbGMga3JiIGEgZ3JydnYu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "beaufort_base64"
+layers = ["Beaufort", "Base64"]
+# base64(beaufort(plaintext, LEMON))
+input = "WmFpdiBiaCBldCB2Z2ggcWJsIGNkeWZ2Z3hrdWsgbmdsaXggYmRiemdoZWwgbWJrIGtuZWJoIHN4aSBjbncsIGxmayBkaGcgbWJrIGwgbHl4bGUu"
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]

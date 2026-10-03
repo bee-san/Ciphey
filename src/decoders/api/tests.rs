@@ -69,6 +69,11 @@ const VIGENERE_CRYPTII: &str = "Ck jdp tqiyr, p vib'u gsebta gonpgl bq tmkxz uqj
 const VIGENERE_AUTOKEY_HELLO: &str = "Kiqpbg xmi rdla aeld hb tsp qflapg al wlan tqd dblq la \
     iywqe nux zpepiw gztyrp ocluiej, kpzr xtsp ofcv ep tjo dsxw.";
 
+/// English encrypted with the Beaufort key CASTLE (issue #1002's vectors, checked with
+/// pycipher 0.5.2), long enough for the cracker
+const BEAUFORT_CASTLE: &str = "Zwnpyb jto plmj esia qx hlp jekhhp ll zawg lrz teii wj gfadt \
+    jto chtuwn rxtiof tunufob, sxyn ntat baqj sq jto jhan.";
+
 // Every decoder
 
 #[test]
@@ -149,6 +154,7 @@ fn crackers_with_keys_take_keys() {
         keyed,
         [
             "affine",
+            "beaufort",
             "caesar",
             "hill",
             "monoalphabetic_substitution",
@@ -340,6 +346,22 @@ fn baudot_decodes() {
     let decoded = baudot("10100 00001 10010 10010 11000 00100 10011 11000 01010 10010 01001");
     assert_plaintext(&decoded, "HELLO WORLD");
     assert_eq!(plaintext_key(&decoded), "MSB-first, US-TTY");
+}
+
+#[test]
+fn beaufort_cracks() {
+    let decoded = beaufort(BEAUFORT_CASTLE);
+    assert_plaintext(
+        &decoded,
+        "Defend the east wall of the castle at dawn and hold it until the relief column \
+         arrives, then fall back to the keep.",
+    );
+    assert_eq!(plaintext_key(&decoded), "CASTLE");
+    // Too short for a 13-letter key: 28 letters, about two per key letter
+    assert!(beaufort("CKMPVCPVWPIWUJOGIUAPVWRIWUUK")
+        .plaintext()
+        .is_none());
+    assert!(beaufort("aGVsbG8gd29ybGQ=").is_empty());
 }
 
 #[test]
@@ -1017,6 +1039,38 @@ fn vigenere_autokey_decrypts_with_a_key() {
 }
 
 #[test]
+fn beaufort_decrypts_with_a_key() {
+    // pycipher 0.5.2 Beaufort('LEMON').encipher('Attack at dawn...'), case and spaces kept
+    let decoded = beaufort_with_key(
+        "Lltolb et lnpr, thj hricp pwbd ahjix vha sw lxsebh",
+        "lemon",
+    )
+    .unwrap();
+    assert_plaintext(
+        &decoded,
+        "Attack at dawn, the enemy will never see us coming",
+    );
+    assert_eq!(plaintext_key(&decoded), "LEMON");
+    // Its own inverse
+    assert_first(
+        &beaufort_with_key("Attack at dawn", "LEMON").unwrap(),
+        "Lltolb et lnpr",
+    );
+    for key in ["", "le mon", "l3mon", "lémon"] {
+        assert!(
+            matches!(
+                beaufort_with_key("text", key),
+                Err(CipheyError::InvalidKey {
+                    decoder: "Beaufort",
+                    ..
+                })
+            ),
+            "{key:?}"
+        );
+    }
+}
+
+#[test]
 fn affine_decrypts_with_a_key() {
     let decoded = affine_with_key("Jffg jf dmgfs gaf gxtd edsgp", 7, 3).unwrap();
     assert_plaintext(&decoded, "Meet me after the toga party");
@@ -1288,6 +1342,14 @@ fn decode_with_reads_every_key_format() {
     );
     assert!(key_error("vigenere_autokey", text, "queenly7").contains("letters"));
 
+    // Beaufort: letters
+    let text = "Lltolb et lnpr, thj hricp pwbd ahjix vha sw lxsebh";
+    assert_plaintext(
+        &with_key("beaufort", text, " lemon "),
+        "Attack at dawn, the enemy will never see us coming",
+    );
+    assert!(key_error("Beaufort", text, "lemon2").contains("letters"));
+
     // Affine: a and b, in order or by name
     let text = "Jffg jf dmgfs gaf gxtd edsgp";
     for key in [
@@ -1378,6 +1440,7 @@ fn cracked_keys_decrypt_again() {
         ("affine", "Jffg jf dmgfs gaf gxtd edsgp"),
         ("vigenere", VIGENERE_CRYPTII),
         ("vigenere_autokey", VIGENERE_AUTOKEY_HELLO),
+        ("beaufort", BEAUFORT_CASTLE),
         ("xor_single_byte", "Z09PXgpHTwpIUwpeQk8KRUZOCkVLQQpeWE9PCkteCkRFRUQ="),
         (
             "xor_repeating_key",

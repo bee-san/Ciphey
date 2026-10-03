@@ -3,6 +3,7 @@
 
 use super::{decrypted, name_of, Decoded, KeySupport};
 use crate::decoders::affine_decoder::{self, AffineDecoder};
+use crate::decoders::beaufort_decoder::{self, BeaufortDecoder};
 use crate::decoders::caesar_decoder::{self, CaesarDecoder};
 use crate::decoders::hill_decoder::{self, HillDecoder, KeyError};
 use crate::decoders::interface::{bytes_to_string, Crack, Decoder};
@@ -115,6 +116,37 @@ pub fn vigenere_autokey_with_key(text: &str, primer: &str) -> Result<Decoded, Ci
     Ok(decrypted::<VigenereAutokeyDecoder>(vec![(
         vigenere_autokey_decoder::decrypt(text, &primer),
         primer,
+    )]))
+}
+
+/// Decrypts the Beaufort cipher with a known key.
+///
+/// The key is ASCII letters in either case, such as `LEMON`. Each of the text's letters
+/// becomes the key letter minus it, P = K − C (mod 26), with the key's letters in turn;
+/// anything else is copied and uses up no key letter. Beaufort is its own inverse, so this
+/// also encrypts.
+///
+/// ```
+/// // pycipher 0.5.2 Beaufort('LEMON').encipher('Hello world') is EABDZPQVDK
+/// let decoded = ciphey::decoders::beaufort_with_key("Eabdz pqvdk", "lemon")?;
+/// assert_eq!(decoded.candidates[0].text, "Hello world");
+/// assert_eq!(decoded.candidates[0].key.as_deref(), Some("LEMON"));
+/// # Ok::<(), ciphey::CipheyError>(())
+/// ```
+///
+/// # Errors
+///
+/// [`CipheyError::InvalidKey`] if the key is empty or has anything but ASCII letters.
+pub fn beaufort_with_key(text: &str, key: &str) -> Result<Decoded, CipheyError> {
+    if key.is_empty() || !key.bytes().all(|byte| byte.is_ascii_alphabetic()) {
+        return Err(invalid_key::<BeaufortDecoder>(format!(
+            "{key:?} isn't a key: it must be one or more letters, such as LEMON"
+        )));
+    }
+    let key = key.to_ascii_uppercase();
+    Ok(decrypted::<BeaufortDecoder>(vec![(
+        beaufort_decoder::decrypt(text, &key),
+        key,
     )]))
 }
 
@@ -414,6 +446,12 @@ pub(super) const VIGENERE_AUTOKEY: KeySupport = KeySupport {
     decrypt: vigenere_autokey_key,
 };
 
+/// Beaufort's key for [`decode_with`](super::decode_with).
+pub(super) const BEAUFORT: KeySupport = KeySupport {
+    format: "The keyword, in letters: LEMON.",
+    decrypt: beaufort_key,
+};
+
 /// Affine's key for [`decode_with`](super::decode_with).
 pub(super) const AFFINE: KeySupport = KeySupport {
     format: "a and b of E(x) = (a*x + b) mod 26, as the cracker reports them: a=5, b=8 \
@@ -482,6 +520,11 @@ fn vigenere_key(text: &str, key: &str) -> Result<Decoded, CipheyError> {
 /// [`vigenere_autokey_with_key`] with the key written as [`VIGENERE_AUTOKEY`] says.
 fn vigenere_autokey_key(text: &str, key: &str) -> Result<Decoded, CipheyError> {
     vigenere_autokey_with_key(text, key.trim())
+}
+
+/// [`beaufort_with_key`] with the key written as [`BEAUFORT`] says.
+fn beaufort_key(text: &str, key: &str) -> Result<Decoded, CipheyError> {
+    beaufort_with_key(text, key.trim())
 }
 
 /// [`affine_with_key`] with the key written as [`AFFINE`] says.

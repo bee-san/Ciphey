@@ -27,6 +27,7 @@ use crate::decoders::base85_decoder::Base85Decoder;
 use crate::decoders::base91_decoder::Base91Decoder;
 use crate::decoders::base92_decoder::Base92Decoder;
 use crate::decoders::baudot_decoder::BaudotDecoder;
+use crate::decoders::beaufort_decoder::BeaufortDecoder;
 use crate::decoders::big_integer_decoder::BigIntegerDecoder;
 use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::braille_decoder::BrailleDecoder;
@@ -339,6 +340,24 @@ decoder_functions! {
     /// assert_eq!(plaintext.key.as_deref(), Some("MSB-first, US-TTY"));
     /// ```
     baudot: BaudotDecoder, aliases ["ita2", "murray"], key None;
+
+    /// Cracks the Beaufort cipher, the reciprocal Vigenère variant P = K − C: Ciphey finds
+    /// the key length and the key from the letter statistics. It needs about 15 letters
+    /// per key letter to be reliable. To decrypt with a known key, use
+    /// [`beaufort_with_key`](super::beaufort_with_key).
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::beaufort(
+    ///     "Zaiv bh et vgh qbl cdyfvgxkuk nglix bdbzghel mbk knebh sxi cnw, lfk dhg mbk l lyxle.",
+    /// );
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(
+    ///     plaintext.text,
+    ///     "Meet me at the old lighthouse after midnight and bring the map, the key and a torch.",
+    /// );
+    /// assert_eq!(plaintext.key.as_deref(), Some("LEMON"));
+    /// ```
+    beaufort: BeaufortDecoder, aliases [], key Some(keys::BEAUFORT);
 
     /// Decodes a big integer: the bytes of the text read as one big-endian number and
     /// written in decimal, as PyCryptodome's `long_to_bytes` decodes it. An optional
