@@ -4,7 +4,6 @@ use crate::config::get_config;
 use gibberish_or_not::Sensitivity;
 use lemmeknow::Identifier;
 use log::trace;
-#[cfg(test)]
 use std::collections::HashSet;
 
 /// WordlistChecker checks if the input text exactly matches any word in a user-provided wordlist
@@ -32,27 +31,9 @@ impl Check for Checker<WordlistChecker> {
 
         // Only run this checker if a wordlist is provided
         if let Some(wordlist) = &config.wordlist {
-            trace!("Running wordlist checker with {} entries", wordlist.len());
-
-            // Perform exact matching against the wordlist
-            let is_match = wordlist.contains(text);
-
-            if is_match {
-                trace!("Found exact match in wordlist for: {}", text);
-                let mut result = CheckResult::new(self);
-                result.is_identified = true;
-                result.text = text.to_string();
-                result.description =
-                    "text which matches an entry in the provided wordlist".to_string();
-                return result;
-            }
-
-            trace!("No match found in wordlist for: {}", text);
-        } else {
-            trace!("Wordlist checker skipped - no wordlist provided");
+            return self.check_with_wordlist(text, wordlist);
         }
-
-        // No match found or no wordlist provided
+        trace!("Wordlist checker skipped - no wordlist provided");
         CheckResult::new(self)
     }
 
@@ -69,28 +50,27 @@ impl Check for Checker<WordlistChecker> {
     }
 }
 
-// Extension methods for testing
-#[cfg(test)]
 impl Checker<WordlistChecker> {
-    /// Check with a directly provided wordlist (for testing)
-    fn check_with_wordlist(&self, text: &str, wordlist: &HashSet<String>) -> CheckResult {
+    /// Checks whether `text` is exactly one of the entries of `wordlist`. [`Check::check`]
+    /// does this with the wordlist from the config; [`crate::detection`] passes its own.
+    pub(crate) fn check_with_wordlist(
+        &self,
+        text: &str,
+        wordlist: &HashSet<String>,
+    ) -> CheckResult {
         trace!("Running wordlist checker with {} entries", wordlist.len());
 
         // Perform exact matching against the wordlist
-        let is_match = wordlist.contains(text);
-
-        if is_match {
+        if wordlist.contains(text) {
             trace!("Found exact match in wordlist for: {}", text);
             let mut result = CheckResult::new(self);
             result.is_identified = true;
             result.text = text.to_string();
-            result.description = "Text matches an entry in the provided wordlist".to_string();
+            result.description = "text which matches an entry in the provided wordlist".to_string();
             return result;
         }
 
         trace!("No match found in wordlist for: {}", text);
-
-        // No match found
         CheckResult::new(self)
     }
 }

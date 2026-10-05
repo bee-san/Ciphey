@@ -27,7 +27,7 @@ impl Check for Checker<EnglishChecker> {
 
     fn check(&self, text: &str) -> CheckResult {
         // Normalize before checking
-        let text = normalise_string(text);
+        let normalised = normalise_string(text);
 
         // Get config to check if enhanced detection is enabled
         let config = get_config();
@@ -38,10 +38,12 @@ impl Check for Checker<EnglishChecker> {
             is_identified: if is_enhanced {
                 // When enhanced detection is enabled, use a more sensitive setting
                 // This is a simple approximation since we don't have the actual BERT model
-                !is_gibberish(&text, Sensitivity::High)
+                !is_gibberish(&normalised, Sensitivity::High)
             } else {
-                !is_gibberish(&text, self.sensitivity)
+                !is_gibberish(&normalised, self.sensitivity)
             },
+            // The text as given, not the normalised copy: this is what the human checker
+            // asks about and what top results lists.
             text: text.to_string(),
             checker_name: self.name,
             checker_description: self.description,
@@ -50,7 +52,7 @@ impl Check for Checker<EnglishChecker> {
         };
 
         // Handle edge case of very short strings after normalization
-        if text.len() < 2 {
+        if normalised.len() < 2 {
             // Reduced from 3 since normalization may remove punctuation
             result.is_identified = false;
         }
@@ -150,6 +152,16 @@ mod tests {
     fn test_checker_works_with_puncuation_and_lowercase() {
         let checker = Checker::<EnglishChecker>::new();
         assert!(checker.check("Prei?nterview He!llo Dog?").is_identified);
+    }
+
+    #[test]
+    fn test_check_result_has_the_original_text() {
+        // The text is normalised for detection only. Returning the normalised copy made the
+        // human checker ask about "hello world" when the candidate was "Hello, World!".
+        let checker = Checker::<EnglishChecker>::new();
+        let result = checker.check("Hello, World!");
+        assert!(result.is_identified);
+        assert_eq!(result.text, "Hello, World!");
     }
 
     #[test]

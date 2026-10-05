@@ -1,6 +1,6 @@
 //! Decode a railfence cipher string
 //! Performs error handling and returns a string
-//! Call railfence_decoder.crack to use. It returns option<String> and check with
+//! Call railfence_decoder.crack to use. It returns `Option<String>` and check with
 //! `result.is_some()` to see if it returned okay.
 //! Uses Low sensitivity for gibberish detection.
 
@@ -30,7 +30,7 @@ impl Crack for Decoder<RailfenceDecoder> {
     }
 
     /// This function does the actual decoding
-    /// It returns an Option<string> if it was successful
+    /// It returns an `Option<String>` if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying railfence with text {:?}", text);
@@ -92,19 +92,38 @@ impl Crack for Decoder<RailfenceDecoder> {
 }
 
 /// Decodes a text encoded with the Rail Fence Cipher with the specified number of rails and offset
-fn railfence_decoder(text: &str, rails: usize, offset: usize) -> String {
-    let mut indexes: Vec<_> = zigzag(rails, offset)
-        .zip(1..)
-        .take(text.chars().count())
-        .collect();
-    indexes.sort();
-    let mut char_with_index: Vec<_> = text
-        .chars()
-        .zip(indexes)
-        .map(|(c, (_, i))| (i, c))
-        .collect();
-    char_with_index.sort();
-    char_with_index.iter().map(|(_, c)| c).collect()
+///
+/// Position `p` of the plaintext is on rail `zigzag[p]`, and the ciphertext lists the
+/// rails one after another. So the ciphertext fills rail 0's positions left to right,
+/// then rail 1's, and so on: a stable counting sort of the positions by rail.
+pub(crate) fn railfence_decoder(text: &str, rails: usize, offset: usize) -> String {
+    // One position per character, not per byte, so multibyte text decodes correctly.
+    let len = text.chars().count();
+    let rail_of: Vec<usize> = zigzag(rails, offset).take(len).collect();
+
+    // next[r]: where rail r's next position goes in the rail-by-rail order.
+    let mut next = vec![0usize; rails];
+    for &rail in &rail_of {
+        next[rail] += 1;
+    }
+    let mut start = 0;
+    for slot in next.iter_mut() {
+        let count = *slot;
+        *slot = start;
+        start += count;
+    }
+    // order[i]: the plaintext position of the i-th ciphertext character.
+    let mut order = vec![0usize; len];
+    for (position, &rail) in rail_of.iter().enumerate() {
+        order[next[rail]] = position;
+        next[rail] += 1;
+    }
+
+    let mut plaintext = vec!['\0'; len];
+    for (c, &position) in text.chars().zip(&order) {
+        plaintext[position] = c;
+    }
+    plaintext.into_iter().collect()
 }
 
 /// Returns an iterator that yields the indexes of a zigzag pattern with the specified number of rails and offset
@@ -130,6 +149,59 @@ mod tests {
     fn get_athena_checker() -> CheckerTypes {
         let athena_checker = Checker::<Athena>::new();
         CheckerTypes::CheckAthena(athena_checker)
+    }
+
+    /// `railfence_decoder` as a plain sort, sized by characters.
+    fn railfence_decoder_reference(text: &str, rails: usize, offset: usize) -> String {
+        let mut indexes: Vec<_> = zigzag(rails, offset)
+            .zip(1..)
+            .take(text.chars().count())
+            .collect();
+        indexes.sort();
+        let mut char_with_index: Vec<_> = text
+            .chars()
+            .zip(indexes)
+            .map(|(c, (_, i))| (i, c))
+            .collect();
+        char_with_index.sort();
+        char_with_index.iter().map(|(_, c)| c).collect()
+    }
+
+    #[test]
+    fn railfence_decoder_matches_reference() {
+        let mut texts: Vec<String> = vec![
+            String::new(),
+            "a".into(),
+            "xcz n akt,emiol r gywShfbqajd op uuv".into(),
+            "😂".into(),
+            "héllo wörld, ünïcode mixes byte and char positions 日本語".into(),
+        ];
+        let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyz ABC.,!é日😂".chars().collect();
+        let mut seed: u64 = 0x2545_F491_4F6C_DD1D;
+        for len in 1..60 {
+            texts.push(
+                (0..len)
+                    .map(|_| {
+                        seed ^= seed << 13;
+                        seed ^= seed >> 7;
+                        seed ^= seed << 17;
+                        alphabet[(seed % alphabet.len() as u64) as usize]
+                    })
+                    .collect(),
+            );
+        }
+        // Same rails and offsets as `crack`.
+        for text in &texts {
+            for rails in 2..10 {
+                for offset in 0..=(rails * 2 - 3) {
+                    assert_eq!(
+                        railfence_decoder(text, rails, offset),
+                        railfence_decoder_reference(text, rails, offset),
+                        "{rails} rails, offset {offset}, text {text:?}"
+                    );
+                }
+            }
+        }
     }
 
     #[test]

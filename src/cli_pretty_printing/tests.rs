@@ -1,4 +1,44 @@
+use super::{colorize, no_color_requested};
 use crate::storage::INVISIBLE_CHARS;
+use std::ffi::OsStr;
+use termcolor::{Color, ColorSpec};
+
+/// The colour spec `statement()` uses with the default colour scheme
+fn bold_white() -> ColorSpec {
+    let mut color_spec = ColorSpec::new();
+    color_spec
+        .set_fg(Some(Color::Rgb(255, 255, 255)))
+        .set_bold(true);
+    color_spec
+}
+
+/// Regression test for https://github.com/bee-san/Ciphey/issues/903
+/// When colours are disabled (a console that can't display ANSI codes, or NO_COLOR is set)
+/// the text must be returned as-is, otherwise the console prints the raw escape codes.
+#[test]
+fn test_colorize_without_color_returns_plain_text() {
+    let text = "Enhanced detection enabled.";
+    assert_eq!(colorize(text, &bold_white(), false), text);
+}
+
+/// Terminals that support colour keep getting the same ANSI escape codes as before
+#[test]
+fn test_colorize_with_color_adds_ansi_codes() {
+    assert_eq!(
+        colorize("Enhanced detection enabled.", &bold_white(), true),
+        "\x1b[0m\x1b[1m\x1b[38;2;255;255;255mEnhanced detection enabled.\x1b[0m"
+    );
+}
+
+/// NO_COLOR disables colour when it is set to any non-empty value (https://no-color.org/)
+#[test]
+fn test_no_color_requested() {
+    assert!(!no_color_requested(None));
+    assert!(!no_color_requested(Some(OsStr::new(""))));
+    assert!(no_color_requested(Some(OsStr::new("1"))));
+    assert!(no_color_requested(Some(OsStr::new("0"))));
+    assert!(no_color_requested(Some(OsStr::new("false"))));
+}
 
 /// Test that checks if the invisible character detection works correctly
 #[test]

@@ -5,6 +5,10 @@ use super::checker_type::{Check, Checker};
 use crate::{checkers::checker_result::CheckResult, config::get_config};
 use log::trace;
 use regex::Regex;
+use std::sync::OnceLock;
+
+/// The crib from the config and its compiled form.
+static COMPILED_REGEX: OnceLock<(String, Regex)> = OnceLock::new();
 
 /// The Regex Checker checks if the text matches a known Regex pattern.
 /// This is the struct for it.
@@ -28,26 +32,21 @@ impl Check for Checker<RegexChecker> {
 
     fn check(&self, text: &str) -> CheckResult {
         trace!("Checking {} with regex", text);
-        // TODO put this into a lazy static so we don't generate it everytime
         let config = get_config();
-        let regex_to_parse = config.regex.clone();
-        let re = Regex::new(&regex_to_parse.unwrap()).unwrap();
+        let pattern = config.regex.as_deref().unwrap();
+        // The config can't change once it is set, so the pattern is compiled once. If it
+        // ever differs from the cached one, compile it fresh like before.
+        let cached =
+            COMPILED_REGEX.get_or_init(|| (pattern.to_string(), Regex::new(pattern).unwrap()));
+        let uncached;
+        let re = if cached.0 == pattern {
+            &cached.1
+        } else {
+            uncached = Regex::new(pattern).unwrap();
+            &uncached
+        };
 
-        let regex_check_result = re.is_match(text);
-        let mut plaintext_found = false;
-        let printed_name = format!("Regex matched: {re}");
-        if regex_check_result {
-            plaintext_found = true;
-        }
-
-        CheckResult {
-            is_identified: plaintext_found,
-            text: text.to_string(),
-            checker_name: self.name,
-            checker_description: self.description,
-            description: printed_name,
-            link: self.link,
-        }
+        self.check_regex(re, text)
     }
 
     fn with_sensitivity(mut self, sensitivity: Sensitivity) -> Self {
@@ -57,5 +56,20 @@ impl Check for Checker<RegexChecker> {
 
     fn get_sensitivity(&self) -> Sensitivity {
         self.sensitivity
+    }
+}
+
+impl Checker<RegexChecker> {
+    /// Checks whether `re` matches `text`. [`Check::check`] does this with the crib from
+    /// the config; [`crate::detection`] passes its own.
+    pub(crate) fn check_regex(&self, re: &Regex, text: &str) -> CheckResult {
+        CheckResult {
+            is_identified: re.is_match(text),
+            text: text.to_string(),
+            checker_name: self.name,
+            checker_description: self.description,
+            description: format!("Regex matched: {re}"),
+            link: self.link,
+        }
     }
 }

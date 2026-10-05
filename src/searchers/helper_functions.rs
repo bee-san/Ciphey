@@ -31,6 +31,11 @@ pub fn update_decoder_stats(decoder: &str, success: bool) {
     // TODO: Write this data to a file for persistence
 }
 
+/// Forget the decoder statistics, as if the process had just started.
+pub fn reset_decoder_stats() {
+    DECODER_SUCCESS_RATES.lock().unwrap().clear();
+}
+
 /// Get the success rate of a decoder
 ///
 /// # Arguments
@@ -63,20 +68,47 @@ pub fn get_decoder_success_rate(decoder: &str) -> f32 {
 ///
 /// * `true` if the sequence is common, `false` otherwise
 pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
-    // Any two binary-to-text encodings stack, including the same one twice.
+    // Any two binary-to-text encodings stack, including the same one twice. UTF-16 decodes
+    // the bytes they produce (PowerShell's -EncodedCommand is Base64 of UTF-16LE). Running it
+    // twice in a row is cheap: its output has no NULs, so its first check rejects it.
     const STACKABLE: &[&str] = &[
         "Base64",
+        "Base64 Alt",
         "Base32",
+        "Base36",
         "Base58 Bitcoin",
         "Base58 Ripple",
         "Base58 Monero",
         "Base58 Flickr",
+        "Base85",
         "Base91",
+        "Base92",
         "Base65536",
+        "Base100",
+        // Chinese CTFs wrap it in Base64 or hex, and hide Base64 inside it
+        "Core Socialist Values",
         "Z85",
+        "Ascii85",
+        "Uuencode",
         "Hexadecimal",
+        "Hexdump",
+        "Decimal",
+        "Big integer to bytes",
         "Binary",
+        "Octal",
+        "HTML Entities",
         "URL",
+        "Unicode Escapes",
+        // Escaped strings get Base64'd, and escaped twice: `\\x41` -> `\x41` -> `A`
+        "Backslash Escapes",
+        "Quoted-Printable",
+        "UTF-16",
+        // Compressed data is usually wrapped in one of the above, and can be nested
+        "Zlib",
+        "Gzip",
+        "Raw DEFLATE",
+        "Bzip2",
+        "XZ",
     ];
     STACKABLE.contains(&prev_decoder) && STACKABLE.contains(&current_cipher)
 }
@@ -216,7 +248,11 @@ pub fn generate_heuristic(
 /// A string is considered undecodeble if:
 /// - It has 2 or fewer characters
 /// - It has more than 30% non-printable characters
-/// - Its overall quality score is below 0.2
+///
+/// Length is not held against it. This used to also require a
+/// [`calculate_string_quality`] of 0.2, which past the two checks above only fails for
+/// text of 821 to 5,000 characters (the length score drops below 0.2 at 821 characters,
+/// and text over 5,000 gets 0.3), so a correct answer that long was always rejected.
 ///
 /// ## Rationale
 ///
@@ -224,7 +260,6 @@ pub fn generate_heuristic(
 /// 2. LemmeKnow and other pattern matchers perform poorly on very short strings
 /// 3. Most encoding schemes produce output of at least 3 characters
 /// 4. Strings with high percentages of non-printable characters are unlikely to be valid encodings
-/// 5. Very low quality strings waste computational resources and rarely yield useful results
 ///
 /// Filtering out these strings early saves computational resources and
 /// prevents the search from exploring unproductive paths.
@@ -237,12 +272,6 @@ pub fn check_if_string_cant_be_decoded(text: &str) -> bool {
     // Check for strings with high non-printable character ratio
     let non_printable_ratio = calculate_non_printable_ratio(text);
     if non_printable_ratio > 0.3 {
-        return true;
-    }
-
-    // Check for overall string quality
-    let quality = calculate_string_quality(text);
-    if quality < 0.2 {
         return true;
     }
 
@@ -312,6 +341,20 @@ mod tests {
         let all_invisible = "\u{0}\u{0}\u{0}\u{0}\u{0}";
         let all_invisible_quality = calculate_string_quality(all_invisible);
         assert_eq!(all_invisible_quality, 0.0);
+    }
+
+    #[test]
+    fn long_text_can_be_a_result() {
+        // The quality check used to reject every text of 821 to 5,000 characters
+        let sentence = "The quick brown fox jumps over the lazy dog. ";
+        for repeats in [17, 19, 25, 60, 110, 120] {
+            let text = sentence.repeat(repeats);
+            assert!(
+                !check_if_string_cant_be_decoded(&text),
+                "{} chars",
+                text.len()
+            );
+        }
     }
 
     #[test]

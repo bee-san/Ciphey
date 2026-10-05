@@ -1,0 +1,22 @@
+# Default ~/.ciphey/config.toml, as written by ciphey::config::create_default_config_file.
+# benches/startup.rs points HOME at a temp dir holding this file so the CLI never runs
+# its first-run wizard or touches your real config.
+
+verbose = 0
+lemmeknow_min_rarity = 0.0
+lemmeknow_max_rarity = 0.0
+lemmeknow_tags = []
+lemmeknow_exclude_tags = []
+lemmeknow_boundaryless = false
+human_checker_on = false
+timeout = 5
+top_results = false
+api_mode = false
+enhanced_detection = false
+
+[colourscheme]
+warning = "255,0,0"
+error = "255,0,0"
+question = "255,215,0"
+success = "0,255,0"
+informational = "255,215,0"

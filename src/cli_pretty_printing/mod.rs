@@ -15,6 +15,12 @@
 //! - Question: Interactive prompts and user queries
 //! - Statement: Standard output and neutral messages
 //!
+//! # Colour Support
+//! Colours are written as ANSI escape codes. On Windows, ANSI support is turned on
+//! for the console before the first colour is used. If the console can't handle
+//! ANSI codes, or the `NO_COLOR` environment variable is set (<https://no-color.org/>),
+//! text is printed without colour.
+//!
 //! # Usage
 //! ```rust
 //! use ciphey::cli_pretty_printing::{success, warning};
@@ -32,8 +38,10 @@ use crate::storage;
 use crate::storage::wait_athena_storage::PlaintextResult;
 use crate::DecoderResult;
 use std::env;
+use std::ffi::OsStr;
 use std::fs::write;
 use std::io::Write;
+use std::sync::OnceLock;
 use termcolor::{Buffer, Color, ColorSpec, WriteColor};
 use text_io::read;
 
@@ -160,18 +168,97 @@ fn color_string(text: &str, role: &str) -> String {
 /// * `b` - Blue value (0-255)
 ///
 /// # Returns
-/// * `String` - The text with ANSI color codes applied
+/// * `String` - The text with ANSI color codes applied, or the plain text if colours are disabled
 fn apply_color_with_rgb(text: &str, r: u8, g: u8, b: u8) -> String {
-    let mut buffer = Buffer::ansi();
     let mut color_spec = ColorSpec::new();
     color_spec.set_fg(Some(Color::Rgb(r, g, b)));
     color_spec.set_bold(true);
 
-    buffer.set_color(&color_spec).unwrap_or(());
+    colorize(text, &color_spec, color_enabled())
+}
+
+/// Applies a termcolor colour spec to text, producing ANSI escape codes.
+///
+/// # Arguments
+/// * `text` - The text to be colored
+/// * `color_spec` - The colour and style to apply
+/// * `use_color` - Whether to add ANSI codes at all, normally the result of [`color_enabled`]
+///
+/// # Returns
+/// * `String` - The text wrapped in ANSI color codes, or the unchanged text if `use_color` is false
+pub(crate) fn colorize(text: &str, color_spec: &ColorSpec, use_color: bool) -> String {
+    if !use_color {
+        return text.to_string();
+    }
+
+    let mut buffer = Buffer::ansi();
+    buffer.set_color(color_spec).unwrap_or(());
     write!(&mut buffer, "{}", text).unwrap_or(());
     buffer.reset().unwrap_or(());
 
     String::from_utf8_lossy(buffer.as_slice()).to_string()
+}
+
+/// Returns whether CLI output should be coloured with ANSI escape codes.
+///
+/// This is decided once, the first time any text is coloured. Colours are off if the
+/// user set `NO_COLOR` or the terminal can't display ANSI codes (see [`enable_ansi_support`]).
+/// Without this check, consoles that don't understand ANSI print the codes literally,
+/// e.g. `←[0m←[1m←[38;2;255;255;255mEnhanced detection enabled.←[0m`.
+pub(crate) fn color_enabled() -> bool {
+    /// Cached result so the console is only configured once
+    static COLOR_ENABLED: OnceLock<bool> = OnceLock::new();
+    *COLOR_ENABLED.get_or_init(|| {
+        // Check NO_COLOR first so we don't touch the console when colours aren't wanted
+        !no_color_requested(env::var_os("NO_COLOR").as_deref()) && enable_ansi_support()
+    })
+}
+
+/// Checks the value of the `NO_COLOR` environment variable.
+///
+/// Following <https://no-color.org/>, colour is disabled when the variable is
+/// present and not empty, whatever its value.
+///
+/// # Arguments
+/// * `no_color` - The value of `NO_COLOR`, or None if it isn't set
+///
+/// # Returns
+/// * `bool` - true if the user asked for output without colour
+fn no_color_requested(no_color: Option<&OsStr>) -> bool {
+    no_color.is_some_and(|value| !value.is_empty())
+}
+
+/// Turns on ANSI escape code support in the Windows console.
+///
+/// The Windows console (cmd.exe, or PowerShell outside Windows Terminal) only
+/// interprets ANSI codes once virtual terminal processing is enabled for it.
+/// This enables it on stdout and stderr when they're attached to a console.
+/// Streams that aren't consoles (pipes, files, or terminals like mintty that
+/// handle ANSI codes themselves) are left alone.
+///
+/// # Returns
+/// * `bool` - false if a console doesn't support ANSI codes (Windows versions
+///   before Windows 10), in which case output should not be coloured
+#[cfg(windows)]
+fn enable_ansi_support() -> bool {
+    use winapi_util::console::Console;
+
+    [Console::stdout(), Console::stderr()]
+        .into_iter()
+        .all(|console| match console {
+            Ok(mut console) => console.set_virtual_terminal_processing(true).is_ok(),
+            // Not a console, so whatever is reading the output handles the codes
+            Err(_) => true,
+        })
+}
+
+/// Terminals on platforms other than Windows understand ANSI escape codes.
+///
+/// # Returns
+/// * `bool` - Always true
+#[cfg(not(windows))]
+fn enable_ansi_support() -> bool {
+    true
 }
 
 /// Colors text based on its role, defaulting to statement color if no role is specified.
@@ -299,20 +386,11 @@ pub fn program_exiting_successful_decoding(result: DecoderResult) {
     /// If 30% of the characters are invisible characters, then prompt the
     /// user to save the resulting plaintext into a file
     const INVIS_CHARS_DETECTION_PERCENTAGE: f64 = 0.3;
-    let mut invis_chars_found: f64 = 0.0;
-    for char in plaintext[0].chars() {
-        if storage::INVISIBLE_CHARS
-            .iter()
-            .any(|invis_chars| *invis_chars == char)
-        {
-            invis_chars_found += 1.0;
-        }
-    }
 
     // If the percentage of invisible characters in the plaintext exceeds
     // the detection percentage, prompt the user asking if they want to
     // save the plaintext into a file
-    let invis_char_percentage = invis_chars_found / plaintext[0].len() as f64;
+    let invis_char_percentage = invisible_char_ratio(&plaintext[0]);
     if invis_char_percentage > INVIS_CHARS_DETECTION_PERCENTAGE {
         let invis_char_percentage_string = format!("{:2.0}%", invis_char_percentage * 100.0);
         println!(
@@ -349,6 +427,22 @@ pub fn program_exiting_successful_decoding(result: DecoderResult) {
         success(&plaintext[0]),
         decoded_path_string
     );
+}
+
+/// Fraction of the characters in `text` that are invisible, between 0.0 and 1.0.
+///
+/// Counts characters rather than bytes: zero-width characters take 3 bytes in UTF-8,
+/// so dividing by the byte length made text that is entirely invisible look 33% invisible.
+fn invisible_char_ratio(text: &str) -> f64 {
+    let total = text.chars().count();
+    if total == 0 {
+        return 0.0;
+    }
+    let invisible = text
+        .chars()
+        .filter(|c| storage::INVISIBLE_CHARS.contains(c))
+        .count();
+    invisible as f64 / total as f64
 }
 
 /// Prints the number of decoding attempts performed.
@@ -581,7 +675,7 @@ pub fn display_top_results(results: &[PlaintextResult]) {
             success(&format!("Description: {}", result.description))
         );
         if results.len() > 1 {
-            // only print seperator if more than 1
+            // only print separator if more than 1
             println!("{}", success("---"));
         }
     }
@@ -601,4 +695,21 @@ fn test_parse_rgb() {
         let result = parse_rgb(case);
         assert!(result.is_some());
     }
+}
+
+#[test]
+fn test_invisible_char_ratio_counts_characters_not_bytes() {
+    let zero_width_space = '\u{200B}';
+    // Entirely invisible, but 3 bytes per character
+    let all_invisible = zero_width_space.to_string().repeat(10);
+    assert!((invisible_char_ratio(&all_invisible) - 1.0).abs() < f64::EPSILON);
+
+    // Half invisible. Dividing by bytes gave 25%, below the 30% threshold.
+    let half_invisible: String = "abcde"
+        .chars()
+        .flat_map(|c| [c, zero_width_space])
+        .collect();
+    assert!((invisible_char_ratio(&half_invisible) - 0.5).abs() < f64::EPSILON);
+
+    assert!(invisible_char_ratio("").abs() < f64::EPSILON);
 }

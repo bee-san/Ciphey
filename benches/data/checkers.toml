@@ -1,0 +1,228 @@
+# Checker benchmark fixtures (used by benches/checkers.rs and benches/crib.rs).
+#
+# [inputs] holds the texts; each [[case]] runs one checker on one input.
+#
+#   checker     = "english" | "lemmeknow" | "password" | "athena"   (checkers.rs)
+#                 "regex" | "wordlist" | "athena"                    (crib.rs, `crib = true`)
+#   sensitivity = "Low" | "Medium" | "High", default "Medium". Caesar, railfence and
+#                 rot47 check their candidates at Low; most other decoders use Medium.
+#   identified  = what the checker returns today. Checked before measuring.
+#
+# Misses matter most: during a search almost every candidate is rejected, and a
+# rejected candidate pays for every checker Athena runs (LemmeKnow, then the
+# password list, then the English checker).
+
+[inputs]
+word = "exuberant"
+sentence = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+paragraph = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+# Same gibberish string the decoder benches use as their "miss" input.
+gibberish = "T00 l3= ox+#G WKyV pajU6j qxH@ %B4+a 5Pn^ 7p_v1q 9sLvu *+36i R5rL&3 mVJZI iO0 Ut8_m COTV"
+# What Caesar hands the checker for a wrong shift of English text.
+rot13_paragraph = "Pvcurl vf na nhgbzngrq qrpbqvat gbby. Lbh tvir vg rapelcgrq be rapbqrq grkg naq vg gevrf gb jbex bhg jung jnf qbar gb vg, jvgubhg lbh univat gb xabj gur xrl be rira gur pvcure. Vg frnepurf guebhtu znal cbffvoyr qrpbqvatf, purpxf rnpu pnaqvqngr gb frr jurgure vg ybbxf yvxr Ratyvfu be zngpurf n xabja cnggrea fhpu nf na rznvy nqqerff, naq fgbcf jura vg svaqf fbzrguvat gung ernqf yvxr cynvagrkg. Zbfg bs gur gvzr guvf gnxrf yrff guna n frpbaq, juvpu znxrf vg unaql sbe pncgher gur synt punyyratrf, chmmyr uhagf naq sbe nalbar jub fghzoyrf npebff n fgenatr fgevat va n ybt svyr."
+# What Caesar hands the checker when the text is still base64 (ROT13 of a base64 string).
+base64_like = "GJIyqPOgMFOuqPO0nTHto2kxVTkcM2u0nT91p2HtLJM0MKVtoJyxozyanUDtLJ5xVTWlnJ5aVUEbMFOgLKNfVUEbMFOeMKxtLJ5xVTRtqT9lL2th"
+url = "https://github.com/bee-san/Ciphey"
+ipv4 = "192.168.0.1"
+email = "someone@example.com"
+password = "123456"
+# Crib inputs. crib.rs runs as if started with `--regex 'flag\{[^}]*\}'` and
+# `--wordlist benches/data/wordlist.txt`.
+flag_sentence = "Meet me at the old lighthouse, the flag is flag{meet_at_the_lighthouse} so hurry."
+wordlist_word = "lighthouse"
+# flag_sentence encoded, for the end-to-end crib searches.
+flag_base64 = "TWVldCBtZSBhdCB0aGUgb2xkIGxpZ2h0aG91c2UsIHRoZSBmbGFnIGlzIGZsYWd7bWVldF9hdF90aGVfbGlnaHRob3VzZX0gc28gaHVycnku"
+flag_rot13_base64 = "WnJyZyB6ciBuZyBndXIgYnlxIHl2dHVndWJoZnIsIGd1ciBzeW50IHZmIHN5bnR7enJyZ19uZ19ndXJfeXZ0dWd1Ymhmcn0gZmIgdWhlZWwu"
+
+# English checker
+[[case]]
+checker = "english"
+input = "word"
+identified = true
+
+[[case]]
+checker = "english"
+input = "sentence"
+identified = true
+
+[[case]]
+checker = "english"
+input = "paragraph"
+identified = true
+
+[[case]]
+checker = "english"
+input = "gibberish"
+identified = false
+
+[[case]]
+checker = "english"
+input = "rot13_paragraph"
+identified = false
+
+[[case]]
+checker = "english"
+input = "base64_like"
+identified = false
+
+[[case]]
+checker = "english"
+sensitivity = "Low"
+input = "sentence"
+identified = true
+
+[[case]]
+checker = "english"
+sensitivity = "Low"
+input = "rot13_paragraph"
+identified = false
+
+[[case]]
+checker = "english"
+sensitivity = "High"
+input = "sentence"
+identified = true
+
+[[case]]
+checker = "english"
+sensitivity = "High"
+input = "rot13_paragraph"
+identified = false
+
+# LemmeKnow (regex database of ~130 known formats)
+[[case]]
+checker = "lemmeknow"
+input = "url"
+identified = true
+
+[[case]]
+checker = "lemmeknow"
+input = "ipv4"
+identified = true
+
+[[case]]
+checker = "lemmeknow"
+input = "email"
+identified = true
+
+[[case]]
+checker = "lemmeknow"
+input = "sentence"
+identified = false
+
+[[case]]
+checker = "lemmeknow"
+input = "gibberish"
+identified = false
+
+[[case]]
+checker = "lemmeknow"
+input = "paragraph"
+identified = false
+
+[[case]]
+checker = "lemmeknow"
+input = "base64_like"
+identified = false
+
+# Common-password list
+[[case]]
+checker = "password"
+input = "password"
+identified = true
+
+[[case]]
+checker = "password"
+input = "sentence"
+identified = false
+
+# Athena: the checker every decoder actually calls
+[[case]]
+checker = "athena"
+input = "sentence"
+identified = true
+
+[[case]]
+checker = "athena"
+input = "paragraph"
+identified = true
+
+[[case]]
+checker = "athena"
+input = "url"
+identified = true
+
+[[case]]
+checker = "athena"
+input = "password"
+identified = true
+
+[[case]]
+checker = "athena"
+input = "gibberish"
+identified = false
+
+[[case]]
+checker = "athena"
+input = "base64_like"
+identified = false
+
+[[case]]
+checker = "athena"
+input = "rot13_paragraph"
+identified = false
+
+[[case]]
+checker = "athena"
+sensitivity = "Low"
+input = "base64_like"
+identified = false
+
+[[case]]
+checker = "athena"
+sensitivity = "Low"
+input = "rot13_paragraph"
+identified = false
+
+# Crib checkers (crib.rs only)
+[[case]]
+crib = true
+checker = "regex"
+input = "flag_sentence"
+identified = true
+
+[[case]]
+crib = true
+checker = "regex"
+input = "sentence"
+identified = false
+
+[[case]]
+crib = true
+checker = "regex"
+input = "paragraph"
+identified = false
+
+[[case]]
+crib = true
+checker = "wordlist"
+input = "wordlist_word"
+identified = true
+
+[[case]]
+crib = true
+checker = "wordlist"
+input = "sentence"
+identified = false
+
+[[case]]
+crib = true
+checker = "athena"
+input = "flag_sentence"
+identified = true
+
+[[case]]
+crib = true
+checker = "athena"
+input = "gibberish"
+identified = false

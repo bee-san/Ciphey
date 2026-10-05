@@ -68,7 +68,7 @@ impl Crack for Decoder<DefaultDecoder> {
 /// All decoders will share the same Crack trait
 /// Which let's us put them into a vector and iterate over them,
 /// Running `.crack()` on each of them.
-/// Relevant docs: https://docs.rs/crack/0.3.0/crack/trait.Crack.html
+/// Relevant docs: <https://docs.rs/crack/0.3.0/crack/trait.Crack.html>
 pub trait Crack {
     /// This function generates a new crack trait
     fn new() -> Self
@@ -80,7 +80,7 @@ pub trait Crack {
     fn get_tags(&self) -> &Vec<&str>;
     /// Get the name of the current decoder
     fn get_name(&self) -> &str;
-    /// Gets the description of the current deocder
+    /// Gets the description of the current decoder
     fn get_description(&self) -> &str;
     /// Gets the link for the current decoder
     fn get_link(&self) -> &str;
@@ -104,4 +104,14 @@ pub fn check_string_success(decoded_text: &str, original_text: &str) -> bool {
         return true;
     }
     false
+}
+
+/// Turns decoded bytes into text.
+///
+/// The bytes are read as UTF-8 when they are valid UTF-8, as encoded text almost always
+/// is. Otherwise each byte becomes the Latin-1 character with that value, so every byte
+/// still maps to a character.
+pub(crate) fn bytes_to_string(bytes: Vec<u8>) -> String {
+    String::from_utf8(bytes)
+        .unwrap_or_else(|error| error.into_bytes().into_iter().map(char::from).collect())
 }

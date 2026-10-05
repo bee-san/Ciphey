@@ -1,0 +1,894 @@
+# A* search corpus (used by benches/search.rs), run end to end through
+# ciphey::perform_cracking with a fixed 1 second timeout.
+#
+#   kind     = "plaintext" | "single" | "multi" | "no_solution"
+#   layers   = encodings applied to the plaintext, innermost first
+#              (["caesar", "Base64"] means base64(rot13(plaintext)))
+#   expected = the text perform_cracking returns today, checked before measuring.
+#   outcome  = no_solution only. How the search ends today:
+#                exhausted       Ok(None): every decoder rejects the input
+#                false_positive  Ok(Some(..)): it settles on gibberish (usually rot47 -> Vigenere)
+#                timeout         Err(Timeout): still searching when the 1 s timer fires
+#              Only "exhausted" and "timeout" are checked; where a false positive is
+#              found depends on search order, and a slower machine may time out first.
+
+[[case]]
+kind = "plaintext"
+name = "already_plaintext"
+layers = []
+input = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "base64"
+layers = ["Base64"]
+input = "TWVldCBtZSBhdCB0aGUgb2xkIGxpZ2h0aG91c2UgYWZ0ZXIgbWlkbmlnaHQgYW5kIGJyaW5nIHRoZSBtYXAsIHRoZSBrZXkgYW5kIGEgdG9yY2gu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "base64_long"
+layers = ["Base64"]
+input = "Q2lwaGV5IGlzIGFuIGF1dG9tYXRlZCBkZWNvZGluZyB0b29sLiBZb3UgZ2l2ZSBpdCBlbmNyeXB0ZWQgb3IgZW5jb2RlZCB0ZXh0IGFuZCBpdCB0cmllcyB0byB3b3JrIG91dCB3aGF0IHdhcyBkb25lIHRvIGl0LCB3aXRob3V0IHlvdSBoYXZpbmcgdG8ga25vdyB0aGUga2V5IG9yIGV2ZW4gdGhlIGNpcGhlci4gSXQgc2VhcmNoZXMgdGhyb3VnaCBtYW55IHBvc3NpYmxlIGRlY29kaW5ncywgY2hlY2tzIGVhY2ggY2FuZGlkYXRlIHRvIHNlZSB3aGV0aGVyIGl0IGxvb2tzIGxpa2UgRW5nbGlzaCBvciBtYXRjaGVzIGEga25vd24gcGF0dGVybiBzdWNoIGFzIGFuIGVtYWlsIGFkZHJlc3MsIGFuZCBzdG9wcyB3aGVuIGl0IGZpbmRzIHNvbWV0aGluZyB0aGF0IHJlYWRzIGxpa2UgcGxhaW50ZXh0LiBNb3N0IG9mIHRoZSB0aW1lIHRoaXMgdGFrZXMgbGVzcyB0aGFuIGEgc2Vjb25kLCB3aGljaCBtYWtlcyBpdCBoYW5keSBmb3IgY2FwdHVyZSB0aGUgZmxhZyBjaGFsbGVuZ2VzLCBwdXp6bGUgaHVudHMgYW5kIGZvciBhbnlvbmUgd2hvIHN0dW1ibGVzIGFjcm9zcyBhIHN0cmFuZ2Ugc3RyaW5nIGluIGEgbG9nIGZpbGUu"
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
+[[case]]
+# Base64 with the crypt(3) / itoa64 alphabet (./0-9A-Za-z)
+kind = "single"
+name = "base64_itoa64"
+layers = ["Base64 Alt"]
+input = "HKJZR0/hNG/VR0/oO4IUPqlY64ldNqVoO4xpQqIUMKNoNL6UPKZYPaZbO5EUMKtY647mOKtb65FcNG/hML.g65FcNG/fNLYUMKtY642UR4xmMqUi"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "hexadecimal"
+layers = ["Hexadecimal"]
+input = "4d656574206d6520617420746865206f6c64206c69676874686f757365206166746572206d69646e6967687420616e64206272696e6720746865206d61702c20746865206b657920616e64206120746f7263682e"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# `hexdump` (util-linux 2.37.4): little-endian 16-bit words and no ASCII column
+kind = "single"
+name = "hexdump"
+layers = ["Hexdump"]
+input = '''
+0000000 654d 7465 6d20 2065 7461 7420 6568 6f20
+0000010 646c 6c20 6769 7468 6f68 7375 2065 6661
+0000020 6574 2072 696d 6e64 6769 7468 6120 646e
+0000030 6220 6972 676e 7420 6568 6d20 7061 202c
+0000040 6874 2065 656b 2079 6e61 2064 2061 6f74
+0000050 6372 2e68                              
+0000054
+'''
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Base64 of gzip.compress(text, mtime=0). Gzip reads the Base64 itself, so it is one step.
+kind = "single"
+name = "gzip"
+layers = ["Gzip", "Base64"]
+input = "H4sIAAAAAAAC/x2K0RGAMAjFVnkDeG7iEGixcJbWQ/xwe5W/XJKFOWAMCoQwRitoWiVk3Ndn92CHaem/A/WC1bXXfI3OKeHgJxMhhm8yv/6/JS9UAAAA"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Base64 of bz2.compress(text). Bzip2 reads the Base64 itself, so it is one step.
+kind = "single"
+name = "bzip2"
+layers = ["Bzip2", "Base64"]
+input = "QlpoOTFBWSZTWWMBlygAAAkVgEAFAAI/794gIABIap5TNE9IwmyBEGQaGgDSU96PsiI3NPoK9qUAyQVg2dJPrHtnqvgZALhY1snmgBge3nckj1SElkwWxL4u5IpwoSDGAy5Q"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "decimal"
+layers = ["Decimal"]
+input = "77 101 101 116 32 109 101 32 97 116 32 116 104 101 32 111 108 100 32 108 105 103 104 116 104 111 117 115 101 32 97 102 116 101 114 32 109 105 100 110 105 103 104 116 32 97 110 100 32 98 114 105 110 103 32 116 104 101 32 109 97 112 44 32 116 104 101 32 107 101 121 32 97 110 100 32 97 32 116 111 114 99 104 46"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# DTMF frequency pairs, low-high, for the keys 18005551234, which LemmeKnow identifies
+# as a phone number. There is no multi case: DTMF can't write letters, and chains that can
+# (DTMF of Decimal) are over 20 times longer than the plaintext, which the search rejects.
+kind = "single"
+name = "dtmf"
+layers = ["DTMF"]
+input = "697-1209 852-1336 941-1336 941-1336 770-1336 770-1336 770-1336 697-1209 697-1336 697-1477 770-1209"
+expected = "18005551234"
+
+[[case]]
+kind = "single"
+name = "big_integer"
+layers = ["Big integer to bytes"]
+input = "5924286894360222175456110753752027428824911406952436191673549997864792617447030598048630620176057525265340209895115724741248167312932204479423391834119139432169971560672548040885900086328159414572509230"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# The phone keypad keys of each word. Ranked word by word, ME reads as OF and MAP as OAR.
+kind = "single"
+name = "t9"
+layers = ["T9"]
+input = "6338 63 28 843 653 5444846873 23837 64364448 263 27464 843 627 843 539 263 2 86724"
+expected = "meet of at the old lighthouse after midnight and bring the oar the key and a torch"
+
+[[case]]
+kind = "single"
+name = "base32"
+layers = ["Base32"]
+input = "JVSWK5BANVSSAYLUEB2GQZJAN5WGIIDMNFTWQ5DIN52XGZJAMFTHIZLSEBWWSZDONFTWQ5BAMFXGIIDCOJUW4ZZAORUGKIDNMFYCYIDUNBSSA23FPEQGC3TEEBQSA5DPOJRWQLQ="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "base36"
+layers = ["Base36"]
+input = "a822v1oz8f1g6201c07e8y94rud6he0289o4d0fxi2pthhv60m2s9nfnu6qul2zwxpn8wdgzfebbb7rml6tb0hl2ze8kye5p1355vfz8nh9otnrvkqdmkecd8s6ratdg6m"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "base58_bitcoin"
+layers = ["Base58 Bitcoin"]
+input = "6X6FW9Fv3pE3p6JtGkbStCFRnzXNxB2FpZzj3qrCm9DJAyJXHm7eixRZfy9rkN8nTwk8SRHWUDmeoc7qJTrURpjgfxQqR3oSt9wR67mGcrjWXhrx2Zb"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "base85"
+layers = ["Base85"]
+input = "O=V?tAZ=wJVRRsLXk{R8Y-Av8X=iA3Xm53MWguZ@bY*fNZE0j~X=iA3AYpD~AYyW9Zf78LXk{R6VQ?%UbZBKDYh`&LVQyp~VIXvGa${&N"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# base92.encode from the base92 2.0.0 package on PyPI
+kind = "single"
+name = "base92"
+layers = ["Base92"]
+input = "=5^dl?57>ogS$p[GEU&taJ'bhnke,79eK=H4OSb$:es:+Z<HHn1kZu'b*&iH*]UkHms3ld3j$FgR%s#;Fc[a_%e>$.p\\$p%1JxvkSl**"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "base100"
+layers = ["Base100"]
+input = "👄👜👜👫🐗👤👜🐗👘👫🐗👫👟👜🐗👦👣👛🐗👣👠👞👟👫👟👦👬👪👜🐗👘👝👫👜👩🐗👤👠👛👥👠👞👟👫🐗👘👥👛🐗👙👩👠👥👞🐗👫👟👜🐗👤👘👧🐣🐗👫👟👜🐗👢👜👰🐗👘👥👛🐗👘🐗👫👦👩👚👟🐥"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# LingoJam's Standard Galactic Alphabet: t is `ℸ ̣ `, p is `!¡`, y is `||`, capitals kept
+kind = "single"
+name = "standard_galactic_alphabet"
+layers = ["Standard Galactic Alphabet"]
+input = "Mᒷᒷℸ ̣  ᒲᒷ ᔑℸ ̣  ℸ ̣ ⍑ᒷ 𝙹ꖎ↸ ꖎ╎⊣⍑ℸ ̣ ⍑𝙹⚍ᓭᒷ ᔑ⎓ℸ ̣ ᒷ∷ ᒲ╎↸リ╎⊣⍑ℸ ̣  ᔑリ↸ ʖ∷╎リ⊣ ℸ ̣ ⍑ᒷ ᒲᔑ!¡, ℸ ̣ ⍑ᒷ ꖌᒷ|| ᔑリ↸ ᔑ ℸ ̣ 𝙹∷ᓵ⍑."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "binary"
+layers = ["Binary"]
+input = "01001101 01100101 01100101 01110100 00100000 01101101 01100101 00100000 01100001 01110100 00100000 01110100 01101000 01100101 00100000 01101111 01101100 01100100 00100000 01101100 01101001 01100111 01101000 01110100 01101000 01101111 01110101 01110011 01100101 00100000 01100001 01100110 01110100 01100101 01110010 00100000 01101101 01101001 01100100 01101110 01101001 01100111 01101000 01110100 00100000 01100001 01101110 01100100 00100000 01100010 01110010 01101001 01101110 01100111 00100000 01110100 01101000 01100101 00100000 01101101 01100001 01110000 00101100 00100000 01110100 01101000 01100101 00100000 01101011 01100101 01111001 00100000 01100001 01101110 01100100 00100000 01100001 00100000 01110100 01101111 01110010 01100011 01101000 00101110"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "octal"
+layers = ["Octal"]
+input = "115 145 145 164 40 155 145 40 141 164 40 164 150 145 40 157 154 144 40 154 151 147 150 164 150 157 165 163 145 40 141 146 164 145 162 40 155 151 144 156 151 147 150 164 40 141 156 144 40 142 162 151 156 147 40 164 150 145 40 155 141 160 54 40 164 150 145 40 153 145 171 40 141 156 144 40 141 40 164 157 162 143 150 56"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "morse"
+layers = ["Morse Code"]
+input = "-- . . - / -- . / .- - / - .... . / --- .-.. -.. / .-.. .. --. .... - .... --- ..- ... . / .- ..-. - . .-. / -- .. -.. -. .. --. .... - / .- -. -.. / -... .-. .. -. --. / - .... . / -- .- .--. --..-- / - .... . / -.- . -.-- / .- -. -.. / .- / - --- .-. -.-. .... .-.-.-"
+expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP, THE KEY AND A TORCH."
+
+# The plaintext as tap code `row,col` pairs, upper case without punctuation, K sent as C
+[[case]]
+kind = "single"
+name = "tap_code"
+layers = ["Tap Code"]
+input = "3,2 1,5 1,5 4,4  3,2 1,5  1,1 4,4  4,4 2,3 1,5  3,4 3,1 1,4  3,1 2,4 2,2 2,3 4,4 2,3 3,4 4,5 4,3 1,5  1,1 2,1 4,4 1,5 4,2  3,2 2,4 1,4 3,3 2,4 2,2 2,3 4,4  1,1 3,3 1,4  1,2 4,2 2,4 3,3 2,2  4,4 2,3 1,5  3,2 1,1 3,5  4,4 2,3 1,5  1,3 1,5 5,4  1,1 3,3 1,4  1,1  4,4 3,4 4,2 1,3 2,3"
+expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP THE CEY AND A TORCH"
+
+[[case]]
+# Key presses separated by spaces, 0 for a space, of the upper-cased text without punctuation
+kind = "single"
+name = "multi_tap"
+layers = ["Multi-tap"]
+input = "6 33 33 8 0 6 33 0 2 8 0 8 44 33 0 666 555 3 0 555 444 4 44 8 44 666 88 7777 33 0 2 333 8 33 777 0 6 444 3 66 444 4 44 8 0 2 66 3 0 22 777 444 66 4 0 8 44 33 0 6 2 7 0 8 44 33 0 55 33 999 0 2 66 3 0 2 0 8 666 777 222 44"
+expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP THE KEY AND A TORCH"
+
+[[case]]
+# Each word's NATO code words joined with `-`, a space between words, `Comma` and `Stop`
+# for the punctuation. CyberChef's layout, code words separated by spaces, is English
+# words, so the search would return it unchanged as plaintext. It does that with the long
+# plaintext in this layout too, and joined with `/` or `|`, so there is no long case.
+kind = "single"
+name = "nato_phonetic"
+layers = ["NATO Phonetic Alphabet"]
+input = "Mike-Echo-Echo-Tango Mike-Echo Alfa-Tango Tango-Hotel-Echo Oscar-Lima-Delta Lima-India-Golf-Hotel-Tango-Hotel-Oscar-Uniform-Sierra-Echo Alfa-Foxtrot-Tango-Echo-Romeo Mike-India-Delta-November-India-Golf-Hotel-Tango Alfa-November-Delta Bravo-Romeo-India-November-Golf Tango-Hotel-Echo Mike-Alfa-Papa-Comma Tango-Hotel-Echo Kilo-Echo-Yankee Alfa-November-Delta Alfa Tango-Oscar-Romeo-Charlie-Hotel-Stop"
+expected = "meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "url"
+layers = ["URL"]
+input = "Meet%20me%20at%20the%20old%20lighthouse%20after%20midnight%20and%20bring%20the%20map%2C%20the%20key%20and%20a%20torch."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# An IDNA domain: Python's "hello.müller.example.com".encode("idna"). The standard
+# plaintext has no non-ASCII character for Punycode to encode.
+kind = "single"
+name = "punycode"
+layers = ["Punycode"]
+input = "hello.xn--mller-kva.example.com"
+expected = "hello.müller.example.com"
+
+[[case]]
+kind = "single"
+name = "unicode_escapes"
+layers = ["Unicode Escapes"]
+input = '\u004D\u0065\u0065\u0074\u0020\u006D\u0065\u0020\u0061\u0074\u0020\u0074\u0068\u0065\u0020\u006F\u006C\u0064\u0020\u006C\u0069\u0067\u0068\u0074\u0068\u006F\u0075\u0073\u0065\u0020\u0061\u0066\u0074\u0065\u0072\u0020\u006D\u0069\u0064\u006E\u0069\u0067\u0068\u0074\u0020\u0061\u006E\u0064\u0020\u0062\u0072\u0069\u006E\u0067\u0020\u0074\u0068\u0065\u0020\u006D\u0061\u0070\u002C\u0020\u0074\u0068\u0065\u0020\u006B\u0065\u0079\u0020\u0061\u006E\u0064\u0020\u0061\u0020\u0074\u006F\u0072\u0063\u0068\u002E'
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# The plaintext in mathematical bold letters (U+1D400 for A, U+1D41A for a)
+kind = "single"
+name = "unicode_fancy_text"
+layers = ["Unicode Fancy Text"]
+input = "𝐌𝐞𝐞𝐭 𝐦𝐞 𝐚𝐭 𝐭𝐡𝐞 𝐨𝐥𝐝 𝐥𝐢𝐠𝐡𝐭𝐡𝐨𝐮𝐬𝐞 𝐚𝐟𝐭𝐞𝐫 𝐦𝐢𝐝𝐧𝐢𝐠𝐡𝐭 𝐚𝐧𝐝 𝐛𝐫𝐢𝐧𝐠 𝐭𝐡𝐞 𝐦𝐚𝐩, 𝐭𝐡𝐞 𝐤𝐞𝐲 𝐚𝐧𝐝 𝐚 𝐭𝐨𝐫𝐜𝐡."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "backslash_escapes"
+layers = ["Backslash Escapes"]
+input = '\x4d\x65\x65\x74\040\x6d\x65\040\x61\x74\040\x74\x68\x65\040\x6f\x6c\x64\040\x6c\x69\x67\x68\x74\x68\x6f\x75\x73\x65\040\x61\x66\x74\x65\x72\040\x6d\x69\x64\x6e\x69\x67\x68\x74\040\x61\x6e\x64\040\x62\x72\x69\x6e\x67\040\x74\x68\x65\040\x6d\x61\x70\054\040\x74\x68\x65\040\x6b\x65\x79\040\x61\x6e\x64\040\x61\040\x74\x6f\x72\x63\x68\056'
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "quoted_printable"
+layers = ["Quoted-Printable"]
+input = "Meet=20me=20at=20the=20old=20lighthouse=20after=20midnight=20and=20bring=20=\nthe=20map,=20the=20key=20and=20a=20torch."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "mime_encoded_word"
+layers = ["MIME Encoded-Word"]
+input = "=?utf-8?Q?Meet_me_at_the_old_lighthouse_after_midnight_and_bring_the_map,_the_key_and_a_torch.?="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "citrix_ctx1"
+layers = ["Citrix Ctx1"]
+input = "OIENINCIOIENJMDJLMBJNBHELEBBJEDBPFFAIBCEKBAENFHALNBINIHNPIFNJHDCPLFOJPDKLPBKNDHGLKBPNNHILFBAMBGEKJAMMGGDLDBGMAGFKFAAIFCAOEEBICCHPGFDJDDGOBEEMBGEKMAJMFGAKBAEMPGKKGADMBGEKJAMNNHIPNFIJMDJPCFHJGDDLGBDNEHBKGADMPGKKBAEMGGDOGEDJCDHPKFPJPDKLPBKNCHHLDBGMDGGOPEKMPGKLLBONDHGLGBDJGDDPNFIJIDNOBEEMBGEKAAFMOGLKKAPIKCPOLEOMLGOLPBKNAHFKCAHMBGEKJAMIHCC"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# valuesEncode from sym233/core-values-encoder@a419ea5, every A to F written with 诚信 (10)
+kind = "single"
+name = "core_socialist_values"
+layers = ["Core Socialist Values"]
+input = "自由诚信和谐公正平等公正平等法治自由文明富强公正诚信和谐公正平等文明富强公正民主法治自由文明富强法治自由公正爱国公正平等文明富强公正诚信平等公正诚信文明公正自由文明富强公正诚信文明公正敬业公正法治公正爱国法治自由公正爱国公正诚信平等法治平等法治和谐公正平等文明富强公正民主公正公正法治自由公正平等法治文明文明富强公正诚信和谐公正敬业公正自由公正诚信自由公正敬业公正法治公正爱国法治自由文明富强公正民主公正诚信自由公正自由文明富强公正文明法治文明公正敬业公正诚信自由公正法治文明富强法治自由公正爱国公正平等文明富强公正诚信和谐公正民主法治富强文明诚信文明文明富强法治自由公正爱国公正平等文明富强公正诚信民主公正平等法治敬业文明富强公正民主公正诚信自由公正自由文明富强公正民主文明富强法治自由公正诚信平等法治文明公正和谐公正爱国文明诚信自由"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "rot13"
+layers = ["caesar"]
+input = "Zrrg zr ng gur byq yvtugubhfr nsgre zvqavtug naq oevat gur znc, gur xrl naq n gbepu."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# ROT18: ROT13 on the letters and ROT5 on the digits, so 1230 and 404 are 6785 and 959
+kind = "single"
+name = "rot18"
+layers = ["rot18"]
+input = "Gur zrrgvat vf ng 6785 va ebbz 959 ba gur frpbaq sybbe"
+expected = "The meeting is at 1230 in room 404 on the second floor"
+
+[[case]]
+kind = "single"
+name = "atbash"
+layers = ["atbash"]
+input = "Nvvg nv zg gsv low ortsgslfhv zugvi nrwmrtsg zmw yirmt gsv nzk, gsv pvb zmw z glixs."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# CyberChef 10.24 "Convert Leet Speak" (To Leet Speak): a 4, e 3, i 1, o 0, s 5, t 7
+kind = "single"
+name = "leetspeak"
+layers = ["Leetspeak"]
+input = "M337 m3 47 7h3 0ld l1gh7h0u53 4f73r m1dn1gh7 4nd br1ng 7h3 m4p, 7h3 k3y 4nd 4 70rch."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "baconian"
+layers = ["Baconian"]
+input = "ABABBAABAAAABAABAABA ABABBAABAA AAAAABAABA BAABAAABBBAABAA ABBABABABAAAABB ABABAABAAAAABBAAABBBBAABAAABBBABBABBAABBBAAABAABAA AAAAAAABABBAABAAABAABAAAA ABABBABAAAAAABBABBAAABAAAAABBAAABBBBAABA AAAAAABBAAAAABB AAAABBAAAAABAAAABBAAAABBA BAABAAABBBAABAA ABABBAAAAAABBBA BAABAAABBBAABAA ABAABAABAABABBA AAAAAABBAAAAABB AAAAA BAABAABBABBAAAAAAABAAABBB"
+expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP THE KEY AND A TORCH"
+
+[[case]]
+# The plaintext upper-cased, in ITA2 five-bit groups (Baudot has no lower case)
+kind = "single"
+name = "baudot"
+layers = ["Baudot"]
+input = "11100 00001 00001 10000 00100 11100 00001 00100 00011 10000 00100 10000 10100 00001 00100 11000 10010 01001 00100 10010 00110 11010 10100 10000 10100 11000 00111 00101 00001 00100 00011 01101 10000 00001 01010 00100 11100 00110 01001 01100 00110 11010 10100 10000 00100 00011 01100 01001 00100 11001 01010 00110 01100 11010 00100 10000 10100 00001 00100 11100 00011 10110 11011 01100 00100 11111 10000 10100 00001 00100 01111 00001 10101 00100 00011 01100 01001 00100 00011 00100 10000 11000 01010 01110 10100 11011 11100"
+expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP, THE KEY AND A TORCH."
+
+[[case]]
+# pycipher 0.5.2 PolybiusSquare, standard 5x5 square, one word at a time
+kind = "single"
+name = "polybius"
+layers = ["Polybius Square"]
+input = "32 15 15 44  32 15  11 44  44 23 15  34 31 14  31 24 22 23 44 23 34 45 43 15  11 21 44 15 42  32 24 14 33 24 22 23 44  11 33 14  12 42 24 33 22  44 23 15  32 11 35  44 23 15  25 15 54  11 33 14  11  44 34 42 13 23"
+expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP THE KEY AND A TORCH"
+
+[[case]]
+# DNA codons: each letter as its alphabetically first codon in the standard genetic code,
+# each space as the stop codon TAA. The codon alphabet has no O, U or B, so the usual
+# plaintext loses letters; this one doesn't.
+kind = "single"
+name = "dna_codon"
+layers = ["DNA Codon"]
+input = "ACA CAC ATA AGC TAA ATA AGC TAA GCA TAA AGC GAA TGC AGA GAA ACA TAA ATG GAA AGC AGC GCA GGA GAA"
+expected = "THIS IS A SECRET MESSAGE"
+
+[[case]]
+# CONGRATULATIONS in 01248: each letter's position as digits 1, 2, 4 and 8 adding up to
+# it, 0 between letters (01248 has no spaces or punctuation)
+kind = "single"
+name = "yunying"
+layers = ["01248 (Yunying)"]
+input = "21084210842042108820108840884108401088408108421084208821"
+expected = "CONGRATULATIONS"
+
+[[case]]
+kind = "single"
+name = "railfence"
+layers = ["railfence"]
+input = "M ahlihetmi  nhatkaaretm tteodlgtos fe ingtadbigtemp h e n  oc.ee   huardhnr  ,eydth"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# The scytale: written in rows of 7 characters, spaces included, and read off by columns
+kind = "single"
+name = "route_transposition"
+layers = ["Route Transposition"]
+input = "M  ge hbh y eaoh mtret tetltai i haot dhfdanmenr t otnnga dcmhlueid pk heeisrg t,ea."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "vigenere"
+layers = ["Vigenere"]
+input = "Nmbvrj me oa lyfczlxqr qpgarvyk fcbw. Cai ttzq wg proflaxqr bc izqboip hrix mbq tx ffvpw fc jzvw che atog hee rbyi fc ve, auhuzyf mbf lmjvyk fc xysi hup oqm bc ihsa elq qvalqf. Ve wqoenlqg gsvaits qmbl asegvmpq rrnspwarw, ovrnoe snnl ooaompogp xa grp atsgsid wg wsayf wmws Rykxwfs sd anegtsf l ozcjy tmhgpvz ghnl mg ny iyovw eprepwe, oao wfccd atsa tx rwaow eczpxtwar xtog cimrf wmws cweubgpbf. Abdx at gsi fwzp xtwf eewsf wieg gsez o fpgabq, hluqu xewsf tx toaoc rce nebhhci fvr qpmu psexzrykqg, cfdlzr syzhf lrp tbc ezmbyi ivb dxgaowie opcseg n dxdoari ehetrs wa l pau stpq."
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
+[[case]]
+# Primer KEY (pycipher 0.5.2's Autokey, on the letters)
+kind = "single"
+name = "vigenere_autokey"
+layers = ["Vigenere Autokey"]
+input = "Wicf qi tf xhx hsh ztjsbnvnzs uxxew fmuzqjub guw belox buk fht, fht dlc krb a grrvv."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+# Beaufort, key LEMON (https://github.com/bee-san/Ciphey/issues/1002)
+[[case]]
+kind = "single"
+name = "beaufort"
+layers = ["Beaufort"]
+input = "Zaiv bh et vgh qbl cdyfvgxkuk nglix bdbzghel mbk knebh sxi cnw, lfk dhg mbk l lyxle."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+# base64(zlib(plaintext)): the Zlib decoder reads the Base64 itself, so it is one step
+[[case]]
+kind = "single"
+name = "zlib"
+layers = ["Zlib"]
+input = "eJwditERgDAIxVZ5A3hu4hBosXCW1kP8cHuVv1yShTlgDAqEMEYraFolZNzXZ/dgh2npvwP1gtW113yNzinh4CcTIYZvMr/7+h2x"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+# Base64 of raw DEFLATE (zlib.compressobj(9, zlib.DEFLATED, -15)): Raw DEFLATE reads the
+# Base64 itself, so it is one step
+[[case]]
+kind = "single"
+name = "raw_deflate"
+layers = ["Raw DEFLATE", "Base64"]
+input = "HYrREYAwCMVWeQN4buIQaLFwltZD/HB7lb9ckoU5YAwKhDBGK2haJWTc12f3YIdp6b8D9YLVtdd8jc4p4eAnEyGGbzK/"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Base64 of Python's lzma.compress(text). XZ reads the Base64 itself, so it is one step.
+kind = "single"
+name = "xz"
+layers = ["XZ", "Base64"]
+input = "/Td6WFoAAATm1rRGAgAhARYAAAB0L+Wj4ABTAEpdACaZbOggNplzov9xgoqk/LcqCEHcBaaF/V9XatyFem4QukOy3e++ZSRkk2d2OD8p9MbyvtJXkkg5fXT5gLesThztSoIpxURIAM0AAAAAxd7IaPdknIIAAWZU5+wnfx+2830BAAAAAARZWg=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# The issue scheme of #973 without a cover text (a cover is accepted as plaintext first)
+kind = "single"
+name = "zero_width"
+layers = ["Zero-width"]
+input = "\u200B\u200C\u200B\u200B\u200C\u200C\u200B\u200C\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200B\u200C\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200B\u200C\u200D\u200B\u200C\u200C\u200C\u200B\u200C\u200B\u200B\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200C\u200B\u200C\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200B\u200C\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200B\u200B\u200C\u200D\u200B\u200C\u200C\u200C\u200B\u200C\u200B\u200B\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200C\u200B\u200C\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200B\u200C\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200C\u200C\u200C\u200D\u200B\u200C\u200C\u200B\u200C\u200C\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200B\u200B\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200C\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200B\u200B\u200C\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200C\u200C\u200D\u200B\u200C\u200C\u200B\u200C\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200C\u200B\u200C\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200C\u200C\u200C\u200D\u200B\u200C\u200C\u200C\u200B\u200C\u200B\u200C\u200D\u200B\u200C\u200C\u200C\u200B\u200B\u200C\u200C\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200B\u200C\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200B\u200B\u200C\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200C\u200B\u200D\u200B\u200C\u200C\u200C\u200B\u200C\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200B\u200C\u200D\u200B\u200C\u200C\u200C\u200B\u200B\u200C\u200B\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200C\u200B\u200C\u200D\u200B\u200C\u200C\u200B\u200C\u200B\u200B\u200C\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200C\u200C\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200B\u200B\u200C\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200C\u200C\u200D\u200B\u200C\u200C\u200B\u200C\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200C\u200B\u200C\u200B\u200B\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200B\u200B\u200C\u200D\u200B\u200C\u200C\u200B\u200C\u200C\u200C\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200B\u200B\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200B\u200C\u200B\u200D\u200B\u200C\u200C\u200C\u200B\u200B\u200C\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200B\u200B\u200C\u200D\u200B\u200C\u200C\u200B\u200C\u200C\u200C\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200C\u200C\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200C\u200B\u200C\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200B\u200C\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200C\u200B\u200C\u200D\u200B\u200C\u200C\u200B\u200B\u200B\u200B\u200C\u200D\u200B\u200C\u200C\u200C\u200B\u200B\u200B\u200B\u200D\u200B\u200B\u200C\u200B\u200C\u200C\u200B\u200B\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200C\u200B\u200C\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200B\u200C\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200B\u200C\u200C\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200B\u200C\u200D\u200B\u200C\u200C\u200C\u200C\u200B\u200B\u200C\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200B\u200B\u200C\u200D\u200B\u200C\u200C\u200B\u200C\u200C\u200C\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200C\u200B\u200B\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200B\u200B\u200C\u200D\u200B\u200B\u200C\u200B\u200B\u200B\u200B\u200B\u200D\u200B\u200C\u200C\u200C\u200B\u200C\u200B\u200B\u200D\u200B\u200C\u200C\u200B\u200C\u200C\u200C\u200C\u200D\u200B\u200C\u200C\u200C\u200B\u200B\u200C\u200B\u200D\u200B\u200C\u200C\u200B\u200B\u200B\u200C\u200C\u200D\u200B\u200C\u200C\u200B\u200C\u200B\u200B\u200B\u200D\u200B\u200B\u200C\u200B\u200C\u200C\u200C\u200B"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# AAEncode (npm aaencode-cli 0.0.2) of "hello world", 1,405 characters
+kind = "single"
+name = "aaencode"
+layers = ["AAEncode"]
+input = '''ﾟωﾟﾉ= /｀ｍ´）ﾉ ~┻━┻   //*´∇｀*/ ["_"]; o=(ﾟｰﾟ)  =_=3; c=(ﾟΘﾟ) =(ﾟｰﾟ)-(ﾟｰﾟ); (ﾟДﾟ) =(ﾟΘﾟ)= (o^_^o)/ (o^_^o);(ﾟДﾟ)={ﾟΘﾟ: "_" ,ﾟωﾟﾉ : ((ﾟωﾟﾉ==3) +"_") [ﾟΘﾟ] ,ﾟｰﾟﾉ :(ﾟωﾟﾉ+ "_")[o^_^o -(ﾟΘﾟ)] ,ﾟДﾟﾉ:((ﾟｰﾟ==3) +"_")[ﾟｰﾟ] }; (ﾟДﾟ) [ﾟΘﾟ] =((ﾟωﾟﾉ==3) +"_") [c^_^o];(ﾟДﾟ) ["c"] = ((ﾟДﾟ)+"_") [ (ﾟｰﾟ)+(ﾟｰﾟ)-(ﾟΘﾟ) ];(ﾟДﾟ) ["o"] = ((ﾟДﾟ)+"_") [ﾟΘﾟ];(ﾟoﾟ)=(ﾟДﾟ) ["c"]+(ﾟДﾟ) ["o"]+(ﾟωﾟﾉ +"_")[ﾟΘﾟ]+ ((ﾟωﾟﾉ==3) +"_") [ﾟｰﾟ] + ((ﾟДﾟ) +"_") [(ﾟｰﾟ)+(ﾟｰﾟ)]+ ((ﾟｰﾟ==3) +"_") [ﾟΘﾟ]+((ﾟｰﾟ==3) +"_") [(ﾟｰﾟ) - (ﾟΘﾟ)]+(ﾟДﾟ) ["c"]+((ﾟДﾟ)+"_") [(ﾟｰﾟ)+(ﾟｰﾟ)]+ (ﾟДﾟ) ["o"]+((ﾟｰﾟ==3) +"_") [ﾟΘﾟ];(ﾟДﾟ) ["_"] =(o^_^o) [ﾟoﾟ] [ﾟoﾟ];(ﾟεﾟ)=((ﾟｰﾟ==3) +"_") [ﾟΘﾟ]+ (ﾟДﾟ) .ﾟДﾟﾉ+((ﾟДﾟ)+"_") [(ﾟｰﾟ) + (ﾟｰﾟ)]+((ﾟｰﾟ==3) +"_") [o^_^o -ﾟΘﾟ]+((ﾟｰﾟ==3) +"_") [ﾟΘﾟ]+ (ﾟωﾟﾉ +"_") [ﾟΘﾟ]; (ﾟｰﾟ)+=(ﾟΘﾟ); (ﾟДﾟ)[ﾟεﾟ]="\\"; (ﾟДﾟ).ﾟΘﾟﾉ=(ﾟДﾟ+ ﾟｰﾟ)[o^_^o -(ﾟΘﾟ)];(oﾟｰﾟo)=(ﾟωﾟﾉ +"_")[c^_^o];(ﾟДﾟ) [ﾟoﾟ]="\'";(ﾟДﾟ) ["_"] ( (ﾟДﾟ) ["_"] (ﾟεﾟ+(ﾟДﾟ)[ﾟoﾟ]+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ (c^_^o)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (ﾟｰﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟｰﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟｰﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ ((ﾟｰﾟ) + (o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟｰﾟ)+ (c^_^o)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((o^_^o) +(o^_^o))+ ((ﾟｰﾟ) + (o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ ((ﾟｰﾟ) + (o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((o^_^o) +(o^_^o))+ ((o^_^o) - (ﾟΘﾟ))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟｰﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (ﾟｰﾟ)+ (ﾟｰﾟ)+ (ﾟДﾟ)[ﾟoﾟ]) (ﾟΘﾟ)) ("_");'''
+expected = "hello world"
+
+[[case]]
+# npm jsfuck@0.4.0 (4,103 characters)
+kind = "single"
+name = "jsfuck"
+layers = ["JSFuck"]
+input = "(+(+!+[]+[+[]]+[+!+[]]))[(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(+![]+([]+[])[([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([![]]+[][[]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(+![]+[![]]+([]+[])[([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]])[!+[]+!+[]+[+[]]]](!+[]+!+[]+[+!+[]])[+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(![]+[])[!+[]+!+[]]+(![]+[])[!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(+[![]]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+!+[]]]+(+(!+[]+!+[]+!+[]+[!+[]+!+[]]))[(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(+![]+([]+[])[([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([![]]+[][[]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(+![]+[![]]+([]+[])[([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]])[!+[]+!+[]+[+[]]]](!+[]+!+[]+!+[]+[!+[]+!+[]+!+[]])+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]+(![]+[])[!+[]+!+[]]+([][[]]+[])[!+[]+!+[]]"
+expected = "hello world"
+
+[[case]]
+kind = "single"
+name = "ascii85"
+layers = ["Ascii85"]
+input = "<~9k@mX+Dk[4@<<W6BOr<)Ch+Z)BkM+$BQ&$7AKYDnFCfJ8D/!NuBkM+$+CT.u+C]A*DJ()6BOr<'@;mb?FD,5.CLqc6@;]Tu@3BZ1Earc8~>"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Python's uu.encode(text, name="data.txt", mode=0o644, backtick=True), with the framing
+kind = "single"
+name = "uuencode"
+layers = ["Uuencode"]
+input = '''
+begin 644 data.txt
+M365E="!M92!A="!T:&4@;VQD(&QI9VAT:&]U<V4@869T97(@;6ED;FEG:'0@
+G86YD(&)R:6YG('1H92!M87`L('1H92!K97D@86YD(&$@=&]R8V@N
+`
+end
+'''
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "affine"
+layers = ["Affine"]
+# a = 5, b = 8
+input = "Qccz qc iz zrc alx lwmrzraeuc ihzcp qwxvwmrz ivx npwvm zrc qif, zrc gcy ivx i zapsr."
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Every key one to the right on US QWERTY
+kind = "single"
+name = "keyboard_shift"
+layers = ["Keyboard shift"]
+input = "<rry ,r sy yjr p;f ;ohjyjpidr sgyrt ,ofmohjy smf ntomh yjr ,s[. yjr lru smf s yptvj/"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Typed on QWERTY keys, read as Dvorak
+kind = "single"
+name = "keyboard_layout"
+layers = ["Keyboard layout"]
+input = "M..y m. ay yd. rne ncidydrgo. auy.p mcebcidy abe xpcbi yd. malw yd. t.f abe a yrpjdv"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# CyberChef 10.24 ADD with the key 07 (hex)
+kind = "single"
+name = "ascii_shift"
+layers = ["ASCII shift"]
+input = "Tll{'tl'h{'{ol'vsk'spno{ov|zl'hm{ly'tpkupno{'huk'iypun'{ol'thw3'{ol'rl\u0080'huk'h'{vyjo5"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# The plaintext's letters encrypted with Wikipedia's 2×2 Hill key [[3,3],[2,5]]
+kind = "single"
+name = "hill"
+layers = ["Hill"]
+input = "WSRZWSFRAVCAQLFKNVAVYYOEPZRGJQHFLONVFMWPCJLDXDHIKYYVHIQOUWWPFRPJBN"
+expected = "MEETMEATTHEOLDLIGHTHOUSEAFTERMIDNIGHTANDBRINGTHEMAPTHEKEYANDATORCH"
+
+[[case]]
+kind = "single"
+name = "xor_single_byte"
+layers = ["Single-byte XOR", "Hexadecimal"]
+input = "674f4f5e0a474f0a4b5e0a5e424f0a45464e0a46434d425e42455f594f0a4b4c5e4f580a47434e44434d425e0a4b444e0a485843444d0a5e424f0a474b5a060a5e424f0a414f530a4b444e0a4b0a5e4558494204"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "single"
+name = "xor_repeating_key"
+# The cracker reads the hex itself, so the search path is just Repeating-key XOR
+layers = ["Repeating-key XOR", "Hexadecimal"]
+input = "0e0c151c45142649111c450d2b0c5007091d6305190f0d0d2b06051b0059220f040d17592e0014060c1e2b1d50090b1d630b02010b1e631d180d451422195c48111126491b0d1c592207144804593706020b0d57"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# An Ook! program (https://esolangs.org/wiki/Ook!) that prints `hello world`. 1,329
+# characters print 11: the search takes results under 5% of the input's length only from
+# interpreters (tag `program`)
+kind = "single"
+name = "ook"
+layers = ["Ook!"]
+input = "Ook. Ook? Ook? Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook! Ook? Ook. Ook? Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook? Ook. Ook! Ook! Ook? Ook! Ook. Ook? Ook! Ook. Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook! Ook. Ook! Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook! Ook. Ook! Ook? Ook! Ook! Ook? Ook! Ook? Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook! Ook? Ook. Ook? Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook? Ook. Ook! Ook! Ook? Ook! Ook. Ook? Ook! Ook. Ook! Ook? Ook! Ook! Ook? Ook! Ook? Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook! Ook? Ook. Ook? Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook? Ook. Ook! Ook! Ook? Ook! Ook. Ook? Ook! Ook! Ook! Ook. Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook. Ook. Ook. Ook. Ook. Ook. Ook. Ook! Ook. Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook. Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook! Ook."
+expected = "hello world"
+
+[[case]]
+kind = "multi"
+name = "base64_x3"
+layers = ["Base64", "Base64", "Base64"]
+input = "VkZkV2JHUkRRblJhVTBKb1pFTkNNR0ZIVldkaU1uaHJTVWQ0Y0ZveWFEQmhSemt4WXpKVloxbFhXakJhV0VsbllsZHNhMkp0Ykc1aFNGRm5XVmMxYTBsSFNubGhWelZ1U1VoU2IxcFRRblJaV0VGelNVaFNiMXBUUW5KYVdHdG5XVmMxYTBsSFJXZGtSemw1V1RKbmRRPT0="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Standard Base64 of the Atom128 form of the plaintext
+kind = "multi"
+name = "base64_alt_base64"
+layers = ["Base64 Alt", "Base64"]
+input = "ZmlINjAyMTlMRDFYMDIxSk1JZ1crbHI1UElyQkxsWEpNSWNrbmxnV0tpTEpMalBXK2k2NSt4NnlNb2JXS2l1NVBJUXNNaXV5UG9BekxEMTlLai8zUG9BekxEMT1MajVXS2l1NVBJR1cwSWNzS2xXVg=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "rot13_base64"
+layers = ["caesar", "Base64"]
+input = "WnJyZyB6ciBuZyBndXIgYnlxIHl2dHVndWJoZnIgbnNncmUgenZxYXZ0dWcgbmFxIG9ldmF0IGd1ciB6bmMsIGd1ciB4cmwgbmFxIG4gZ2JlcHUu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Python 3 base64.b64encode() of search/single/rot18
+kind = "multi"
+name = "rot18_base64"
+layers = ["rot18", "Base64"]
+input = "R3VyIHpycmd2YXQgdmYgbmcgNjc4NSB2YSBlYmJ6IDk1OSBiYSBndXIgZnJwYmFxIHN5YmJl"
+expected = "The meeting is at 1230 in room 404 on the second floor"
+
+[[case]]
+kind = "multi"
+name = "rot13_base64_hex"
+layers = ["caesar", "Base64", "Hexadecimal"]
+input = "576e4a795a794236636942755a79426e64584967596e6c7849486c326448566e64574a6f5a6e4967626e4e6e636d5567656e5a7859585a3064576367626d46784947396c646d46304947643163694236626d4d734947643163694234636d7767626d4678494734675a324a6c63485575"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "atbash_base64"
+layers = ["atbash", "Base64"]
+input = "TnZ2ZyBudiB6ZyBnc3YgbG93IG9ydHNnc2xmaHYgenVndmkgbnJ3bXJ0c2cgem13IHlpcm10IGdzdiBuemssIGdzdiBwdmIgem13IHogZ2xpeHMu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Python 3 base64.b64encode of the keyboard_layout input
+kind = "multi"
+name = "keyboard_layout_base64"
+layers = ["Keyboard layout", "Base64"]
+input = "TS4ueSBtLiBheSB5ZC4gcm5lIG5jaWR5ZHJnby4gYXV5LnAgbWNlYmNpZHkgYWJlIHhwY2JpIHlkLiBtYWx3IHlkLiB0LmYgYWJlIGEgeXJwamR2"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "route_transposition_base64"
+layers = ["Route Transposition", "Base64"]
+input = "TSAgZ2UgaGJoIHkgZWFvaCBtdHJldCB0ZXRsdGFpIGkgaGFvdCBkaGZkYW5tZW5yIHQgb3RubmdhIGRjbWhsdWVpZCBwayBoZWVpc3JnIHQsZWEu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# base64.b64encode of search/single/vigenere_autokey
+kind = "multi"
+name = "vigenere_autokey_base64"
+layers = ["Vigenere Autokey", "Base64"]
+input = "V2ljZiBxaSB0ZiB4aHggaHNoIHp0anNibnZuenMgdXh4ZXcgZm11enFqdWIgZ3V3IGJlbG94IGJ1ayBmaHQsIGZodCBkbGMga3JiIGEgZ3JydnYu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "beaufort_base64"
+layers = ["Beaufort", "Base64"]
+# base64(beaufort(plaintext, LEMON))
+input = "WmFpdiBiaCBldCB2Z2ggcWJsIGNkeWZ2Z3hrdWsgbmdsaXggYmRiemdoZWwgbWJrIGtuZWJoIHN4aSBjbncsIGxmayBkaGcgbWJrIGwgbHl4bGUu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "leetspeak_base64"
+layers = ["Leetspeak", "Base64"]
+input = "TTMzNyBtMyA0NyA3aDMgMGxkIGwxZ2g3aDB1NTMgNGY3M3IgbTFkbjFnaDcgNG5kIGJyMW5nIDdoMyBtNHAsIDdoMyBrM3kgNG5kIDQgNzByY2gu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "url_base64"
+layers = ["URL", "Base64"]
+input = "TWVldCUyMG1lJTIwYXQlMjB0aGUlMjBvbGQlMjBsaWdodGhvdXNlJTIwYWZ0ZXIlMjBtaWRuaWdodCUyMGFuZCUyMGJyaW5nJTIwdGhlJTIwbWFwJTJDJTIwdGhlJTIwa2V5JTIwYW5kJTIwYSUyMHRvcmNoLg=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "punycode_base64"
+layers = ["Punycode", "Base64"]
+input = "aGVsbG8ueG4tLW1sbGVyLWt2YS5leGFtcGxlLmNvbQ=="
+expected = "hello.müller.example.com"
+
+[[case]]
+kind = "multi"
+name = "base100_base64"
+layers = ["Base100", "Base64"]
+input = "8J+RhPCfkZzwn5Gc8J+Rq/CfkJfwn5Gk8J+RnPCfkJfwn5GY8J+Rq/CfkJfwn5Gr8J+Rn/CfkZzwn5CX8J+RpvCfkaPwn5Gb8J+Ql/CfkaPwn5Gg8J+RnvCfkZ/wn5Gr8J+Rn/Cfkabwn5Gs8J+RqvCfkZzwn5CX8J+RmPCfkZ3wn5Gr8J+RnPCfkanwn5CX8J+RpPCfkaDwn5Gb8J+RpfCfkaDwn5Ge8J+Rn/Cfkavwn5CX8J+RmPCfkaXwn5Gb8J+Ql/CfkZnwn5Gp8J+RoPCfkaXwn5Ge8J+Ql/Cfkavwn5Gf8J+RnPCfkJfwn5Gk8J+RmPCfkafwn5Cj8J+Ql/Cfkavwn5Gf8J+RnPCfkJfwn5Gi8J+RnPCfkbDwn5CX8J+RmPCfkaXwn5Gb8J+Ql/CfkZjwn5CX8J+Rq/Cfkabwn5Gp8J+RmvCfkZ/wn5Cl"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# base64.b64encode of the UTF-8 of search/single/standard_galactic_alphabet
+kind = "multi"
+name = "standard_galactic_alphabet_base64"
+layers = ["Standard Galactic Alphabet", "Base64"]
+input = "TeGSt+GSt+KEuCDMoyAg4ZKy4ZK3IOGUkeKEuCDMoyAg4oS4IMyjIOKNkeGStyDwnZm56paO4oa4IOqWjuKVjuKKo+KNkeKEuCDMoyDijZHwnZm54pqN4ZOt4ZK3IOGUkeKOk+KEuCDMoyDhkrfiiLcg4ZKy4pWO4oa444Oq4pWO4oqj4o2R4oS4IMyjICDhlJHjg6rihrggypbiiLfilY7jg6riiqMg4oS4IMyjIOKNkeGStyDhkrLhlJEhwqEsIOKEuCDMoyDijZHhkrcg6paM4ZK3fHwg4ZSR44Oq4oa4IOGUkSDihLggzKMg8J2ZueKIt+GTteKNkS4="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "base64_reverse"
+layers = ["Base64", "Reverse"]
+input = "ug2Yy9GdgEGIk5WYgkXZrBSZoRHIsAXYtBSZoRHIn5WayJGIk5WYgQHanlmbklWbgIXZ0ZWYgU2c19Ga0h2ZpxGIkx2bgUGa0BCdhBSZtBCdlVWT"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "binary_base64"
+layers = ["Binary", "Base64"]
+input = "MDEwMDExMDEgMDExMDAxMDEgMDExMDAxMDEgMDExMTAxMDAgMDAxMDAwMDAgMDExMDExMDEgMDExMDAxMDEgMDAxMDAwMDAgMDExMDAwMDEgMDExMTAxMDAgMDAxMDAwMDAgMDExMTAxMDAgMDExMDEwMDAgMDExMDAxMDEgMDAxMDAwMDAgMDExMDExMTEgMDExMDExMDAgMDExMDAxMDAgMDAxMDAwMDAgMDExMDExMDAgMDExMDEwMDEgMDExMDAxMTEgMDExMDEwMDAgMDExMTAxMDAgMDExMDEwMDAgMDExMDExMTEgMDExMTAxMDEgMDExMTAwMTEgMDExMDAxMDEgMDAxMDAwMDAgMDExMDAwMDEgMDExMDAxMTAgMDExMTAxMDAgMDExMDAxMDEgMDExMTAwMTAgMDAxMDAwMDAgMDExMDExMDEgMDExMDEwMDEgMDExMDAxMDAgMDExMDExMTAgMDExMDEwMDEgMDExMDAxMTEgMDExMDEwMDAgMDExMTAxMDAgMDAxMDAwMDAgMDExMDAwMDEgMDExMDExMTAgMDExMDAxMDAgMDAxMDAwMDAgMDExMDAwMTAgMDExMTAwMTAgMDExMDEwMDEgMDExMDExMTAgMDExMDAxMTEgMDAxMDAwMDAgMDExMTAxMDAgMDExMDEwMDAgMDExMDAxMDEgMDAxMDAwMDAgMDExMDExMDEgMDExMDAwMDEgMDExMTAwMDAgMDAxMDExMDAgMDAxMDAwMDAgMDExMTAxMDAgMDExMDEwMDAgMDExMDAxMDEgMDAxMDAwMDAgMDExMDEwMTEgMDExMDAxMDEgMDExMTEwMDEgMDAxMDAwMDAgMDExMDAwMDEgMDExMDExMTAgMDExMDAxMDAgMDAxMDAwMDAgMDExMDAwMDEgMDAxMDAwMDAgMDExMTAxMDAgMDExMDExMTEgMDExMTAwMTAgMDExMDAwMTEgMDExMDEwMDAgMDAxMDExMTA="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "baudot_base64"
+layers = ["Baudot", "Base64"]
+input = "MTExMDAgMDAwMDEgMDAwMDEgMTAwMDAgMDAxMDAgMTExMDAgMDAwMDEgMDAxMDAgMDAwMTEgMTAwMDAgMDAxMDAgMTAwMDAgMTAxMDAgMDAwMDEgMDAxMDAgMTEwMDAgMTAwMTAgMDEwMDEgMDAxMDAgMTAwMTAgMDAxMTAgMTEwMTAgMTAxMDAgMTAwMDAgMTAxMDAgMTEwMDAgMDAxMTEgMDAxMDEgMDAwMDEgMDAxMDAgMDAwMTEgMDExMDEgMTAwMDAgMDAwMDEgMDEwMTAgMDAxMDAgMTExMDAgMDAxMTAgMDEwMDEgMDExMDAgMDAxMTAgMTEwMTAgMTAxMDAgMTAwMDAgMDAxMDAgMDAwMTEgMDExMDAgMDEwMDEgMDAxMDAgMTEwMDEgMDEwMTAgMDAxMTAgMDExMDAgMTEwMTAgMDAxMDAgMTAwMDAgMTAxMDAgMDAwMDEgMDAxMDAgMTExMDAgMDAwMTEgMTAxMTAgMTEwMTEgMDExMDAgMDAxMDAgMTExMTEgMTAwMDAgMTAxMDAgMDAwMDEgMDAxMDAgMDExMTEgMDAwMDEgMTAxMDEgMDAxMDAgMDAwMTEgMDExMDAgMDEwMDEgMDAxMDAgMDAwMTEgMDAxMDAgMTAwMDAgMTEwMDAgMDEwMTAgMDExMTAgMTAxMDAgMTEwMTEgMTExMDA="
+expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP, THE KEY AND A TORCH."
+
+[[case]]
+kind = "multi"
+name = "octal_base64"
+layers = ["Octal", "Base64"]
+input = "MTE1IDE0NSAxNDUgMTY0IDQwIDE1NSAxNDUgNDAgMTQxIDE2NCA0MCAxNjQgMTUwIDE0NSA0MCAxNTcgMTU0IDE0NCA0MCAxNTQgMTUxIDE0NyAxNTAgMTY0IDE1MCAxNTcgMTY1IDE2MyAxNDUgNDAgMTQxIDE0NiAxNjQgMTQ1IDE2MiA0MCAxNTUgMTUxIDE0NCAxNTYgMTUxIDE0NyAxNTAgMTY0IDQwIDE0MSAxNTYgMTQ0IDQwIDE0MiAxNjIgMTUxIDE1NiAxNDcgNDAgMTY0IDE1MCAxNDUgNDAgMTU1IDE0MSAxNjAgNTQgNDAgMTY0IDE1MCAxNDUgNDAgMTUzIDE0NSAxNzEgNDAgMTQxIDE1NiAxNDQgNDAgMTQxIDQwIDE2NCAxNTcgMTYyIDE0MyAxNTAgNTY="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "multi_tap_base64"
+layers = ["Multi-tap", "Base64"]
+input = "NiAzMyAzMyA4IDAgNiAzMyAwIDIgOCAwIDggNDQgMzMgMCA2NjYgNTU1IDMgMCA1NTUgNDQ0IDQgNDQgOCA0NCA2NjYgODggNzc3NyAzMyAwIDIgMzMzIDggMzMgNzc3IDAgNiA0NDQgMyA2NiA0NDQgNCA0NCA4IDAgMiA2NiAzIDAgMjIgNzc3IDQ0NCA2NiA0IDAgOCA0NCAzMyAwIDYgMiA3IDAgOCA0NCAzMyAwIDU1IDMzIDk5OSAwIDIgNjYgMyAwIDIgMCA4IDY2NiA3NzcgMjIyIDQ0"
+expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP THE KEY AND A TORCH"
+
+[[case]]
+# Base64 of the UTF-8 of the unicode_fancy_text input
+kind = "multi"
+name = "unicode_fancy_text_base64"
+layers = ["Unicode Fancy Text", "Base64"]
+input = "8J2QjPCdkJ7wnZCe8J2QrSDwnZCm8J2QniDwnZCa8J2QrSDwnZCt8J2QofCdkJ4g8J2QqPCdkKXwnZCdIPCdkKXwnZCi8J2QoPCdkKHwnZCt8J2QofCdkKjwnZCu8J2QrPCdkJ4g8J2QmvCdkJ/wnZCt8J2QnvCdkKsg8J2QpvCdkKLwnZCd8J2Qp/CdkKLwnZCg8J2QofCdkK0g8J2QmvCdkKfwnZCdIPCdkJvwnZCr8J2QovCdkKfwnZCgIPCdkK3wnZCh8J2QniDwnZCm8J2QmvCdkKksIPCdkK3wnZCh8J2QniDwnZCk8J2QnvCdkLIg8J2QmvCdkKfwnZCdIPCdkJog8J2QrfCdkKjwnZCr8J2QnPCdkKEu"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Python's base64.b64encode of search/single/keyboard_shift
+kind = "multi"
+name = "keyboard_shift_base64"
+layers = ["Keyboard shift", "Base64"]
+input = "PHJyeSAsciBzeSB5anIgcDtmIDtvaGp5anBpZHIgc2d5cnQgLG9mbW9oankgc21mIG50b21oIHlqciAsc1suIHlqciBscnUgc21mIHMgeXB0dmov"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Python's base64.b64encode of search/single/hill
+kind = "multi"
+name = "hill_base64"
+layers = ["Hill", "Base64"]
+input = "V1NSWldTRlJBVkNBUUxGS05WQVZZWU9FUFpSR0pRSEZMT05WRk1XUENKTERYREhJS1lZVkhJUU9VV1dQRlJQSkJO"
+expected = "MEETMEATTHEOLDLIGHTHOUSEAFTERMIDNIGHTANDBRINGTHEMAPTHEKEYANDATORCH"
+
+[[case]]
+kind = "multi"
+name = "backslash_escapes_base64"
+layers = ["Backslash Escapes", "Base64"]
+input = "XHg0ZFx4NjVceDY1XHg3NFwwNDBceDZkXHg2NVwwNDBceDYxXHg3NFwwNDBceDc0XHg2OFx4NjVcMDQwXHg2Zlx4NmNceDY0XDA0MFx4NmNceDY5XHg2N1x4NjhceDc0XHg2OFx4NmZceDc1XHg3M1x4NjVcMDQwXHg2MVx4NjZceDc0XHg2NVx4NzJcMDQwXHg2ZFx4NjlceDY0XHg2ZVx4NjlceDY3XHg2OFx4NzRcMDQwXHg2MVx4NmVceDY0XDA0MFx4NjJceDcyXHg2OVx4NmVceDY3XDA0MFx4NzRceDY4XHg2NVwwNDBceDZkXHg2MVx4NzBcMDU0XDA0MFx4NzRceDY4XHg2NVwwNDBceDZiXHg2NVx4NzlcMDQwXHg2MVx4NmVceDY0XDA0MFx4NjFcMDQwXHg3NFx4NmZceDcyXHg2M1x4NjhcMDU2"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# GNU coreutils base64 of the big integer
+kind = "multi"
+name = "big_integer_base64"
+layers = ["Big integer to bytes", "Base64"]
+input = "NTkyNDI4Njg5NDM2MDIyMjE3NTQ1NjExMDc1Mzc1MjAyNzQyODgyNDkxMTQwNjk1MjQzNjE5MTY3MzU0OTk5Nzg2NDc5MjYxNzQ0NzAzMDU5ODA0ODYzMDYyMDE3NjA1NzUyNTI2NTM0MDIwOTg5NTExNTcyNDc0MTI0ODE2NzMxMjkzMjIwNDQ3OTQyMzM5MTgzNDExOTEzOTQzMjE2OTk3MTU2MDY3MjU0ODA0MDg4NTkwMDA4NjMyODE1OTQxNDU3MjUwOTIzMA=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Python base64.b64encode of the 709 characters of Ook! for
+# `><++++++++[>+++++++++++++<-]>.---.+++++++..+++.[-]<++++[>++++++++<-]>+.`
+kind = "multi"
+name = "ook_base64"
+layers = ["Ook!", "Base64"]
+input = "T29rLiBPb2s/IE9vaz8gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vayEgT29rPyBPb2suIE9vaz8gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vaz8gT29rLiBPb2shIE9vayEgT29rPyBPb2shIE9vay4gT29rPyBPb2shIE9vay4gT29rISBPb2shIE9vayEgT29rISBPb2shIE9vayEgT29rISBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2shIE9vay4gT29rISBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vayEgT29rLiBPb2shIE9vaz8gT29rISBPb2shIE9vaz8gT29rISBPb2s/IE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vayEgT29rPyBPb2suIE9vaz8gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2suIE9vay4gT29rLiBPb2s/IE9vay4gT29rISBPb2shIE9vaz8gT29rISBPb2suIE9vaz8gT29rLiBPb2suIE9vayEgT29rLg=="
+expected = "hello!"
+
+[[case]]
+kind = "multi"
+name = "hex_base32"
+layers = ["Hexadecimal", "Base32"]
+input = "GRSDMNJWGU3TIMRQGZSDMNJSGA3DCNZUGIYDONBWHA3DKMRQGZTDMYZWGQZDANTDGY4TMNZWHA3TINRYGZTDONJXGM3DKMRQGYYTMNRXGQ3DKNZSGIYDMZBWHE3DINTFGY4TMNZWHA3TIMRQGYYTMZJWGQZDANRSG4ZDMOJWMU3DOMRQG42DMOBWGUZDANTEGYYTOMBSMMZDANZUGY4DMNJSGA3GENRVG44TEMBWGE3GKNRUGIYDMMJSGA3TINTGG4ZDMMZWHAZGK==="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# `base64 -w0 | xxd`
+kind = "multi"
+name = "base64_hexdump"
+layers = ["Base64", "Hexdump"]
+input = '''
+00000000: 5457 566c 6443 4274 5a53 4268 6443 4230  TWVldCBtZSBhdCB0
+00000010: 6147 5567 6232 786b 4947 7870 5a32 6830  aGUgb2xkIGxpZ2h0
+00000020: 6147 3931 6332 5567 5957 5a30 5a58 4967  aG91c2UgYWZ0ZXIg
+00000030: 6257 6c6b 626d 6c6e 6148 5167 5957 356b  bWlkbmlnaHQgYW5k
+00000040: 4947 4a79 6157 356e 4948 526f 5a53 4274  IGJyaW5nIHRoZSBt
+00000050: 5958 4173 4948 526f 5a53 4272 5a58 6b67  YXAsIHRoZSBrZXkg
+00000060: 5957 356b 4947 4567 6447 3979 5932 6775  YW5kIGEgdG9yY2gu
+'''
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "base32_hex_base64"
+layers = ["Base32", "Hexadecimal", "Base64"]
+input = "NGE1NjUzNTc0YjM1NDI0MTRlNTY1MzUzNDE1OTRjNTU0NTQyMzI0NzUxNWE0YTQxNGUzNTU3NDc0OTQ5NDQ0ZDRlNDY1NDU3NTEzNTQ0NDk0ZTM1MzI1ODQ3NWE0YTQxNGQ0NjU0NDg0OTVhNGM1MzQ1NDI1NzU3NTM1YTQ0NGY0ZTQ2NTQ1NzUxMzU0MjQxNGQ0NjU4NDc0OTQ5NDQ0MzRmNGE1NTU3MzQ1YTVhNDE0ZjUyNTU0NzRiNDk0NDRlNGQ0NjU5NDM1OTQ5NDQ1NTRlNDI1MzUzNDEzMjMzNDY1MDQ1NTE0NzQzMzM1NDQ1NDU0MjUxNTM0MTM1NDQ1MDRmNGE1MjU3NTE0YzUxM2Q="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "utf16le_base64"
+layers = ["UTF-16", "Base64"]
+input = "TQBlAGUAdAAgAG0AZQAgAGEAdAAgAHQAaABlACAAbwBsAGQAIABsAGkAZwBoAHQAaABvAHUAcwBlACAAYQBmAHQAZQByACAAbQBpAGQAbgBpAGcAaAB0ACAAYQBuAGQAIABiAHIAaQBuAGcAIAB0AGgAZQAgAG0AYQBwACwAIAB0AGgAZQAgAGsAZQB5ACAAYQBuAGQAIABhACAAdABvAHIAYwBoAC4A"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Base64 of =?utf-8?Q?The_quick_brown_fox_jumps_over_the_lazy_dog?=
+kind = "multi"
+name = "mime_encoded_word_base64"
+layers = ["MIME Encoded-Word", "Base64"]
+input = "PT91dGYtOD9RP1RoZV9xdWlja19icm93bl9mb3hfanVtcHNfb3Zlcl90aGVfbGF6eV9kb2c/PQ=="
+expected = "The quick brown fox jumps over the lazy dog"
+
+[[case]]
+kind = "multi"
+name = "rot13_zlib"
+layers = ["caesar", "Zlib"]
+input = "eJwdisENgDAMxFa5ARAD8WtROB4o0NBUNNMD/Vm2FzMiDErQDbkX9FadnvftszdNEK2k30FTwSkt1fGGrtOAx46RFMxy+fwCLvgetQ=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Base64 of the stream's hex. Raw DEFLATE reads the hex itself: Base64 -> Raw DEFLATE
+kind = "multi"
+name = "raw_deflate_hex_base64"
+layers = ["Raw DEFLATE", "Hexadecimal", "Base64"]
+input = "MWQ4YWQxMTE4MDMwMDhjNTU2NzkwMzc4NmVlMjEwNjhiMTcwOTZkNjQzZmM3MDdiOTViZjVjOTI4NTM5NjAwYzBhODQzMDQ2MmI2ODVhMjU2NGRjZDc2N2Y3NjA4NzY5ZTliZjAzZjU4MmQ1YjVkNzdjOGRjZTI5ZTFlMDI3MTMyMTg2NmYzMmJm"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Base64 of the hex of bz2.compress(text). Bzip2 reads the hex itself, so the search's
+# path is Base64 -> Bzip2.
+kind = "multi"
+name = "bzip2_hex_base64"
+layers = ["Bzip2", "Hexadecimal", "Base64"]
+input = "NDI1YTY4MzkzMTQxNTkyNjUzNTk2MzAxOTcyODAwMDAwOTE1ODA0MDA1MDAwMjNmZWZkZTIwMjAwMDQ4NmE5ZTUzMzQ0ZjQ4YzI2YzgxMTA2NDFhMWEwMGQyNTNkZThmYjIyMjM3MzRmYTBhZjZhNTAwYzkwNTYwZDlkMjRmYWM3YjY3YWFmODE5MDBiODU4ZDZjOWU2ODAxODFlZGU3NzI0OGY1NDg0OTY0YzE2YzRiZTJlZTQ4YTcwYTEyMGM2MDMyZTUw"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# base64.b64encode(lzma.compress(text).hex().encode()): Base64 decodes to the hex, which
+# XZ reads itself, so the search path is Base64 -> XZ
+kind = "multi"
+name = "xz_hex_base64"
+layers = ["XZ", "Hexadecimal", "Base64"]
+input = "ZmQzNzdhNTg1YTAwMDAwNGU2ZDZiNDQ2MDIwMDIxMDExNjAwMDAwMDc0MmZlNWEzZTAwMDUzMDA0YTVkMDAyNjk5NmNlODIwMzY5OTczYTJmZjcxODI4YWE0ZmNiNzJhMDg0MWRjMDVhNjg1ZmQ1ZjU3NmFkYzg1N2E2ZTEwYmE0M2IyZGRlZmJlNjUyNDY0OTM2Nzc2MzgzZjI5ZjRjNmYyYmVkMjU3OTI0ODM5N2Q3NGY5ODBiN2FjNGUxY2VkNGE4MjI5YzU0NDQ4MDBjZDAwMDAwMDAwYzVkZWM4NjhmNzY0OWM4MjAwMDE2NjU0ZTdlYzI3N2YxZmI2ZjM3ZDAxMDAwMDAwMDAwNDU5NWE="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "base64_xor_base64"
+layers = ["Base64", "Single-byte XOR", "Base64"]
+input = "FhUULiYBADYYEQAqJgEAciMFFyUgcDopCwU6MhhwKnIjBXtzIXAXJRsVGHIYGgslIBUuKSAvLiwjChMlGxV3KQsFCDsjFXcsCwoQLRgRADYbGgMxCwoQLRgRADAYGiklGxV3KQsFByUmBXs7G3AlNw=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# CyberChef 10.24 ADD with the key 07 (hex), then To Hex with no delimiter. The bytes aren't
+# UTF-8, so the Hexadecimal decoder hands them on as Latin-1.
+kind = "multi"
+name = "ascii_shift_hex"
+layers = ["ASCII shift", "Hexadecimal"]
+input = "546c6c7b27746c27687b277b6f6c2776736b2773706e6f7b6f767c7a6c27686d7b6c792774706b75706e6f7b2768756b27697970756e277b6f6c2774687733277b6f6c27726c802768756b2768277b76796a6f35"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+kind = "multi"
+name = "base36_base64"
+layers = ["Base36", "Base64"]
+input = "YTgyMnYxb3o4ZjFnNjIwMWMwN2U4eTk0cnVkNmhlMDI4OW80ZDBmeGkycHRoaHY2MG0yczluZm51NnF1bDJ6d3hwbjh3ZGd6ZmViYmI3cm1sNnRiMGhsMnplOGt5ZTVwMTM1NXZmejhuaDlvdG5ydmtxZG1rZWNkOHM2cmF0ZGc2bQ=="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# base64.b64encode(base92.encode(plaintext)), base92 2.0.0 from PyPI
+kind = "multi"
+name = "base92_base64"
+layers = ["Base92", "Base64"]
+input = "PTVeZGw/NTc+b2dTJHBbR0VVJnRhSidiaG5rZSw3OWVLPUg0T1NiJDplczorWjxISG4xa1p1J2IqJmlIKl1Va0htczNsZDNqJEZnUiVzIztGY1thXyVlPiQucFwkcCUxSnh2a1NsKio="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Base64 of the two uuencode data lines of search/single/uuencode, each with its line break
+kind = "multi"
+name = "uuencode_base64"
+layers = ["Uuencode", "Base64"]
+input = "TTM2NUU9IiFNOTIhQT0iIVQ6JjRAO1ZRRCgmUUk5VkFUOiZdVTxWNEA4NjlUOTcoQDs2RUQ7RkVHOicwQApHODZZRCgmKVI6NllHKCcxSDkyIU04N2BMKCcxSDkyIUs5N0RAODZZRCgmJEA9Jl1SOFZATgo="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# Base64 of the single-layer nato_phonetic input
+kind = "multi"
+name = "nato_phonetic_base64"
+layers = ["NATO Phonetic Alphabet", "Base64"]
+input = "TWlrZS1FY2hvLUVjaG8tVGFuZ28gTWlrZS1FY2hvIEFsZmEtVGFuZ28gVGFuZ28tSG90ZWwtRWNobyBPc2Nhci1MaW1hLURlbHRhIExpbWEtSW5kaWEtR29sZi1Ib3RlbC1UYW5nby1Ib3RlbC1Pc2Nhci1Vbmlmb3JtLVNpZXJyYS1FY2hvIEFsZmEtRm94dHJvdC1UYW5nby1FY2hvLVJvbWVvIE1pa2UtSW5kaWEtRGVsdGEtTm92ZW1iZXItSW5kaWEtR29sZi1Ib3RlbC1UYW5nbyBBbGZhLU5vdmVtYmVyLURlbHRhIEJyYXZvLVJvbWVvLUluZGlhLU5vdmVtYmVyLUdvbGYgVGFuZ28tSG90ZWwtRWNobyBNaWtlLUFsZmEtUGFwYS1Db21tYSBUYW5nby1Ib3RlbC1FY2hvIEtpbG8tRWNoby1ZYW5rZWUgQWxmYS1Ob3ZlbWJlci1EZWx0YSBBbGZhIFRhbmdvLU9zY2FyLVJvbWVvLUNoYXJsaWUtSG90ZWwtU3RvcA=="
+expected = "meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+# AAEncode (npm aaencode-cli 0.0.2) of the Base64 of "hello world", 1,611 characters.
+# An AAEncode program inside Base64 has no case: the search drops intermediate texts of
+# 821 to 5,000 bytes, and the 9 KB Base64 of a longer program takes over the 1 s timeout
+# (tests/aaencode_decoder.rs has one).
+kind = "multi"
+name = "base64_aaencode"
+layers = ["Base64", "AAEncode"]
+input = '''ﾟωﾟﾉ= /｀ｍ´）ﾉ ~┻━┻   //*´∇｀*/ ["_"]; o=(ﾟｰﾟ)  =_=3; c=(ﾟΘﾟ) =(ﾟｰﾟ)-(ﾟｰﾟ); (ﾟДﾟ) =(ﾟΘﾟ)= (o^_^o)/ (o^_^o);(ﾟДﾟ)={ﾟΘﾟ: "_" ,ﾟωﾟﾉ : ((ﾟωﾟﾉ==3) +"_") [ﾟΘﾟ] ,ﾟｰﾟﾉ :(ﾟωﾟﾉ+ "_")[o^_^o -(ﾟΘﾟ)] ,ﾟДﾟﾉ:((ﾟｰﾟ==3) +"_")[ﾟｰﾟ] }; (ﾟДﾟ) [ﾟΘﾟ] =((ﾟωﾟﾉ==3) +"_") [c^_^o];(ﾟДﾟ) ["c"] = ((ﾟДﾟ)+"_") [ (ﾟｰﾟ)+(ﾟｰﾟ)-(ﾟΘﾟ) ];(ﾟДﾟ) ["o"] = ((ﾟДﾟ)+"_") [ﾟΘﾟ];(ﾟoﾟ)=(ﾟДﾟ) ["c"]+(ﾟДﾟ) ["o"]+(ﾟωﾟﾉ +"_")[ﾟΘﾟ]+ ((ﾟωﾟﾉ==3) +"_") [ﾟｰﾟ] + ((ﾟДﾟ) +"_") [(ﾟｰﾟ)+(ﾟｰﾟ)]+ ((ﾟｰﾟ==3) +"_") [ﾟΘﾟ]+((ﾟｰﾟ==3) +"_") [(ﾟｰﾟ) - (ﾟΘﾟ)]+(ﾟДﾟ) ["c"]+((ﾟДﾟ)+"_") [(ﾟｰﾟ)+(ﾟｰﾟ)]+ (ﾟДﾟ) ["o"]+((ﾟｰﾟ==3) +"_") [ﾟΘﾟ];(ﾟДﾟ) ["_"] =(o^_^o) [ﾟoﾟ] [ﾟoﾟ];(ﾟεﾟ)=((ﾟｰﾟ==3) +"_") [ﾟΘﾟ]+ (ﾟДﾟ) .ﾟДﾟﾉ+((ﾟДﾟ)+"_") [(ﾟｰﾟ) + (ﾟｰﾟ)]+((ﾟｰﾟ==3) +"_") [o^_^o -ﾟΘﾟ]+((ﾟｰﾟ==3) +"_") [ﾟΘﾟ]+ (ﾟωﾟﾉ +"_") [ﾟΘﾟ]; (ﾟｰﾟ)+=(ﾟΘﾟ); (ﾟДﾟ)[ﾟεﾟ]="\\"; (ﾟДﾟ).ﾟΘﾟﾉ=(ﾟДﾟ+ ﾟｰﾟ)[o^_^o -(ﾟΘﾟ)];(oﾟｰﾟo)=(ﾟωﾟﾉ +"_")[c^_^o];(ﾟДﾟ) [ﾟoﾟ]="\'";(ﾟДﾟ) ["_"] ( (ﾟДﾟ) ["_"] (ﾟεﾟ+(ﾟДﾟ)[ﾟoﾟ]+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (ﾟｰﾟ)+ (ﾟΘﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (c^_^o)+ ((ﾟｰﾟ) + (o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((o^_^o) - (ﾟΘﾟ))+ ((o^_^o) +(o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((o^_^o) +(o^_^o))+ (o^_^o)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (ﾟｰﾟ)+ ((o^_^o) - (ﾟΘﾟ))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (c^_^o)+ ((ﾟｰﾟ) + (o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+((ﾟｰﾟ) + (o^_^o))+ (c^_^o)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (ﾟｰﾟ)+ ((ﾟｰﾟ) + (o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (ﾟｰﾟ)+ (ﾟｰﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+((o^_^o) +(o^_^o))+ ((o^_^o) - (ﾟΘﾟ))+ (ﾟДﾟ)[ﾟεﾟ]+((ﾟｰﾟ) + (o^_^o))+ (ﾟΘﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (o^_^o))+ (ﾟΘﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (ﾟｰﾟ)+ ((o^_^o) - (ﾟΘﾟ))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (c^_^o)+ ((ﾟｰﾟ) + (o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((o^_^o) - (ﾟΘﾟ))+ (ﾟΘﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+((ﾟｰﾟ) + (o^_^o))+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟДﾟ)[ﾟoﾟ]) (ﾟΘﾟ)) ("_");'''
+expected = "hello world"
+
+[[case]]
+# GNU base64 -w0 of npm jsfuck@0.4.0's 653-character program for `a nice day`
+kind = "multi"
+name = "jsfuck_base64"
+layers = ["JSFuck", "Base64"]
+input = "KCFbXStbXSlbKyErW11dKygrWyFbXV0rW11bKCFbXStbXSlbK1tdXSsoWyFbXV0rW11bW11dKVsrIStbXStbK1tdXV0rKCFbXStbXSlbIStbXSshK1tdXSsoISFbXStbXSlbK1tdXSsoISFbXStbXSlbIStbXSshK1tdKyErW11dKyghIVtdK1tdKVsrIStbXV1dKVsrIStbXStbKyErW11dXSsoW11bW11dK1tdKVsrIStbXV0rKFshW11dK1tdW1tdXSlbKyErW10rWytbXV1dKyhbXVsoIVtdK1tdKVsrW11dKyhbIVtdXStbXVtbXV0pWyshK1tdK1srW11dXSsoIVtdK1tdKVshK1tdKyErW11dKyghIVtdK1tdKVsrW11dKyghIVtdK1tdKVshK1tdKyErW10rIStbXV0rKCEhW10rW10pWyshK1tdXV0rW10pWyErW10rIStbXSshK1tdXSsoISFbXStbXSlbIStbXSshK1tdKyErW11dKygrWyFbXV0rW11bKCFbXStbXSlbK1tdXSsoWyFbXV0rW11bW11dKVsrIStbXStbK1tdXV0rKCFbXStbXSlbIStbXSshK1tdXSsoISFbXStbXSlbK1tdXSsoISFbXStbXSlbIStbXSshK1tdKyErW11dKyghIVtdK1tdKVsrIStbXV1dKVsrIStbXStbKyErW11dXSsoW11bW11dK1tdKVshK1tdKyErW11dKyghW10rW10pWyshK1tdXSsoK1shW11dK1srKCshK1tdKyghK1tdK1tdKVshK1tdKyErW10rIStbXV0rWyshK1tdXStbK1tdXStbK1tdXStbK1tdXSldKVsrIStbXStbK1tdXV0="
+expected = "a nice day"
+
+[[case]]
+kind = "no_solution"
+name = "gibberish"
+outcome = "false_positive"
+layers = []
+input = "T00 l3= ox+#G WKyV pajU6j qxH@ %B4+a 5Pn^ 7p_v1q 9sLvu *+36i R5rL&3 mVJZI iO0 Ut8_m COTV"
+expected = ""
+
+[[case]]
+kind = "no_solution"
+name = "gibberish_long"
+outcome = "false_positive"
+layers = []
+input = "9HJJw TR!V H=cH Z&I2 X3J_@ Snyh _IP ~EoSLoS GYs XrRp0 t0Kx Ee~ qCAT O?7Hw 6mz# E9hEZ ?UM Tga% ZhL &&L7X 7Dzu E0i TTUr W%joc kGgj8 LVP=n 1?e Jb4Hz%c BXR5H KCH 8XbG #i!1 G?^i kh1_ b%NX BEaSR Fg!mt 79Fbf LA81ShT ZX8w EMB *@91 ccm# Qpso zOzEM 0ng KV986 lUHo O9uoR GrlpY iQ9R8+ 5uOZ6hf bQT# ^Kc j%^ KoiZYc9 m@_ EjBIi pCUT %pz xggxk7@ bk+ uU7u* T1*tc? zHd2rH fSA EzXfl 2jsl U0oso ^PV +nMqA 4v+j %4^_ !rBi H"
+expected = ""
+
+[[case]]
+kind = "no_solution"
+name = "unicode_exhausts"
+outcome = "exhausted"
+layers = []
+input = "éèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüç"
+expected = ""
+
+[[case]]
+kind = "no_solution"
+name = "gibberish_timeout"
+outcome = "timeout"
+layers = []
+input = "haQa CCyXT 4pT y^jAA GavTV oMb ^fZk ytDJ QnkU LaA4 MUXE z&H =QpAx? JHRT ~^o #KN nQZqf w8de6 zU*2 m4^&H eOPmz i079 kWe29 q%7O JFus t=3n f@gO xjiC 8CyI^ %=4! ~+y8k QVK8es M@or zaOHat 6hy6 l+BGK SKXcGU F5m*e s0V^ ^Fp h0Ydv 7cSjc aRcI ruFwE4 ^Y0I2 XY4~g6 J6F Ry* LH*k1 ms6X =u^b3 Kv6JDet &4hH jAKqD c^I&_8 v#^ZWuY G8?ro o4? CFoL Gm!0V 5H1+ NOs+9+ CAHu *?T#x8 SDmQ!& bqsd?PN _uQU A^Lw ~x@zR +iO 1cI0 ma?= G2D1%q Xd&qFO ?R04KA& Y%?! QNY8I Jqzy0 UmfOb P?Bot Ccht? I%e Dt=O%! JwFa Y4SVE XXuu E%m_r ~1#yg sLl PZu 4qlycH O!vP~ 3va27Vu CLHLF4 JVrzqA ys#ZPj ePx^ MoTrlO XG7z fGue hYY ZyDDp EAyT dMw=C 0XIY %uAB MR&Zq uv7? fdB& hKj2j kHocC% 4oxQ &O!HXQ *Io la^^ +tZclS %LpmF Nz+ d=pyKn GvQtdO PfXATO Z4d1Lb fh&y~ kVj= 9uWbce ?mn8 5vtC Njl8q9 ICpCKj !B5s fM1Jp pRZD rjeX Vvhm1L +t?_ E8= F@e8m j0?19jM !lV0e cZA&E nXb0 81tlF qL2rX f4Ca!A aDcIy w7&9 DUZAJl w675q cSPkK~ bMuyM hNO _3E KzO_l Gt4?! loc %!vp 6vdVfh #HDcHG KLjb O6WXoQs J%W kH^@ DWR xtb +Re fFJ%O N@s 5vt7N kjfrr buBTb L#bmP3 O7P0 Bad nb7y m~j?W ADIt%qr XLs IV~Y Y^4E IRcg bQAc4 ~8~9Iy SRkZ Olf1SW sJc vPjh TI4&m F#*b0 fK_z1 Ca6 jP0 B@hn f=Ic Z!pk^ ~sf9gw 5@&4 2?QKB 40d2 i7Y dSxb AtH~C wlw6k ms=I=Q wBmI52 l9I1c# D^^xh #B9xv o5Y9gv R=GsP iAvni 6&eAGz 238!% WQGa NQJUI %rR jEnP1R 2ipaui if1q RgpA# 7cPuf Zjo 0gbs 3M2t NL0XE BERkT ADG e*A4 U@tx meT1q= HFKoM7 HA%#=f ku702y Vc0v hZE dVkJ RCR?n haAlx J+4Xb 5@DCS W1oq?b 8+Ke SUK8v J@l 6ZYOM smZ C5O Ln?+ d~z 7?=6@ j_^ 77D& T_D4T 5EqhQZa 9@a 6VBC8 lmW+ buTq Y7ZUlk H*LNcg ?%_WXd 5IK yp52# cZL ZcD 0KNaT gKJ%T"
+expected = ""

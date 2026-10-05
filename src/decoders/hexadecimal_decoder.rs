@@ -1,5 +1,5 @@
 use crate::checkers::CheckerTypes;
-use crate::decoders::interface::check_string_success;
+use crate::decoders::interface::{bytes_to_string, check_string_success};
 
 use super::crack_results::CrackResult;
 use super::interface::Crack;
@@ -15,8 +15,6 @@ pub struct HexadecimalDecoder;
 enum Error {
     /// Error when the input is not divisible by 2
     InvalidLength,
-    /// Error if the result isn't UTF-8
-    InvalidUtf8,
 }
 
 impl Crack for Decoder<HexadecimalDecoder> {
@@ -32,7 +30,7 @@ impl Crack for Decoder<HexadecimalDecoder> {
     }
 
     /// This function does the actual decoding
-    /// It returns an Option<string> if it was successful
+    /// It returns an `Option<String>` if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying hexadecimal with text {:?}", text);
@@ -101,19 +99,20 @@ fn hexadecimal_to_string(hex: &str) -> Result<String, Error> {
     }
 
     // Iterate over the vector of bytes in pairs
-    let mut result = String::new();
-    for pair in bytes.chunks(2) {
-        // Parse the pair of bytes as a hexadecimal number and push the corresponding
-        // ASCII character to the result string
-        result.push(u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap() as char);
-    }
+    let decoded: Vec<u8> = bytes
+        .chunks(2)
+        // Each pair is two ASCII hexadecimal digits, so this can't fail
+        .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())
+        .collect();
 
-    String::from_utf8(result.into()).map_err(|_| Error::InvalidUtf8)
+    // Pushing each byte as a char treated the bytes as Latin-1, turning UTF-8 text
+    // like "café" into "cafÃ©"
+    Ok(bytes_to_string(decoded))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::HexadecimalDecoder;
+    use super::{hexadecimal_to_string, HexadecimalDecoder};
     use crate::{
         checkers::{
             athena::Athena,
@@ -209,6 +208,23 @@ mod tests {
             result.unencrypted_text.unwrap()[0],
             "Hexadecimal with 0x + commas"
         );
+    }
+
+    #[test]
+    fn hexadecimal_decodes_utf8_text() {
+        // Every byte used to become its own Latin-1 character: "café" came out as "cafÃ©"
+        assert_eq!(hexadecimal_to_string("636166c3a9").unwrap(), "café");
+        assert_eq!(
+            hexadecimal_to_string("e697a5e69cace8aa9e").unwrap(),
+            "日本語"
+        );
+        assert_eq!(hexadecimal_to_string("f09f9882").unwrap(), "😂");
+    }
+
+    #[test]
+    fn hexadecimal_falls_back_to_latin1_when_not_utf8() {
+        // "café" encoded as Latin-1
+        assert_eq!(hexadecimal_to_string("636166e9").unwrap(), "café");
     }
 
     #[test]

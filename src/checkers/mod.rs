@@ -177,6 +177,11 @@ pub static CHECKER_MAP: Lazy<HashMap<&str, CheckerBox>> = Lazy::new(|| {
             "Wordlist Checker",
             CheckerBox::new(Checker::<WordlistChecker>::new()),
         ),
+        // Names JWTs accepted on their structure, see the JWT decoder
+        (
+            "JWT Structure",
+            CheckerBox::new(crate::decoders::jwt_decoder::jwt_structure_checker()),
+        ),
     ])
 });
 
