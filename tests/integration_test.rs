@@ -111,10 +111,9 @@ fn test_utf16le_powershell_encoded_command() {
 
 #[test]
 #[serial]
-#[ignore = "Vigenere accepts junk from this input at depth 1, before Base64 -> UTF-16 is tried (#1031)"]
 fn test_utf16le_powershell_encoded_command_from_issue() {
-    // The example from issue #943. The UTF-16 decoder decodes it (see its unit tests), and the
-    // search finds it when Vigenere results are checked at Low sensitivity (#1031, fix 9).
+    // The example from issue #943. Vigenere used to accept junk from this input at depth 1,
+    // before Base64 -> UTF-16 was tried (#1031).
     // base64.b64encode("Write-Output 'hello world'".encode("utf-16-le"))
     assert_eq!(
         crack("VwByAGkAdABlAC0ATwB1AHQAcAB1AHQAIAAnAGgAZQBsAGwAbwAgAHcAbwByAGwAZAAnAA=="),

@@ -29,9 +29,9 @@ impl Check for Checker<JsonChecker> {
     fn check(&self, text: &str) -> CheckResult {
         let mut result = CheckResult::new(self);
         result.text = text.to_string();
-        result.is_identified = is_json_object_or_array(text);
-        if result.is_identified {
-            result.description = "JavaScript Object Notation (JSON)".to_string();
+        if let Some(description) = identify(text) {
+            result.is_identified = true;
+            result.description = description;
         }
         result
     }
@@ -44,6 +44,11 @@ impl Check for Checker<JsonChecker> {
     fn get_sensitivity(&self) -> Sensitivity {
         self.sensitivity
     }
+}
+
+/// What the JSON checker identifies `text` as, if anything.
+pub(crate) fn identify(text: &str) -> Option<String> {
+    is_json_object_or_array(text).then(|| "JavaScript Object Notation (JSON)".to_string())
 }
 
 /// Whether `text` is a non-empty JSON object or array.

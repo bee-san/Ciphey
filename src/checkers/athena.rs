@@ -8,11 +8,7 @@ use log::trace;
 
 use super::{
     checker_type::{Check, Checker},
-    english::EnglishChecker,
-    human_checker,
-    json_checker::JsonChecker,
-    lemmeknow_checker::LemmeKnow,
-    password::PasswordChecker,
+    human_checker, identify_plaintext,
     regex_checker::RegexChecker,
     wordlist::WordlistChecker,
 };
@@ -40,7 +36,8 @@ impl Check for Checker<Athena> {
     ///
     /// * with a `--regex` crib, only the regex checker,
     /// * otherwise the wordlist (if there is one), LemmeKnow (known formats and CTF
-    ///   flags), JSON, the common-password list and finally the English checker.
+    ///   flags), JSON, the common-password list, the English checker and finally the code
+    ///   checker (source code and shell commands).
     ///
     /// The human checker then has the last word on that candidate.
     fn check(&self, text: &str) -> CheckResult {
@@ -70,34 +67,16 @@ impl Check for Checker<Athena> {
             }
         }
 
-        // TODO: wrap all checkers in oncecell so we only create them once!
-        let lemmeknow = Checker::<LemmeKnow>::new().with_sensitivity(self.sensitivity);
-        let lemmeknow_result = lemmeknow.check(text);
-        if lemmeknow_result.is_identified {
-            return confirm(&lemmeknow, lemmeknow_result);
+        match identify_plaintext(text, self.sensitivity) {
+            Some(found) => {
+                // The human checker has the last word
+                let mut result = found.into_result(text);
+                result.is_identified = human_checker::human_checker(&result);
+                trace!("Human checker result: {}", result.is_identified);
+                result
+            }
+            None => CheckResult::new(self),
         }
-
-        let json = Checker::<JsonChecker>::new().with_sensitivity(self.sensitivity);
-        let json_result = json.check(text);
-        if json_result.is_identified {
-            return confirm(&json, json_result);
-        }
-
-        // The common-password list. (Not named after passwords: CodeQL takes anything
-        // with that name for a secret, and the candidate is printed for the human checker.)
-        let common_list = Checker::<PasswordChecker>::new().with_sensitivity(self.sensitivity);
-        let common_list_result = common_list.check(text);
-        if common_list_result.is_identified {
-            return confirm(&common_list, common_list_result);
-        }
-
-        let english = Checker::<EnglishChecker>::new().with_sensitivity(self.sensitivity);
-        let english_result = english.check(text);
-        if english_result.is_identified {
-            return confirm(&english, english_result);
-        }
-
-        CheckResult::new(self)
     }
 
     fn with_sensitivity(mut self, sensitivity: Sensitivity) -> Self {

@@ -190,7 +190,7 @@ This prints `hello there general (via Base64)`.
 ## Documentation
 
 - [API docs on docs.rs](https://docs.rs/ciphey)
-- [The `docs/` folder](docs/), including an [overview](docs/ares_overview.md), the [architecture](docs/ares_architecture.md), [how the A* search works](docs/astar.md) and [how plaintext is identified](docs/plaintext_identification.md)
+- [The `docs/` folder](docs/), including an [overview](docs/ares_overview.md), the [architecture](docs/ares_architecture.md), [how the A* search works](docs/astar.md) and [how plaintext is detected](docs/plaintext-detection.md)
 - [Ciphey 2 documentation](https://broadleaf-angora-7db.notion.site/Ciphey2-32d5eea5d38b40c5b95a9442b4425710) on Notion
 - [Introducing Ares](https://skerritt.blog/introducing-ares/), the blog post about the Rust rewrite (it was called Ares before it became Ciphey)
 
