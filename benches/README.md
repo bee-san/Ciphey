@@ -13,7 +13,7 @@ cargo bench -- --test                # run every benchmark once and check the fi
 
 | Suite | What it measures | Ids |
 |---|---|---|
-| `decoders` | `Decoder::crack` with the Athena checker, for every decoder, on an 84 character text encoded with that decoder (`medium`), a 576 character one (`long`), and a gibberish string it rejects (`miss`, the common case during a search) | `decoders/<decoder>/{medium,long,miss}` |
+| `decoders` | `Decoder::crack` with the Athena checker, for every decoder, on an 84 character text encoded with that decoder (`medium`), a 576 character one (`long`), and a gibberish string it rejects (`miss`, the common case during a search). Crackers that take hundreds of milliseconds per call (Playfair) are in a group of their own with 10 flat samples | `decoders/<decoder>/{medium,long,miss}`, `decoders_slow/<decoder>/{long,miss}` |
 | `checkers` | English (gibberish detection), LemmeKnow, the password list, and Athena (all of them in turn), on hits and misses, at each sensitivity the decoders use | `checkers/<checker>[_<sensitivity>]/<input>` |
 | `crib` | The regex and wordlist checkers, plus two end-to-end `--regex` searches | `crib/...`, `crib/search/...` |
 | `search` | `perform_cracking` end to end: input that is already plaintext, single-layer and multi-layer encodings, and inputs with no solution, all with a 1 second timeout | `search/{plaintext,single,multi,no_solution}/<case>` |

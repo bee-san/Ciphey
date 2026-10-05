@@ -1,4 +1,23 @@
 //! ciphey is an automatic decoding and cracking tool. <https://github.com/bee-san/ciphey>
+//!
+//! The library has three parts:
+//!
+//! * [`perform_cracking`] runs the whole search: give it text and it works out which
+//!   decoders, in which order, turn it into plaintext.
+//! * [`decoders`] runs one decoder: a function per decoder such as
+//!   [`decoders::base64`] or [`decoders::caesar`], [`decode_with`] to pick one by name,
+//!   and [`list_decoders`].
+//! * [`detection`] says whether a text is plaintext and what it is:
+//!   [`detect_plaintext`] and [`is_plaintext`].
+//!
+//! ```
+//! let decoded = ciphey::decoders::hexadecimal("3139322e3136382e302e31");
+//! let plaintext = decoded.plaintext().unwrap();
+//! assert_eq!(plaintext.text, "192.168.0.1");
+//!
+//! let detection = plaintext.detection.as_ref().unwrap();
+//! assert_eq!(detection.description, "Internet Protocol (IP) Address Version 4");
+//! ```
 // Warns in case we forget to include documentation
 #![warn(
     missing_docs,
@@ -36,6 +55,8 @@ pub mod cli_pretty_printing;
 pub mod config;
 /// Decoders are the functions that actually perform the decodings.
 pub mod decoders;
+/// Plaintext detection: run Ciphey's plaintext checkers on a text.
+pub mod detection;
 /// The error type returned by the library API.
 mod error;
 /// The filtration system builds what decoders to use at runtime
@@ -64,6 +85,10 @@ use crate::{
 };
 
 use self::decoders::crack_results::CrackResult;
+pub use decoders::{
+    decode_with, decoder_info, list_decoders, Candidate, DecodeOptions, Decoded, DecoderInfo,
+};
+pub use detection::{detect_plaintext, is_plaintext, DetectOptions, Detection};
 pub use error::CipheyError;
 
 /// The main function to call which performs the cracking.
@@ -209,6 +234,13 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
                 e
             ));
         }
+    }
+
+    // Every check from here on runs LemmeKnow (unless a regex crib replaces the checkers),
+    // so start compiling its regexes now, all at once, instead of one after another
+    // during the first check.
+    if get_config().regex.is_none() {
+        checkers::lemmeknow_checker::warm_up();
     }
 
     let initial_check_for_plaintext = check_if_input_text_is_plaintext(&text);
@@ -445,6 +477,32 @@ mod tests {
         let result = perform_cracking("aGVsbG8gdGhlcmUgZ2VuZXJhbA==", config).unwrap();
         assert!(result.is_some());
         assert!(result.unwrap().text[0] == "hello there general")
+    }
+
+    #[test]
+    fn test_perform_cracking_decodes_long_base64() {
+        // 966 characters of plaintext. Text between 821 and 5,000 characters used to be
+        // rejected as a result, so this ran into the timeout.
+        let _test_db = TestDatabase::default();
+        set_test_db_path();
+
+        let plaintext = "It was the best of times, it was the worst of times, it was the age of \
+            wisdom, it was the age of foolishness, it was the epoch of belief. "
+            .repeat(7);
+        assert!(plaintext.len() > 900);
+        let encoded = {
+            use base64::Engine as _;
+            base64::engine::general_purpose::STANDARD.encode(&plaintext)
+        };
+        let config = Config {
+            // Unoptimised builds need a while for the first search step on this much text
+            timeout: 60,
+            ..Config::default()
+        };
+        let result = perform_cracking(&encoded, config).unwrap();
+        let result = result.expect("the long Base64 should be decoded");
+        assert_eq!(result.text[0], plaintext);
+        assert_eq!(result.path.last().unwrap().decoder, "Base64");
     }
 
     #[test]

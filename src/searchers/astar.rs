@@ -11,6 +11,7 @@
 
 use crate::cli_pretty_printing::decoded_how_many_times;
 use crate::decoders::interface::Crack;
+use crate::decoders::DECODER_MAP;
 use crate::filtration_system::get_all_decoders;
 use crossbeam::channel::Sender;
 
@@ -41,6 +42,27 @@ const PRUNE_THRESHOLD: usize = 200_000;
 
 /// Number of nodes to expand in parallel per iteration of the main loop.
 const PARALLEL_BATCH_SIZE: usize = 10;
+
+/// A search that ends with at least this many queued nodes frees them on another
+/// thread, see [`free_leftovers`].
+const FREE_IN_BACKGROUND_MIN_NODES: usize = 1_000;
+
+/// Frees what a finished search leaves behind (`queued_nodes` nodes and the seen-sets).
+///
+/// The caller gets its answer, or its timeout, only once the search thread has finished,
+/// and a search can end with hundreds of thousands of queued nodes, each holding its
+/// text and decoder path: freeing them took up to a quarter of a second. Big leftovers
+/// are therefore freed on a new thread. Small ones are freed here, which is cheaper than
+/// starting a thread, and so are big ones if the thread can't be started.
+fn free_leftovers<T: Send + 'static>(leftovers: T, queued_nodes: usize) {
+    if queued_nodes < FREE_IN_BACKGROUND_MIN_NODES {
+        return;
+    }
+    // If the thread can't be started the closure, and with it `leftovers`, is dropped here.
+    let _ = std::thread::Builder::new()
+        .name("ciphey-free-search".to_string())
+        .spawn(move || drop(leftovers));
+}
 
 /// Hash for the seen-set.
 fn calculate_hash(text: &str) -> u64 {
@@ -152,9 +174,20 @@ fn should_try_decoder(decoder: &(dyn Crack + Sync), last: Option<&crate::CrackRe
     is_common_sequence(last.decoder, name)
 }
 
+/// Whether the decoder of `step` is tagged `program`: its output can be a tiny part of its
+/// input by design. A steganography decoder (Zero-width) returns the hidden message
+/// without its cover text, which can be any length, and an interpreter prints less than
+/// its program.
+fn shrinks_by_design(step: &crate::CrackResult) -> bool {
+    DECODER_MAP
+        .get(step.decoder)
+        .is_some_and(|decoder| decoder.get::<()>().get_tags().contains(&"program"))
+}
+
 /// Reject results no correct answer could look like: under 3 chars, mostly non-printable,
-/// under 5% of the input length (no decoder shrinks text that much), or an English-checker
-/// hit that is more than a third punctuation.
+/// under 5% of the input length (no decoder shrinks text that much, except the ones in
+/// [`shrinks_by_design`], wherever they are in the path), or an English-checker hit that
+/// is more than a third punctuation.
 fn result_passes_sanity(node: &AStarNode, original_input_len: usize) -> bool {
     let Some(text) = node.state.text.first() else {
         return false;
@@ -162,7 +195,12 @@ fn result_passes_sanity(node: &AStarNode, original_input_len: usize) -> bool {
     if check_if_string_cant_be_decoded(text) {
         return false;
     }
-    if original_input_len >= 40 && text.chars().count() * 20 < original_input_len {
+    // The steps after a program-tagged one can't undo its shrinking: in
+    // AAEncode -> Base64 the answer is a fraction of the Base64 the program printed.
+    if original_input_len >= 40
+        && text.chars().count() * 20 < original_input_len
+        && !node.state.path.iter().any(shrinks_by_design)
+    {
         return false;
     }
     // gibberish_or_not at Medium passes strings like `-t{)-+&it|{})h"#/,")isoe'$h` on bigrams.
@@ -307,6 +345,8 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
     let seen_strings: DashSet<u64> = DashSet::new();
     let seen_results: DashSet<u64> = DashSet::new();
     let open_set = ThreadSafePriorityQueue::new();
+    // Like the seen-sets, Athena's memory of rejected candidates starts empty.
+    crate::checkers::athena::forget_rejections();
 
     open_set.push(AStarNode {
         state: initial,
@@ -404,6 +444,11 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
 
             if !get_config().top_results {
                 stop.store(true, AtomicOrdering::Relaxed);
+                let queued_nodes = open_set.len() + children.len();
+                free_leftovers(
+                    (open_set, children, seen_strings, seen_results),
+                    queued_nodes,
+                );
                 return;
             }
         }
@@ -423,6 +468,8 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
             .send(None)
             .expect("Should successfully send the result");
     }
+    let queued_nodes = open_set.len();
+    free_leftovers((open_set, seen_strings, seen_results), queued_nodes);
 }
 
 #[cfg(test)]
@@ -502,6 +549,28 @@ mod tests {
         assert!(should_try_decoder(quoted_printable.as_ref(), Some(&last)));
     }
 
+    /// Reports the thread it is dropped on.
+    struct DropProbe(crossbeam::channel::Sender<std::thread::ThreadId>);
+
+    impl Drop for DropProbe {
+        fn drop(&mut self) {
+            let _ = self.0.send(std::thread::current().id());
+        }
+    }
+
+    #[test]
+    fn big_leftovers_are_freed_on_another_thread() {
+        let (sender, receiver) = bounded(2);
+        free_leftovers(DropProbe(sender.clone()), FREE_IN_BACKGROUND_MIN_NODES - 1);
+        assert_eq!(receiver.recv().unwrap(), std::thread::current().id());
+
+        free_leftovers(DropProbe(sender), FREE_IN_BACKGROUND_MIN_NODES);
+        let dropped_on = receiver
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("the leftovers should be freed");
+        assert_ne!(dropped_on, std::thread::current().id());
+    }
+
     #[test]
     fn sanity_rejects_tiny_outputs_from_long_inputs() {
         let node = AStarNode {
@@ -527,5 +596,112 @@ mod tests {
             is_result: true,
         };
         assert!(result_passes_sanity(&node, 16));
+    }
+
+    /// A result node whose path is one step by `decoder`, checked by `checker_name`
+    fn result_node(text: &str, decoder: &'static str, checker_name: &'static str) -> AStarNode {
+        let mut step = crate::CrackResult::new(&crate::Decoder::default(), String::new());
+        step.decoder = decoder;
+        step.checker_name = checker_name;
+        AStarNode {
+            state: DecoderResult {
+                text: vec![text.to_string()],
+                path: vec![step],
+            },
+            depth: 1,
+            cost: 1.0,
+            total_cost: 0.0,
+            is_result: true,
+        }
+    }
+
+    #[test]
+    fn sanity_lets_program_decoders_shrink_text() {
+        // A 23-character flag hidden in a 615-character cover: 23 * 20 < 615
+        let flag = "flag{zero_width_is_fun}";
+        assert!(result_passes_sanity(
+            &result_node(flag, "Zero-width", "LemmeKnow Checker"),
+            615
+        ));
+        // The same result from a decoder without the tag is still too short
+        assert!(!result_passes_sanity(
+            &result_node(flag, "Base64", "LemmeKnow Checker"),
+            615
+        ));
+        // The tag only skips the length rule: unprintable and tiny results are still
+        // rejected, and so is an English-checker hit that is mostly punctuation
+        assert!(!result_passes_sanity(
+            &result_node("\u{2}\u{3}\u{4}\u{5}", "Zero-width", "LemmeKnow Checker"),
+            615
+        ));
+        assert!(!result_passes_sanity(
+            &result_node("hi", "Zero-width", "LemmeKnow Checker"),
+            615
+        ));
+        assert!(!result_passes_sanity(
+            &result_node(
+                "-t{)-+&it|{})h\"#/,\")isoe'$h",
+                "Zero-width",
+                "English Checker"
+            ),
+            615
+        ));
+    }
+
+    #[test]
+    fn sanity_lets_ook_print_much_less_than_its_program() {
+        // 1,329 characters of Ook! print `hello world`, 11: under 5% of the input. Fine for
+        // an interpreter (tag `program`), not for Base64.
+        assert!(result_passes_sanity(
+            &result_node("hello world", "Ook!", "English Checker"),
+            1_329
+        ));
+        assert!(!result_passes_sanity(
+            &result_node("hello world", "Base64", "English Checker"),
+            1_329
+        ));
+        // Two characters are still too few
+        assert!(!result_passes_sanity(
+            &result_node("hi", "Ook!", "English Checker"),
+            299
+        ));
+    }
+
+    #[test]
+    fn sanity_lets_steps_after_a_program_decoder_shrink_text() {
+        // An 11-character answer from a 1,405-character AAEncode program: 11 * 20 < 1,405
+        let path = |decoders: &[&'static str]| {
+            let mut node = result_node("hello world", "AAEncode", "English Checker");
+            node.state.path = decoders
+                .iter()
+                .map(|&decoder| {
+                    let mut step =
+                        crate::CrackResult::new(&crate::Decoder::default(), String::new());
+                    step.decoder = decoder;
+                    step.checker_name = "English Checker";
+                    step
+                })
+                .collect();
+            node
+        };
+        assert!(result_passes_sanity(&path(&["AAEncode"]), 1405));
+        assert!(!result_passes_sanity(&path(&["Base64"]), 1405));
+        // The program printed Base64, which the next step decoded
+        assert!(result_passes_sanity(&path(&["AAEncode", "Base64"]), 1405));
+        assert!(result_passes_sanity(&path(&["Base64", "AAEncode"]), 1405));
+        assert!(!result_passes_sanity(&path(&["Base64", "Base64"]), 1405));
+    }
+
+    #[test]
+    fn sanity_lets_jsfuck_shrink_text() {
+        // jsfuck.js 0.4.0 writes `hello world` in 4,103 characters: 11 * 20 < 4,103
+        assert!(result_passes_sanity(
+            &result_node("hello world", "JSFuck", "English Checker"),
+            4103
+        ));
+        assert!(!result_passes_sanity(
+            &result_node("hello world", "Base64", "English Checker"),
+            4103
+        ));
     }
 }

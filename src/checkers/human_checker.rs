@@ -4,9 +4,36 @@ use crate::config::get_config;
 use crate::storage::database;
 use crate::{cli_pretty_printing, timer};
 use dashmap::DashSet;
+use std::cell::Cell;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 use text_io::read;
+
+thread_local! {
+    /// Whether [`human_checker`] accepts candidates without asking on this thread, see
+    /// [`without_prompts`].
+    static PROMPTS_OFF: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Runs `f` with the human checker turned off on this thread: every candidate the other
+/// checkers identify is accepted without asking, as in API mode. The library's
+/// single-decoder functions use it so they never read from stdin, whatever the config.
+pub(crate) fn without_prompts<T>(f: impl FnOnce() -> T) -> T {
+    /// Puts the previous setting back when dropped, even if `f` panics.
+    struct Restore {
+        /// The setting before `without_prompts` was called
+        previous: bool,
+    }
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            PROMPTS_OFF.with(|off| off.set(self.previous));
+        }
+    }
+    let _restore = Restore {
+        previous: PROMPTS_OFF.with(|off| off.replace(true)),
+    };
+    f()
+}
 
 /// Prompts already shown in this process so repeated candidates do not ask again.
 static SEEN_PROMPTS: OnceLock<DashSet<String>> = OnceLock::new();
@@ -34,6 +61,10 @@ fn get_prompt_lock() -> &'static Mutex<()> {
 /// TODO: Add a way to specify a list of checkers to use in the library. This checker is not library friendly!
 // compile this if we are not running tests
 pub fn human_checker(input: &CheckResult) -> bool {
+    // The library's single-decoder functions never ask, see `without_prompts`
+    if PROMPTS_OFF.with(Cell::get) {
+        return true;
+    }
     // Check if a human has already confirmed a result (fast path)
     if HUMAN_CONFIRMED.load(Ordering::Acquire) {
         return true;
@@ -135,6 +166,26 @@ mod tests {
         result.text = text.to_string();
         result.description = "Words".to_string();
         result
+    }
+
+    #[test]
+    fn without_prompts_accepts_and_restores_the_setting() {
+        assert!(!PROMPTS_OFF.with(Cell::get));
+        let accepted = without_prompts(|| {
+            // Nested calls keep prompts off until the outermost one returns
+            without_prompts(|| assert!(PROMPTS_OFF.with(Cell::get)));
+            assert!(PROMPTS_OFF.with(Cell::get));
+            human_checker(&candidate("human checker test: never asked about"))
+        });
+        assert!(accepted);
+        assert!(!PROMPTS_OFF.with(Cell::get));
+
+        // Other threads still ask as the config says
+        without_prompts(|| {
+            std::thread::spawn(|| assert!(!PROMPTS_OFF.with(Cell::get)))
+                .join()
+                .unwrap();
+        });
     }
 
     #[test]

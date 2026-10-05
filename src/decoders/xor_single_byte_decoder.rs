@@ -169,7 +169,7 @@ struct Candidate {
 }
 
 /// Formats a key the way CyberChef's XOR operation takes it, e.g. `0x2a`.
-fn format_key(key: u8) -> String {
+pub(crate) fn format_key(key: u8) -> String {
     format!("0x{key:02x}")
 }
 
@@ -381,7 +381,7 @@ fn byte_views(text: &str) -> Vec<Vec<u8>> {
 
 /// Decodes hex. The digits may be split by whitespace or `:` into groups of whole bytes,
 /// each group optionally starting with `0x`.
-fn hex_view(text: &str) -> Option<Vec<u8>> {
+pub(crate) fn hex_view(text: &str) -> Option<Vec<u8>> {
     let mut nibbles = Vec::with_capacity(text.len());
     for group in text.split(|c: char| c.is_whitespace() || c == ':') {
         let digits = group
@@ -425,7 +425,7 @@ fn base64_view(text: &str) -> Option<Vec<u8>> {
 
 /// Decodes text matching `[A-Za-z0-9+/_-]+={0,2}` with the engines `base64_decoder.rs`
 /// uses: standard Base64, or URL-safe Base64 if that fails.
-fn decode_base64(text: &str) -> Option<Vec<u8>> {
+pub(crate) fn decode_base64(text: &str) -> Option<Vec<u8>> {
     let body = text.trim_end_matches('=');
     let is_base64_char =
         |b: u8| b.is_ascii_alphanumeric() || matches!(b, b'+' | b'/' | b'_' | b'-');

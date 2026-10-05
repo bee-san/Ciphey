@@ -8,6 +8,10 @@
 //! `crack` runs with the Athena checker, the same as during a search, so the times
 //! include checking the candidates it produces.
 //!
+//! The decoders in [`SLOW`] take a large part of a second per call on their inputs, so
+//! they are measured in their own group, `decoders_slow`, with fewer samples. With the
+//! settings of the `decoders` group criterion would run each of them for minutes.
+//!
 //! Run: `cargo bench --bench decoders` (add `-- caesar` to run one decoder).
 
 mod common;
@@ -17,9 +21,17 @@ use ciphey::checkers::checker_type::{Check, Checker};
 use ciphey::checkers::CheckerTypes;
 use ciphey::decoders::DECODER_MAP;
 use common::{DecoderCase, DecoderFixtures};
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::measurement::WallTime;
+use criterion::{
+    criterion_group, criterion_main, BenchmarkGroup, BenchmarkId, Criterion, SamplingMode,
+    Throughput,
+};
 use std::hint::black_box;
 use std::time::Duration;
+
+/// Decoders benchmarked in the `decoders_slow` group: crackers that search for a key for
+/// hundreds of milliseconds on their `long` input.
+const SLOW: &[&str] = &["Playfair"];
 
 fn decoders(c: &mut Criterion) {
     common::init(common::bench_config());
@@ -28,39 +40,60 @@ fn decoders(c: &mut Criterion) {
 
     let mut names: Vec<&str> = fixtures.case.iter().map(|c| c.decoder.as_str()).collect();
     names.dedup();
+    let (slow, fast): (Vec<&str>, Vec<&str>) = names.into_iter().partition(|n| SLOW.contains(n));
 
     let mut group = c.benchmark_group("decoders");
     group
         .warm_up_time(Duration::from_millis(500))
         .measurement_time(Duration::from_secs(2));
-
-    for name in names {
-        let decoder = DECODER_MAP
-            .get(name)
-            .unwrap_or_else(|| panic!("no decoder named {name:?} in DECODER_MAP"))
-            .get::<()>();
-        let id = common::slug(name);
-
-        for case in fixtures.case.iter().filter(|c| c.decoder == name) {
-            verify(case, decoder.crack(&case.input, &checker));
-            group.throughput(Throughput::Bytes(case.input.len() as u64));
-            group.bench_with_input(
-                BenchmarkId::new(&id, &case.size),
-                case.input.as_str(),
-                |b, input| b.iter(|| decoder.crack(black_box(input), &checker)),
-            );
-        }
-
-        let miss = decoder.crack(&fixtures.miss, &checker);
-        assert!(!miss.success, "{name} accepted the miss input: {miss:?}");
-        group.throughput(Throughput::Bytes(fixtures.miss.len() as u64));
-        group.bench_with_input(
-            BenchmarkId::new(&id, "miss"),
-            fixtures.miss.as_str(),
-            |b, input| b.iter(|| decoder.crack(black_box(input), &checker)),
-        );
+    for name in fast {
+        bench_decoder(&mut group, name, &fixtures, &checker);
     }
     group.finish();
+
+    let mut group = c.benchmark_group("decoders_slow");
+    group
+        .sampling_mode(SamplingMode::Flat)
+        .sample_size(10)
+        .warm_up_time(Duration::from_secs(1))
+        .measurement_time(Duration::from_secs(10));
+    for name in slow {
+        bench_decoder(&mut group, name, &fixtures, &checker);
+    }
+    group.finish();
+}
+
+/// Benchmarks decoder `name` on each of its cases and on the miss input, in `group`.
+fn bench_decoder(
+    group: &mut BenchmarkGroup<'_, WallTime>,
+    name: &str,
+    fixtures: &DecoderFixtures,
+    checker: &CheckerTypes,
+) {
+    let decoder = DECODER_MAP
+        .get(name)
+        .unwrap_or_else(|| panic!("no decoder named {name:?} in DECODER_MAP"))
+        .get::<()>();
+    let id = common::slug(name);
+
+    for case in fixtures.case.iter().filter(|c| c.decoder == name) {
+        verify(case, decoder.crack(&case.input, checker));
+        group.throughput(Throughput::Bytes(case.input.len() as u64));
+        group.bench_with_input(
+            BenchmarkId::new(&id, &case.size),
+            case.input.as_str(),
+            |b, input| b.iter(|| decoder.crack(black_box(input), checker)),
+        );
+    }
+
+    let miss = decoder.crack(&fixtures.miss, checker);
+    assert!(!miss.success, "{name} accepted the miss input: {miss:?}");
+    group.throughput(Throughput::Bytes(fixtures.miss.len() as u64));
+    group.bench_with_input(
+        BenchmarkId::new(&id, "miss"),
+        fixtures.miss.as_str(),
+        |b, input| b.iter(|| decoder.crack(black_box(input), checker)),
+    );
 }
 
 /// Panics if the decoder no longer behaves the way the fixture recorded, so a

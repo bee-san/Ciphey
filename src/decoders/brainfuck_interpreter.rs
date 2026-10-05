@@ -16,7 +16,7 @@ use log::{debug, trace};
 /// Brainfuck is Turing-complete, so an untrusted program may never terminate.
 /// One million instructions is far above the valid programs in this decoder's
 /// test corpus while bounding malicious execution and output growth.
-const BRAINFUCK_INSTRUCTION_LIMIT: usize = 1_000_000;
+pub(crate) const BRAINFUCK_INSTRUCTION_LIMIT: usize = 1_000_000;
 
 /// The Brainfuck interpreter, call:
 /// `let brainfuck_interpreter = Decoder::<BrainfuckInterpreter>::new()` to create a new instance

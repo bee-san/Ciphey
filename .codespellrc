@@ -1,6 +1,7 @@
 [codespell]
 # "ue" appears in Caesar-cipher test vectors in caesar_decoder.rs
 ignore-words-list = ue
-# Encoded benchmark inputs are gibberish by design, and n-gram tables are
-# letter sequences, not words
-skip = ./benches/data/*,benches/data/*,./src/storage/ngrams/*.txt,src/storage/ngrams/*.txt
+# Encoded benchmark inputs are gibberish by design, n-gram tables are
+# letter sequences, not words, and the CTF corpus quotes ciphertexts and
+# challenge names (misspellings included) exactly as published
+skip = ./benches/data/*,benches/data/*,./src/storage/ngrams/*.txt,src/storage/ngrams/*.txt,./tests/data/*,tests/data/*

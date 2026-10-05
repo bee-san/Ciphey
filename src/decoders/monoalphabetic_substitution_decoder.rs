@@ -137,8 +137,9 @@ const CACHE_WAIT: Duration = Duration::from_secs(10);
 /// Marks a letter that doesn't occur in a key or label table.
 const NONE: u8 = u8::MAX;
 
-/// log10 probability of every quadgram, indexed by [`quadgram_index`].
-static QUADGRAMS: Lazy<Box<[f32]>> =
+/// log10 probability of every quadgram, indexed by [`quadgram_index`]. The Hill cracker
+/// scores its decryptions with it too.
+pub(crate) static QUADGRAMS: Lazy<Box<[f32]>> =
     Lazy::new(|| parse_quadgrams(include_str!("../storage/ngrams/english_quadgrams.txt")));
 
 /// Upper-case English words.
@@ -881,7 +882,7 @@ fn used_part(key: &[u8; 26], present: &[bool; 26]) -> [u8; 26] {
 
 /// Decrypts `text` with `key`, keeping case and everything that isn't an ASCII letter.
 /// Every letter of `text` has a plaintext letter in `key`.
-fn decrypt(text: &str, key: &[u8; 26]) -> String {
+pub(crate) fn decrypt(text: &str, key: &[u8; 26]) -> String {
     text.chars()
         .map(|c| {
             if c.is_ascii_uppercase() {

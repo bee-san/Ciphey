@@ -46,21 +46,7 @@ impl Check for Checker<RegexChecker> {
             &uncached
         };
 
-        let regex_check_result = re.is_match(text);
-        let mut plaintext_found = false;
-        let printed_name = format!("Regex matched: {re}");
-        if regex_check_result {
-            plaintext_found = true;
-        }
-
-        CheckResult {
-            is_identified: plaintext_found,
-            text: text.to_string(),
-            checker_name: self.name,
-            checker_description: self.description,
-            description: printed_name,
-            link: self.link,
-        }
+        self.check_regex(re, text)
     }
 
     fn with_sensitivity(mut self, sensitivity: Sensitivity) -> Self {
@@ -70,5 +56,20 @@ impl Check for Checker<RegexChecker> {
 
     fn get_sensitivity(&self) -> Sensitivity {
         self.sensitivity
+    }
+}
+
+impl Checker<RegexChecker> {
+    /// Checks whether `re` matches `text`. [`Check::check`] does this with the crib from
+    /// the config; [`crate::detection`] passes its own.
+    pub(crate) fn check_regex(&self, re: &Regex, text: &str) -> CheckResult {
+        CheckResult {
+            is_identified: re.is_match(text),
+            text: text.to_string(),
+            checker_name: self.name,
+            checker_description: self.description,
+            description: format!("Regex matched: {re}"),
+            link: self.link,
+        }
     }
 }

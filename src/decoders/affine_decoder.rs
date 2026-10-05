@@ -307,7 +307,7 @@ fn letter_index(c: char) -> Option<usize> {
 }
 
 /// The inverse of `a` mod 26, if `a` is coprime with 26.
-fn inverse_mod_26(a: u8) -> Option<u8> {
+pub(crate) fn inverse_mod_26(a: u8) -> Option<u8> {
     (1..26u8).find(|&x| (u16::from(a) * u16::from(x)) % 26 == 1)
 }
 
@@ -323,7 +323,7 @@ fn decryption_table(a_inverse: u8, b: u8) -> [u8; 26] {
 /// Decrypts `text` with the affine key (a, b): ASCII letters are decrypted and keep their
 /// case, everything else (digits, punctuation, whitespace, non-ASCII letters) is copied.
 /// If `a` is not coprime with 26 there is no such key and `text` comes back unchanged.
-fn decrypt(text: &str, a: u8, b: u8) -> String {
+pub(crate) fn decrypt(text: &str, a: u8, b: u8) -> String {
     let Some(a_inverse) = inverse_mod_26(a) else {
         return text.to_string();
     };

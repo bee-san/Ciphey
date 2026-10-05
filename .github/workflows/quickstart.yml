@@ -29,6 +29,9 @@ jobs:
       - name: Run cargo check
         run: cargo check --all-targets
 
+      - name: Run cargo check (mcp feature)
+        run: cargo check --all-targets --features mcp
+
   bench-build:
     name: Benchmarks build
     runs-on: ubuntu-latest
@@ -74,6 +77,11 @@ jobs:
       - name: Run cargo test
         run: cargo test
 
+      - name: Run MCP server tests (mcp feature)
+        # The library's tests already ran above; only run the ciphey-mcp unit tests and the
+        # JSON-RPC-over-stdio integration test.
+        run: cargo test --features mcp --bin ciphey-mcp --test mcp_stdio
+
   lints:
     name: Lints
     runs-on: ubuntu-latest
@@ -95,3 +103,6 @@ jobs:
       - name: Run cargo clippy
         # --all-targets also lints tests and benches; -D warnings turns lints into failures.
         run: cargo clippy --all-targets -- -D warnings
+
+      - name: Run cargo clippy (mcp feature)
+        run: cargo clippy --all-targets --features mcp -- -D warnings
