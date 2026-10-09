@@ -273,6 +273,14 @@ fn base32_decodes() {
 }
 
 #[test]
+fn base32_variants_decodes() {
+    let decoded =
+        base32_variants("ktwgkedtqiwsg43ycj3g675qrbug66bypj4s4hdurbzzc3m1rb4go3jyptozw6jyctzsq");
+    assert_plaintext(&decoded, "The quick brown fox jumps over the lazy dog");
+    assert_eq!(plaintext_key(&decoded), "z-base-32");
+}
+
+#[test]
 fn base36_decodes() {
     assert_plaintext(&base36("fuvrsivvnfrbjwajo"), "hello world");
     assert_plaintext(&base36("FUVRSIVVNFRBJWAJO"), "hello world");

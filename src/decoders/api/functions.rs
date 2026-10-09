@@ -15,6 +15,7 @@ use crate::decoders::backslash_escape_decoder::BackslashEscapeDecoder;
 use crate::decoders::baconian_decoder::BaconianDecoder;
 use crate::decoders::base100_decoder::Base100Decoder;
 use crate::decoders::base32_decoder::Base32Decoder;
+use crate::decoders::base32_variants_decoder::Base32VariantsDecoder;
 use crate::decoders::base36_decoder::Base36Decoder;
 use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
 use crate::decoders::base58_flickr_decoder::Base58FlickrDecoder;
@@ -232,6 +233,19 @@ decoder_functions! {
     /// assert_eq!(decoded.candidates[0].text, "hello world");
     /// ```
     base32: Base32Decoder, aliases ["b32"], key None;
+
+    /// Decodes Base32 written with base32hex, Crockford's or the z-base-32 alphabet, trying
+    /// each one. The key names the alphabet. Standard Base32 is [`base32`](fn@base32).
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::base32_variants(
+    ///     "AHM6A83HENMP6TS0C9S6YXVE41K6YY10D9TPTW3K41QQCSBJ41T6GS90DHGQMY90CHQPE",
+    /// );
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(plaintext.text, "The quick brown fox jumps over the lazy dog");
+    /// assert_eq!(plaintext.key.as_deref(), Some("Crockford"));
+    /// ```
+    base32_variants: Base32VariantsDecoder, aliases [], key None;
 
     /// Decodes Base36, text written as one number in base 36 (digits `0` to `9`, then `a` to
     /// `z`, in either case).

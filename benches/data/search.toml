@@ -120,6 +120,14 @@ input = "JVSWK5BANVSSAYLUEB2GQZJAN5WGIIDMNFTWQ5DIN52XGZJAMFTHIZLSEBWWSZDONFTWQ5B
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# base32hex (RFC 4648 §7, 0-9A-V)
+kind = "single"
+name = "base32hex"
+layers = ["Base32 Variants"]
+input = "9LIMAT10DLII0OBK41Q6GP90DTM6883CD5JMGT38DTQN6P90C5J78PBI41MMIP3ED5JMGT10C5N68832E9KMSPP0EHK6A83DC5O2O83KD1II0QR5F4G62RJ441GI0T3FE9HMGBG="
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "base36"
 layers = ["Base36"]

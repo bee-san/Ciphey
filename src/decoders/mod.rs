@@ -89,6 +89,8 @@ pub mod backslash_escape_decoder;
 pub mod baconian_decoder;
 /// The base32_decoder module decodes base32
 pub mod base32_decoder;
+/// The base32_variants_decoder module decodes base32hex, Crockford's Base32 and z-base-32
+pub mod base32_variants_decoder;
 /// The base36_decoder module decodes Base36 (bytes as one big-endian radix-36 integer)
 pub mod base36_decoder;
 /// The base58_bitcoin_decoder module decodes base58 bitcoin
@@ -272,6 +274,7 @@ use atbash_decoder::AtbashDecoder;
 use backslash_escape_decoder::BackslashEscapeDecoder;
 use baconian_decoder::BaconianDecoder;
 use base32_decoder::Base32Decoder;
+use base32_variants_decoder::Base32VariantsDecoder;
 use base36_decoder::Base36Decoder;
 use base58_bitcoin_decoder::Base58BitcoinDecoder;
 use base58_flickr_decoder::Base58FlickrDecoder;
@@ -383,6 +386,8 @@ pub enum DecoderType {
     PlayfairDecoder(playfair_decoder::PlayfairDecoder),
     /// base32 decoder
     Base32Decoder(base32_decoder::Base32Decoder),
+    /// base32 decoder for other alphabets
+    Base32VariantsDecoder(base32_variants_decoder::Base32VariantsDecoder),
     /// base36 decoder
     Base36Decoder(base36_decoder::Base36Decoder),
     /// base58 bitcoin decoder
@@ -662,6 +667,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         ),
         ("UTF-16", DecoderBox::new(Decoder::<Utf16Decoder>::new())),
         ("Base32", DecoderBox::new(Decoder::<Base32Decoder>::new())),
+        (
+            "Base32 Variants",
+            DecoderBox::new(Decoder::<Base32VariantsDecoder>::new()),
+        ),
         ("Base36", DecoderBox::new(Decoder::<Base36Decoder>::new())),
         (
             "Uuencode",

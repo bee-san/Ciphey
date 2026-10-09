@@ -75,6 +75,7 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         "Base64",
         "Base64 Alt",
         "Base32",
+        "Base32 Variants",
         "Base36",
         "Base58 Bitcoin",
         "Base58 Ripple",
