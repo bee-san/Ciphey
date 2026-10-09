@@ -314,7 +314,7 @@ mod tests {
 
     #[test]
     fn handles_panic_if_emoji() {
-        assert_no_candidate("😂😂😂😂😂😂😂😂");
+        assert_no_candidate(&"\u{1F602}".repeat(8));
     }
 
     #[test]
