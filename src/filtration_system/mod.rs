@@ -11,6 +11,7 @@ use crate::decoders::atbash_decoder::AtbashDecoder;
 use crate::decoders::backslash_escape_decoder::BackslashEscapeDecoder;
 use crate::decoders::baconian_decoder::BaconianDecoder;
 use crate::decoders::base32_decoder::Base32Decoder;
+use crate::decoders::base32_variants_decoder::Base32VariantsDecoder;
 use crate::decoders::base36_decoder::Base36Decoder;
 use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
 use crate::decoders::base58_monero_decoder::Base58MoneroDecoder;
@@ -334,6 +335,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let mime_encoded_word = Decoder::<MimeEncodedWordDecoder>::new();
     let utf16 = Decoder::<Utf16Decoder>::new();
     let base32 = Decoder::<Base32Decoder>::new();
+    let base32_variants = Decoder::<Base32VariantsDecoder>::new();
     let base36 = Decoder::<Base36Decoder>::new();
     let uuencode = Decoder::<UuencodeDecoder>::new();
     let reversedecoder = Decoder::<ReverseDecoder>::new();
@@ -469,6 +471,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(octal),
             Box::new(html_entity),
             Box::new(base32),
+            Box::new(base32_variants),
             Box::new(base36),
             Box::new(uuencode),
             // Before rot47: when two decoders find plaintext in the same step the search
