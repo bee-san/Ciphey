@@ -58,7 +58,7 @@ rayon = "1.12.0"
 regex = "1.12.4"
 # Official MCP Rust SDK, only used by `ciphey-mcp` (feature `mcp`). Pinned exactly so
 # `cargo install` (which ignores Cargo.lock) builds against the version we tested.
-rmcp = { version = "=3.5.0", optional = true, default-features = false, features = ["macros", "server", "transport-io"] }
+rmcp = { version = "=3.5.1", optional = true, default-features = false, features = ["macros", "server", "transport-io"] }
 rpassword = "7.5.4"
 rusqlite = { version = "0.37", features = ["bundled"] }
 serde = { version = "1.0.228", features = ["derive"] }
