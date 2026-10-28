@@ -667,22 +667,6 @@ decoder_functions! {
     /// ```
     null_cipher: NullCipherDecoder, aliases ["acrostic", "concealment_cipher"], key None;
 
-    /// Cracks the Pollux cipher, which encodes Morse code by replacing dots, dashes and
-    /// separators with single digits from three disjoint classes (1/4/7, 2/5/8 and
-    /// 3/6/9/0). Ciphey tries every assignment of digits to the three classes
-    /// (3^10 = 59,049 possibilities), decodes each as Morse and reports the first
-    /// reading the checker accepts. The key is reported in the form
-    /// `. = 147, - = 258, x = 3690`.
-    ///
-    /// ```
-    /// // "HELLO WORLD" with `. = 1 4 7, - = 2 5 8, x = 3 6 9 0`
-    /// let decoded = ciphey::decoders::pollux("7774640754467514028890485358201240751738773");
-    /// let plaintext = decoded.plaintext().unwrap();
-    /// assert_eq!(plaintext.text, "HELLO WORLD");
-    /// assert_eq!(plaintext.key.as_deref(), Some(". = 147, - = 258, x = 3690"));
-    /// ```
-    pollux: PolluxDecoder, aliases [], key None;
-
     /// Decodes character codes written in octal.
     ///
     /// ```
@@ -723,6 +707,21 @@ decoder_functions! {
     /// assert_eq!(plaintext.key.as_deref(), Some("TREASUBCDFGHIKLMNOPQVWXYZ"));
     /// ```
     playfair: PlayfairDecoder, aliases [], key Some(keys::PLAYFAIR);
+
+    /// Cracks the Pollux cipher, Morse code written with digits: each digit stands for a
+    /// dot, a dash or the separator between letters (two between words). Ciphey tries the
+    /// digit classes that split the text into Morse letters, ranks the readings by English
+    /// quadgram statistics and checks the best few. The key is the classes, such as
+    /// `. = 1 4 7, - = 2 5 8, x = 3 6 9 0`.
+    ///
+    /// ```
+    /// // "HELLO WORLD" with `. = 1 4 7, - = 2 5 8, x = 3 6 9 0`
+    /// let decoded = ciphey::decoders::pollux("7774640754467514028890485358201240751738773");
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(plaintext.text, "HELLO WORLD");
+    /// assert_eq!(plaintext.key.as_deref(), Some(". = 1 4 7, - = 2 5 8, x = 3 6 9 0"));
+    /// ```
+    pollux: PolluxDecoder, aliases [], key None;
 
     /// Decodes the Polybius square cipher: each letter as its row and column in a 5×5
     /// square with I and J in one cell, written as digits (`23` is H) or as letters from

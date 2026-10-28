@@ -333,6 +333,14 @@ input = "32 15 15 44  32 15  11 44  44 23 15  34 31 14  31 24 22 23 44 23 34 45 
 expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP THE KEY AND A TORCH"
 
 [[case]]
+# Pollux, the issue's key . = 1 4 7, - = 2 5 8, x = 3 6 9 0, digits of each class in turn
+kind = "single"
+name = "pollux"
+layers = ["Pollux"]
+input = "253164980325679018326950471437698250184732146975140713824671479501471382564789147013642971540837612490583716247951047382164714950378621954703814761249710543827695014713469820753182469507147316984207351826945087321469750386258912405781347146"
+expected = "MEET ME AT THE OLD LIGHTHOUSE AFTER MIDNIGHT AND BRING THE MAP THE KEY AND A TORCH"
+
+[[case]]
 # DNA codons: each letter as its alphabetically first codon in the standard genetic code,
 # each space as the stop codon TAA. The codon alphabet has no O, U or B, so the usual
 # plaintext loses letters; this one doesn't.

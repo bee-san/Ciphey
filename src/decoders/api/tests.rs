@@ -832,7 +832,10 @@ fn pollux_decodes() {
         .plaintext()
         .unwrap_or_else(|| panic!("no plaintext in {decoded:#?}"));
     assert_eq!(plaintext.text, "HELLO WORLD");
-    assert_eq!(plaintext.key.as_deref(), Some(". = 147, - = 258, x = 3690"));
+    assert_eq!(
+        plaintext.key.as_deref(),
+        Some(". = 1 4 7, - = 2 5 8, x = 3 6 9 0")
+    );
 
     // Empty input produces no candidates (Pollux only takes digits).
     assert!(pollux("").is_empty());

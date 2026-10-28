@@ -517,6 +517,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // Before rot47, which shifts digits to other digits that LemmeKnow can take for
             // a number it knows, and so can win a tie in the same search step
             Box::new(polybius),
+            // Before rot47 for the same reason: Pollux ciphertexts are digit strings too
             Box::new(pollux),
             Box::new(caesardecoder),
             Box::new(affine),
