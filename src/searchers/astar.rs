@@ -27,6 +27,7 @@ use rayon::prelude::*;
 use crate::checkers::athena::Athena;
 use crate::checkers::checker_type::{Check, Checker};
 use crate::checkers::english::EnglishChecker;
+use crate::checkers::lemmeknow_checker::{is_ctf_flag_shaped, is_unmarked_ctf_flag};
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
 use crate::searchers::helper_functions::{
@@ -186,13 +187,19 @@ fn shrinks_by_design(step: &crate::CrackResult) -> bool {
 
 /// Reject results no correct answer could look like: under 3 chars, mostly non-printable,
 /// under 5% of the input length (no decoder shrinks text that much, except the ones in
-/// [`shrinks_by_design`], wherever they are in the path), or an English-checker hit that
-/// is more than a third punctuation.
-fn result_passes_sanity(node: &AStarNode, original_input_len: usize) -> bool {
+/// [`shrinks_by_design`], wherever they are in the path), an English-checker hit that is
+/// more than a third punctuation, or a CTF flag without a flag word in its prefix
+/// (`SEKAI{...}`) when the input was already shaped like a flag: Caesar, Atbash, Vigenère
+/// and their combinations with Reverse keep that shape, so such a result is just the input
+/// with its letters changed.
+fn result_passes_sanity(node: &AStarNode, original_input_len: usize, input_is_flag: bool) -> bool {
     let Some(text) = node.state.text.first() else {
         return false;
     };
     if check_if_string_cant_be_decoded(text) {
+        return false;
+    }
+    if input_is_flag && is_unmarked_ctf_flag(text) {
         return false;
     }
     // The steps after a program-tagged one can't undo its shrinking: in
@@ -266,6 +273,10 @@ fn expand_node(
                             path,
                         },
                         depth: current_node.depth + 1,
+                        // Every result step costs the same, so results found in the same
+                        // step that tie on confidence keep the decoder list's order:
+                        // `filter_and_get_decoders` puts each decoder before the ones that
+                        // turn its input into junk the checkers accept.
                         cost: current_node.cost + 1.0,
                         total_cost: f32::NEG_INFINITY,
                         is_result: true,
@@ -333,10 +344,29 @@ fn result_confidence(node: &AStarNode) -> (u8, f32) {
     (class, node.cost)
 }
 
+/// Keeps only the first result for each text, in batch order (for one node's results, the
+/// order the decoders are listed in).
+///
+/// When two decoders find the same plaintext in one step, the list order says which one
+/// describes it (Quoted-Printable before Hexadecimal for `=48=65`). Results are then
+/// sorted by checker class and path cost, so a duplicate found from a cheaper node of the
+/// same batch must not get the chance to come first.
+fn keep_first_of_each_text(results: &mut Vec<AStarNode>) {
+    let mut seen = std::collections::HashSet::new();
+    results.retain(|node| {
+        node.state
+            .text
+            .first()
+            .is_none_or(|text| seen.insert(calculate_hash(text)))
+    });
+}
+
 /// Search for a decoder sequence that turns `input` into plaintext. Sends `Some(result)`
 /// on success (repeatedly in `top_results` mode), `None` if the space is exhausted.
 pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Arc<AtomicBool>) {
     let original_input_len = input.chars().count();
+    // With a crib the crib decides what the flag looks like
+    let input_is_flag = is_ctf_flag_shaped(&input) && get_config().regex.is_none();
     let initial = DecoderResult {
         text: vec![input],
         path: vec![],
@@ -383,6 +413,7 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
             new_nodes.into_iter().partition(|n| n.is_result);
 
         if results.len() > 1 {
+            keep_first_of_each_text(&mut results);
             results.sort_by(|a, b| {
                 result_confidence(a)
                     .partial_cmp(&result_confidence(b))
@@ -398,7 +429,7 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
                 debug!("Skipping duplicate result: {:?}", text);
                 continue;
             }
-            if !result_passes_sanity(&node, original_input_len) {
+            if !result_passes_sanity(&node, original_input_len, input_is_flag) {
                 debug!(
                     "Rejected implausible result {:?} from path {:?}; continuing search",
                     text,
@@ -488,10 +519,29 @@ mod tests {
 
     #[test]
     fn astar_prevents_cycles() {
+        // `AAAA` is a fixpoint of several decoders and has no plaintext. The search used to
+        // end on a false positive (`pppp` via ROT47); now nothing is accepted, and without
+        // the timer `perform_cracking` sets, it would search until memory runs out. So
+        // stop it after a second, as the timer would.
         let (sender, receiver) = bounded::<Option<DecoderResult>>(1);
         let stop = Arc::new(AtomicBool::new(false));
+        let stopper = {
+            let stop = Arc::clone(&stop);
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                stop.store(true, AtomicOrdering::Relaxed);
+            })
+        };
+        let started = std::time::Instant::now();
         astar("AAAA".to_string(), sender, stop);
-        let _ = receiver.recv().unwrap();
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(60),
+            "the search didn't stop"
+        );
+        if let Ok(Some(result)) = receiver.try_recv() {
+            panic!("junk accepted as the plaintext of AAAA: {:?}", result.text);
+        }
+        stopper.join().unwrap();
     }
 
     #[test]
@@ -583,7 +633,7 @@ mod tests {
             total_cost: 0.0,
             is_result: true,
         };
-        assert!(!result_passes_sanity(&node, 800));
+        assert!(!result_passes_sanity(&node, 800, false));
 
         let node = AStarNode {
             state: DecoderResult {
@@ -595,7 +645,65 @@ mod tests {
             total_cost: 0.0,
             is_result: true,
         };
-        assert!(result_passes_sanity(&node, 16));
+        assert!(result_passes_sanity(&node, 16, false));
+    }
+
+    #[test]
+    fn the_first_decoder_to_find_a_text_describes_it() {
+        let result = |decoder: &'static str, text: &str, cost: f32| {
+            let mut step = crate::CrackResult::new(&crate::Decoder::default(), String::new());
+            step.decoder = decoder;
+            AStarNode {
+                state: DecoderResult {
+                    text: vec![text.to_string()],
+                    path: vec![step],
+                },
+                depth: 1,
+                cost,
+                total_cost: f32::NEG_INFINITY,
+                is_result: true,
+            }
+        };
+        let mut results = vec![
+            result("Quoted-Printable", "Hello World", 2.0),
+            result("Hexadecimal", "Hello World", 1.5),
+            result("Base64", "something else", 1.0),
+        ];
+        keep_first_of_each_text(&mut results);
+        let decoders: Vec<&str> = results.iter().map(|n| n.state.path[0].decoder).collect();
+        assert_eq!(decoders, ["Quoted-Printable", "Base64"]);
+    }
+
+    #[test]
+    fn sanity_rejects_unmarked_flags_from_flag_shaped_input() {
+        let flag = |text: &str| AStarNode {
+            state: DecoderResult {
+                text: vec![text.to_string()],
+                path: vec![],
+            },
+            depth: 3,
+            cost: 3.0,
+            total_cost: 0.0,
+            is_result: true,
+        };
+        // e.g. Reverse -> Atbash -> Reverse of FRXNV{l0h_s0haq_z3}
+        assert!(!result_passes_sanity(
+            &flag("UICME{o0s_h0szj_a3}"),
+            19,
+            true
+        ));
+        // From input that wasn't a flag (Base64, hex ...) it may be the answer
+        assert!(result_passes_sanity(
+            &flag("SEKAI{y0u_f0und_m3}"),
+            28,
+            false
+        ));
+        // A flag word in the prefix is always fine
+        assert!(result_passes_sanity(
+            &flag("flag{this_is_the_flag}"),
+            22,
+            true
+        ));
     }
 
     /// A result node whose path is one step by `decoder`, checked by `checker_name`
@@ -621,22 +729,26 @@ mod tests {
         let flag = "flag{zero_width_is_fun}";
         assert!(result_passes_sanity(
             &result_node(flag, "Zero-width", "LemmeKnow Checker"),
-            615
+            615,
+            false
         ));
         // The same result from a decoder without the tag is still too short
         assert!(!result_passes_sanity(
             &result_node(flag, "Base64", "LemmeKnow Checker"),
-            615
+            615,
+            false
         ));
         // The tag only skips the length rule: unprintable and tiny results are still
         // rejected, and so is an English-checker hit that is mostly punctuation
         assert!(!result_passes_sanity(
             &result_node("\u{2}\u{3}\u{4}\u{5}", "Zero-width", "LemmeKnow Checker"),
-            615
+            615,
+            false
         ));
         assert!(!result_passes_sanity(
             &result_node("hi", "Zero-width", "LemmeKnow Checker"),
-            615
+            615,
+            false
         ));
         assert!(!result_passes_sanity(
             &result_node(
@@ -644,7 +756,8 @@ mod tests {
                 "Zero-width",
                 "English Checker"
             ),
-            615
+            615,
+            false
         ));
     }
 
@@ -654,16 +767,19 @@ mod tests {
         // an interpreter (tag `program`), not for Base64.
         assert!(result_passes_sanity(
             &result_node("hello world", "Ook!", "English Checker"),
-            1_329
+            1_329,
+            false
         ));
         assert!(!result_passes_sanity(
             &result_node("hello world", "Base64", "English Checker"),
-            1_329
+            1_329,
+            false
         ));
         // Two characters are still too few
         assert!(!result_passes_sanity(
             &result_node("hi", "Ook!", "English Checker"),
-            299
+            299,
+            false
         ));
     }
 
@@ -684,12 +800,24 @@ mod tests {
                 .collect();
             node
         };
-        assert!(result_passes_sanity(&path(&["AAEncode"]), 1405));
-        assert!(!result_passes_sanity(&path(&["Base64"]), 1405));
+        assert!(result_passes_sanity(&path(&["AAEncode"]), 1405, false));
+        assert!(!result_passes_sanity(&path(&["Base64"]), 1405, false));
         // The program printed Base64, which the next step decoded
-        assert!(result_passes_sanity(&path(&["AAEncode", "Base64"]), 1405));
-        assert!(result_passes_sanity(&path(&["Base64", "AAEncode"]), 1405));
-        assert!(!result_passes_sanity(&path(&["Base64", "Base64"]), 1405));
+        assert!(result_passes_sanity(
+            &path(&["AAEncode", "Base64"]),
+            1405,
+            false
+        ));
+        assert!(result_passes_sanity(
+            &path(&["Base64", "AAEncode"]),
+            1405,
+            false
+        ));
+        assert!(!result_passes_sanity(
+            &path(&["Base64", "Base64"]),
+            1405,
+            false
+        ));
     }
 
     #[test]
@@ -697,11 +825,13 @@ mod tests {
         // jsfuck.js 0.4.0 writes `hello world` in 4,103 characters: 11 * 20 < 4,103
         assert!(result_passes_sanity(
             &result_node("hello world", "JSFuck", "English Checker"),
-            4103
+            4103,
+            false
         ));
         assert!(!result_passes_sanity(
             &result_node("hello world", "Base64", "English Checker"),
-            4103
+            4103,
+            false
         ));
     }
 }

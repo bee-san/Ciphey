@@ -529,12 +529,11 @@ fn hill_cracks() {
         "DEFENDTHEEASTWALLOFTHECASTLEATDAWNANDHOLDITUNTILTHERELIEFCOLUMNARRIVES",
     );
     assert_eq!(plaintext_key(&decoded), "[[5,8],[17,3]]");
-    // The issue's example is found, but 20 unspaced letters are too few for the checks: it
-    // comes back unmarked, with its key
+    // The issue's example: 20 unspaced letters, which the English checker scores by
+    // their quadgrams
     let decoded = hill("XTPJPUOUCKEGFCURFTYH");
-    assert_first(&decoded, "SHORTMESSAGEFORHILLX");
-    assert!(decoded.plaintext().is_none(), "{decoded:#?}");
-    assert_eq!(decoded.candidates[0].key.as_deref(), Some("[[3,3],[2,5]]"));
+    assert_plaintext(&decoded, "SHORTMESSAGEFORHILLX");
+    assert_eq!(plaintext_key(&decoded), "[[3,3],[2,5]]");
     assert!(hill("hello world").is_empty());
 }
 
@@ -697,10 +696,10 @@ fn polybius_decodes() {
         "5x5 I=J, row-column, letters ADFGX"
     );
     // Unidentified: both row-column readings come back, without keys
-    let decoded = polybius("25 45 32 35  34 51 15 42");
+    let decoded = polybius("25 41 53 55  51 52 54 35");
     assert!(decoded.plaintext().is_none(), "{decoded:#?}");
     let texts: Vec<&str> = decoded.candidates.iter().map(|c| c.text.as_str()).collect();
-    assert_eq!(texts, ["KUMP OVER", "JUMP OVER"]);
+    assert_eq!(texts, ["KQXZ VWYP", "JQXZ VWYP"]);
 }
 
 #[test]
@@ -811,13 +810,13 @@ fn t9_decodes() {
         &t9("843 3524 47 443336 46 843 427336"),
         "the flag is hidden in the garden",
     );
-    // No reading of RING and SING in two places is accepted, so the 3 best come back
-    let ranked: Vec<String> = t9("7464 7464")
+    // No reading of one four-letter word is accepted, so the 3 best come back
+    let ranked: Vec<String> = t9("4663")
         .candidates
         .into_iter()
         .map(|candidate| candidate.text)
         .collect();
-    assert_eq!(ranked, ["ring ring", "ring sing", "sing ring"]);
+    assert_eq!(ranked, ["good", "gone", "home"]);
     // By name or alias
     for name in ["T9", "t9", "predictive_text", "Predictive text"] {
         let decoded = decode_with(name, "43556 96753", &DecodeOptions::default()).unwrap();

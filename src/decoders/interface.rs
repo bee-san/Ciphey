@@ -1,4 +1,5 @@
 use crate::checkers::CheckerTypes;
+use crate::storage::ngrams::bigram_fitness;
 
 use super::crack_results::CrackResult;
 
@@ -106,23 +107,22 @@ pub fn check_string_success(decoded_text: &str, original_text: &str) -> bool {
     false
 }
 
-/// Collects `candidates` up to and including the first one [`check_string_success`]
-/// rejects for `original_text` (empty, or unchanged), and returns them with that one's
-/// index. Brute-force decoders stop trying keys there.
-pub(crate) fn candidates_until_unchanged(
-    original_text: &str,
-    candidates: impl Iterator<Item = String>,
-) -> (Vec<String>, Option<usize>) {
-    let mut collected = Vec::new();
-    for candidate in candidates {
-        let unchanged = !check_string_success(&candidate, original_text);
-        collected.push(candidate);
-        if unchanged {
-            let index = collected.len() - 1;
-            return (collected, Some(index));
+/// The index of the candidate whose letters look most like English (by bigram fitness),
+/// the first if several tie, or `None` if none has two letters.
+///
+/// Ciphers with a small key space use it to ask the checker only about their best
+/// candidate. Asking about every candidate and taking the first accepted one finds wrong
+/// keys whose output happens to pass.
+pub(crate) fn best_ranked<'a>(candidates: impl IntoIterator<Item = &'a str>) -> Option<usize> {
+    let mut best: Option<(usize, f64)> = None;
+    for (i, candidate) in candidates.into_iter().enumerate() {
+        if let Some(fitness) = bigram_fitness(candidate) {
+            if best.is_none_or(|(_, best_fitness)| fitness > best_fitness) {
+                best = Some((i, fitness));
+            }
         }
     }
-    (collected, None)
+    best.map(|(i, _)| i)
 }
 
 /// Turns decoded bytes into text.

@@ -14,10 +14,11 @@ pub struct DetectParams {
     /// decoded first.
     #[schemars(length(min = 1, max = MAX_INPUT_CHARS))]
     pub text: String,
-    /// The checkers to run, by default all three. `lemmeknow` recognises over 100 formats
-    /// (IP and email addresses, URLs, API keys and tokens, crypto wallets, credit card
-    /// numbers, CTF flags, ...), `password` matches common passwords and `english` accepts
-    /// English text. They run in that order, and the first to accept the text answers.
+    /// The checkers to run, by default all five. `lemmeknow` recognises over 100 formats
+    /// (IP and email addresses, URLs, API keys and tokens, crypto wallets, CTF flags in any
+    /// format, ...), `json` accepts JSON objects and arrays, `password` matches common
+    /// passwords, `english` accepts English text and `code` source code and shell
+    /// commands. They run in that order, and the first to accept the text answers.
     pub checkers: Option<Vec<CheckerChoice>>,
     /// How readily the English checker takes text for English: `low` is the strictest,
     /// `medium` the default, and `high` the most lenient (it accepts English with typos,
@@ -38,16 +39,20 @@ pub enum CheckerChoice {
     // The variants have no doc comments on purpose: with them, schemars describes the enum
     // with `oneOf`, which some MCP clients don't understand, instead of a plain `enum`.
     Lemmeknow,
+    Json,
     Password,
     English,
+    Code,
 }
 
 impl From<CheckerChoice> for CheckerKind {
     fn from(choice: CheckerChoice) -> Self {
         match choice {
             CheckerChoice::Lemmeknow => CheckerKind::LemmeKnow,
+            CheckerChoice::Json => CheckerKind::Json,
             CheckerChoice::Password => CheckerKind::Password,
             CheckerChoice::English => CheckerKind::English,
+            CheckerChoice::Code => CheckerKind::Code,
         }
     }
 }
@@ -92,7 +97,7 @@ impl DetectParams {
         if request.options()?.enabled_checkers().next().is_none() {
             return Err(
                 "there are no checkers to run: list at least one of `lemmeknow`, \
-                 `password` and `english` in `checkers`, or pass a `regex`"
+                 `json`, `password`, `english` and `code` in `checkers`, or pass a `regex`"
                     .to_string(),
             );
         }
@@ -153,16 +158,17 @@ pub struct DetectOutput {
     pub is_plaintext: bool,
     /// What the checker that accepted the text found. Null if none accepted it.
     pub detection: Option<DetectionOutput>,
-    /// The checkers that ran, in order, such as `["lemmeknow", "password", "english"]`.
+    /// The checkers that ran, in order, such as
+    /// `["lemmeknow", "json", "password", "english", "code"]`.
     pub checkers: Vec<String>,
 }
 
 /// What one of ciphey's plaintext checkers found.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct DetectionOutput {
-    /// The checker that accepted the text: `regex` (the crib), `lemmeknow`, `password`,
-    /// `english`, or `jwt_structure` (a well-formed JSON Web Token, only in `decode_with`
-    /// results of the JWT decoder).
+    /// The checker that accepted the text: `regex` (the crib), `lemmeknow`, `json`,
+    /// `password`, `english`, `code`, or `jwt_structure` (a well-formed JSON Web Token,
+    /// only in `decode_with` results of the JWT decoder).
     pub checker: String,
     /// What the checker took the text for: `Words` for English, the name of the format
     /// LemmeKnow matched, such as `Internet Protocol (IP) Address Version 4`,
@@ -288,7 +294,10 @@ mod tests {
                 confidence: Some(0.7),
             })
         );
-        assert_eq!(ip.checkers, ["lemmeknow", "password", "english"]);
+        assert_eq!(
+            ip.checkers,
+            ["lemmeknow", "json", "password", "english", "code"]
+        );
 
         let english = detect(params("hello there general")).detection.unwrap();
         assert_eq!(english.checker, "english");
@@ -354,8 +363,8 @@ mod tests {
 
     #[test]
     fn sensitivity_changes_the_english_checker() {
-        // One English word in gibberish: only `high` takes it for English.
-        let text = "Rcl maocr otmwi lit dnoen oehc 13 iron seah.";
+        // English with typos: only `high` takes it for English.
+        let text = "let me jnow whdn you gdt home";
         let at = |sensitivity| {
             detect(DetectParams {
                 sensitivity: Some(sensitivity),

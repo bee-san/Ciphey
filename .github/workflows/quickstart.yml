@@ -1,6 +1,17 @@
-on: [push, pull_request]
+# Pull requests are tested through the pull_request event; running the same commits again on
+# every branch push doubled the work (177 push runs vs 114 PR runs in the 30 days to
+# 2026-10-13, 3 OSes each). Superseded runs of the same PR are cancelled.
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
 
 name: Test
+
+concurrency:
+  group: test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Least-privilege GITHUB_TOKEN: every job only needs to read the repo.
 # (Swatinem/rust-cache uses the Actions cache service, which doesn't need extra scopes.)
