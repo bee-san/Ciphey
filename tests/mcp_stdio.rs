@@ -470,7 +470,7 @@ fn detect_plaintext_identifies_text() {
                 "description": "Internet Protocol (IP) Address Version 4",
                 "confidence": 0.7,
             },
-            "checkers": ["lemmeknow", "password", "english"],
+            "checkers": ["lemmeknow", "json", "password", "english", "code"],
         })
     );
 
@@ -504,8 +504,8 @@ fn detect_plaintext_identifies_text() {
     assert_eq!(output["detection"]["checker"], "regex", "{output}");
     assert_eq!(output["checkers"], json!(["regex"]), "{output}");
 
-    // One English word in gibberish: only `high` sensitivity takes it for English.
-    let noisy = "Rcl maocr otmwi lit dnoen oehc 13 iron seah.";
+    // English with typos: only `high` sensitivity takes it for English.
+    let noisy = "let me jnow whdn you gdt home";
     for (sensitivity, is_plaintext) in [("low", false), ("high", true)] {
         let output = detect(
             &mut client,

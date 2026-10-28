@@ -9,6 +9,7 @@ cargo bench --bench decoders         # one suite
 cargo bench --bench decoders -- caesar        # benchmarks whose id matches a regex
 cargo bench --bench search -- search/multi
 cargo bench -- --test                # run every benchmark once and check the fixtures
+cargo bench --bench plaintext        # the plaintext-detection report (docs/plaintext-detection.md)
 ```
 
 | Suite | What it measures | Ids |
@@ -18,6 +19,7 @@ cargo bench -- --test                # run every benchmark once and check the fi
 | `crib` | The regex and wordlist checkers, plus two end-to-end `--regex` searches | `crib/...`, `crib/search/...` |
 | `search` | `perform_cracking` end to end: input that is already plaintext, single-layer and multi-layer encodings, and inputs with no solution, all with a 1 second timeout | `search/{plaintext,single,multi,no_solution}/<case>` |
 | `startup` | Config defaults, loading `config.toml` and a wordlist, the SQLite cache, `perform_cracking` on a cache hit and miss, and the `ciphey` binary started as a subprocess (Unix only) | `startup/...` |
+| `plaintext` | Plaintext-detection accuracy (precision, recall and F1 per checker, family and category, on train and held-out splits), time per check, decoder results and, with `-- --e2e`, whole searches. Not criterion: a report. See [docs/plaintext-detection.md](../docs/plaintext-detection.md) | - |
 
 Criterion keeps results in `target/criterion` and compares each run with the previous
 one. To compare against a named baseline:
@@ -70,9 +72,10 @@ update the fixture. Search results are only checked in optimised builds: under
   iteration (`ciphey::reset_decoder_stats`), so each search explores in the same order
   as in a fresh `ciphey` process instead of depending on how many searches ran before.
 * The no-solution searches end when the decoders run out of candidates, when the
-  search settles on a false positive (most gibberish ends up as rot47 → Vigenere), or
-  at the timeout. Which one happens can depend on machine speed, so only the
-  "exhausted" and "timeout" outcomes are checked.
+  search settles on a false positive, or at the timeout. Which one happens can depend on
+  machine speed, so only the "exhausted" and "timeout" outcomes are checked. Before
+  [#1031](https://github.com/bee-san/Ciphey/issues/1031) both gibberish inputs ended
+  early on a false positive (rot47 → Vigenere); now they run until the timeout.
 * The search runs on rayon's thread pool, so its numbers depend on core count and on
   whatever else the machine is doing. Close other heavy work before comparing runs.
 

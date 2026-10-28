@@ -1,0 +1,893 @@
+# Plaintext-detection benchmark data: hand-picked samples. category<TAB>split<TAB>text, with
+# \t, \n, \r and \\ escaped. See docs/plaintext-detection.md for what each category is.
+# Sources: the #1031 harness's lists (all train: the thresholds were tuned on them), text
+# written for this benchmark, public-domain verse and quotations, and pyWhat's examples of
+# the formats LemmeKnow knows (lemmeknow 0.8.0's regex.json, MIT), except formats that look
+# like credentials, which benches/plaintext.rs generates at start-up (GitHub's push
+# protection blocks even pyWhat's public examples of them). Other samples are split into
+# train and heldout by a hash of their text.
+code	heldout	import os\nprint(os.getcwd())
+code	heldout	ls -la /home/user
+code	heldout	cat /etc/passwd | grep root
+code	heldout	git commit -m "fix the parser"
+code	heldout	docker run -it ubuntu bash
+code	heldout	let x = 5; x += 1;
+code	heldout	public static void main(String[] args) { System.out.println("Hi"); }
+code	heldout	<html><body><h1>Hello</h1></body></html>
+code	heldout	<script>alert(1)</script>
+code	heldout	CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT);
+code	heldout	puts "Hello from Ruby"
+code	heldout	awk '{print $1}' access.log | sort | uniq -c
+code	heldout	grep -rn "TODO" src/
+code	heldout	export PATH=$PATH:/usr/local/bin
+code	heldout	eval(atob("YWxlcnQoMSk="))
+code	heldout	printf("%d\\n", x);
+code	heldout	return a.map(x => x * 2).filter(Boolean);
+code	heldout	mov eax, 1\nint 0x80
+code	heldout	nmap -sV -p- 10.10.10.10
+code	heldout	openssl enc -d -aes-256-cbc -in secret.enc -out secret.txt
+code	heldout	key = "supersecret"\ncipher = AES.new(key, AES.MODE_ECB)
+code	train	print("hello world")
+code	train	def add(a, b): return a + b
+code	train	int main() { return 0; }
+code	train	SELECT * FROM users WHERE id = 1;
+code	train	console.log('hi');
+code	train	#include <stdio.h>
+code	train	fn main() { println!("Hello, world!"); }
+code	train	for i in range(10): print(i)
+code	train	echo "hello" > /tmp/out.txt
+code	train	curl -s https://example.com/api/v1/status
+code	train	sudo apt-get install python3
+code	train	chmod +x run.sh && ./run.sh
+code	train	nc -lvnp 4444
+code	train	python3 -c 'import pty; pty.spawn("/bin/bash")'
+code	train	const sum = (a, b) => a + b;
+code	train	if (x > 10) { return true; } else { return false; }
+code	train	while True:\n    pass
+code	train	<?php echo 'Hello World'; ?>
+code	train	' OR '1'='1' --
+code	train	UPDATE accounts SET balance = 0 WHERE id = 7;
+code	train	x = [i * i for i in range(5)]
+code	train	try:\n    main()\nexcept Exception as e:\n    print(e)
+code	train	function greet(name) {\n  return "Hello, " + name;\n}
+code	train	package main\n\nimport "fmt"\n\nfunc main() { fmt.Println("hi") }
+code	train	#!/bin/bash\nfor f in *.txt; do wc -l "$f"; done
+code	train	SELECT name, COUNT(*) FROM orders GROUP BY name ORDER BY 2 DESC;
+code	train	from flask import Flask\napp = Flask(__name__)
+code	train	ssh root@192.168.1.10 -p 2222
+code	train	base64 -d flag.txt
+ctf_flag	heldout	flag{base64_all_the_way_down}
+ctf_flag	heldout	flag{xor_is_reversible}
+ctf_flag	heldout	flag{s1mpl3_subst1tut10n}
+ctf_flag	heldout	flag{h3x_t0_ascii}
+ctf_flag	heldout	flag{m0rse_c0de_r0cks}
+ctf_flag	heldout	Flag{Mixed_Case_Flag}
+ctf_flag	heldout	picoCTF{not_too_bad_of_a_problem}
+ctf_flag	heldout	picoCTF{3nc0d1ng_1s_n0t_3ncrypt10n}
+ctf_flag	heldout	picoCTF{1n_7h3_|<3y_0f_e48d1c79}
+ctf_flag	heldout	picoCTF{h4ck3r_m4n_8a2e5c1f}
+ctf_flag	heldout	CTF{s0_m4ny_l4y3rs}
+ctf_flag	heldout	HTB{b4s1c_3nc0d1ng}
+ctf_flag	heldout	DUCTF{c4nt_st0p_th3_r0ck}
+ctf_flag	heldout	tjctf{j4v4scr1pt_1s_w31rd}
+ctf_flag	heldout	bctf{binary_bomb_defused}
+ctf_flag	heldout	lactf{l4_l4_l4nd}
+ctf_flag	heldout	SEKAI{w3lc0me_t0_s3k41}
+ctf_flag	heldout	dice{sp4rkl3s}
+ctf_flag	heldout	dice{h0p_on_th3_tr41n}
+ctf_flag	heldout	hkcert{h0ng_k0ng}
+ctf_flag	heldout	gigem{h0wdy_4gg13s}
+ctf_flag	heldout	UMDCTF{t3rr4p1ns}
+ctf_flag	heldout	ASIS{a5ia_ctf_fl4g}
+ctf_flag	heldout	CSCG{cy83r_s3cur1ty}
+ctf_flag	heldout	FwordCTF{fw0rd_fl4g}
+ctf_flag	train	flag{this_is_the_flag}
+ctf_flag	train	FLAG{HELLO_WORLD}
+ctf_flag	train	CTF{c4es4r_1s_e4sy}
+ctf_flag	train	picoCTF{b4s3_64_1s_fun}
+ctf_flag	train	HTB{s0m3_fl4g_h3r3}
+ctf_flag	train	THM{tryh4ckm3_r0cks}
+ctf_flag	train	DUCTF{d0wn_und3r}
+ctf_flag	train	flag{w3lc0me_t0_th3_g4me}
+ctf_flag	train	csawctf{n0t_s0_h4rd}
+ctf_flag	train	uiuctf{rust_is_great}
+ctf_flag	train	CTF{the_quick_brown_fox}
+ctf_flag	train	picoCTF{the_answer_is_42}
+ctf_flag	train	flag{n3st3d_b64_is_fun}
+ctf_flag	train	flag{caesar_is_too_easy}
+ctf_flag	train	flag{r0t13_1s_n0t_encrypt10n}
+ctf_flag	train	flag{you_found_me}
+ctf_flag	train	flag{d3c0d3_m3_1f_y0u_c4n}
+ctf_flag	train	flag{7e1b9e3a2f4d}
+ctf_flag	train	flag{0f2a9c6e1b7d4a83}
+ctf_flag	train	flag{1_l0v3_crypt0}
+ctf_flag	train	flag{the_quick_brown_fox}
+ctf_flag	train	FLAG{CAPITAL_LETTERS_ONLY}
+ctf_flag	train	picoCTF{next_time_I'll_try_2_rounds_of_rot13_hWqFsgzu}
+ctf_flag	train	picoCTF{w1z4rd_0f_b1n4ry}
+ctf_flag	train	HTB{r3v3rs3_th3_str1ng}
+ctf_flag	train	THM{hidden_in_plain_sight}
+ctf_flag	train	utflag{w4ll_0f_t3xt}
+ctf_flag	train	actf{all_cows_eat_grass}
+ctf_flag	train	ictf{1m4g1n4ry_fl4g}
+ctf_flag	train	nactf{n0t_4_r3al_fl4g}
+ctf_flag	train	wctf{w0lv3r1n3s}
+ctf_flag	train	sdctf{s4n_d13g0}
+ctf_flag	train	SEKAI{y0u_f0und_m3}
+ctf_flag	train	ENO{w3ll_d0ne!}
+ctf_flag	train	CCTF{h0w_d1d_y0u_f1nd_m3}
+ctf_flag	train	corctf{c0rr3ct_fl4g}
+ctf_flag	train	TFCCTF{t3st_fl4g}
+ctf_flag	train	RCTF{r3d_fl4g}
+ctf_flag	train	DEADFACE{d34d_f4c3}
+ctf_flag	train	bi0sctf{b10s_rul3s}
+ctf_flag	train	justCTF{just_4_t3st}
+ctf_flag	train	KCTF{k1ll3r_qu33n}
+ctf_flag	train	SECCON{j4p4n3s3_fl4g}
+email	heldout	bob.smith@company.org
+email	heldout	security@github.com
+email	heldout	john_doe123@mail.example.net
+email	heldout	first.last@university.ac.uk
+email	heldout	noreply@accounts.google.com
+email	heldout	info@museum.museum
+email	train	bee@skerritt.blog
+email	train	user.name+tag@example.co.uk
+email	train	alice@example.com
+email	train	admin@localhost.localdomain
+email	train	contact@ciphey.dev
+email	train	support@service.io
+email	train	jane-doe@sub.domain.example.com
+email	train	hello@world.dev
+email	train	root@kali.local
+en_chat	heldout	hey are you coming tonight?
+en_chat	heldout	lol that was hilarious
+en_chat	heldout	ok sounds good to me
+en_chat	heldout	did you see the game last night
+en_chat	heldout	omg I forgot my keys again
+en_chat	heldout	no worries, happy to help
+en_chat	heldout	what time does the movie start
+en_chat	heldout	let me know when you get home
+en_chat	heldout	honestly I have no idea what's going on
+en_chat	heldout	that's a great idea, let's do it
+en_chat	heldout	just got home, it's freezing outside
+en_chat	heldout	my phone is about to die
+en_chat	heldout	I'll send you the photos later
+en_chat	heldout	wish you were here
+en_chat	heldout	yeah I'm free after five
+en_chat	heldout	see you at the usual spot
+en_chat	heldout	can you believe it's already friday
+en_chat	heldout	i'm outside, open the door
+en_chat	heldout	who's bringing the snacks?
+en_chat	heldout	pizza or tacos tonight?
+en_chat	heldout	my mum says hi
+en_chat	heldout	we should go hiking sometime
+en_chat	heldout	that song has been stuck in my head all day
+en_chat	heldout	did anyone see my blue jacket
+en_chat	heldout	I'll be honest, I didn't read the email
+en_chat	heldout	send me the address and I'll be there
+en_chat	train	can't talk right now, call you later
+en_chat	train	where are you? we're waiting outside
+en_chat	train	running late, be there in 10
+en_chat	train	thanks so much for the help yesterday
+en_chat	train	I'm so tired I could sleep for a week
+en_chat	train	haha yeah I know what you mean
+en_chat	train	can you pick up some milk on the way back
+en_chat	train	sorry I missed your call
+en_chat	train	brb grabbing a coffee
+en_chat	train	the wifi is down again, ugh
+en_chat	train	do you want to grab lunch tomorrow?
+en_chat	train	miss you already
+en_chat	train	good luck on your exam!
+en_chat	train	congrats on the new job!!
+en_chat	train	not gonna lie that was pretty good
+en_chat	train	wait what happened?
+en_chat	train	I think I left my wallet at your place
+en_chat	train	are we still on for saturday
+en_chat	train	nah I'm good thanks
+en_chat	train	this weather is ridiculous
+en_chat	train	it's my turn to cook tonight
+en_chat	train	don't forget to feed the cat
+en_chat	train	the bus is late again
+en_chat	train	just finished the book, the ending was wild
+en_chat	train	call me when you wake up
+en_chat	train	any plans for the weekend?
+en_chat	train	I can't find the remote anywhere
+en_chat	train	hurry up, the train leaves in five minutes
+en_chat	train	let's meet at the coffee shop on main street
+en_chat	train	happy new year everyone!
+en_chat	train	is it just me or is it really hot in here
+en_chat	train	the party was amazing, thanks for inviting me
+en_chat	train	can we reschedule to next week?
+en_chat	train	okay, I'll take care of it
+en_ctf	heldout	Look for the hidden message in the image metadata.
+en_ctf	heldout	The key is the name of the first cipher you learned.
+en_ctf	heldout	Congratulations, you have solved the first challenge!
+en_ctf	heldout	The secret code is four digits long.
+en_ctf	heldout	The treasure is buried beneath the third oak tree.
+en_ctf	heldout	Agent Smith will contact you at the train station.
+en_ctf	heldout	The launch codes have been changed.
+en_ctf	heldout	Go to the main square and wait for the signal.
+en_ctf	heldout	Your mission, should you choose to accept it, begins tomorrow.
+en_ctf	heldout	Rotate the letters thirteen places to read this.
+en_ctf	heldout	This is not the flag, try harder.
+en_ctf	heldout	We attack at dawn from the eastern hill.
+en_ctf	heldout	The prisoner escaped through the tunnel under the wall.
+en_ctf	heldout	Bring the key, the map and a torch.
+en_ctf	heldout	The code word is pineapple.
+en_ctf	heldout	If you can read this, you are on the right track.
+en_ctf	heldout	The meeting point has moved to the harbour.
+en_ctf	heldout	Leave the money under the bench in the park.
+en_ctf	train	The flag is hidden in the source code of the login page.
+en_ctf	train	The password for the next level is stored in a file called readme.
+en_ctf	train	You are getting closer, keep decoding.
+en_ctf	train	Meet me at the old library at midnight.
+en_ctf	train	Do not trust the man in the grey coat.
+en_ctf	train	The next clue is written on the back of the map.
+en_ctf	train	The documents are in the safe behind the painting.
+en_ctf	train	Destroy this message after reading.
+en_ctf	train	The answer to the riddle is a shadow.
+en_ctf	train	Nothing is hidden that will not be revealed.
+en_ctf	train	The vault opens only at sunrise.
+en_ctf	train	The password is swordfish.
+en_ctf	train	Remember the date, the fifth of November.
+en_ctf	train	The package will arrive on Thursday morning.
+en_ctf	train	Every cipher can be broken with enough patience.
+en_ctf	train	Well done, you decoded the base64 string.
+en_ctf	train	The real flag is two layers deeper.
+en_ctf	train	Knock three times and ask for Alice.
+en_ctf	train	The pigeon flies at noon.
+en_ctf	train	Send reinforcements to the northern border.
+en_ctf	train	All units report to headquarters immediately.
+en_ctf	train	The spy has been identified, proceed with caution.
+en_formal	heldout	Residents were advised to stay indoors as the storm approached the coast.
+en_formal	heldout	Scientists have discovered a new species of frog in the rainforest.
+en_formal	heldout	The election results will be announced later this evening.
+en_formal	heldout	The tenant shall pay the rent on the first day of each month.
+en_formal	heldout	The findings suggest that regular exercise improves memory in older adults.
+en_formal	heldout	The minister declined to comment on the reports.
+en_formal	heldout	The hospital has opened a new wing for children.
+en_formal	heldout	Unemployment fell to its lowest level in a decade.
+en_formal	heldout	We regret to inform you that your application was unsuccessful.
+en_formal	heldout	Please find attached the minutes of the last meeting.
+en_formal	heldout	The board of directors approved the merger unanimously.
+en_formal	heldout	The prime minister will address the nation tonight.
+en_formal	heldout	The orchestra performed to a sold out audience on Saturday night.
+en_formal	heldout	The survey was conducted among two thousand adults across the country.
+en_formal	heldout	The new law comes into force at the beginning of next year.
+en_formal	train	The committee will meet on Tuesday to review the annual budget.
+en_formal	train	Officials confirmed that the bridge will remain closed until further notice.
+en_formal	train	The company reported a sharp rise in profits during the third quarter.
+en_formal	train	The agreement was signed by representatives of both governments.
+en_formal	train	Heavy rain caused flooding in several towns along the river.
+en_formal	train	The museum has acquired a rare collection of medieval manuscripts.
+en_formal	train	Police are asking anyone with information to come forward.
+en_formal	train	This agreement shall be governed by the laws of the state.
+en_formal	train	All employees are required to complete the safety training by Friday.
+en_formal	train	Tickets for the concert sold out within minutes.
+en_formal	train	The court ruled that the contract was valid.
+en_formal	train	The festival attracts thousands of visitors every summer.
+en_formal	train	Applicants must submit their documents before the deadline.
+en_formal	train	The library will be closed on public holidays.
+en_formal	train	According to the report, the project is two months behind schedule.
+en_formal	train	The ancient city was buried by volcanic ash nearly two thousand years ago.
+en_formal	train	The treaty ended a war that had lasted for more than thirty years.
+en_formal	train	The university announced a new scholarship for students from rural areas.
+en_formal	train	Customers can return any item within thirty days of purchase.
+en_formal	train	Shares fell sharply after the announcement.
+en_formal	train	The trial is expected to last several weeks.
+en_formal	train	Researchers warn that the glacier is melting faster than expected.
+en_formal	train	In conclusion, the evidence supports the original hypothesis.
+en_formal	train	Visitors are reminded that photography is not permitted in the gallery.
+en_formal	train	The airline cancelled dozens of flights because of the strike.
+en_nospace	train	WEAREDISCOVEREDFLEEATONCE
+en_nospace	train	DEFENDTHEEASTWALLOFTHECASTLE
+en_paragraph	heldout	It was a cold morning in late November when the letter arrived. Nobody in the village knew who had sent it, and the envelope carried no stamp. Inside was a single sheet of paper covered in rows of letters that made no sense at all. The schoolteacher, who had once worked as a codebreaker, recognised the pattern at once and began to count.
+en_paragraph	heldout	To install the program, download the archive for your operating system and extract it to a folder of your choice. Then open a terminal in that folder and run the installer. If you see a permission error, try again with administrator rights. When the installation finishes, restart your computer before you use the program for the first time.
+en_paragraph	heldout	The old lighthouse stood on a rock at the edge of the bay. For more than a hundred years its light had guided ships safely into the harbour. Now it was empty, its windows broken and its door rusted shut. But every night, just after midnight, the fishermen swore they could still see a faint light turning at the top of the tower.
+en_paragraph	heldout	The experiment was repeated three times under the same conditions. In each case the temperature rose quickly during the first ten minutes and then levelled off. We believe that the small differences between the runs were caused by changes in the room temperature rather than by the samples themselves.
+en_paragraph	heldout	Security researchers have found a flaw in a popular messaging app that could let attackers read private messages. The company said it had fixed the problem and urged users to update their phones as soon as possible. There is no evidence that the flaw was used by criminals before it was reported.
+en_paragraph	heldout	The capture the flag competition starts at nine o'clock on Saturday morning and runs for forty eight hours. Teams of up to four people may take part. Challenges cover cryptography, forensics, reverse engineering and web security. Flags are in the usual format, and the scoreboard will be frozen during the last hour.
+en_paragraph	heldout	When the train finally stopped, the passengers poured out onto the platform. Some ran towards the exit, others stood still and looked around as if they had forgotten why they had come. An old man with a suitcase sat down on a bench, opened a newspaper and began to read as though nothing in the world could hurry him.
+en_paragraph	heldout	We are pleased to announce that the new version of the software is now available. This release includes faster startup times, a redesigned settings page and support for dark mode. It also fixes several bugs reported by our users, including a crash that happened when files were opened from a network drive.
+en_paragraph	heldout	Our ancestors looked up at the night sky and saw patterns in the stars. They gave the patterns names and told stories about them, and they used them to find their way across deserts and oceans. Today we know that the stars in a constellation are often very far apart, but the old names and stories remain.
+en_paragraph	heldout	If you are reading this, the plan has worked. The files you need are on the memory stick taped under the desk in room twelve. Copy them, put the stick back exactly where you found it and leave by the back stairs. Do not use your phone until you are at least two streets away from the building.
+en_paragraph	train	Thank you for contacting customer support. We have received your request and a member of our team will get back to you within two working days. In the meantime, you may find the answer to your question in the help centre on our website. Please quote your reference number in any future correspondence.
+en_paragraph	train	Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings and stops when it finds something that reads like plaintext.
+en_paragraph	train	Dear Sarah, I hope this letter finds you well. The weather here has been terrible all week, but the children are enjoying the snow. We are planning to visit you in the spring, if that suits you. Please give my love to your parents and tell them we miss them. With best wishes, Margaret.
+en_paragraph	train	Once upon a time there lived a king who had three daughters. The youngest was so beautiful that even the sun, which has seen so many things, was astonished whenever it shone upon her face. Near the castle there was a great dark forest, and in the forest, under an old lime tree, there was a well.
+en_paragraph	train	First, preheat the oven to one hundred and eighty degrees. Mix the flour, sugar and butter in a large bowl until the mixture looks like breadcrumbs. Add the eggs one at a time and stir well. Pour the batter into a greased tin and bake for about forty minutes, or until a knife comes out clean.
+en_paragraph	train	Please read these instructions carefully before you start. Answer all of the questions in the spaces provided. You may use a calculator, but you must show your working. The exam lasts two hours, and you will not be allowed to leave the room during the first thirty minutes.
+en_paragraph	train	The hikers set off early, hoping to reach the summit before the clouds rolled in. The path was steep and covered in loose stones, and by midday they were exhausted. They stopped by a small stream to eat their sandwiches and fill their bottles. From there they could already see the hut where they would spend the night.
+en_paragraph	train	The detective looked at the muddy footprints on the kitchen floor and then at the open window. Whoever had come in had not bothered to hide their tracks. He knelt down, measured one of the prints with his hand and smiled. The thief, he said, was a tall man who walked with a limp and had recently been to the harbour.
+en_paragraph	train	Good evening and welcome to the late news. Tonight, thousands of people have been left without power after strong winds brought down cables across the region. Engineers are working through the night to restore supplies, but some homes may not be reconnected until tomorrow afternoon.
+en_paragraph	train	Learning a new language takes time and patience. Try to practise a little every day rather than a lot once a week. Listen to music, watch films and read simple books in the language you are learning. Most importantly, do not be afraid of making mistakes, because that is how everybody learns.
+en_phrase	heldout	the eagle has landed
+en_phrase	heldout	open the door
+en_phrase	heldout	see you tomorrow
+en_phrase	heldout	good luck
+en_phrase	heldout	almost there
+en_phrase	heldout	you found it
+en_phrase	heldout	you win
+en_phrase	heldout	game over
+en_phrase	heldout	happy birthday
+en_phrase	heldout	good night
+en_phrase	heldout	no problem
+en_phrase	heldout	follow the white rabbit
+en_phrase	heldout	under the bridge
+en_phrase	heldout	behind the clock
+en_phrase	heldout	in the garden
+en_phrase	heldout	hello there
+en_phrase	heldout	hi friend
+en_phrase	heldout	I am here
+en_phrase	heldout	help me
+en_phrase	heldout	call me later
+en_phrase	heldout	bring snacks
+en_phrase	heldout	stay hidden
+en_phrase	heldout	it is a trap
+en_phrase	heldout	Thank you!
+en_phrase	heldout	Wait for me.
+en_phrase	heldout	Mission accomplished.
+en_phrase	heldout	Baker Street
+en_phrase	heldout	fish and chips
+en_phrase	heldout	salt and pepper
+en_phrase	heldout	black coffee
+en_phrase	heldout	code red
+en_phrase	heldout	roger that
+en_phrase	heldout	on my way
+en_phrase	heldout	cold water
+en_phrase	heldout	blue moon
+en_phrase	heldout	dear diary
+en_phrase	heldout	long live the king
+en_phrase	heldout	knock knock
+en_phrase	heldout	the quick brown fox
+en_phrase	heldout	apple pie
+en_phrase	heldout	up the hill
+en_phrase	heldout	down the rabbit hole
+en_phrase	heldout	the key is under the mat
+en_phrase	heldout	I love pizza
+en_phrase	heldout	we are the champions
+en_phrase	heldout	lost in space
+en_phrase	heldout	the last one
+en_phrase	heldout	two more days
+en_phrase	heldout	three blind mice
+en_phrase	train	hello world
+en_phrase	train	attack at dawn
+en_phrase	train	meet me at noon
+en_phrase	train	it is in the box
+en_phrase	train	I love you
+en_phrase	train	thank you
+en_phrase	train	good morning
+en_phrase	train	the end
+en_phrase	train	open sesame
+en_phrase	train	top secret
+en_phrase	train	send help
+en_phrase	train	see you soon
+en_phrase	train	call me
+en_phrase	train	hi there
+en_phrase	train	no way
+en_phrase	train	well done
+en_phrase	train	nice try
+en_phrase	train	try again
+en_phrase	train	not quite
+en_phrase	train	keep going
+en_phrase	train	merry christmas
+en_phrase	train	thank you very much
+en_phrase	train	look behind you
+en_phrase	train	the cake is a lie
+en_phrase	train	how are you
+en_phrase	train	send the money
+en_phrase	train	trust no one
+en_phrase	train	run away
+en_phrase	train	the answer is yes
+en_phrase	train	Hello, World!
+en_phrase	train	Good morning!
+en_phrase	train	Well done!
+en_phrase	train	Oh no!
+en_phrase	train	Not today.
+en_phrase	train	See you soon.
+en_phrase	train	Over and out.
+en_phrase	train	New York City
+en_phrase	train	Sherlock Holmes
+en_phrase	train	the north tower
+en_phrase	train	a cup of tea
+en_phrase	train	a piece of cake
+en_phrase	train	rock and roll
+en_phrase	train	red alert
+en_phrase	train	plan B
+en_phrase	train	stand by
+en_phrase	train	copy that
+en_phrase	train	just kidding
+en_phrase	train	carpe diem
+en_phrase	train	time flies
+en_phrase	train	seize the day
+en_phrase	train	under pressure
+en_phrase	train	from the river to the sea
+en_phrase	train	dinner is ready
+en_phrase	train	back to the future
+en_phrase	train	sweet dreams
+en_phrase	train	break a leg
+en_sentence	train	The quick brown fox jumps over the lazy dog
+en_sentence	train	Hello, my name is Bee and I like to decode things
+en_sentence	train	It was the best of times, it was the worst of times
+en_sentence	train	We hold these truths to be self-evident, that all men are created equal
+en_sentence	train	To be or not to be, that is the question
+en_sentence	train	The meeting has been moved to Thursday afternoon at three o'clock
+en_sentence	train	Please remember to bring your laptop and charger to the workshop
+en_sentence	train	Cryptography is the practice and study of techniques for secure communication
+en_sentence	train	The treasure is buried under the old oak tree near the river
+en_sentence	train	All work and no play makes Jack a dull boy
+en_sentence	train	I think we should leave before the storm arrives tonight
+en_sentence	train	Never gonna give you up, never gonna let you down
+en_sentence	train	The password for the server is stored in the blue notebook
+en_sentence	train	Sometimes the simplest solution is the one that works best
+en_sentence	train	This is a secret message that nobody else should be able to read
+en_sentence	train	Attack the north gate at dawn and hold the bridge until noon
+en_sentence	train	She sells sea shells by the sea shore every summer morning
+en_sentence	train	The museum will be closed for renovations until next spring
+en_sentence	train	Can you send me the report by the end of the day please
+en_sentence	train	Ciphey is an automated decoding tool written in Rust
+en_sentence	train	Don't stop believing!
+en_sentence	train	It's a well-known fact.
+en_sentence	train	E-mail me at noon, OK?
+en_sentence	train	Hello,world!How are you?
+en_sentence	train	Wait... what?!
+en_sentence	train	This is state-of-the-art technology.
+en_sentence	train	Rock'n'roll isn't dead; it's evolving.
+en_sentence	train	"Help!" she shouted, "I'm stuck!"
+en_sentence	train	We can't, won't, and shouldn't do that.
+en_sentence	train	Q: What's up? A: Not much.
+en_sentence	train	Mr. Smith's dog-walking service (est. 1999)
+en_sentence	train	The cost is $5.99 - a bargain!
+en_sentence	train	You're welcome :)
+en_sentence	train	Item #42: 'fragile' - handle with care.
+en_sentence	train	Ready? Set... go!
+en_technical	heldout	Run the build script before you deploy the container.
+en_technical	heldout	The server returned a 404 error for every request.
+en_technical	heldout	The cache is cleared every time the application starts.
+en_technical	heldout	Install the dependencies with the package manager first.
+en_technical	heldout	The memory usage grew steadily until the process crashed.
+en_technical	heldout	The log file rotates when it reaches one hundred megabytes.
+en_technical	heldout	Our tests pass on Linux but fail on Windows.
+en_technical	heldout	Disk space is running low on the primary database server.
+en_technical	heldout	The script reads the input file line by line.
+en_technical	heldout	A race condition causes the counter to skip values.
+en_technical	heldout	Upgrade the library to the latest stable version.
+en_technical	heldout	The certificate expires at the end of the month.
+en_technical	heldout	The queue processes messages in the order they arrive.
+en_technical	heldout	The load balancer sends traffic to the healthy instances.
+en_technical	heldout	Commit your changes and open a pull request for review.
+en_technical	heldout	Set the environment variable before running the tests.
+en_technical	heldout	A hash function maps data of any size to a fixed size value.
+en_technical	heldout	Base64 encoding turns binary data into printable text.
+en_technical	heldout	The checksum did not match, so the download is corrupted.
+en_technical	heldout	The kernel panicked during boot after the update.
+en_technical	heldout	Your account has been locked after too many failed attempts.
+en_technical	heldout	Click the button below to verify your email address.
+en_technical	heldout	Permission denied while opening the configuration file.
+en_technical	heldout	The operation completed successfully.
+en_technical	heldout	The function was called with too many arguments.
+en_technical	heldout	The cluster has three nodes and one of them is down.
+en_technical	heldout	Check the documentation for the full list of options.
+en_technical	heldout	The output is written to standard error instead of standard output.
+en_technical	train	Restart the service after changing the configuration file.
+en_technical	train	The database migration failed because a column already exists.
+en_technical	train	Make sure the firewall allows traffic on port 443.
+en_technical	train	This function returns an empty list when the input is invalid.
+en_technical	train	The backup job runs every night at two in the morning.
+en_technical	train	Each request must include a valid authentication token.
+en_technical	train	Use a strong password and enable two factor authentication.
+en_technical	train	The compiler warns about an unused variable in the parser.
+en_technical	train	The API rate limit is one thousand requests per hour.
+en_technical	train	Encrypt the data at rest and in transit.
+en_technical	train	Please attach the stack trace to the bug report.
+en_technical	train	The binary is stripped, so there are no debug symbols.
+en_technical	train	The parser rejects any line that starts with a hash.
+en_technical	train	The new release fixes a crash when the network is offline.
+en_technical	train	Every file in the directory is scanned for viruses.
+en_technical	train	The query takes three seconds because the table has no index.
+en_technical	train	Cryptography protects information by transforming it into an unreadable form.
+en_technical	train	The Caesar cipher shifts every letter by the same amount.
+en_technical	train	Never store passwords in plain text.
+en_technical	train	The private key must never leave the hardware module.
+en_technical	train	Turn it off and on again.
+en_technical	train	The user interface freezes when the window is resized.
+en_technical	train	Please do not reply to this automated message.
+en_technical	train	The meeting link will be sent by email.
+en_technical	train	The update will be installed when you restart your computer.
+en_technical	train	Unable to connect to the remote server.
+en_technical	train	Searching for the plaintext in every possible decoding.
+en_technical	train	The A star search expands the most promising node first.
+en_technical	train	Each decoder runs in parallel on its own thread.
+en_technical	train	The timeout stops the search after five seconds.
+en_technical	train	Memory is freed when the last reference goes out of scope.
+en_technical	train	The service listens on localhost only.
+en_verse	heldout	Water, water, every where, nor any drop to drink.
+en_verse	heldout	Hope is the thing with feathers that perches in the soul.
+en_verse	heldout	The woods are lovely, dark and deep, but I have promises to keep.
+en_verse	heldout	Do not go gentle into that good night.
+en_verse	heldout	Twinkle, twinkle, little star, how I wonder what you are.
+en_verse	heldout	Mary had a little lamb, its fleece was white as snow.
+en_verse	heldout	All that glitters is not gold.
+en_verse	heldout	To err is human, to forgive divine.
+en_verse	heldout	A thing of beauty is a joy for ever.
+en_verse	heldout	Friends, Romans, countrymen, lend me your ears.
+en_verse	heldout	It is a truth universally acknowledged that a single man in possession of a good fortune must be in want of a wife.
+en_verse	heldout	Ask not what your country can do for you.
+en_verse	heldout	That's one small step for man, one giant leap for mankind.
+en_verse	train	Shall I compare thee to a summer's day? Thou art more lovely and more temperate.
+en_verse	train	Two roads diverged in a yellow wood, and sorry I could not travel both.
+en_verse	train	Tyger Tyger, burning bright, in the forests of the night.
+en_verse	train	I wandered lonely as a cloud that floats on high o'er vales and hills.
+en_verse	train	Because I could not stop for Death, he kindly stopped for me.
+en_verse	train	Half a league, half a league, half a league onward.
+en_verse	train	Once upon a midnight dreary, while I pondered, weak and weary.
+en_verse	train	I think that I shall never see a poem lovely as a tree.
+en_verse	train	Humpty Dumpty sat on a wall, Humpty Dumpty had a great fall.
+en_verse	train	The quality of mercy is not strained.
+en_verse	train	Now is the winter of our discontent.
+en_verse	train	Call me Ishmael.
+en_verse	train	The only thing we have to fear is fear itself.
+en_verse	train	I have a dream that one day this nation will rise up.
+en_verse	train	Knowledge is power.
+en_verse	train	Fortune favours the bold.
+en_verse	train	Where there is a will there is a way.
+en_word	heldout	welcome
+en_word	heldout	library
+en_word	heldout	mountain
+en_word	heldout	whisper
+en_word	heldout	journey
+en_word	heldout	firewall
+en_word	heldout	sunflower
+en_word	heldout	umbrella
+en_word	heldout	tomorrow
+en_word	heldout	mystery
+en_word	heldout	question
+en_word	heldout	answer
+en_word	heldout	silence
+en_word	heldout	thunder
+en_word	heldout	decoded
+en_word	heldout	hidden
+en_word	heldout	Congratulations
+en_word	heldout	Hello
+en_word	heldout	Goodbye
+en_word	heldout	SECRET
+en_word	heldout	TREASURE
+en_word	heldout	WELCOME
+en_word	heldout	everything
+en_word	heldout	programming
+en_word	heldout	something
+en_word	heldout	beautiful
+en_word	heldout	celebration
+en_word	heldout	experience
+en_word	heldout	basketball
+en_word	heldout	playground
+en_word	heldout	photograph
+en_word	heldout	dangerous
+en_word	heldout	wonderful
+en_word	train	hello
+en_word	train	yes
+en_word	train	secret
+en_word	train	computer
+en_word	train	elephant
+en_word	train	treasure
+en_word	train	password
+en_word	train	midnight
+en_word	train	lighthouse
+en_word	train	attack
+en_word	train	dragon
+en_word	train	keyboard
+en_word	train	butterfly
+en_word	train	chocolate
+en_word	train	hospital
+en_word	train	yesterday
+en_word	train	kitchen
+en_word	train	pyramid
+en_word	train	starlight
+en_word	train	detective
+en_word	train	victory
+en_word	train	freedom
+en_word	train	cipher
+en_word	train	puzzle
+en_word	train	riddle
+en_word	train	message
+en_word	train	Welcome
+en_word	train	Thanks
+en_word	train	VICTORY
+en_word	train	encryption
+en_word	train	understanding
+en_word	train	information
+en_word	train	neighbourhood
+en_word	train	adventure
+en_word	train	knowledge
+en_word	train	government
+en_word	train	throughout
+en_word	train	interesting
+en_word	train	friendship
+en_word	train	comfortable
+hash	train	5f4dcc3b5aa765d61d8327deb882cf99
+hash	train	5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8
+hash	train	5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8
+hash	train	5d41402abc4b2a76b9719d911017c592
+hash	train	aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d
+hash	train	2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+hash	train	65aceb62e48136baaad4c3df3cc89bdf
+hash	train	4ae6e6b0d2cc66305737df35a08b4d5d7b034290
+hash	train	e17ca16299cb5c965a4dbc69b719a22ba18fdf483bced1823f79d13432cc9904
+hash	train	21232f297a57a5a743894a0e4a801fc3
+hash	train	d033e22ae348aeb5660fc2140aec35850c4da997
+hash	train	8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+ip	heldout	172.16.254.1
+ip	heldout	255.255.255.0
+ip	heldout	192.168.1.100:8080
+ip	heldout	10.10.14.7
+ip	heldout	00:1A:2B:3C:4D:5E
+ip	train	192.168.0.1
+ip	train	10.0.0.254
+ip	train	8.8.8.8
+ip	train	127.0.0.1
+ip	train	203.0.113.42
+ip	train	1.1.1.1
+ip	train	2001:0db8:85a3:0000:0000:8a2e:0370:7334
+ip	train	fe80::1ff:fe23:4567:890a
+json	heldout	{"temperature": 21.5, "unit": "celsius", "city": "London"}
+json	heldout	["red", "green", "blue"]
+json	heldout	[["x", 1], ["y", 2]]
+json	heldout	{"ip": "10.0.0.1", "port": 8080, "open": true}
+json	heldout	{"title": "Notes", "body": "Buy milk and eggs"}
+json	heldout	{"emoji": "\\ud83d\\ude00", "text": "smile"}
+json	heldout	{"users": [{"id": 1}, {"id": 2}, {"id": 3}]}
+json	heldout	{"enabled": false}
+json	train	{"name": "ciphey", "version": 1}
+json	train	{"user":"admin","pass":"hunter2"}
+json	train	[1, 2, 3, 4]
+json	train	{"key": "value"}
+json	train	{"flag": "you found it", "points": 100}
+json	train	{"error": null, "ok": true}
+json	train	[{"id": 1, "title": "hello world"}]
+json	train	{"message": "meet at the usual place"}
+json	train	{"status":"success","data":{"id":42,"email":"alice@example.com"}}
+json	train	{"items": [], "total": 0, "page": 1}
+json	train	{\n  "name": "example",\n  "private": true,\n  "scripts": {\n    "test": "jest"\n  }\n}
+json	train	{"lat": 51.5074, "lon": -0.1278}
+json	train	{"token": "abc123", "expires_in": 3600}
+json	train	{"secret": "the eagle has landed"}
+json	train	[{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
+json	train	{"a":1,"b":[true,false,null],"c":{"d":"e"}}
+json	train	{"sub":"1234567890","name":"John Doe","iat":1516239022}
+json	train	{"alg":"HS256","typ":"JWT"}
+json	train	{"level": 3, "hint": "try rot13"}
+json	train	{"query": "SELECT * FROM users", "rows": 12}
+json	train	{"answer": 42}
+json	train	{"coordinates": [12.5, -7.25], "type": "Point"}
+lemmeknow	heldout	ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCE9Uli8bGnD4hOWdeo5KKQJ/P/vOazI4MgqJK54w37emP2JwOAOdMmXuwpxbKng3KZz27mz+nKWIlXJ3rzSGMo= r00t@my-random_host
+lemmeknow	heldout	ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK0wmN/Cr3JXqmLW7u+g9pTh+wyqDHpSQEIQczXkVx9q r00t@my-random_host
+lemmeknow	heldout	htb{just_a_test}
+lemmeknow	heldout	FLAG{hello}
+lemmeknow	heldout	s3://bucket/path/key
+lemmeknow	heldout	s3://bucket/path/directory/
+lemmeknow	heldout	arn:aws:s3:::my_corporate_bucket/Development/*
+lemmeknow	heldout	arn:aws:sns:us-east-2:123456789012:MyTopic
+lemmeknow	heldout	https://www.notion.so/test-user/My-Note-fa45346d9dd4421abc6857ce2e7fb0db
+lemmeknow	heldout	otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXP&issuer=Example
+lemmeknow	heldout	sshpass -P 'Please enter your password' -p MyPassw0RD!
+lemmeknow	heldout	mount -t cifs -osec=ntlmv2,password=S3cUr3D!,domain=mydomain,noserverino,username=H4x0r
+lemmeknow	heldout	cifs uid=1000,password=password,gid=1000,noperm,nofail,username=myuser
+lemmeknow	heldout	http://test.com?q=No
+lemmeknow	heldout	https://example.com#admin@email.com
+lemmeknow	heldout	http://user%40example.com:pass%21word@example.com/path/to/input.avi
+lemmeknow	heldout	http://u-rl.com/
+lemmeknow	heldout	http://0.0.0.0/
+lemmeknow	heldout	https://142.250.217.100/search?client=firefox-b-d&q=hello
+lemmeknow	heldout	https://142.250.217.100:443/search?client=firefox-b-d&q=hello
+lemmeknow	heldout	ftp://internet.address.edu/file/path/file.txt
+lemmeknow	heldout	1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY
+lemmeknow	heldout	52.6169586, -1.9779857
+lemmeknow	heldout	53.76297,-1.9388732
+lemmeknow	heldout	41°24'12.2" N 2°10'26.5" E
+lemmeknow	heldout	00:00:00:00:00:00
+lemmeknow	heldout	firstname+lastname@example.com
+lemmeknow	heldout	john.smith@[123.123.123.123]
+lemmeknow	heldout	RSSMRA00A01H501C
+lemmeknow	heldout	001:01:0001
+lemmeknow	heldout	001.01.0001
+lemmeknow	heldout	001 01 0001
+lemmeknow	heldout	1Z123ABC0012345678
+lemmeknow	heldout	1Z9999999999999999
+lemmeknow	heldout	1Z999AA10123456784
+lemmeknow	heldout	13081987
+lemmeknow	heldout	47DF8D9NwtmefhFUghynYRMqrexiZTsm48T1hhi2jZcbfcwoPbkhMrrED6zqJRfeYpXFfdaqAT3jnBEwoMwCx6BYDJ1W3ub
+lemmeknow	heldout	0x52908400098527886E0F7030069857D2E4169EE7
+lemmeknow	heldout	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+lemmeknow	heldout	eyJhbGciOiJIUzI1NiJ9.e30.4E_Bsx-pJi3kOW9wVXN8CgbATwP09D9V5gxh9-9zSZ0
+lemmeknow	heldout	eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.PyaQAiuwn6CTGq4ZQCTbXIs4GnRT7bBBFohNBlNdwTJQvGEIxKjecJITFjaPuxEG
+lemmeknow	heldout	i-1234567890abcdef0
+lemmeknow	heldout	i-1a2b3c4d
+lemmeknow	train	Access-Control-Allow: *
+lemmeknow	train	thm{hello}
+lemmeknow	train	https://www.youtube.com/watch?v=ScOAntcCa78
+lemmeknow	train	http://www.youtube.com/watch?v=dQw4w9WgXcQ
+lemmeknow	train	http://s3.amazonaws.com/bucket
+lemmeknow	train	arn:partition:service:region:account-id:resource
+lemmeknow	train	arn:partition:service:region:account-id:resourcetype/resource
+lemmeknow	train	arn:partition:service:region:account-id:resourcetype:resource
+lemmeknow	train	https://calendar.google.com/calendar/embed?src=ht3jlfaac5lfd6263ulfh4tql8%40group.calendar.google.com&ctz=Europe%2FLondon
+lemmeknow	train	https://testorg.notion.site/My-Note-9f8863871e024ea6acc64d6564004a22
+lemmeknow	train	nano_1c46rz7xnk98ozhzdjq7thwty844sgnqxk9496yysit1bnio1rcdzshc5ymn
+lemmeknow	train	otpauth://totp/My_Ex0T1c-L00king.name?issuer=ArgsShouldBeCommutable&secret=JBSWY3DPEHPK3PXP&digits=6&period=30
+lemmeknow	train	sshpass -p MyPassw0RD!
+lemmeknow	train	mount -o username=myuser,password=password
+lemmeknow	train	mount.cifs -o username=myuser,password=password
+lemmeknow	train	10.1000/182
+lemmeknow	train	doi:10.1002/0470841559.ch1
+lemmeknow	train	2001:0db8:85a3:0000:0000:8a2e:0370:7334
+lemmeknow	train	[2001:db8::1]:8080
+lemmeknow	train	http://username:password@example.com/
+lemmeknow	train	hTTPs://tryhackme.com
+lemmeknow	train	https://xn--80aaxitdbjk.xn--p1ai/
+lemmeknow	train	http://10.1.1.1
+lemmeknow	train	http://10.1.1.1/just/a/test
+lemmeknow	train	https://img.shields.io/twitter/follow/bee_sec_san?style=social
+lemmeknow	train	https://www.google.com
+lemmeknow	train	http://test.com/?q=No
+lemmeknow	train	http://foo.com/?q=Test%20URL-encoded%20stuff
+lemmeknow	train	http://d.com/#@.s?h/
+lemmeknow	train	https://en.wikipedia.org/wiki/Swiss_cheese_(North_America)#Production
+lemmeknow	train	http://user:pass%21word@example.com/path/to/input.avi
+lemmeknow	train	https://www.google.com:443/search?client=firefox-b-d&q=hello
+lemmeknow	train	192.0.2.235:80
+lemmeknow	train	3EmUH8Uh9EXE7axgyAeBsCc2vdUdKkDqWK
+lemmeknow	train	bc1qj89046x7zv6pm4n00qgqp505nvljnfp6xfznyw
+lemmeknow	train	77° 30' 29.9988" N
+lemmeknow	train	N 32° 53.733 W 096° 48.358
+lemmeknow	train	40.741895,-73.989308
+lemmeknow	train	@13.923404,101.3395163,17z
+lemmeknow	train	00-00-00-00-00-00
+lemmeknow	train	0000.0000.0000
+lemmeknow	train	github@skerritt.blog
+lemmeknow	train	001-01-0001
+lemmeknow	train	UCjXfkj5iapKHJrhYfAF9ZGg
+lemmeknow	train	b2ced6f5-2542-4f7d-b131-e3ada95d8b75
+lemmeknow	train	13.08.1987
+lemmeknow	train	13/08/1987
+lemmeknow	train	13-08-1987
+lemmeknow	train	13 08 1987
+lemmeknow	train	o-aa111bb222
+lemmeknow_ignored	heldout	google.com/help
+lemmeknow_ignored	heldout	DANHz6EQVoWyZ9rER56DwTXHWUxfkv9k2o
+lemmeknow_ignored	heldout	202-555-0178
+lemmeknow_ignored	heldout	+1-202-555-0156
+lemmeknow_ignored	heldout	+662025550156
+lemmeknow_ignored	heldout	+356 202 555 0156
+lemmeknow_ignored	heldout	34A2344
+lemmeknow_ignored	heldout	34A23415
+lemmeknow_ignored	heldout	81ABC75
+lemmeknow_ignored	heldout	6556123456789012
+lemmeknow_ignored	heldout	30137891521480
+lemmeknow_ignored	heldout	30000000000004
+lemmeknow_ignored	heldout	630495060000000000
+lemmeknow_ignored	heldout	6334498823141663
+lemmeknow_ignored	heldout	633341812811453789
+lemmeknow_ignored	heldout	5fc7c33a7ef88b139122a38a
+lemmeknow_ignored	heldout	1577836800000
+lemmeknow_ignored	heldout	94694400
+lemmeknow_ignored	heldout	94694400000
+lemmeknow_ignored	heldout	01ERJ58HMWDN3VTRRHZQV2T5R5
+lemmeknow_ignored	heldout	dQw4w9WgXcQ
+lemmeknow_ignored	heldout	james:S3cr37_P@$$W0rd
+lemmeknow_ignored	train	bitcoincash:qzlg6uvceehgzgtz6phmvy8gtdqyt6vf359at4n3lq
+lemmeknow_ignored	train	tryhackme.com
+lemmeknow_ignored	train	06BK123
+lemmeknow_ignored	train	06JK1234
+lemmeknow_ignored	train	LRX8rSPVjifTxoLeoJtLf2JYdJFTQFcE7m
+lemmeknow_ignored	train	rBPAQmwMrt7FDDPNyjwFgwSqbWZPf6SLkk
+lemmeknow_ignored	train	3056 9309 0259 04
+lemmeknow_ignored	train	6011000000000004
+lemmeknow_ignored	train	6011 1111 1111 1117
+lemmeknow_ignored	train	5409010000000004
+lemmeknow_ignored	train	5409 0100 0000 0004
+lemmeknow_ignored	train	5038146401278870
+lemmeknow_ignored	train	6759 6498 2643 8453
+lemmeknow_ignored	train	4111111111111111
+lemmeknow_ignored	train	4607 0000 0000 0009
+lemmeknow_ignored	train	6387849878080951
+lemmeknow_ignored	train	3537124887293334
+lemmeknow_ignored	train	3543824683332150682
+lemmeknow_ignored	train	9837282929900015
+lemmeknow_ignored	train	B07ND5BB8V
+lemmeknow_ignored	train	12345678902
+lemmeknow_ignored	train	12345678900
+lemmeknow_ignored	train	1577836800
+lemmeknow_ignored	train	1234567890
+non_english	heldout	Le trésor est caché sous le vieux chêne
+non_english	heldout	Nous partirons à l'aube
+non_english	heldout	Ich habe keine Ahnung
+non_english	heldout	No entiendo nada
+non_english	heldout	Ciao, come stai?
+non_english	heldout	Ci vediamo domani sera
+non_english	heldout	Olá, tudo bem?
+non_english	heldout	A senha é segredo
+non_english	heldout	Goedemorgen, hoe gaat het?
+non_english	heldout	Ik hou van je
+non_english	heldout	Hej, hur mår du?
+non_english	heldout	Veni, vidi, vici
+non_english	heldout	Cogito, ergo sum
+non_english	heldout	Dzień dobry, jak się masz?
+non_english	heldout	Привет, как дела?
+non_english	heldout	今日はいい天気ですね
+non_english	heldout	你好，你好吗？
+non_english	heldout	我们明天见
+non_english	heldout	안녕하세요
+non_english	heldout	مرحبا كيف حالك
+non_english	heldout	שלום, מה שלומך
+non_english	heldout	Xin chào, bạn khỏe không?
+non_english	heldout	สวัสดีครับ
+non_english	train	Bonjour, comment allez-vous aujourd'hui ?
+non_english	train	Le chat est sur la table
+non_english	train	Je ne sais pas ce que tu veux dire
+non_english	train	Rendez-vous demain matin devant la gare
+non_english	train	Guten Morgen, wie geht es dir?
+non_english	train	Ich liebe dich
+non_english	train	Das Wetter ist heute sehr schön
+non_english	train	Wir treffen uns morgen am Bahnhof
+non_english	train	Hola, ¿cómo estás?
+non_english	train	La casa es muy grande
+non_english	train	Nos vemos mañana en la estación
+non_english	train	El tesoro está debajo del árbol
+non_english	train	Il fait très beau aujourd'hui
+non_english	train	Où est la bibliothèque ?
+non_english	train	Der Schlüssel liegt unter der Matte
+non_english	train	Buenas noches a todos
+non_english	train	La chiave è sotto il tappeto
+non_english	train	Obrigado pela ajuda
+non_english	train	Jeg elsker deg
+non_english	train	Alea iacta est
+non_english	train	Merhaba, nasılsın?
+non_english	train	Встретимся завтра у вокзала
+non_english	train	こんにちは、お元気ですか
+non_english	train	Γεια σου, τι κάνεις;
+non_english	train	नमस्ते, आप कैसे हैं?
+password	heldout	hunter2
+password	heldout	welcome
+password	heldout	admin
+password	heldout	baseball
+password	heldout	master
+password	heldout	superman
+password	train	123456
+password	train	password
+password	train	qwerty
+password	train	letmein
+password	train	iloveyou
+password	train	dragon
+password	train	monkey
+password	train	sunshine
+password	train	trustno1
+password	train	football
+password	train	abc123
+password	train	password1
+password	train	princess
+password	train	shadow
+url	heldout	https://www.youtube.com/watch?v=dQw4w9WgXcQ
+url	heldout	https://ctftime.org/event/list/
+url	heldout	https://api.example.com/v2/users/42?fields=name,email
+url	heldout	www.example.org/about-us
+url	heldout	https://mail.google.com/mail/u/0/#inbox
+url	heldout	https://bit.ly/3xYzAbC
+url	heldout	https://tinyurl.com/2p8yz9ak
+url	heldout	https://news.ycombinator.com/item?id=1
+url	heldout	https://www.gutenberg.org/ebooks/1342
+url	train	https://github.com/bee-san/Ciphey
+url	train	http://example.com/index.html?q=1
+url	train	www.google.com
+url	train	https://skerritt.blog/introducing-ciphey/
+url	train	ftp://files.example.org/pub/readme.txt
+url	train	s3://my-bucket/path/to/key
+url	train	https://en.wikipedia.org/wiki/Caesar_cipher
+url	train	http://localhost:8080/admin
+url	train	https://pastebin.com/raw/abc123XY
+url	train	https://drive.google.com/file/d/1a2b3c4d5e6f/view
+url	train	http://10.10.10.5/secret/flag.txt
+url	train	https://docs.rs/ciphey/latest/ciphey/
+url	train	https://www.amazon.co.uk/gp/product/B000000000
+url	train	https://store.steampowered.com/app/620/
+url	train	https://discord.gg/abcdef
+url	train	http://shop.example.net/cart?item=17&qty=2

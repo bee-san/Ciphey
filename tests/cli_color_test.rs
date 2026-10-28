@@ -38,7 +38,8 @@ impl Drop for TempHome {
 }
 
 /// Runs ciphey on plaintext input and returns everything it printed to stdout and stderr.
-/// `--enable-enhanced-detection` prints the message from the bug report to stderr.
+/// `--enable-enhanced-detection` prints a notice to stderr before the config is set, as
+/// the message from the bug report did.
 fn run_ciphey(no_color: Option<&str>) -> String {
     let home = TempHome::new(&format!("color-test-{}", no_color.unwrap_or("unset")));
     let mut command = Command::new(env!("CARGO_BIN_EXE_ciphey"));
@@ -69,7 +70,7 @@ fn run_ciphey(no_color: Option<&str>) -> String {
 #[test]
 fn test_no_color_disables_ansi_escape_codes() {
     let printed = run_ciphey(Some("1"));
-    assert!(printed.contains("Enhanced detection enabled."));
+    assert!(printed.contains("--enable-enhanced-detection does nothing"));
     assert!(printed.contains("Hello, World!"));
     assert!(
         !printed.contains('\x1b'),

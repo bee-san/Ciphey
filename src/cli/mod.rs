@@ -60,8 +60,9 @@ pub struct Opts {
     /// Automatically disables the human checker
     #[arg(long)]
     top_results: bool,
-    /// Enables enhanced plaintext detection with BERT model.
-    #[arg(long)]
+    /// Does nothing. Enhanced detection never loaded a model and was removed; the flag is
+    /// still accepted so existing scripts keep working.
+    #[arg(long, hide = true)]
     enable_enhanced_detection: bool,
 }
 
@@ -164,14 +165,13 @@ fn cli_args_into_config_struct(opts: Opts, text: String) -> (String, Config) {
         config.human_checker_on = false;
     }
 
-    // Handle enhanced detection if enabled via CLI
-    if opts.enable_enhanced_detection {
-        // Simply enable enhanced detection without downloading a model
-        // since the current version of gibberish-or-not doesn't support model downloading
-        config.enhanced_detection = true;
+    if opts.enable_enhanced_detection && !config.api_mode {
         eprintln!(
             "{}",
-            cli_pretty_printing::statement("Enhanced detection enabled.", None)
+            cli_pretty_printing::warning(
+                "--enable-enhanced-detection does nothing and will be removed: ciphey never \
+                 loaded a model for it (https://github.com/bee-san/Ciphey/issues/1031)."
+            )
         );
     }
 
@@ -205,6 +205,16 @@ mod tests {
             .err()
             .expect("--text with --file should be rejected");
         assert_eq!(error.kind(), ErrorKind::ArgumentConflict);
+    }
+
+    #[test]
+    fn enhanced_detection_flag_is_still_accepted_but_hidden() {
+        assert!(
+            Opts::try_parse_from(["ciphey", "--enable-enhanced-detection", "-t", "aGVsbG8="])
+                .is_ok()
+        );
+        let help = Opts::command().render_help().to_string();
+        assert!(!help.contains("enhanced"), "{help}");
     }
 
     #[test]

@@ -631,11 +631,18 @@ mod tests {
 
     #[test]
     fn decodes_the_issue_examples() {
-        // Athena doesn't identify the issue's plaintext at Low (Medium does), so the search
-        // doesn't get it, but it is the first decoding tried: ROT18, then ROT5 only
-        for (text, shift) in [
-            ("Zrrg zr ng 6789 Ryz Fgerrg ng 5490", 13),
-            ("Meet me at 6789 Elm Street at 5490", 0),
+        // The first decoding tried is the issue's plaintext: ROT18, then ROT5 only
+        for (text, shift, key) in [
+            (
+                "Zrrg zr ng 6789 Ryz Fgerrg ng 5490",
+                13,
+                "letters 13, digits 5",
+            ),
+            (
+                "Meet me at 6789 Elm Street at 5490",
+                0,
+                "letters 0, digits 5",
+            ),
         ] {
             assert_eq!(shifts_to_try(&scan(text).unwrap())[0], shift, "{text:?}");
             assert_eq!(
@@ -643,8 +650,12 @@ mod tests {
                 "Meet me at 1234 Elm Street at 0945"
             );
             let result = crack(text);
-            assert!(!result.success, "{text:?}: {result:?}");
-            assert!(result.unencrypted_text.is_none(), "{text:?}: {result:?}");
+            assert!(result.success, "{text:?}: {result:?}");
+            assert_eq!(
+                result.unencrypted_text,
+                Some(vec!["Meet me at 1234 Elm Street at 0945".to_string()])
+            );
+            assert_eq!(result.key.as_deref(), Some(key), "{text:?}");
         }
     }
 

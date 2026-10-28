@@ -1,3 +1,12 @@
+> **Status: removed.** This plan was never finished: no model was ever loaded, and
+> `enhanced_detection = true` only switched the English checker to its most lenient
+> sensitivity, which more than quadrupled false positives. The flag, the first-run prompt
+> and the model download were removed in
+> [#1031](https://github.com/bee-san/Ciphey/issues/1031); a quadgram score
+> (`src/storage/ngrams`) handles the space-less text a model was meant to help with. The
+> `enhanced_detection` and `model_path` config keys are still read, and ignored, so old
+> config files keep working. The plan is kept for reference.
+
 Okay, here's a detailed plan for integrating enhanced plaintext detection using BERT into the ciphey project, along with a CLI argument for enabling it and a first-run user experience:
 
 ```markdown

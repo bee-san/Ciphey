@@ -2,7 +2,9 @@ use self::{
     athena::Athena,
     checker_result::CheckResult,
     checker_type::{Check, CheckInfo, Checker},
+    code_checker::CodeChecker,
     english::EnglishChecker,
+    json_checker::JsonChecker,
     lemmeknow_checker::LemmeKnow,
     password::PasswordChecker,
     regex_checker::RegexChecker,
@@ -21,12 +23,16 @@ pub mod athena;
 pub mod checker_result;
 /// This is the base checker that all other checkers inherit from.
 pub mod checker_type;
+/// The Code Checker checks if the text is source code or a shell command
+pub mod code_checker;
 /// The default checker we use which simply calls all other checkers in order.
 pub mod default_checker;
 /// The English Checker is a checker that checks if the input is English
 pub mod english;
 /// The Human Checker asks humans if the expected plaintext is real plaintext
 pub mod human_checker;
+/// The JSON Checker checks if the text is a JSON object or array
+pub mod json_checker;
 /// The LemmeKnow Checker checks if the text matches a known Regex pattern.
 pub mod lemmeknow_checker;
 /// The Password checker checks if the text matches a known common password
@@ -38,6 +44,101 @@ pub mod wait_athena;
 /// The Wordlist checker checks if the text exactly matches any word in a user-provided wordlist
 pub mod wordlist;
 
+/// What one of the plaintext checkers identified a text as.
+pub(crate) struct Identification {
+    /// Name of the checker that identified the text, as in [`CheckResult::checker_name`]
+    pub(crate) checker_name: &'static str,
+    /// Its description
+    pub(crate) checker_description: &'static str,
+    /// Its link
+    pub(crate) link: &'static str,
+    /// What the text is, like "Words" or "Email Address"
+    pub(crate) description: String,
+    /// The tag WaitAthena stores with the result, like "EnglishChecker"
+    pub(crate) kind: &'static str,
+}
+
+impl Identification {
+    /// `checker` identified the text as `description`.
+    fn by<T>(checker: &Checker<T>, kind: &'static str, description: String) -> Self {
+        Identification {
+            checker_name: checker.name,
+            checker_description: checker.description,
+            link: checker.link,
+            description,
+            kind,
+        }
+    }
+
+    /// The identification as an identified [`CheckResult`] for `text`.
+    pub(crate) fn into_result(self, text: &str) -> CheckResult {
+        CheckResult {
+            is_identified: true,
+            text: text.to_string(),
+            description: self.description,
+            checker_name: self.checker_name,
+            checker_description: self.checker_description,
+            link: self.link,
+        }
+    }
+}
+
+/// The checkers [`identify_plaintext`] runs, built once: building one allocates, and
+/// Athena runs on every candidate of every decoder.
+static LEMMEKNOW_CHECKER: Lazy<Checker<LemmeKnow>> = Lazy::new(Checker::<LemmeKnow>::new);
+/// See [`LEMMEKNOW_CHECKER`].
+static JSON_CHECKER: Lazy<Checker<JsonChecker>> = Lazy::new(Checker::<JsonChecker>::new);
+/// See [`LEMMEKNOW_CHECKER`].
+static PASSWORD_CHECKER: Lazy<Checker<PasswordChecker>> =
+    Lazy::new(Checker::<PasswordChecker>::new);
+/// See [`LEMMEKNOW_CHECKER`].
+static ENGLISH_CHECKER: Lazy<Checker<EnglishChecker>> = Lazy::new(Checker::<EnglishChecker>::new);
+/// See [`LEMMEKNOW_CHECKER`].
+static CODE_CHECKER: Lazy<Checker<CodeChecker>> = Lazy::new(Checker::<CodeChecker>::new);
+
+/// Runs the plaintext checkers of Athena and WaitAthena (after the wordlist) in order and
+/// returns the first identification: LemmeKnow (known formats and CTF flags), JSON, the
+/// common-password list, English at `sensitivity`, and code. The order is cheapest and
+/// most specific first; English goes before code so that text that reads as English is
+/// reported as words.
+///
+/// Nothing is allocated unless a checker identifies the text: almost every text a search
+/// checks is rejected.
+pub(crate) fn identify_plaintext(text: &str, sensitivity: Sensitivity) -> Option<Identification> {
+    let lemmeknow = &*LEMMEKNOW_CHECKER;
+    if let Some(description) = lemmeknow_checker::identify(&lemmeknow.lemmeknow_config, text) {
+        return Some(Identification::by(lemmeknow, "LemmeKnow", description));
+    }
+    if let Some(description) = json_checker::identify(text) {
+        return Some(Identification::by(
+            &*JSON_CHECKER,
+            "JsonChecker",
+            description,
+        ));
+    }
+    if password::is_common_password(text) {
+        return Some(Identification::by(
+            &*PASSWORD_CHECKER,
+            "PasswordChecker",
+            "Common Password".to_string(),
+        ));
+    }
+    if english::is_english(text, sensitivity) {
+        return Some(Identification::by(
+            &*ENGLISH_CHECKER,
+            "EnglishChecker",
+            "Words".to_string(),
+        ));
+    }
+    if let Some(description) = code_checker::identify(text) {
+        return Some(Identification::by(
+            &*CODE_CHECKER,
+            "CodeChecker",
+            description,
+        ));
+    }
+    None
+}
 /// [`CheckerTypes::first_identified`] checks candidates in parallel when they add up to
 /// at least this many bytes. Below that the checks are cheap (an 84 character text's 93
 /// ROT47 candidates are 8 KB), and a decoder's loop isn't what a search step waits for.
@@ -59,6 +160,10 @@ pub enum CheckerTypes {
     CheckPassword(Checker<PasswordChecker>),
     /// Wrapper for Wordlist Checker
     CheckWordlist(Checker<WordlistChecker>),
+    /// Wrapper for JSON Checker
+    CheckJson(Checker<JsonChecker>),
+    /// Wrapper for Code Checker
+    CheckCode(Checker<CodeChecker>),
 }
 
 impl CheckerTypes {
@@ -109,6 +214,8 @@ impl CheckerTypes {
             CheckerTypes::CheckRegex(regex_checker) => regex_checker.check(text),
             CheckerTypes::CheckPassword(password_checker) => password_checker.check(text),
             CheckerTypes::CheckWordlist(wordlist_checker) => wordlist_checker.check(text),
+            CheckerTypes::CheckJson(json_checker) => json_checker.check(text),
+            CheckerTypes::CheckCode(code_checker) => code_checker.check(text),
         }
     }
 
@@ -150,6 +257,16 @@ impl CheckerTypes {
                 new_checker.sensitivity = sensitivity;
                 CheckerTypes::CheckWordlist(new_checker)
             }
+            CheckerTypes::CheckJson(_checker) => {
+                let mut new_checker = Checker::<JsonChecker>::new();
+                new_checker.sensitivity = sensitivity;
+                CheckerTypes::CheckJson(new_checker)
+            }
+            CheckerTypes::CheckCode(_checker) => {
+                let mut new_checker = Checker::<CodeChecker>::new();
+                new_checker.sensitivity = sensitivity;
+                CheckerTypes::CheckCode(new_checker)
+            }
         }
     }
 
@@ -163,6 +280,8 @@ impl CheckerTypes {
             CheckerTypes::CheckRegex(checker) => checker.get_sensitivity(),
             CheckerTypes::CheckPassword(checker) => checker.get_sensitivity(),
             CheckerTypes::CheckWordlist(checker) => checker.get_sensitivity(),
+            CheckerTypes::CheckJson(checker) => checker.get_sensitivity(),
+            CheckerTypes::CheckCode(checker) => checker.get_sensitivity(),
         }
     }
 }
@@ -193,12 +312,20 @@ pub static CHECKER_MAP: Lazy<HashMap<&str, CheckerBox>> = Lazy::new(|| {
     HashMap::from([
         ("Athena Checker", CheckerBox::new(Checker::<Athena>::new())),
         (
+            "Code Checker",
+            CheckerBox::new(Checker::<CodeChecker>::new()),
+        ),
+        (
             "English Checker",
             CheckerBox::new(Checker::<EnglishChecker>::new()),
         ),
         (
             "Template checker",
             CheckerBox::new(Checker::<default_checker::DefaultChecker>::new()),
+        ),
+        (
+            "JSON Checker",
+            CheckerBox::new(Checker::<JsonChecker>::new()),
         ),
         (
             "LemmeKnow Checker",

@@ -11,9 +11,7 @@ use crate::storage::wait_athena_storage;
 
 use super::{
     checker_type::{Check, Checker},
-    english::EnglishChecker,
-    lemmeknow_checker::LemmeKnow,
-    password::PasswordChecker,
+    identify_plaintext,
     regex_checker::RegexChecker,
     wordlist::WordlistChecker,
 };
@@ -34,7 +32,6 @@ impl Check for Checker<WaitAthena> {
             popularity: 1.0,
             lemmeknow_config: Identifier::default(),
             sensitivity: Sensitivity::Medium, // Default to Medium sensitivity
-            enhanced_detector: None,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -91,62 +88,16 @@ impl Check for Checker<WaitAthena> {
                 }
             }
 
-            // In Ciphey if the user uses the regex checker all the other checkers turn off
-            // This is because they are looking for one specific bit of information so will not want the other checkers
-            let lemmeknow = Checker::<LemmeKnow>::new().with_sensitivity(self.sensitivity);
-            let lemmeknow_result = lemmeknow.check(text);
-            if lemmeknow_result.is_identified {
-                let mut check_res = CheckResult::new(&lemmeknow);
-                check_res.is_identified = true; // No human checker involvement
-                check_res.text = lemmeknow_result.text;
-                check_res.description = lemmeknow_result.description;
+            if let Some(found) = identify_plaintext(text, self.sensitivity) {
+                let kind = found.kind;
+                let check_res = found.into_result(text); // No human checker involvement
 
                 // Store the result instead of returning immediately
                 wait_athena_storage::add_plaintext_result(
                     check_res.text.clone(),
                     check_res.description.clone(),
-                    lemmeknow.name.to_string(),
-                    "LemmeKnow".to_string(),
-                );
-
-                // Continue checking by returning the result
-                return check_res;
-            }
-
-            let password = Checker::<PasswordChecker>::new().with_sensitivity(self.sensitivity);
-            let password_result = password.check(text);
-            if password_result.is_identified {
-                let mut check_res = CheckResult::new(&password);
-                check_res.is_identified = true; // No human checker involvement
-                check_res.text = password_result.text;
-                check_res.description = password_result.description;
-
-                // Store the result instead of returning immediately
-                wait_athena_storage::add_plaintext_result(
-                    check_res.text.clone(),
-                    check_res.description.clone(),
-                    password.name.to_string(),
-                    "PasswordChecker".to_string(),
-                );
-
-                // Continue checking by returning the result
-                return check_res;
-            }
-
-            let english = Checker::<EnglishChecker>::new().with_sensitivity(self.sensitivity);
-            let english_result = english.check(text);
-            if english_result.is_identified {
-                let mut check_res = CheckResult::new(&english);
-                check_res.is_identified = true; // No human checker involvement
-                check_res.text = english_result.text;
-                check_res.description = english_result.description;
-
-                // Store the result instead of returning immediately
-                wait_athena_storage::add_plaintext_result(
-                    check_res.text.clone(),
-                    check_res.description.clone(),
-                    english.name.to_string(),
-                    "EnglishChecker".to_string(),
+                    check_res.checker_name.to_string(),
+                    kind.to_string(),
                 );
 
                 // Continue checking by returning the result
@@ -182,6 +133,15 @@ mod tests {
     fn test_check_dictionary_word() {
         let checker = Checker::<WaitAthena>::new();
         assert!(checker.check("exuberant").is_identified);
+    }
+
+    #[test]
+    fn test_check_json_and_ctf_flags() {
+        let checker = Checker::<WaitAthena>::new();
+        let json = checker.check("[{\"id\": 1, \"title\": \"hello world\"}]");
+        assert!(json.is_identified);
+        assert_eq!(json.checker_name, "JSON Checker");
+        assert!(checker.check("DUCTF{d0wn_und3r}").is_identified);
     }
 
     #[test]

@@ -397,6 +397,12 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // step, the search reports the one listed first. Its first check rejects text
             // that isn't JSFuck at the first byte, so running early costs nothing.
             Box::new(jsfuck),
+            // Before the key-searching ciphers: when two decoders find plaintext in the same
+            // step, the search reports the one listed first, and reversed text is also one
+            // of Route Transposition's readings, which reads part of it backwards (`ekam yalp
+            // on ysAll work ando Jack a dull b`). Reverse only answers when the reversed
+            // text is plaintext.
+            Box::new(reversedecoder),
             // Before Vigenere: a Hill plaintext and a Vigenère false positive found in the
             // same step tie on checker class and cost, and the first in this list wins.
             // Vigenère keys turn Hill ciphertexts into English-looking junk
@@ -416,14 +422,14 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // class and cost when both are found in the same step, and the first in this
             // list is reported.
             Box::new(playfair),
-            // Before Vigenere: on unspaced text both can return an English hit at Medium
-            // sensitivity from the same step, which ties on checker class and cost and
-            // keeps this order, and Vigenere keys can turn an autokey ciphertext into text
-            // the English checker accepts.
+            // Before Vigenere: on unspaced text both can return an English hit from the
+            // same step, which ties on checker class and cost and keeps this order, and
+            // Vigenere keys can turn an autokey ciphertext into text the English checker
+            // accepts.
             Box::new(vigenere_autokey),
-            // Before Vigenere: on text without spaces both can find plaintext the Medium
-            // English check accepts in the same step, where they tie on checker class and
-            // cost and keep this order. Vigenere turns a Beaufort ciphertext into junk that
+            // Before Vigenere: on text without spaces both can find plaintext the English
+            // check accepts in the same step, where they tie on checker class and cost and
+            // keep this order. Vigenere turns a Beaufort ciphertext into junk that
             // check can accept; Beaufort only answers with a key whose decryption reads as
             // English quadgrams.
             Box::new(beaufort),
@@ -437,7 +443,6 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(rot18),
             Box::new(vigenere),
             Box::new(xor_repeating_key),
-            Box::new(reversedecoder),
             // Before Base64, and so before railfence and rot47 too: results found in the
             // same step tie on checker class and cost and keep this order. The y64 reading
             // of `aGVsbG8gd29ybGQ-` (`hello world`) has to beat Base64's `hello world>`.

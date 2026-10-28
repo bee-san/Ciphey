@@ -1,7 +1,10 @@
 [codespell]
-# "ue" appears in Caesar-cipher test vectors in caesar_decoder.rs
-ignore-words-list = ue
-# Encoded benchmark inputs are gibberish by design, n-gram tables are
-# letter sequences, not words, and the CTF corpus quotes ciphertexts and
-# challenge names (misspellings included) exactly as published
-skip = ./benches/data/*,benches/data/*,./src/storage/ngrams/*.txt,src/storage/ngrams/*.txt,./tests/data/*,tests/data/*
+# "ue" appears in Caesar-cipher test vectors in caesar_decoder.rs.
+# "sais", "ist" and "sie" are French and German words (english.rs);
+# "fpr" is the plaintext benchmark's false-positive-rate key (benches/plaintext.rs).
+ignore-words-list = ue,sais,ist,sie,fpr
+# Encoded benchmark inputs and near misses are gibberish by design, and the plaintext
+# benchmark's data has Gutenberg prose and other languages; the n-gram tables are binary
+# counts, letter sequences and word lists (with archaic words like "fro"); and the CTF
+# corpus quotes ciphertexts and challenge names (misspellings included) exactly as published
+skip = ./benches/data/*,benches/data/*,./src/storage/ngrams/*.bin,src/storage/ngrams/*.bin,./src/storage/ngrams/*.txt,src/storage/ngrams/*.txt,./tests/data/*,tests/data/*

@@ -204,7 +204,7 @@ impl Crack for Decoder<HillDecoder> {
     fn new() -> Decoder<HillDecoder> {
         Decoder {
             name: "Hill",
-            description: "Hill cipher: blocks of 2 or 3 letters multiplied by an invertible key matrix mod 26. Recovers the matrix row by row with letter-frequency statistics and ranks the combinations by quadgram fitness. Uses Low sensitivity for gibberish detection on spaced text, Medium on unspaced text.",
+            description: "Hill cipher: blocks of 2 or 3 letters multiplied by an invertible key matrix mod 26. Recovers the matrix row by row with letter-frequency statistics and ranks the combinations by quadgram fitness. Uses Low sensitivity for gibberish detection.",
             link: "https://en.wikipedia.org/wiki/Hill_cipher",
             tags: vec!["hill", "matrix", "substitution", "classical"],
             popularity: 0.3,
@@ -232,13 +232,7 @@ impl Crack for Decoder<HillDecoder> {
             return results;
         };
 
-        // The checker reads unspaced text as one word: only Medium identifies it
-        let sensitivity = if text.trim().bytes().any(|byte| byte.is_ascii_whitespace()) {
-            Sensitivity::Low
-        } else {
-            Sensitivity::Medium
-        };
-        let checker_with_sensitivity = checker.with_sensitivity(sensitivity);
+        let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
 
         let mut best_plaintext = None;
         for candidate in &ranked {
@@ -1232,9 +1226,9 @@ mod tests {
     }
 
     #[test]
-    fn issue_example_is_ranked_first_but_not_identified() {
-        // The issue's example. 20 unspaced letters are too few for the checker at Medium,
-        // but the decryption reads like English, so it is handed on with its key.
+    fn issue_example_is_ranked_first_and_identified() {
+        // The issue's example: 20 unspaced letters, which the English checker scores by
+        // their quadgrams
         let ciphertext = "XTPJPUOUCKEGFCURFTYH";
         let ranked = rank(&ciphertext_letters(ciphertext).unwrap());
         let inverse = Matrix::from_rows(&KEY_3_3_2_5).unwrap().inverse().unwrap();
@@ -1242,13 +1236,7 @@ mod tests {
         assert_eq!(ranked[0].key(), "[[3,3],[2,5]]");
         assert!(ranked[0].fitness >= UNCONFIRMED_FITNESS, "{ranked:?}");
 
-        let result = crack(ciphertext);
-        assert!(!result.success, "{result:?}");
-        assert_eq!(
-            result.unencrypted_text,
-            Some(vec!["SHORTMESSAGEFORHILLX".to_string()])
-        );
-        assert_eq!(result.key.as_deref(), Some("[[3,3],[2,5]]"));
+        assert_cracks(ciphertext, "SHORTMESSAGEFORHILLX", "[[3,3],[2,5]]");
     }
 
     #[test]
@@ -1329,13 +1317,10 @@ mod tests {
     }
 
     #[test]
-    fn long_3x3_is_found_but_not_identified() {
-        // The checker doesn't accept 465 letters of unspaced English at Medium, so the
-        // decryption comes back unconfirmed, with its key
-        let result = crack(LONG_CIPHERTEXT);
-        assert!(!result.success, "{result:?}");
-        assert_eq!(result.unencrypted_text, Some(vec![LONG_PADDED.to_string()]));
-        assert_eq!(result.key.as_deref(), Some("[[2,4,5],[9,2,1],[3,17,7]]"));
+    fn long_3x3_is_found_and_identified() {
+        // 465 letters of unspaced English, which the English checker scores by their
+        // quadgrams
+        assert_cracks(LONG_CIPHERTEXT, LONG_PADDED, "[[2,4,5],[9,2,1],[3,17,7]]");
     }
 
     #[test]
