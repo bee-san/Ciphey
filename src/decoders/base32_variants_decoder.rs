@@ -7,10 +7,15 @@
 //! | Key | Symbols 0 to 31 | Notes |
 //! |---|---|---|
 //! | `base32hex` | `0-9A-V` | RFC 4648 §7, DNSSEC NSEC3. Either case, optional `=` padding |
-//! | `Crockford` | `0-9A-HJKMNP-TV-Z` | ULIDs. Either case, `O` is `0`, `I` and `L` are `1`, `-` is ignored |
+//! | `Crockford` | `0-9A-HJKMNP-TV-Z` | Either case, `O` is `0`, `I` and `L` are `1`, `-` is ignored. No check symbol |
 //! | `z-base-32` | `ybndrfg8ejkmcpqxot1uwisza345h769` | Tahoe-LAFS, ZRTP. Lower case only |
 //!
 //! Standard Base32 (`A-Z2-7`) belongs to the Base32 decoder.
+//!
+//! Crockford's spec writes numbers, but text is written in it the way RFC 4648 writes
+//! bytes, 5 bits at a time from the first byte (npm's `base32-encode` and most libraries),
+//! and that is what is decoded here. ULIDs use Crockford's alphabet for a 128-bit number,
+//! two bits short of 26 symbols, so they don't decode to their bytes.
 //!
 //! Every alphabet is tried. Output that isn't printable ASCII is dropped, and the rest is
 //! checked in the order above. The alphabet is reported as the key.
@@ -184,7 +189,7 @@ fn decode_variants(text: &str) -> Vec<(&'static str, String)> {
 
 #[cfg(test)]
 mod tests {
-    use super::{decode_variants, Base32VariantsDecoder};
+    use super::{decode_variants, Base32VariantsDecoder, BASE32HEX};
     use crate::{
         checkers::{
             athena::Athena,
@@ -232,9 +237,32 @@ mod tests {
     }
 
     #[test]
+    fn rfc_4648_base32hex_vectors_decode() {
+        // RFC 4648 §10
+        for (text, plaintext) in [
+            ("CO", "f"),
+            ("CPNG", "fo"), // codespell:ignore fo
+            ("CPNMU", "foo"),
+            ("CPNMUOG", "foob"),
+            ("CPNMUOJ1", "fooba"),
+            ("CPNMUOJ1E8", "foobar"),
+            ("cpnmuoj1e8", "foobar"),
+        ] {
+            assert_eq!(
+                BASE32HEX.decode(text.as_bytes()).as_deref(),
+                Ok(plaintext.as_bytes()),
+                "{text}"
+            );
+        }
+        // The padded forms, as the decoder reads them
+        assert_eq!(
+            decode_variants("CPNMUOJ1E8======"),
+            [("base32hex", "foobar".to_string())]
+        );
+    }
+
+    #[test]
     fn issue_examples_decode() {
-        // The Athena checker doesn't accept this pangram, so the search gets it as a
-        // candidate instead
         assert_eq!(
             decode_variants("ADO6GQBEF0G6UPH0C9M62ORB41ONAOBIEHT2O83AELI6EP90DLSI0TJFESN0===="),
             [("base32hex", SPHINX.to_string())]
