@@ -663,9 +663,7 @@ mod tests {
             // LemmeKnow identifies it as a CTF flag
             ("flag{h3ll0_w0rld}", "flag{hello_world}"), // CC
             ("Y0u h4v3 b33n pwn3d", "You have been pwned"), // CC
-            // CyberChef gives "ieet haxor"
-            ("1337 h4x0r", "leet haxor"), // proto
-            ("1337", "leet"),             // proto
+            ("1337", "leet"),                               // proto
             // CyberChef leaves |-| and |<
             ("7|-|3 |<3y 15 |-|3r3", "the key is here"), // proto
         ] {
@@ -673,6 +671,11 @@ mod tests {
             assert!(result.success, "{leet:?} wasn't identified: {result:?}");
             assert_eq!(result.unencrypted_text.unwrap()[0], plain, "{leet:?}");
         }
+        // CyberChef gives "ieet haxor". Decoded, but two words need both to be dictionary
+        // words, and "haxor" isn't, so it goes to the search unconfirmed.
+        let result = crack("1337 h4x0r");
+        assert!(!result.success, "{result:?}");
+        assert_eq!(result.unencrypted_text.unwrap(), ["leet haxor"]); // proto
     }
 
     #[test]

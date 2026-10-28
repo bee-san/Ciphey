@@ -699,17 +699,26 @@ mod tests {
     }
 
     #[test]
-    fn both_row_column_readings_are_returned() {
-        // JUMP OVER in the tap code square. The checker accepts none of the readings, so
-        // both row-column ones go to the search; the column-row one is checked but not
-        // returned.
+    fn the_tap_code_reading_is_checked_after_the_i_j_one() {
+        // JUMP OVER in the tap code square. 25 is K in the I=J square, so that reading,
+        // KUMP OVER, is checked first and rejected.
         let text = "25 45 32 35  34 51 15 42";
         assert_eq!(reading_texts(text), ["KUMP OVER", "JUMP OVER", "WYHX SEVI"]);
+        assert_cracks(text, "JUMP OVER", "5x5 C=K (tap code), row-column");
+    }
+
+    #[test]
+    fn both_row_column_readings_are_returned() {
+        // Letters that spell nothing in either square. The checker accepts none of the
+        // readings, so both row-column ones go to the search; the column-row one is
+        // checked but not returned.
+        let text = "25 41 53 55  51 52 54 35";
+        assert_eq!(reading_texts(text), ["KQXZ VWYP", "JQXZ VWYP", "WDPZ EKUX"]);
         let result = crack(text);
         assert!(!result.success, "{result:?}");
         assert_eq!(
             result.unencrypted_text,
-            Some(vec!["KUMP OVER".to_string(), "JUMP OVER".to_string()])
+            Some(vec!["KQXZ VWYP".to_string(), "JQXZ VWYP".to_string()])
         );
         assert_eq!(result.key, None);
     }

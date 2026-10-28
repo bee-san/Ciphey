@@ -1,11 +1,20 @@
 //! Vigenère cipher decoder with automated key detection
 //! Uses Index of Coincidence (IoC) for key length detection and frequency analysis for key discovery
 //! Returns `Option<String>` with the decrypted text if successful
-//! Uses Medium sensitivity for gibberish detection as the default.
+//! Uses Low sensitivity (the strictest) for gibberish detection: the key search maximises
+//! letter-pair fitness, which is what the English checker looks at, so near-misses pass at
+//! Medium.
 
 use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
+use crate::checkers::athena::Athena;
+use crate::checkers::checker_result::CheckResult;
+use crate::checkers::checker_type::{Check, Checker};
+use crate::checkers::english::has_mostly_words;
+use crate::checkers::json_checker::is_json_object_or_array;
+use crate::checkers::lemmeknow_checker::{is_marked_ctf_flag, is_unmarked_ctf_flag};
 use crate::checkers::CheckerTypes;
+use crate::config::get_config;
 use gibberish_or_not::Sensitivity;
 use log::{debug, trace};
 use once_cell::sync::Lazy;
@@ -99,6 +108,18 @@ static KEY_SEARCH_TABLES: Lazy<KeySearchTables> = Lazy::new(|| {
     KeySearchTables { plain, scores }
 });
 
+/// A candidate with spaces is only checked if at least this share of its words are
+/// English words. In the #1031 harness the right key's output never scores
+/// below 0.78 and a wrong key's that the checker accepted never above 0.62; a near miss in
+/// the #1031 end-to-end cases (`1HE TREASURE IS BURIED ... [W MPG [OZEQF`) scores 0.73.
+const MIN_WORD_RATIO: f64 = 0.75;
+
+/// Keys are only tried if the text has at least this many letters per key letter. With
+/// fewer, the key search found the right key for 22 of about 4,150 texts in the benchmark
+/// (benches/plaintext.rs) and wrong plaintext for 20, and on inputs with no plaintext its
+/// output ended searches on junk such as `afirsadineof` and `cendinheihale`.
+const MIN_LETTERS_PER_KEY_LETTER: usize = 5;
+
 /// The Vigenère decoder struct
 pub struct VigenereDecoder;
 
@@ -106,7 +127,7 @@ impl Crack for Decoder<VigenereDecoder> {
     fn new() -> Decoder<VigenereDecoder> {
         Decoder {
             name: "Vigenere",
-            description: "A polyalphabetic substitution cipher using a keyword to shift each letter. This implementation automatically detects the key length and breaks the cipher. Uses Medium sensitivity for gibberish detection.",
+            description: "A polyalphabetic substitution cipher using a keyword to shift each letter. This implementation automatically detects the key length and breaks the cipher. Uses Low sensitivity for gibberish detection.",
             link: "https://en.wikipedia.org/wiki/Vigen%C3%A8re_cipher",
             tags: vec!["substitution", "classical"],
             popularity: 0.6,
@@ -126,18 +147,37 @@ impl Crack for Decoder<VigenereDecoder> {
             return results;
         }
 
-        let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Medium);
-        let mut checker_result = checker_with_sensitivity.check(text);
+        let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
+        let mut checker_result = CheckResult::new(&Checker::<Athena>::new());
 
+        let crib = get_config().regex.is_some();
+        if !crib && is_json_object_or_array(text) {
+            // Vigenère keeps JSON's shape, so every key would pass as JSON
+            return results;
+        }
         let letters = cipher_letters(text);
-        for key_length in 3..30 {
-            // Use Medium sensitivity for Vigenere decoder
+        // A key needs enough ciphertext under each of its letters to be broken: with a
+        // key nearly as long as the text, the key search can make the text say almost
+        // anything, and its junk ended searches (`sheonooninto`, `hathinthethasbec`)
+        let max_key_length = (letters.len() / MIN_LETTERS_PER_KEY_LETTER).min(29);
+        for key_length in 3..=max_key_length {
             let key = break_vigenere_letters(&letters, key_length);
             let key_str = key.as_str().trim();
             if key_str.is_empty() {
                 continue;
             }
             let decode_attempt = decrypt(text, key_str);
+            // The key search maximises letter-pair fitness, so even wrong keys give text
+            // the statistical checks accept; only words tell them apart. Skipping these
+            // before the checker also keeps them away from the human checker. With a
+            // crib, the crib decides.
+            if !crib
+                && !is_marked_ctf_flag(&decode_attempt)
+                && (!has_mostly_words(&decode_attempt, MIN_WORD_RATIO)
+                    || is_unmarked_ctf_flag(&decode_attempt))
+            {
+                continue;
+            }
             checker_result = checker_with_sensitivity.check(&decode_attempt);
             if checker_result.is_identified {
                 results.unencrypted_text = Some(vec![decode_attempt]);
@@ -302,6 +342,22 @@ mod tests {
     fn get_athena_checker() -> CheckerTypes {
         let athena_checker = Checker::<Athena>::new();
         CheckerTypes::CheckAthena(athena_checker)
+    }
+
+    #[test]
+    fn short_texts_get_no_key_longer_than_a_fifth_of_them() {
+        // On 12 to 20 letters of junk the key search could make almost anything; these
+        // were all accepted as plaintext from searches of inputs with no plaintext
+        let vigenere_decoder = Decoder::<VigenereDecoder>::new();
+        for junk in [
+            "sheonooninto",
+            "afirsadineof",
+            "cendinheihale",
+            "hHeREoUtHo",
+        ] {
+            let result = vigenere_decoder.crack(junk, &get_athena_checker());
+            assert!(!result.success, "{junk}");
+        }
     }
 
     #[test]

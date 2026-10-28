@@ -124,7 +124,7 @@ More are on the way: [#1030](https://github.com/bee-san/Ciphey/issues/1030) trac
 
 <sub>▶ <a href="https://cdn.jsdelivr.net/gh/bee-san/Ciphey@d41d19946234477346fede14dadf8c351cc469e6/media/tui-video/out/lemmeknow.mp4">Watch the clip</a> (21 s)</sub>
 
-Every candidate plaintext also goes through [LemmeKnow](https://github.com/swanandx/lemmeknow), the Rust port of [pyWhat](https://github.com/bee-san/pyWhat), which recognises more than 120 formats. So Ciphey doesn't just decode the string, it tells you what it is: a password in a `mount` or `sshpass` command, a TOTP secret, a GitHub token or Stripe key, an IP or MAC address, an email address or URL, a card number, a crypto wallet, an AWS ARN or a CTF flag.
+Every candidate plaintext also goes through [LemmeKnow](https://github.com/swanandx/lemmeknow), the Rust port of [pyWhat](https://github.com/bee-san/pyWhat), which recognises more than 120 formats. So Ciphey doesn't just decode the string, it tells you what it is: a password in a `mount` or `sshpass` command, a TOTP secret, a GitHub token or Stripe key, an IP or MAC address, an email address or URL, a crypto wallet, an AWS ARN, JSON or a CTF flag in any format (`flag{…}`, `picoCTF{…}`, `DUCTF{…}`). LemmeKnow patterns that only check which characters a string has and how long it is (card and phone numbers, for example) are ignored: decoder junk matches them all the time.
 
 ```console
 $ ciphey -t '3139322e3136382e302e31'
@@ -138,7 +138,7 @@ Possible plaintext: '192.168.0.1' (y/N):
 
 <sub>▶ <a href="https://cdn.jsdelivr.net/gh/bee-san/Ciphey@d41d19946234477346fede14dadf8c351cc469e6/media/tui-video/out/crib.mp4">Watch the clip</a> (14.5 s)</sub>
 
-If you know part of the answer (the flag format, a word that has to be in there, how it starts), give it to Ciphey as a regex with `-r`. The other checkers switch off and only text that matches is accepted. This finds plaintext the English detection would pass over: Base64-encoded `picoCTF{b4s3_64_1s_fun}` comes back as gibberish by default, but with `-r 'picoCTF\{'` it's the first match.
+If you know part of the answer (the flag format, a word that has to be in there, how it starts), give it to Ciphey as a regex with `-r`. The other checkers switch off and only text that matches is accepted. This finds plaintext the other checkers would pass over, or stops on the one you want when several candidates look like plaintext: with `-r 'picoCTF\{'`, only a `picoCTF{…}` flag ends the search.
 
 `--wordlist words.txt` works the same way for exact matches: a candidate that is a line in the file counts as plaintext.
 
@@ -217,7 +217,7 @@ Nothing is filtered out: you get what the decoder hands on to the search. The ca
 
 ### Is it plaintext?
 
-`detect_plaintext` runs the checks the search uses (a regex crib, a wordlist, LemmeKnow, common passwords and English) and says which one accepted the text and what it took it for:
+`detect_plaintext` runs the checks the search uses (a regex crib, a wordlist, LemmeKnow, JSON, common passwords, English and code) and says which one accepted the text and what it took it for:
 
 ```rust
 use ciphey::detection::{detect_plaintext, CheckerKind, DetectOptions, Sensitivity};
@@ -260,7 +260,7 @@ It provides four tools:
 
 - `decode` decodes `text` when you don't know how it was encoded, and returns the `plaintext` and the `path` of decoders used, with keys such as the Caesar shift. Optional arguments: `timeout_secs` (1 to 30, default 10) and `regex`, a crib the plaintext must match, such as `flag\{`.
 - `decode_with` runs one decoder you choose on `text`: give it the `decoder`'s id, name or an alias (`base64`, `rot13`, `vigenere`, `xor_single_byte`, ...). Without a `key` it decodes the text, or cracks the cipher by trying every key; with one it decrypts, for ciphers that take a key (`13`, `LEMON`, `a=5, b=8`, `rails=3, offset=1`). It returns every candidate decoding and whether each passes Ciphey's plaintext check. `regex` works as for `decode`.
-- `detect_plaintext` checks whether `text` already is plaintext, without decoding it, and says which checker accepted it, what it took it for and, for LemmeKnow's formats, how sure it is. Optional arguments: `checkers` (any of `lemmeknow`, `password` and `english`, by default all three), `sensitivity` of the English checker (`low`, `medium` or `high`) and a `regex` crib.
+- `detect_plaintext` checks whether `text` already is plaintext, without decoding it, and says which checker accepted it, what it took it for and, for LemmeKnow's formats, how sure it is. Optional arguments: `checkers` (any of `lemmeknow`, `json`, `password`, `english` and `code`, by default all five), `sensitivity` of the English checker (`low`, `medium` or `high`) and a `regex` crib.
 - `list_decoders` lists the encodings and ciphers Ciphey supports, with the ids and aliases `decode_with` takes and the key format of each cipher that takes one.
 
 A `decode` result looks like this. `status` is `decoded`, `not_found` or `timed_out`.
@@ -304,7 +304,7 @@ A `decode` result looks like this. `status` is `decoded`, `not_found` or `timed_
     "description": "Internet Protocol (IP) Address Version 4",
     "confidence": 0.7
   },
-  "checkers": ["lemmeknow", "password", "english"]
+  "checkers": ["lemmeknow", "json", "password", "english", "code"]
 }
 ```
 
@@ -349,14 +349,15 @@ Most MCP clients take the same `mcpServers` entry: a stdio server started by `ci
 
 ## Good to know
 
-- Plaintext detection isn't perfect. Very short phrases, text that isn't English, JSON and unusual flag formats can be missed or mistaken for something else. [#1031](https://github.com/bee-san/Ciphey/issues/1031) has the details and the planned fixes. If you know anything about the answer, a crib (`-r`) or a wordlist helps a lot.
+- Plaintext detection isn't perfect. Text that isn't English is often missed, and a near-miss key (Vigenère in particular) can still produce text that passes for English. [#1031](https://github.com/bee-san/Ciphey/issues/1031) has the evaluation. If you know anything about the answer, a crib (`-r`) or a wordlist helps a lot.
+- A flag whose prefix isn't a flag word (`SEKAI{…}` rather than `…CTF{…}` or `flag{…}`) looks the same as its own Caesar shifts, so under Caesar, ROT13 or Atbash Ciphey can't tell which one is right. Give it the format as a crib: `-r 'SEKAI\{'`.
 - If a cached answer is wrong, delete `~/.ciphey/database.sqlite` to clear the cache.
 - If you're stuck, ask in `#coded-messages` on [Discord](http://discord.skerritt.blog).
 
 ## Documentation
 
 - [API docs on docs.rs](https://docs.rs/ciphey)
-- [The `docs/` folder](docs/), including an [overview](docs/ares_overview.md), the [architecture](docs/ares_architecture.md), [how the A* search works](docs/astar.md) and [how plaintext is identified](docs/plaintext_identification.md)
+- [The `docs/` folder](docs/), including an [overview](docs/ares_overview.md), the [architecture](docs/ares_architecture.md), [how the A* search works](docs/astar.md) and [how plaintext is detected](docs/plaintext-detection.md)
 - [Ciphey 2 documentation](https://broadleaf-angora-7db.notion.site/Ciphey2-32d5eea5d38b40c5b95a9442b4425710) on Notion
 - [Introducing Ares](https://skerritt.blog/introducing-ares/), the blog post about the Rust rewrite (it was called Ares before it became Ciphey)
 

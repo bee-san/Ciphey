@@ -579,7 +579,9 @@ mod tests {
 
     #[test]
     fn decodes_mixed_text_and_keeps_other_characters() {
-        assert_cracks("𝐡𝐞𝐥𝐥𝐨 café", "hello café");
+        // Decoded, but Athena doesn't take `hello café` for English: `café` isn't in the
+        // dictionary, and both words of a two-word text must be
+        assert_decodes("𝐡𝐞𝐥𝐥𝐨 café", "hello café");
         assert_decodes("ＡＢ北", "AB北");
     }
 
@@ -811,9 +813,9 @@ mod tests {
     #[test]
     fn sets_unencrypted_text_when_athena_rejects_it() {
         let decoder = Decoder::<UnicodeFancyTextDecoder>::new();
-        let result = decoder.crack("𝐅𝐥𝐚𝐠 𝟐𝟎𝟐𝟒", &get_athena_checker());
+        let result = decoder.crack("𝐐𝐳𝐱𝐯 𝟐𝟎𝟐𝟒", &get_athena_checker());
         assert!(!result.success);
-        assert_eq!(result.unencrypted_text.unwrap(), ["Flag 2024"]);
+        assert_eq!(result.unencrypted_text.unwrap(), ["Qzxv 2024"]);
     }
 
     #[test]
@@ -888,7 +890,7 @@ mod tests {
             assert_eq!(crack(text), None, "{text:?}");
         }
         // Base65536 and Base100 (the library API's examples), Braille, and the bench's
-        // accented `unicode_exhausts` input
+        // accented `unicode_times_out` input
         for text in [
             "𒅓鹨𖡮𒀠啦ꍢ顡啫𓍱𓁡𠁴唬𓍪鱤啥𖥭𔐠𔕯ᔮ",
             "👟👜👣👣👦🐗👮👦👩👣👛",

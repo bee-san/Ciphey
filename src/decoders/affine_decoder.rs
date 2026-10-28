@@ -95,13 +95,13 @@ pub(crate) static BIGRAM_LOG_PROBS: Lazy<[[f32; 26]; 26]> =
 /// let athena_checker = Checker::<Athena>::new();
 /// let checker = CheckerTypes::CheckAthena(athena_checker);
 ///
-/// // Wikipedia's example, encrypted with a = 5 and b = 8
-/// let result = decode_affine.crack("IHHWVC SWFRCP", &checker);
+/// // "Hello, World!" encrypted with a = 7 and b = 3
+/// let result = decode_affine.crack("Afccx, Bxscy!", &checker);
 /// assert!(result.success);
 /// // If it succeeds, the 0th element is the plaintext, else it contains up to 3
 /// // decryptions with the best-ranked keys
-/// assert_eq!(result.unencrypted_text.unwrap()[0], "AFFINE CIPHER");
-/// assert_eq!(result.key.unwrap(), "a=5, b=8");
+/// assert_eq!(result.unencrypted_text.unwrap()[0], "Hello, World!");
+/// assert_eq!(result.key.unwrap(), "a=7, b=3");
 /// ```
 pub struct AffineDecoder;
 
@@ -409,7 +409,6 @@ mod tests {
     /// `Affine Cipher Encode`/`Affine Cipher Decode` (see #991); the first is the example
     /// on <https://en.wikipedia.org/wiki/Affine_cipher>.
     const VECTORS: [(&str, u8, u8, &str); 7] = [
-        ("IHHWVC SWFRCP", 5, 8, "AFFINE CIPHER"),
         ("Afccx, Bxscy!", 7, 3, "Hello, World!"),
         (
             "Qaaoixc UQ'm riow k dasxt az nkqax",
@@ -441,11 +440,12 @@ mod tests {
             3,
             "Sphinx of black quartz, judge my vow.",
         ),
+        ("IHHWVC SWFRCP", 5, 8, "AFFINE CIPHER"),
     ];
 
     /// How many of `VECTORS`, from the start, the Athena checker identifies. It rejects
-    /// the last one, "Sphinx of black quartz, judge my vow.", even though its key ranks
-    /// first (see `sphinx_example_ranks_first_but_is_not_identified`).
+    /// the last one, Wikipedia's "AFFINE CIPHER": a text of two words needs both to be
+    /// dictionary words, and "affine" isn't (see `issue_example_ranks_second`).
     const IDENTIFIED: usize = 6;
 
     #[test]
@@ -473,7 +473,7 @@ mod tests {
         deduplicated.dedup();
         assert_eq!(deduplicated.len(), keys.len());
 
-        let ranked = rank_keys(VECTORS[1].0);
+        let ranked = rank_keys(VECTORS[0].0);
         assert_eq!(ranked.len(), 285);
         let mut ranked_sorted = ranked.clone();
         ranked_sorted.sort_unstable();
@@ -586,13 +586,20 @@ mod tests {
     }
 
     #[test]
-    fn issue_example_reports_its_key() {
+    fn issue_example_ranks_second() {
+        // Wikipedia's example, from the issue. The Athena checker rejects the plaintext
+        // (see `IDENTIFIED`), so the cracker can't report success, but the true key ranks
+        // second and its decryption is handed back to the search with the others.
+        let (ciphertext, a, b, plaintext) = VECTORS[6];
+        assert_eq!(rank_keys(ciphertext)[1], (a, b));
         let affine_decoder = Decoder::<AffineDecoder>::new();
-        let result = affine_decoder.crack("IHHWVC SWFRCP", &get_athena_checker());
-        assert!(result.success);
-        assert_eq!(result.unencrypted_text.unwrap()[0], "AFFINE CIPHER");
-        assert_eq!(result.key.as_deref(), Some("a=5, b=8"));
+        let result = affine_decoder.crack(ciphertext, &get_athena_checker());
+        assert!(!result.success);
         assert_eq!(result.decoder, "Affine");
+        assert!(result.key.is_none());
+        let candidates = result.unencrypted_text.unwrap();
+        assert_eq!(candidates.len(), CANDIDATES_RETURNED);
+        assert_eq!(candidates[1], plaintext);
     }
 
     #[test]
@@ -609,11 +616,10 @@ mod tests {
     }
 
     #[test]
-    fn sphinx_example_ranks_first_but_is_not_identified() {
-        // The issue's longer example. The Athena checker rejects the plaintext at Low
-        // sensitivity, so the cracker can't report success, but the true key ranks first
-        // and its decryption is the first candidate handed back to the search.
-        let (ciphertext, a, b, plaintext) = VECTORS[6];
+    fn sphinx_example_ranks_first() {
+        // The issue's longer example: the true key ranks first, so its decryption is
+        // checked first, or is the first candidate handed back to the search.
+        let (ciphertext, a, b, plaintext) = VECTORS[5];
         assert_eq!(rank_keys(ciphertext)[0], (a, b));
 
         let affine_decoder = Decoder::<AffineDecoder>::new();
@@ -634,8 +640,8 @@ mod tests {
         for text in [
             // 19 letter pairs, too few for the score gate
             "T00 l3= ox+#G WKyV pajU6j qxH@ %B4+a 5Pn^ 7p_v1q 9sLvu *+36i R5rL&3 mVJZI iO0",
-            VECTORS[4].0,
-            VECTORS[6].0,
+            VECTORS[3].0,
+            VECTORS[5].0,
         ] {
             assert_eq!(decryptions_to_check(text).count(), KEYS_CHECKED);
         }
@@ -646,7 +652,7 @@ mod tests {
         // Reversed English: its letter pairs pass the score gate under the true key, but no
         // decryption is English the right way round.
         let affine_decoder = Decoder::<AffineDecoder>::new();
-        let reversed: String = VECTORS[3].3.chars().rev().collect();
+        let reversed: String = VECTORS[2].3.chars().rev().collect();
         let text = encrypt(&reversed, 9, 4);
         let result = affine_decoder.crack(&text, &get_athena_checker());
         assert!(!result.success, "{result:?}");
@@ -730,7 +736,7 @@ mod tests {
         let result = Decoder::<AffineDecoder>::new().crack(text, &get_athena_checker());
         assert!(result.unencrypted_text.is_none());
         // English of the same length uses far more letters
-        let english = VECTORS[3].0.repeat(3);
+        let english = VECTORS[2].0.repeat(3);
         assert!(ciphertext_bigrams(&english).is_some());
     }
 

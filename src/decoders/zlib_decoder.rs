@@ -29,6 +29,9 @@ use flate2::bufread::ZlibDecoder as Inflater;
 use serde_json::Value;
 
 use crate::checkers::checker_result::CheckResult;
+use crate::checkers::checker_type::{Check, Checker};
+use crate::checkers::english::EnglishChecker;
+use crate::checkers::json_checker::JsonChecker;
 use crate::checkers::CheckerTypes;
 use crate::decoders::interface::check_string_success;
 
@@ -129,11 +132,16 @@ impl Crack for Decoder<ZlibDecoder> {
         results.key = git_type.map(String::from);
 
         let mut checker_result = checker.check(plaintext);
-        if !checker_result.is_identified {
-            // A Flask session is JSON, which the checkers don't recognise as a whole,
-            // but a value inside it (a flag, a URL, an email address) they may.
+        // A Flask session is JSON. A value inside it (a flag, a URL, an email address)
+        // says more than "JSON", so it is reported instead when there is one; an English
+        // value isn't more specific than JSON.
+        let only_json = checker_result.is_identified
+            && checker_result.checker_name == Checker::<JsonChecker>::new().name;
+        if !checker_result.is_identified || only_json {
             if let Some(hit) = check_json_values(plaintext, checker) {
-                checker_result = hit;
+                if !only_json || hit.checker_name != Checker::<EnglishChecker>::new().name {
+                    checker_result = hit;
+                }
             }
         }
         results.unencrypted_text = Some(vec![plaintext.to_string()]);
@@ -592,20 +600,22 @@ mod tests {
             result.unencrypted_text.unwrap()[0],
             r#"{"user":"admin","role":"admin","logged_in":true,"flag":"flag{flask_sessions_are_signed_not_encrypted}"}"#
         );
-        // Athena rejects the JSON as a whole, but LemmeKnow recognises the flag inside it
+        // Athena takes the whole text for JSON, but the flag inside it says more
         assert!(result.success);
         assert_eq!(result.checker_name, "LemmeKnow Checker");
     }
 
     #[test]
-    fn json_without_a_recognised_value_is_a_candidate() {
+    fn json_without_a_recognised_value_is_identified_as_json() {
         // The payload segment of a Flask cookie for {"user":"admin","logged_in":true}
         let result = crack("eJyrViotTi1SslJKTMnNzFPSUcrJT09PTYkHsq1KikpTawG-FguV");
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             r#"{"user":"admin","logged_in":true}"#
         );
-        assert!(!result.success);
+        // Since #1031 the JSON checker identifies JSON objects
+        assert!(result.success);
+        assert_eq!(result.checker_name, "JSON Checker");
     }
 
     #[test]

@@ -111,10 +111,9 @@ fn test_utf16le_powershell_encoded_command() {
 
 #[test]
 #[serial]
-#[ignore = "Vigenere accepts junk from this input at depth 1, before Base64 -> UTF-16 is tried (#1031)"]
 fn test_utf16le_powershell_encoded_command_from_issue() {
-    // The example from issue #943. The UTF-16 decoder decodes it (see its unit tests), and the
-    // search finds it when Vigenere results are checked at Low sensitivity (#1031, fix 9).
+    // The example from issue #943. Vigenere used to accept junk from this input at depth 1,
+    // before Base64 -> UTF-16 was tried (#1031).
     // base64.b64encode("Write-Output 'hello world'".encode("utf-16-le"))
     assert_eq!(
         crack("VwByAGkAdABlAC0ATwB1AHQAcAB1AHQAIAAnAGgAZQBsAGwAbwAgAHcAbwByAGwAZAAnAA=="),
@@ -516,6 +515,40 @@ fn test_jwt_inside_base64_is_decoded() {
     assert_eq!(result.text[0], JWT_IO_PAYLOAD);
     let decoders: Vec<&str> = result.path.iter().map(|step| step.decoder).collect();
     assert_eq!(decoders, ["Base64", "JWT"]);
+}
+
+#[test]
+#[serial]
+fn test_cached_plaintext_that_fails_the_checkers_is_searched_again() {
+    // https://github.com/bee-san/Ciphey/issues/1031: older versions cached BYFFIQILFX (a
+    // wrong Caesar shift LemmeKnow called an "ASIN") for KHOORZRUOG, and every later run
+    // returned it from the cache without checking it.
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
+    database::setup_database().unwrap();
+
+    let encoded = String::from("KHOORZRUOG");
+    let caesar = Decoder::<ciphey::decoders::caesar_decoder::CaesarDecoder>::new();
+    let mut stale = CrackResult::new(&caesar, encoded.clone());
+    stale.unencrypted_text = Some(vec!["BYFFIQILFX".to_string()]);
+    stale.success = true;
+    database::insert_cache(&database::CacheEntry {
+        uuid: Uuid::new_v4(),
+        encoded_text: encoded.clone(),
+        decoded_text: "BYFFIQILFX".to_string(),
+        path: vec![stale],
+        execution_time_ms: 10,
+    })
+    .unwrap();
+
+    let result = perform_cracking(&encoded, Config::default())
+        .unwrap()
+        .unwrap();
+    assert_eq!(result.text[0], "HELLOWORLD");
+
+    // The stale row is gone and the new answer is cached instead
+    let row = database::read_cache(&encoded).unwrap().unwrap();
+    assert_eq!(row.decoded_text, "HELLOWORLD");
 }
 
 /// Runs the full search on `input` and checks it finds `plaintext` with the repeating-key

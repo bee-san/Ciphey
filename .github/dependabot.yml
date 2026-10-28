@@ -8,7 +8,7 @@ updates:
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "monthly"
     # candle-core 0.3.3 requires the rand 0.8 / half 2.3 compatibility line.
     # Later versions compile with incompatible rand traits and break every build.
     ignore:

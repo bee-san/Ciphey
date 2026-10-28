@@ -595,9 +595,14 @@ mod tests {
 
     #[test]
     fn unidentified_english_is_handed_to_the_search() {
-        let result = crack(SPHINX_HEX);
+        // "Affine cipher" XORed with 0x2a, as hex. The checker doesn't take it for English
+        // ("affine" isn't in its dictionary), but it scores like English
+        let result = crack("6b4c4c43444f0a49435a424f58");
         assert!(!result.success);
-        assert_eq!(result.unencrypted_text, Some(vec![SPHINX.to_string()]));
+        assert_eq!(
+            result.unencrypted_text,
+            Some(vec!["Affine cipher".to_string()])
+        );
         assert_eq!(result.key.as_deref(), Some("0x2a"));
     }
 
@@ -850,7 +855,7 @@ mod tests {
     fn accented_text_has_no_raw_view() {
         // Accented letters alone are text, not bytes from an earlier decoder. Reading them
         // as bytes made every such node cost five checks; the search suite's
-        // `unicode_exhausts` input is 48 of them.
+        // `unicode_times_out` input is 48 of them.
         for text in [
             "éèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüç",
             "Où est la bibliothèque ? Déjà vu, garçon, à bientôt",

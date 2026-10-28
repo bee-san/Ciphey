@@ -160,7 +160,7 @@ impl Crack for Decoder<VigenereAutokeyDecoder> {
     fn new() -> Decoder<VigenereAutokeyDecoder> {
         Decoder {
             name: "Vigenere Autokey",
-            description: "Autokey (autoclave) Vigenère cipher: a short primer followed by the plaintext as the key stream. Recovers the primer by solving each residue class independently and refining with quadgram statistics. Uses Low sensitivity for gibberish detection on spaced text, Medium on unspaced text.",
+            description: "Autokey (autoclave) Vigenère cipher: a short primer followed by the plaintext as the key stream. Recovers the primer by solving each residue class independently and refining with quadgram statistics. Uses Low sensitivity for gibberish detection.",
             link: "https://en.wikipedia.org/wiki/Autokey_cipher",
             tags: vec!["autokey", "vigenere", "substitution", "classical"],
             popularity: 0.3,
@@ -188,14 +188,7 @@ impl Crack for Decoder<VigenereAutokeyDecoder> {
             return results;
         };
 
-        // Without word breaks the English checker reads the text as one long word, and
-        // only accepts English at Medium sensitivity
-        let sensitivity = if census.whitespace > 0 {
-            Sensitivity::Low
-        } else {
-            Sensitivity::Medium
-        };
-        let checker = checker.with_sensitivity(sensitivity);
+        let checker = checker.with_sensitivity(Sensitivity::Low);
         for candidate in &candidates {
             let primer = primer_string(&candidate.primer);
             let plaintext = decrypt(text, &primer);
@@ -735,8 +728,8 @@ mod tests {
              incredulity, it was the season of Light, it was the season of Darkness",
         ),
         (
-            // The issue's longer example: no word breaks, so only Medium sensitivity
-            // accepts the plaintext
+            // The issue's longer example: no word breaks, so the English checker scores
+            // the plaintext by its quadgrams
             "KBLHWRPXXEKMVJUMEXGNMEMWLPXSOJLASBHZEXGNMEMWLPXWGWHMAIYHCREBODGFPXWGWHMJOUPWXMBSDAAAJEKLPXAPGVOSJQSNPSKJXHIWYPXAPGVOSJXBEYSICYKKCLNHILRPXOESLVRGJLAUUHNEEGZMPXOESLVRGJDSFXBJVS",
             "CIPHEY",
             DICKENS_UNSPACED,
@@ -863,7 +856,7 @@ mod tests {
     }
 
     #[test]
-    fn unspaced_text_is_checked_at_medium_sensitivity() {
+    fn unspaced_text_is_cracked() {
         // The issue's longer example has no word breaks
         let ciphertext = VECTORS[5].0;
         assert!(!ciphertext.contains(' '));

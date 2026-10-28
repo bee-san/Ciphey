@@ -4,7 +4,7 @@ This document outlines all the threats Ciphey may face.
 
 ## System Overview
 
-`ciphey` is a local decoding tool with a thin CLI over a library-first core. Users provide ciphertext, files, configuration, and optional model-download credentials. The search pipeline runs decoders and checkers against attacker-controlled input and stores some local state under `~/.ciphey`.
+`ciphey` is a local decoding tool with a thin CLI over a library-first core. Users provide ciphertext, files and configuration. The search pipeline runs decoders and checkers against attacker-controlled input and stores some local state under `~/.ciphey`.
 
 ## Security Goals
 
@@ -17,15 +17,13 @@ This document outlines all the threats Ciphey may face.
 - local files passed through `--file`
 - `~/.ciphey/config.toml`
 - `~/.ciphey/database.sqlite`
-- optional model files under `~/.ciphey/models/`
-- Hugging Face or other download credentials used during first-run setup but not stored
 - release artifacts, workflow definitions, and dependency metadata
 
 ## Trust Boundaries
 
-- CLI arguments, stdin, and file contents are untrusted input. Becuase Ciphey is local we should trust the user knows what they are doing.
+- CLI arguments, stdin, and file contents are untrusted input. Because Ciphey is local we should trust the user knows what they are doing.
 - Decoder and checker execution must treat transformed candidate strings as untrusted.
-- The first-run model download flow crosses a trust boundary into third-party services if the user downloads files (wordlists, AI models)
+- Wordlists the user points ciphey at are files from outside, read as untrusted input. Ciphey downloads nothing itself.
 - SQLite-backed persistence is trusted only as local state owned by the current user, not as authoritative truth from a trusted server.
 - GitHub workflows, release automation, and repository settings form the supply-chain boundary for published artifacts.
 
@@ -35,12 +33,10 @@ This document outlines all the threats Ciphey may face.
 
 Relevant risks:
 
-- a malicious or unexpected source is treated as trusted during optional model download or other third-party fetches
 - release automation or dependency sources are impersonated through compromised credentials, tags, or workflow context
 
 Mitigations:
 
-- keep credential handling private to the minimum code path required for model download
 - prefer authenticated, explicit sources for release and dependency operations
 - protect repository settings, default branch controls, and workflow credentials
 - Ensure no 1 maintainer can cut a release, and the maintainers that do have PGP keys and MFA setup.
@@ -56,6 +52,7 @@ Relevant risks:
 Mitigations:
 
 - keep storage behavior explicit and predictable
+- check a cached plaintext with the current checkers (and the human checker, if it is on) before returning it, and forget it if it fails
 - use test helpers instead of the real user database in tests
 - review SQLite changes in the source code for corruption, injection, and persistence-boundary risks
 
@@ -77,7 +74,7 @@ Mitigations:
 Relevant risks:
 
 - local files passed through `--file` may contain sensitive content that is mishandled or overexposed (via logging)
-- configuration, database contents, or optional model-download credentials are logged, persisted, or disclosed unintentionally
+- configuration or database contents are logged, persisted, or disclosed unintentionally
 - plaintext-identification logic classifies secrets or credentials as meaningful plaintext and surfaces them unnecessarily
 
 Mitigations:
@@ -108,5 +105,5 @@ Mitigations:
 ## Assumptions And Out Of Scope
 
 - A fully compromised user workstation is out of scope.
-- Network threats are mostly limited to optional model download or dependency/release workflows.
+- Ciphey makes no network requests at runtime, so network threats are limited to dependency/release workflows.
 - `ciphey` is a local analysis tool, not a sandbox for safely executing untrusted code.

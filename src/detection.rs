@@ -30,17 +30,19 @@
 //!
 //! 1. [`CheckerKind::Regex`](crate::detection::CheckerKind::Regex): a crib, text matching a regular expression;
 //! 2. [`CheckerKind::Wordlist`](crate::detection::CheckerKind::Wordlist): exact matches from a wordlist;
-//! 3. [`CheckerKind::LemmeKnow`](crate::detection::CheckerKind::LemmeKnow): over a hundred formats, from IP addresses to API keys;
-//! 4. [`CheckerKind::Password`](crate::detection::CheckerKind::Password): a list of common passwords;
-//! 5. [`CheckerKind::English`](crate::detection::CheckerKind::English): English text.
+//! 3. [`CheckerKind::LemmeKnow`](crate::detection::CheckerKind::LemmeKnow): over a hundred formats, from IP addresses to API keys, and CTF flags in any format;
+//! 4. [`CheckerKind::Json`](crate::detection::CheckerKind::Json): JSON objects and arrays;
+//! 5. [`CheckerKind::Password`](crate::detection::CheckerKind::Password): a list of common passwords;
+//! 6. [`CheckerKind::English`](crate::detection::CheckerKind::English): English text;
+//! 7. [`CheckerKind::Code`](crate::detection::CheckerKind::Code): source code and shell commands.
 //!
-//! Plaintext detection isn't perfect: short phrases, other languages, JSON and most flag
-//! formats other than `flag{...}` are often missed, and a crib or a wordlist helps a lot.
-//! [#1031](https://github.com/bee-san/Ciphey/issues/1031) tracks the improvements.
+//! Plaintext detection isn't perfect: other languages are often missed, and so are
+//! short phrases with rare words. A crib or a wordlist helps a lot.
+//! [#1031](https://github.com/bee-san/Ciphey/issues/1031) has the evaluation.
 //!
 //! [`DetectOptions`](crate::detection::DetectOptions) chooses which of them run and how lenient the English checker is.
-//! The defaults run LemmeKnow, the password list and English at [`Sensitivity::Medium`](crate::detection::Sensitivity::Medium),
-//! which is what Athena, the checker the search uses, does with the default
+//! The defaults run LemmeKnow, JSON, the password list, English at [`Sensitivity::Medium`](crate::detection::Sensitivity::Medium)
+//! and code, which is what Athena, the checker the search uses, does with the default
 //! [`Config`](crate::config::Config). These are Athena's checkers, unchanged. Unlike
 //! Athena, `detect_plaintext` never asks the human checker, and it takes its crib and
 //! wordlist from the options, not from the process-wide config.
@@ -56,7 +58,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::checkers::checker_result::CheckResult;
 use crate::checkers::checker_type::{Check, Checker};
+use crate::checkers::code_checker::CodeChecker;
 use crate::checkers::english::EnglishChecker;
+use crate::checkers::json_checker::JsonChecker;
 use crate::checkers::lemmeknow_checker::LemmeKnow;
 use crate::checkers::password::PasswordChecker;
 use crate::checkers::regex_checker::RegexChecker;
@@ -84,9 +88,14 @@ pub enum CheckerKind {
     Wordlist,
     /// [LemmeKnow](https://github.com/swanandx/lemmeknow), the Rust port of pyWhat: over
     /// a hundred formats, such as IP and email addresses, URLs, API keys and crypto
-    /// wallet addresses. The whole text has to be the match.
+    /// wallet addresses, and CTF flags in any format (`picoCTF{...}`). The whole text has
+    /// to be the match. Patterns that only check which characters a text has and how
+    /// long it is (card and phone numbers) are ignored.
     #[serde(rename = "lemmeknow")]
     LemmeKnow,
+    /// A JSON object or array with at least one entry.
+    #[serde(rename = "json")]
+    Json,
     /// Text that is exactly one of the common passwords gibberish-or-not knows.
     #[serde(rename = "password")]
     Password,
@@ -94,6 +103,9 @@ pub enum CheckerKind {
     /// checker [`Sensitivity`] changes.
     #[serde(rename = "english")]
     English,
+    /// Source code or a shell command, such as `import os` or `curl -s https://...`.
+    #[serde(rename = "code")]
+    Code,
     /// Only in decoder results: a well-formed JSON Web Token, which the JWT decoder
     /// accepts on its structure when no other checker identifies the payload.
     /// [`detect_plaintext`] never reports it.
@@ -108,8 +120,10 @@ impl CheckerKind {
         CheckerKind::Regex,
         CheckerKind::Wordlist,
         CheckerKind::LemmeKnow,
+        CheckerKind::Json,
         CheckerKind::Password,
         CheckerKind::English,
+        CheckerKind::Code,
         CheckerKind::JwtStructure,
     ];
 
@@ -130,8 +144,10 @@ impl CheckerKind {
             CheckerKind::Regex => "regex",
             CheckerKind::Wordlist => "wordlist",
             CheckerKind::LemmeKnow => "lemmeknow",
+            CheckerKind::Json => "json",
             CheckerKind::Password => "password",
             CheckerKind::English => "english",
+            CheckerKind::Code => "code",
             CheckerKind::JwtStructure => "jwt_structure",
         }
     }
@@ -146,8 +162,10 @@ impl CheckerKind {
             CheckerKind::Regex => of(&Checker::<RegexChecker>::new()),
             CheckerKind::Wordlist => of(&Checker::<WordlistChecker>::new()),
             CheckerKind::LemmeKnow => of(&Checker::<LemmeKnow>::new()),
+            CheckerKind::Json => of(&Checker::<JsonChecker>::new()),
             CheckerKind::Password => of(&Checker::<PasswordChecker>::new()),
             CheckerKind::English => of(&Checker::<EnglishChecker>::new()),
+            CheckerKind::Code => of(&Checker::<CodeChecker>::new()),
             CheckerKind::JwtStructure => of(&jwt_structure_checker()),
         }
     }
@@ -256,9 +274,9 @@ impl Detection {
 
 /// Which checkers [`detect_plaintext`] runs, and how.
 ///
-/// The default runs [`CheckerKind::LemmeKnow`], [`CheckerKind::Password`] and
-/// [`CheckerKind::English`] at [`Sensitivity::Medium`], as Athena does with the default
-/// config. Whatever you choose, the checkers run in the order of [`CheckerKind::ALL`].
+/// The default runs [`CheckerKind::LemmeKnow`], [`CheckerKind::Json`],
+/// [`CheckerKind::Password`], [`CheckerKind::English`] at [`Sensitivity::Medium`] and
+/// [`CheckerKind::Code`], as Athena does with the default config. Whatever you choose, the checkers run in the order of [`CheckerKind::ALL`].
 ///
 /// ```
 /// use ciphey::detection::{detect_plaintext, CheckerKind, DetectOptions, Sensitivity};
@@ -300,8 +318,10 @@ impl Default for DetectOptions {
         DetectOptions {
             checkers: vec![
                 CheckerKind::LemmeKnow,
+                CheckerKind::Json,
                 CheckerKind::Password,
                 CheckerKind::English,
+                CheckerKind::Code,
             ],
             sensitivity: Sensitivity::Medium,
             regex: None,
@@ -360,8 +380,8 @@ impl DetectOptions {
         Ok(self)
     }
 
-    /// Also accepts text that is exactly one of `words`, checked before LemmeKnow, the
-    /// passwords and English, like `ciphey --wordlist`. [`load_wordlist`] reads one from a
+    /// Also accepts text that is exactly one of `words`, checked before the other
+    /// checkers, like `ciphey --wordlist`. [`load_wordlist`] reads one from a
     /// file.
     ///
     /// [`load_wordlist`]: crate::config::load_wordlist
@@ -392,10 +412,7 @@ impl DetectOptions {
 ///
 /// See the [module docs](self) for the order. The checkers are Athena's, with the same
 /// settings, so with the default options this accepts exactly what the search accepts
-/// with the default config. One setting comes from the process-wide config: if
-/// `Config::enhanced_detection` is on, the English checker uses
-/// [`Sensitivity::High`] whatever you choose, as it does in the search. The human checker
-/// is never asked.
+/// with the default config. The human checker is never asked.
 ///
 /// ```
 /// use ciphey::detection::{detect_plaintext, CheckerKind, DetectOptions};
@@ -418,10 +435,16 @@ pub fn detect_plaintext(text: &str, options: &DetectOptions) -> Option<Detection
             CheckerKind::LemmeKnow => Checker::<LemmeKnow>::new()
                 .with_sensitivity(sensitivity)
                 .check(text),
+            CheckerKind::Json => Checker::<JsonChecker>::new()
+                .with_sensitivity(sensitivity)
+                .check(text),
             CheckerKind::Password => Checker::<PasswordChecker>::new()
                 .with_sensitivity(sensitivity)
                 .check(text),
             CheckerKind::English => Checker::<EnglishChecker>::new()
+                .with_sensitivity(sensitivity)
+                .check(text),
+            CheckerKind::Code => Checker::<CodeChecker>::new()
                 .with_sensitivity(sensitivity)
                 .check(text),
             CheckerKind::JwtStructure => return None,
@@ -484,8 +507,10 @@ pub(crate) fn for_accepted_decoding(
             .then(|| Checker::<RegexChecker>::new().check(text)),
         CheckerKind::Wordlist => Some(Checker::<WordlistChecker>::new().check(text)),
         CheckerKind::LemmeKnow => Some(Checker::<LemmeKnow>::new().check(text)),
+        CheckerKind::Json => Some(Checker::<JsonChecker>::new().check(text)),
         CheckerKind::Password => Some(Checker::<PasswordChecker>::new().check(text)),
         CheckerKind::English => Some(Checker::<EnglishChecker>::new().check(text)),
+        CheckerKind::Code => Some(Checker::<CodeChecker>::new().check(text)),
         CheckerKind::JwtStructure => Some(structure_result(text)),
     };
     Some(match again {
@@ -529,6 +554,7 @@ mod tests {
         "Hello, World!",
         "This is a perfectly normal English sentence about cats.",
         "Rcl maocr otmwi lit dnoen oehc 13 iron seah.",
+        "let me jnow whdn you gdt home",
         "Max mkxtlnkx bl unkbxw ngwxk",
         "yob llud a kcaJ",
         "vjkrerkdnxhrfjekfdjexk",
@@ -552,6 +578,12 @@ mod tests {
         "日本語のテキスト",
         "Tqxxa ftue ue mz qjmybxq fqjf tffbe://saasxq.oay !",
         "mount -o username=bee,password=hunter2 //server/share /mnt",
+        "[1, 2, 3]",
+        "import os",
+        "int main() { return 0; }",
+        "curl -s https://example.com/api | jq .name",
+        "Flag: picoCTF{n0t_s0_h4rd}",
+        "The password is IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR",
     ];
 
     /// The sensitivities, strictest first
@@ -602,6 +634,21 @@ mod tests {
         assert_eq!(english.description, "Words");
         assert_eq!(english.confidence, None);
 
+        let json = detect_plaintext("{\"key\": \"value\"}", &options).unwrap();
+        assert_eq!(json.checker, CheckerKind::Json);
+        assert_eq!(json.description, "JavaScript Object Notation (JSON)");
+        assert_eq!(json.confidence, None);
+
+        let code =
+            detect_plaintext("curl -s https://example.com/api | jq .name", &options).unwrap();
+        assert_eq!(code.checker, CheckerKind::Code);
+        assert_eq!(code.description, "Source code or shell command");
+
+        // Any CTF's flag format, not only flag{...}
+        let flag = detect_plaintext("picoCTF{b4s3_64_1s_fun}", &options).unwrap();
+        assert_eq!(flag.checker, CheckerKind::LemmeKnow);
+        assert_eq!(flag.description, "Capture The Flag (CTF) Flag");
+
         for junk in [
             "",
             "#",
@@ -616,8 +663,8 @@ mod tests {
 
     #[test]
     fn sensitivity_changes_only_the_english_checker() {
-        // One English word in gibberish: only High takes it for English
-        let text = "Rcl maocr otmwi lit dnoen oehc 13 iron seah.";
+        // English with typos: only High takes it for English
+        let text = "let me jnow whdn you gdt home";
         let at =
             |sensitivity| detect_plaintext(text, &DetectOptions::new().sensitivity(sensitivity));
         assert_eq!(at(Sensitivity::Low), None);
@@ -665,8 +712,10 @@ mod tests {
             unusable.enabled_checkers().collect::<Vec<_>>(),
             [
                 CheckerKind::LemmeKnow,
+                CheckerKind::Json,
                 CheckerKind::Password,
-                CheckerKind::English
+                CheckerKind::English,
+                CheckerKind::Code
             ]
         );
     }
@@ -715,8 +764,10 @@ mod tests {
             [
                 CheckerKind::Wordlist,
                 CheckerKind::LemmeKnow,
+                CheckerKind::Json,
                 CheckerKind::Password,
-                CheckerKind::English
+                CheckerKind::English,
+                CheckerKind::Code
             ]
         );
 

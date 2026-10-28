@@ -1,7 +1,8 @@
 name: 'Handle stale PRs'
+# The weekday schedule was removed (GitHub Actions cost audit, 2026-10-13); run by hand from
+# the Actions tab when wanted.
 on:
-    schedule:
-        - cron: '30 7 * * 1-5'
+    workflow_dispatch:
 
 permissions:
     issues: write
