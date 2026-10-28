@@ -5,6 +5,8 @@ use std::path::Path;
 
 /// Module housing functions for managing SQLite database
 pub mod database;
+/// English letter statistics (quadgrams, bigrams, short words) for scoring plaintext
+pub mod ngrams;
 /// Module for storing WaitAthena results
 pub mod wait_athena_storage;
 

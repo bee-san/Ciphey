@@ -190,7 +190,7 @@ impl Crack for Decoder<BeaufortDecoder> {
     fn new() -> Decoder<BeaufortDecoder> {
         Decoder {
             name: "Beaufort",
-            description: "Beaufort cipher, the reciprocal Vigenère variant P = K − C. Finds the key length and key automatically. Uses Low sensitivity for gibberish detection on spaced text, Medium on unspaced text.",
+            description: "Beaufort cipher, the reciprocal Vigenère variant P = K − C. Finds the key length and key automatically. Uses Low sensitivity for gibberish detection.",
             link: "https://en.wikipedia.org/wiki/Beaufort_cipher",
             tags: vec!["beaufort", "vigenere", "substitution", "classical", "reciprocal"],
             popularity: 0.4,
@@ -203,9 +203,8 @@ impl Crack for Decoder<BeaufortDecoder> {
     /// none of the decryptions but the best one still reads like English, that one is
     /// returned unconfirmed, with its key, so the search can keep decoding it.
     ///
-    /// Decryptions of text with whitespace are checked with Low sensitivity, like the
-    /// other classical ciphers, and of text without it with Medium: Low rarely accepts
-    /// English without spaces.
+    /// Decryptions are checked with Low sensitivity, like the other classical ciphers.
+    /// Without whitespace the English checker scores them by their quadgrams.
     fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
         trace!("Trying Beaufort with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
@@ -214,12 +213,7 @@ impl Crack for Decoder<BeaufortDecoder> {
             trace!("Beaufort found no key worth checking");
             return results;
         }
-        let sensitivity = if text.bytes().any(|byte| byte.is_ascii_whitespace()) {
-            Sensitivity::Low
-        } else {
-            Sensitivity::Medium
-        };
-        let checker = checker.with_sensitivity(sensitivity);
+        let checker = checker.with_sensitivity(Sensitivity::Low);
         let mut confirm = |plaintext: &str| {
             let check = checker.check(plaintext);
             check.is_identified.then_some(check)
@@ -928,12 +922,10 @@ mod tests {
     }
 
     #[test]
-    fn unspaced_text_is_checked_with_medium_sensitivity() {
-        // Athena at Low doesn't accept the unspaced plaintext, at Medium it does
+    fn unspaced_text_is_checked_with_low_sensitivity() {
+        // Athena at Low scores the unspaced plaintext by its quadgrams and accepts it
         let low = athena().with_sensitivity(Sensitivity::Low);
-        let medium = athena().with_sensitivity(Sensitivity::Medium);
-        assert!(!low.check(DICKENS_UNSPACED).is_identified);
-        assert!(medium.check(DICKENS_UNSPACED).is_identified);
+        assert!(low.check(DICKENS_UNSPACED).is_identified);
         assert!(crack(CIPHEY_UNSPACED).success);
     }
 

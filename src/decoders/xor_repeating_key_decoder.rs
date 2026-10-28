@@ -589,6 +589,22 @@ fn decrypts_to_flag(view: &[u8], key: &[u8], prefix: &[u8]) -> bool {
     last_visible == b'}'
 }
 
+/// Whether the contents of the flag that `view` XORed with `key` gives, between `prefix`
+/// and the closing `}`, are ASCII letters, digits and `_-!?.@$#&+'`, the characters CTF
+/// flags use.
+fn has_flag_contents(view: &[u8], key: &[u8], prefix: &[u8]) -> bool {
+    let plain: Vec<u8> = view
+        .iter()
+        .zip(key.iter().cycle())
+        .map(|(byte, key_byte)| byte ^ key_byte)
+        .collect();
+    let plain = plain.trim_ascii_end();
+    plain.len() > prefix.len() + 1
+        && plain[prefix.len()..plain.len() - 1]
+            .iter()
+            .all(|b| b.is_ascii_alphanumeric() || b"_-!?.@$#&+'".contains(b))
+}
+
 /// Whether `view` is a CTF flag XORed with a single byte (or with none). The single-byte
 /// XOR cracker reports those; frequency analysis here would make letter soup of them.
 fn is_single_byte_flag(view: &[u8]) -> bool {
@@ -602,6 +618,11 @@ fn is_single_byte_flag(view: &[u8]) -> bool {
 /// the start of the view XORed with the start of a flag prefix, so keys up to the prefix
 /// length are found exactly. Longer keys are not guessed: a printable but wrong flag would
 /// still match LemmeKnow's flag pattern.
+///
+/// A key as long as the prefix is made from the prefix alone, so nothing checks it, and
+/// any text of the right length that stays printable "decrypts" to a flag. Such a key is
+/// only kept if the flag's contents look like a flag's (see [`has_flag_contents`]): the
+/// search turned `FRXNV{l0h_s0haq_z3}` into `DUCTF{o qq`4k|jqu3}` that way.
 fn crib_keys(view: &[u8]) -> Vec<Vec<u8>> {
     let mut keys: Vec<Vec<u8>> = Vec::new();
     for prefix in FLAG_PREFIXES {
@@ -619,6 +640,7 @@ fn crib_keys(view: &[u8]) -> Vec<Vec<u8>> {
             if key.len() >= 2
                 && !keys.iter().any(|k| k == key)
                 && decrypts_to_flag(view, key, prefix)
+                && (key.len() < prefix.len() || has_flag_contents(view, key, prefix))
             {
                 keys.push(key.to_vec());
             }
@@ -1250,6 +1272,24 @@ mod tests {
         // Real keys share at most a byte or so with the single-byte key
         let ciphertext = hex_bytes(ICE_HEX);
         assert!(!is_mostly_single_byte_key(&ciphertext, b"ICE"));
+    }
+
+    #[test]
+    fn keys_as_long_as_the_prefix_need_flag_contents() {
+        // A 6-byte key is made from `DUCTF{` alone, so only the contents can say it's right
+        let xor = |plain: &[u8]| -> Vec<u8> {
+            plain
+                .iter()
+                .zip(b"SECRET".iter().cycle())
+                .map(|(byte, key)| byte ^ key)
+                .collect()
+        };
+        assert_eq!(
+            crib_keys(&xor(b"DUCTF{x0r_k3y_0f_s1x}")),
+            vec![b"SECRET".to_vec()]
+        );
+        // What the search made of FRXNV{l0h_s0haq_z3} with such a key
+        assert!(crib_keys(&xor(b"DUCTF{o qq`4k|jqu3}")).is_empty());
     }
 
     #[test]

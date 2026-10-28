@@ -3,7 +3,6 @@
 /// For a version that continues checking and collects all plaintexts, see WaitAthena.
 use crate::{
     checkers::checker_result::CheckResult,
-    cli_pretty_printing,
     config::{get_config, is_global_config_set},
 };
 use dashmap::DashSet;
@@ -16,10 +15,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::{
     checker_type::{Check, Checker},
-    english::EnglishChecker,
-    human_checker,
-    lemmeknow_checker::LemmeKnow,
-    password::PasswordChecker,
+    human_checker, identify_plaintext,
     regex_checker::RegexChecker,
     wordlist::WordlistChecker,
 };
@@ -118,6 +114,19 @@ impl Hit {
             answer: CheckResult::new(checker),
         }
     }
+
+    /// `found` is an identified result, named after the checker that identified it.
+    fn identified(found: CheckResult) -> Self {
+        let answer = CheckResult {
+            is_identified: false,
+            text: String::new(),
+            description: String::new(),
+            checker_name: found.checker_name,
+            checker_description: found.checker_description,
+            link: found.link,
+        };
+        Hit { found, answer }
+    }
 }
 
 impl Checker<Athena> {
@@ -170,30 +179,10 @@ impl Checker<Athena> {
             }
         }
 
-        // In Ciphey if the user uses the regex checker all the other checkers turn off
-        // This is because they are looking for one specific bit of information so will not want the other checkers
-        // TODO: wrap all checkers in oncecell so we only create them once!
-        let lemmeknow = Checker::<LemmeKnow>::new().with_sensitivity(self.sensitivity);
-        let lemmeknow_result = lemmeknow.check(text);
-        if lemmeknow_result.is_identified {
-            return Some(Hit::new(&lemmeknow, lemmeknow_result));
-        }
-
-        // Not called `password`: CodeQL takes anything named like that for a secret and
-        // flags every log line its result reaches. This is the common-password list.
-        let common_pw = Checker::<PasswordChecker>::new().with_sensitivity(self.sensitivity);
-        let common_pw_result = common_pw.check(text);
-        if common_pw_result.is_identified {
-            return Some(Hit::new(&common_pw, common_pw_result));
-        }
-
-        let english = Checker::<EnglishChecker>::new().with_sensitivity(self.sensitivity);
-        let english_result = english.check(text);
-        if english_result.is_identified {
-            return Some(Hit::new(&english, english_result));
-        }
-
-        None
+        // LemmeKnow (known formats and CTF flags), JSON, the common-password list, English
+        // and code, in that order
+        identify_plaintext(text, self.sensitivity)
+            .map(|found| Hit::identified(found.into_result(text)))
     }
 
     /// Asks the human checker about `hit` and returns Athena's answer: identified if
@@ -209,10 +198,6 @@ impl Checker<Athena> {
         check_res.is_identified = human_result;
         check_res.text = hit.found.text;
         check_res.description = hit.found.description;
-        cli_pretty_printing::success(&format!(
-            "DEBUG: Athena {} - human_result: {}, check_res.is_identified: {}",
-            check_res.checker_name, human_result, check_res.is_identified
-        ));
         check_res
     }
 }
@@ -229,11 +214,18 @@ impl Check for Checker<Athena> {
             popularity: 1.0,
             lemmeknow_config: Identifier::default(),
             sensitivity: Sensitivity::Medium, // Default to Medium sensitivity
-            enhanced_detector: None,
             _phantom: std::marker::PhantomData,
         }
     }
 
+    /// Runs the checkers in order and stops at the first that identifies `text`:
+    ///
+    /// * with a `--regex` crib, only the regex checker,
+    /// * otherwise the wordlist (if there is one), LemmeKnow (known formats and CTF
+    ///   flags), JSON, the common-password list, the English checker and finally the code
+    ///   checker (source code and shell commands).
+    ///
+    /// The human checker then has the last word on that candidate.
     fn check(&self, text: &str) -> CheckResult {
         trace!("Athena checker running on text: {}", text);
         match self.find(text) {
@@ -256,6 +248,37 @@ impl Check for Checker<Athena> {
 mod tests {
     use super::*;
     use crate::config::{set_global_config, Config};
+
+    fn identify(text: &str) -> CheckResult {
+        Checker::<Athena>::new().check(text)
+    }
+
+    #[test]
+    fn flags_json_and_short_phrases_are_found() {
+        // All missed before https://github.com/bee-san/Ciphey/issues/1031
+        let flag = identify("picoCTF{b4s3_64_1s_fun}");
+        assert!(flag.is_identified);
+        assert_eq!(flag.checker_name, "LemmeKnow Checker");
+
+        let json = identify("{\"key\": \"value\"}");
+        assert!(json.is_identified);
+        assert_eq!(json.checker_name, "JSON Checker");
+
+        let phrase = identify("call me");
+        assert!(phrase.is_identified);
+        assert_eq!(phrase.checker_name, "English Checker");
+    }
+
+    #[test]
+    fn charset_only_lemmeknow_matches_are_not_plaintext() {
+        for junk in [
+            "736563726574",
+            "5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8",
+            "BYFFIQILFX",
+        ] {
+            assert!(!identify(junk).is_identified, "{junk}");
+        }
+    }
 
     #[test]
     fn rejection_keys_differ_by_text_and_sensitivity() {
@@ -285,8 +308,8 @@ mod tests {
     fn checking_again_gives_the_same_answer_at_each_sensitivity() {
         // Rejections are only remembered once the config is set
         set_global_config(Config::default());
-        // Gibberish at Low sensitivity, English at High (see the English checker's tests)
-        let text = "Rcl maocr otmwi lit dnoen oehc 13 iron seah.";
+        // Not English at Low sensitivity, English at High (see the English checker's tests)
+        let text = "let me jnow whdn you gdt home";
         let low = Checker::<Athena>::new().with_sensitivity(Sensitivity::Low);
         let high = Checker::<Athena>::new().with_sensitivity(Sensitivity::High);
         for _ in 0..2 {

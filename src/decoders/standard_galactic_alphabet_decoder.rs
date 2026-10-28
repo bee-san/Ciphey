@@ -456,9 +456,10 @@ mod tests {
 
     #[test]
     fn a_lone_exclamation_mark_is_p_without_multi_character_letters() {
-        // The quirk documented in the module: cipheydists' p is `!`. Athena still takes
-        // `hello worldp` for English.
-        assert_eq!(crack_successfully("⍑ᒷꖎꖎ𝙹 ∴𝙹∷ꖎ↸!"), "hello worldp");
+        // The quirk documented in the module: cipheydists' p is `!`. `worldp` isn't a
+        // word, so Athena doesn't take `hello worldp` for English, and the decoding goes
+        // to the search unconfirmed.
+        assert_eq!(crack("⍑ᒷꖎꖎ𝙹 ∴𝙹∷ꖎ↸!").unwrap(), "hello worldp");
     }
 
     #[test]

@@ -23,7 +23,12 @@
 //! and becomes a space, so the keys of each word stay together for decoders that read
 //! them next, such as Multi-tap.
 
+use crate::checkers::checker_result::CheckResult;
+use crate::checkers::checker_type::{Check, Checker};
+use crate::checkers::human_checker::human_checker;
+use crate::checkers::lemmeknow_checker::{is_phone_number, LemmeKnow};
 use crate::checkers::CheckerTypes;
+use crate::config::get_config;
 use crate::decoders::interface::check_string_success;
 
 use super::crack_results::CrackResult;
@@ -115,7 +120,12 @@ impl Crack for Decoder<DtmfDecoder> {
 
         // The keys are returned even when the checker doesn't identify them: a string of
         // digits is what decoders such as Multi-tap, T9 or A1Z26 read next.
-        let checker_result = checker.check(&decoded_text);
+        let mut checker_result = checker.check(&decoded_text);
+        if !checker_result.is_identified && get_config().regex.is_none() {
+            if let Some(dialled) = dialled_number(&decoded_text) {
+                checker_result = dialled;
+            }
+        }
         results.unencrypted_text = Some(vec![decoded_text]);
         results.update_checker(&checker_result);
 
@@ -142,6 +152,21 @@ impl Crack for Decoder<DtmfDecoder> {
     fn get_link(&self) -> &str {
         self.link
     }
+}
+
+/// The checkers don't take a run of digits for a phone number, as decoder junk is full of
+/// them (#1031). Keys pressed on a telephone keypad are different: when LemmeKnow's phone
+/// number pattern matches them, they are the number dialled, as long as the human
+/// checker agrees. Without a crib only: with one, the crib decides.
+fn dialled_number(keys: &str) -> Option<CheckResult> {
+    if !is_phone_number(keys) {
+        return None;
+    }
+    let mut result = CheckResult::new(&Checker::<LemmeKnow>::new());
+    result.is_identified = true;
+    result.text = keys.to_string();
+    result.description = "Phone Number".to_string();
+    human_checker(&result).then_some(result)
 }
 
 /// One of the two frequencies of a key.

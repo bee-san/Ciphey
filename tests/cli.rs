@@ -167,14 +167,27 @@ fn cli_options_apply_with_unknown_config_keys() {
     );
 }
 
+/// A crib no decoding of `hello world` matches, even by chance.
+const CRIB_NOTHING_MATCHES: &str = "^xyzzy plugh$";
+
 #[test]
 fn regex_crib_is_respected() {
     // The simplesubstitution decoder used to declare success without asking the checker,
-    // so the search returned junk like "W T" even though it doesn't match the crib.
+    // so the search returned junk like "W T" even though it doesn't match the crib. The
+    // crib is long: a short one like `^xyz` is matched by some junk candidate of a fast
+    // enough search (`xyzB2kBB9Ns8Jbk=` from railfence -> Keyboard layout -> caesar).
     let home = TempHome::new("regex-crib");
     let output = run(
         &home,
-        &["-d", "-c", "2", "--regex", "^xyz", "-t", "aGVsbG8gd29ybGQ="],
+        &[
+            "-d",
+            "-c",
+            "2",
+            "--regex",
+            CRIB_NOTHING_MATCHES,
+            "-t",
+            "aGVsbG8gd29ybGQ=",
+        ],
     );
     assert_eq!(output.code, Some(0), "{output}");
     assert!(!output.stdout.contains("The plaintext is"), "{output}");
@@ -296,7 +309,15 @@ fn cached_plaintext_must_match_the_regex_crib() {
     // "hello world" doesn't match the crib, but used to be returned from the cache
     let second = run(
         &home,
-        &["-d", "-c", "1", "--regex", "^xyz", "-t", "aGVsbG8gd29ybGQ="],
+        &[
+            "-d",
+            "-c",
+            "1",
+            "--regex",
+            CRIB_NOTHING_MATCHES,
+            "-t",
+            "aGVsbG8gd29ybGQ=",
+        ],
     );
     assert_eq!(second.code, Some(0), "{second}");
     assert!(!second.stdout.contains("The plaintext is"), "{second}");
