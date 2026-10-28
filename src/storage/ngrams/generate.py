@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Regenerates english_quadgrams.bin and english_short_words.txt.
 
-    python3 src/storage/ngrams/generate.py [--cache DIR] [--bench]
+    python3 src/storage/ngrams/generate.py [--bench]
 
 Both files are built from the public-domain books in BOOKS (Project Gutenberg plain
-text). The script downloads each book once into the cache directory (default
-target/gutenberg), cuts off Project Gutenberg's header and licence footer, and counts:
+text). The script downloads each book once into target/gutenberg at the top of the
+repository (Cargo's build directory, which git ignores), cuts off Project Gutenberg's
+header and licence footer, and counts:
 
 * english_quadgrams.bin: 26^4 bytes, one per letter quadgram AAAA..ZZZZ in that order
   (index = ((a*26 + b)*26 + c)*26 + d). Byte q stores log10 P(quadgram) = -q / 25,
@@ -140,14 +141,17 @@ NOT_WORDS = {"co", "de", "em", "en", "la", "le", "non", "re", "th", "un"}
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
+# Where downloaded books are kept. Fixed rather than a command-line option, so no file path
+# comes from user input (as in gen_quadgrams.py, #1058).
+CACHE_DIR = os.path.join(ROOT, "target", "gutenberg")
 PRIDE_AND_PREJUDICE = 1342
 
 ROMAN = re.compile(r"^(?=[ivxlcdm]+$)m{0,3}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$")
 WORD = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)*")
 
 
-def fetch(number, cache):
-    path = os.path.join(cache, f"pg{number}.txt")
+def fetch(number):
+    path = os.path.join(CACHE_DIR, f"pg{int(number)}.txt")
     if not os.path.exists(path):
         url = f"https://www.gutenberg.org/cache/epub/{number}/pg{number}.txt"
         print(f"downloading {url}", file=sys.stderr)
@@ -165,24 +169,37 @@ def strip_gutenberg(text, number):
     header = text[:5000]
     if not re.search(r"^Language: English\s*$", header, re.M) or re.search(r"^Translator", header, re.M | re.I):
         sys.exit(f"pg{number}.txt: not an English original")
-    start = re.search(r"\*\*\* ?START OF (THE|THIS) PROJECT GUTENBERG EBOOK[^\n]*\n", text, re.I)
-    end = re.search(r"\*\*\* ?END OF (THE|THIS) PROJECT GUTENBERG EBOOK", text, re.I)
-    if not start or not end:
+    start = find_marker(text, "START")
+    end = find_marker(text, "END")
+    if start < 0 or end < 0:
         sys.exit(f"pg{number}.txt: could not find the Project Gutenberg start/end markers")
-    return text[start.end():end.start()]
+    # The book starts on the line after the start marker
+    line_end = text.find("\n", start)
+    if line_end < 0:
+        sys.exit(f"pg{number}.txt: nothing after the Project Gutenberg start marker")
+    return text[line_end + 1:end]
 
 
-def pick_sentences(cache, number, start_marker, n_sentences, n_phrases):
+def find_marker(text, which):
+    """Where `*** START OF THE PROJECT GUTENBERG EBOOK` (or END, THIS, without the space
+    after the asterisks, in any case) starts in `text`, or -1. The pattern has no
+    unbounded repetition, so the search takes linear time."""
+    found = re.search(rf"\*\*\* ?{which} OF TH(?:E|IS) PROJECT GUTENBERG EBOOK", text, re.I)
+    return found.start() if found else -1
+
+
+def pick_sentences(number, start_marker, n_sentences, n_phrases):
     """`n_sentences` sentences of 5 to 14 words and `n_phrases` phrases of 1 to 4 words from a
     book, picked evenly: every k-th usable sentence, then 1, 2, 3 or 4 words (in turn) from
     inside every m-th other one."""
-    body = strip_gutenberg(fetch(number, cache), number)
+    body = strip_gutenberg(fetch(number), number)
     for curly, straight in (("\u2018", "'"), ("\u2019", "'"), ("\u201c", '"'), ("\u201d", '"'), ("\u2014", " - "), ("_", "")):
         body = body.replace(curly, straight)
     body = re.sub(r"\s+", " ", body[body.index(start_marker):])
     # "Mr. Bennet" is not the end of a sentence
     body = re.sub(r"\b(Mr|Mrs|Dr|St)\.", r"\1", body)
-    sentences = [s.strip(' "') for s in re.split(r'(?<=[.!?])\s+(?=["A-Z])', body)]
+    # Whitespace is already a single space, so one space separates sentences
+    sentences = [s.strip(' "') for s in re.split(r'(?<=[.!?]) (?=["A-Z])', body)]
     usable = [
         s for s in sentences
         if s.isascii() and 5 <= len(s.split()) <= 14 and not re.search(r"[\[\]\d]|CHAPTER|Chapter", s)
@@ -214,13 +231,13 @@ BENCH_BOOKS = [
 BENCH_GUTENBERG = os.path.join(ROOT, "benches", "data", "plaintext", "gutenberg.tsv")
 
 
-def write_bench(cache):
+def write_bench():
     """Sentences and phrases from BENCH_BOOKS for the plaintext-detection benchmark, as
     `category<TAB>split<TAB>text` lines. Pride and Prejudice's are the 200 lines the #1031 harness
     held out (examples/data/heldout_pride_and_prejudice.txt in that change)."""
     lines = []
     for number, marker, split, n_sentences, n_phrases in BENCH_BOOKS:
-        chosen, phrases = pick_sentences(cache, number, marker, n_sentences, n_phrases)
+        chosen, phrases = pick_sentences(number, marker, n_sentences, n_phrases)
         lines += [f"en_literary\t{split}\t{s}" for s in chosen]
         lines += [f"{'en_word' if ' ' not in p else 'en_phrase'}\t{split}\t{p}" for p in phrases]
     os.makedirs(os.path.dirname(BENCH_GUTENBERG), exist_ok=True)
@@ -238,14 +255,13 @@ def write_bench(cache):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--cache", default=os.path.join(ROOT, "target", "gutenberg"))
     parser.add_argument(
         "--bench", action="store_true", help="write the benchmark's book sentences instead"
     )
     args = parser.parse_args()
-    os.makedirs(args.cache, exist_ok=True)
+    os.makedirs(CACHE_DIR, exist_ok=True)
     if args.bench:
-        write_bench(args.cache)
+        write_bench()
         return
 
     counts = [0] * (26 ** 4)
@@ -255,7 +271,7 @@ def main():
     lower = collections.Counter()  # short word -> times written in lower case
     capital = collections.Counter()  # short word -> times capitalised mid-sentence
     for number, title in BOOKS:
-        body = strip_gutenberg(fetch(number, args.cache), number)
+        body = strip_gutenberg(fetch(number), number)
         letters = [ord(c) - 65 for c in body.upper() if "A" <= c <= "Z"]
         for i in range(len(letters) - 3):
             counts[((letters[i] * 26 + letters[i + 1]) * 26 + letters[i + 2]) * 26 + letters[i + 3]] += 1

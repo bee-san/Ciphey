@@ -363,8 +363,8 @@ mod tests {
 
     #[test]
     fn sensitivity_changes_the_english_checker() {
-        // One English word in gibberish: only `high` takes it for English.
-        let text = "Rcl maocr otmwi lit dnoen oehc 13 iron seah.";
+        // English with typos: only `high` takes it for English.
+        let text = "let me jnow whdn you gdt home";
         let at = |sensitivity| {
             detect(DetectParams {
                 sensitivity: Some(sensitivity),
