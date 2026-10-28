@@ -145,11 +145,6 @@ struct Jwt {
 /// ignored. The cheapest checks come first, so most text is rejected straight away.
 fn parse(text: &str) -> Option<Jwt> {
     let token = strip_bearer(text.trim());
-    // `eyJ` is base64url for `{"`, which every header starts with
-    if !token.starts_with("eyJ") {
-        return None;
-    }
-
     // Exactly three parts. A JWE has five, and its payload is encrypted.
     let mut parts = token.split('.');
     let (header, payload, signature) = (parts.next()?, parts.next()?, parts.next()?);
@@ -364,6 +359,32 @@ mod tests {
         assert!(!result.success, "{text:?}");
         assert!(result.unencrypted_text.is_none(), "{text:?}: {result:?}");
         assert!(result.key.is_none(), "{text:?}");
+    }
+
+    #[test]
+    fn qualification_jwt_json_header_whitespace_decodes() {
+        // RFC 7515 sections 3 and 5: the protected header is a UTF-8 JSON object.
+        // JSON whitespace is inside the base64url-encoded header, not the token itself.
+        for header in [
+            r#"{ "alg":"none"}"#,
+            r#" {"alg":"none"}"#,
+            "\r\n{\"alg\":\"none\"}",
+        ] {
+            let token = format!(
+                "{}.{}.",
+                URL_SAFE_NO_PAD.encode(header),
+                URL_SAFE_NO_PAD.encode(r#"{"message":"hello world"}"#),
+            );
+            assert_decodes_to(&token, r#"{"message":"hello world"}"#);
+        }
+    }
+
+    #[test]
+    fn qualification_jwt_canonical_and_invalid_controls() {
+        assert_decodes_to(ALG_NONE, ALG_NONE_PAYLOAD);
+        assert_not_decoded("bm90IGpzb24.eyJtZXNzYWdlIjoiaGVsbG8gd29ybGQifQ.");
+        assert_not_decoded("eyJhbGciOjF9.eyJtZXNzYWdlIjoiaGVsbG8gd29ybGQifQ.");
+        assert_not_decoded("eyJhbGciOiJub25lIn0. eyJtZXNzYWdlIjoiaGVsbG8gd29ybGQifQ.");
     }
 
     #[test]
