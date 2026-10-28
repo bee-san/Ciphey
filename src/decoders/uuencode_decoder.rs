@@ -124,12 +124,21 @@ fn decode_uuencode(text: &str) -> Option<String> {
     // length of zero, and trailing spaces are zeros, which is what a missing character is
     // read as.
     let text = text.trim();
-    let mut lines = text.split('\n');
+    let mut lines = text.split('\n').peekable();
+    // Empty data lines may precede the first nonempty line too. Do not let the
+    // fast first-byte check reject the backtick spelling of a zero-length line.
+    while lines
+        .peek()
+        .is_some_and(|line| matches!(trim_line(line), b"" | b"`"))
+    {
+        lines.next();
+    }
+    let first = trim_line(lines.peek()?);
 
     // Only a `begin` header or a length character (`!` to `M`) can come first. Most input
     // fails here, at byte 0: lower-case letters, `N` to `Z` (the bench `miss` string starts
     // with `T`), `[` to `_`, and anything that isn't ASCII.
-    match *text.as_bytes().first()? {
+    match *first.first()? {
         b'b' => {
             if !is_begin_line(trim_line(lines.next()?)) {
                 return None;
@@ -236,6 +245,19 @@ mod tests {
     use crate::decoders::interface::{Crack, Decoder};
     use crate::decoders::{DecoderType, DECODER_MAP};
     use crate::filtration_system::get_decoder_by_name;
+
+    #[test]
+    fn qualification_uu_accepts_leading_zero_length_lines() {
+        // Python binascii.a2b_uu gives empty bytes for each backtick line.
+        let text = format!("`\n`\n{LIGHTHOUSE_LINES}");
+        assert_eq!(decode_uuencode(&text).as_deref(), Some(LIGHTHOUSE));
+    }
+
+    #[test]
+    fn qualification_uu_keeps_rejecting_trailing_data_after_end() {
+        let text = format!("{LIGHTHOUSE_FRAMED}{}", LIGHTHOUSE_LINES);
+        assert!(decode_uuencode(&text).is_none());
+    }
 
     // Every vector was made with Python 3.9 (`codecs.encode(data, "uu")`,
     // `uu.encode(..., backtick=...)` or `binascii.b2a_uu`) and decoded back, line by line,
