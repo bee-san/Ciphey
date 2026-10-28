@@ -123,7 +123,9 @@ impl Crack for Decoder<DecimalDecoder> {
 
 /// Decodes decimal character codes to text, or returns `None` if `text` isn't decimal.
 fn decode_decimal(text: &str) -> Option<String> {
-    let body = strip_wrapper(text.trim()).as_bytes();
+    let text = text.trim();
+    let from_char_code = text.starts_with("String.fromCharCode(");
+    let body = strip_wrapper(text).as_bytes();
     // A single scan that rejects almost every input before anything is allocated
     if !body
         .iter()
@@ -156,13 +158,20 @@ fn decode_decimal(text: &str) -> Option<String> {
         }
     };
 
-    let decoded = match codes
-        .iter()
-        .map(|&code| u8::try_from(code))
-        .collect::<Result<Vec<u8>, _>>()
-    {
-        Ok(bytes) => bytes_to_string(bytes),
-        Err(_) => decode_char_codes(&codes)?,
+    let decoded = if from_char_code {
+        // An explicit JavaScript wrapper disambiguates bytes from UTF-16 code units.
+        // String.fromCharCode applies ToUint16 even to values greater than 65535.
+        let code_units: Vec<u16> = codes.iter().map(|&code| code as u16).collect();
+        String::from_utf16(&code_units).ok()?
+    } else {
+        match codes
+            .iter()
+            .map(|&code| u8::try_from(code))
+            .collect::<Result<Vec<u8>, _>>()
+        {
+            Ok(bytes) => bytes_to_string(bytes),
+            Err(_) => decode_char_codes(&codes)?,
+        }
     };
 
     // Control characters mean the numbers are something else: A1Z26 `8 5 12 12 15` decodes
@@ -268,6 +277,34 @@ mod tests {
     // Every vector here was checked with Python 3 (`' '.join(str(b) for b in text.encode())`,
     // `list(b"...")`, `bytes(...).decode()`, `chr`) and the char-code ones with Node's
     // `String.fromCharCode` / `String.fromCodePoint`.
+
+    #[test]
+    fn qualification_decimal_explicit_js_uses_utf16_code_units() {
+        // ECMAScript String.fromCharCode applies ToUint16 to each argument; it does
+        // not interpret the arguments as a UTF-8 byte stream.
+        assert_eq!(
+            crack("String.fromCharCode(67,97,102,195,169)").as_deref(),
+            Some("CafÃ©"),
+        );
+        assert_eq!(
+            crack("String.fromCharCode(104,101,108,108,111,128512)").as_deref(),
+            Some("hello\u{F600}"),
+        );
+    }
+
+    #[test]
+    fn qualification_decimal_byte_and_ascii_controls() {
+        assert_eq!(crack("67 97 102 195 169").as_deref(), Some("Café"));
+        assert_eq!(
+            crack("String.fromCharCode(104,101,108,108,111)").as_deref(),
+            Some("hello"),
+        );
+        assert_eq!(
+            crack("String.fromCharCode(55357,56832,32,104,105)").as_deref(),
+            Some("😀 hi"),
+        );
+        assert!(crack("String.fromCharCode(104,101,55357)").is_none());
+    }
 
     #[test]
     fn decodes_the_issue_example() {
