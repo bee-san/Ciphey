@@ -144,8 +144,10 @@ struct Jwt {
 /// ignored. The cheapest checks come first, so most text is rejected straight away.
 fn parse(text: &str) -> Option<Jwt> {
     let token = strip_bearer(text.trim());
-    // `eyJ` is base64url for `{"`, which every header starts with
-    if !token.starts_with("eyJ") {
+    // The header is base64url of a JSON object, which starts with `{` or JSON whitespace
+    // (space, tab, line feed, carriage return). Their first base64url characters are `e`,
+    // `I`, `C` and `D`: `eyJ` is `{"`, `IHsi` is ` {"`.
+    if !matches!(token.as_bytes().first(), Some(b'e' | b'I' | b'C' | b'D')) {
         return None;
     }
 
@@ -370,6 +372,38 @@ mod tests {
         assert!(!result.success, "{text:?}");
         assert!(result.unencrypted_text.is_none(), "{text:?}: {result:?}");
         assert!(result.key.is_none(), "{text:?}");
+    }
+
+    #[test]
+    fn header_with_json_whitespace_decodes() {
+        // RFC 7515 sections 3 and 5: the protected header is a UTF-8 JSON object, so it
+        // may start with JSON whitespace. The whitespace is inside the base64url-encoded
+        // header, not the token itself.
+        for header in [
+            r#"{ "alg":"none"}"#,
+            r#" {"alg":"none"}"#,
+            "\t{\"alg\":\"none\"}",
+            "\n{\"alg\":\"none\"}",
+            "\r\n{\"alg\":\"none\"}",
+        ] {
+            let token = format!(
+                "{}.{}.",
+                URL_SAFE_NO_PAD.encode(header),
+                URL_SAFE_NO_PAD.encode(r#"{"message":"hello world"}"#),
+            );
+            assert_decodes_to(&token, r#"{"message":"hello world"}"#);
+        }
+    }
+
+    #[test]
+    fn canonical_header_decodes_and_malformed_ones_do_not() {
+        assert_decodes_to(ALG_NONE, ALG_NONE_PAYLOAD);
+        // "not json"
+        assert_not_decoded("bm90IGpzb24.eyJtZXNzYWdlIjoiaGVsbG8gd29ybGQifQ.");
+        // " [1]": starts like whitespace before an object, but is an array
+        assert_not_decoded("IFsxXQ.eyJtZXNzYWdlIjoiaGVsbG8gd29ybGQifQ.");
+        assert_not_decoded("eyJhbGciOjF9.eyJtZXNzYWdlIjoiaGVsbG8gd29ybGQifQ.");
+        assert_not_decoded("eyJhbGciOiJub25lIn0. eyJtZXNzYWdlIjoiaGVsbG8gd29ybGQifQ.");
     }
 
     #[test]

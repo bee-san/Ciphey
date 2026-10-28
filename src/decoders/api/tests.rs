@@ -833,6 +833,25 @@ fn t9_decodes() {
 }
 
 #[test]
+fn pollux_decodes() {
+    // "HELLO WORLD" with `. = 1 4 7, - = 2 5 8, x = 3 6 9 0` (issue #1000 example)
+    let decoded = pollux("7774640754467514028890485358201240751738773");
+    let plaintext = decoded
+        .plaintext()
+        .unwrap_or_else(|| panic!("no plaintext in {decoded:#?}"));
+    assert_eq!(plaintext.text, "HELLO WORLD");
+    assert_eq!(
+        plaintext.key.as_deref(),
+        Some(". = 1 4 7, - = 2 5 8, x = 3 6 9 0")
+    );
+
+    // Empty input produces no candidates (Pollux only takes digits).
+    assert!(pollux("").is_empty());
+    // Non-digit input produces no candidates.
+    assert!(pollux("hello world").is_empty());
+}
+
+#[test]
 fn tap_code_decodes() {
     assert_plaintext(
         &tap_code(".. ...  . .....  ... .  ... .  ... ...."),

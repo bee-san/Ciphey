@@ -59,6 +59,7 @@ use crate::decoders::null_cipher_decoder::NullCipherDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
 use crate::decoders::ook_decoder::OokDecoder;
 use crate::decoders::playfair_decoder::PlayfairDecoder;
+use crate::decoders::pollux_decoder::PolluxDecoder;
 use crate::decoders::polybius_decoder::PolybiusDecoder;
 use crate::decoders::punycode_decoder::PunycodeDecoder;
 use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
@@ -720,6 +721,21 @@ decoder_functions! {
     /// assert_eq!(plaintext.key.as_deref(), Some("TREASUBCDFGHIKLMNOPQVWXYZ"));
     /// ```
     playfair: PlayfairDecoder, aliases [], key Some(keys::PLAYFAIR);
+
+    /// Cracks the Pollux cipher, Morse code written with digits: each digit stands for a
+    /// dot, a dash or the separator between letters (two between words). Ciphey tries the
+    /// digit classes that split the text into Morse letters, ranks the readings by English
+    /// quadgram statistics and checks the best few. The key is the classes, such as
+    /// `. = 1 4 7, - = 2 5 8, x = 3 6 9 0`.
+    ///
+    /// ```
+    /// // "HELLO WORLD" with `. = 1 4 7, - = 2 5 8, x = 3 6 9 0`
+    /// let decoded = ciphey::decoders::pollux("7774640754467514028890485358201240751738773");
+    /// let plaintext = decoded.plaintext().unwrap();
+    /// assert_eq!(plaintext.text, "HELLO WORLD");
+    /// assert_eq!(plaintext.key.as_deref(), Some(". = 1 4 7, - = 2 5 8, x = 3 6 9 0"));
+    /// ```
+    pollux: PolluxDecoder, aliases [], key None;
 
     /// Decodes the Polybius square cipher: each letter as its row and column in a 5×5
     /// square with I and J in one cell, written as digits (`23` is H) or as letters from

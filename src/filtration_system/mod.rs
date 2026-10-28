@@ -29,6 +29,7 @@ use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
 use crate::decoders::octal_decoder::OctalDecoder;
 use crate::decoders::ook_decoder::OokDecoder;
 use crate::decoders::playfair_decoder::PlayfairDecoder;
+use crate::decoders::pollux_decoder::PolluxDecoder;
 use crate::decoders::polybius_decoder::PolybiusDecoder;
 use crate::DecoderResult;
 
@@ -346,6 +347,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let baconian = Decoder::<BaconianDecoder>::new();
     let baudot = Decoder::<BaudotDecoder>::new();
     let polybius = Decoder::<PolybiusDecoder>::new();
+    let pollux = Decoder::<PolluxDecoder>::new();
     let caesardecoder = Decoder::<CaesarDecoder>::new();
     let affine = Decoder::<AffineDecoder>::new();
     let railfencedecoder = Decoder::<RailfenceDecoder>::new();
@@ -518,6 +520,8 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // Before rot47, which shifts digits to other digits that LemmeKnow can take for
             // a number it knows, and so can win a tie in the same search step
             Box::new(polybius),
+            // Before rot47 for the same reason: Pollux ciphertexts are digit strings too
+            Box::new(pollux),
             Box::new(caesardecoder),
             Box::new(affine),
             Box::new(railfencedecoder),
