@@ -8,8 +8,11 @@
 //!   UTF-8. This is CyberChef's `From Decimal`, dCode's "ASCII code" and Python's
 //!   `list(b"...")`.
 //! * Char codes: some number is above 255. Numbers are UTF-16 code units, with surrogate pairs
-//!   joined, or code points, as with JavaScript's `String.fromCharCode(...)` and CyberChef's
-//!   `From Charcode` in base 10.
+//!   joined, or code points, as with CyberChef's `From Charcode` in base 10.
+//!
+//! Inside a `String.fromCharCode(...)` wrapper the numbers are always what JavaScript makes
+//! of them: UTF-16 code units, taken mod 65536 (ECMAScript's ToUint16), so
+//! `String.fromCharCode(67,97,102,195,169)` is `CafÃ©`, not the UTF-8 `Café`.
 //!
 //! The numbers are separated by runs of whitespace, `,`, `;`, `:` or `-`. A
 //! `String.fromCharCode(...)` or `[...]` wrapper is removed first. A single run of digits
@@ -64,7 +67,7 @@ impl Crack for Decoder<DecimalDecoder> {
     fn new() -> Decoder<DecimalDecoder> {
         Decoder {
             name: "Decimal",
-            description: "Decimal encoding writes each character as its character code in base 10, for example 104 101 108 108 111 for \"hello\". When every number is 255 or less they are read as the bytes of UTF-8 text; otherwise they are read as Unicode character codes, as with JavaScript's String.fromCharCode.",
+            description: "Decimal encoding writes each character as its character code in base 10, for example 104 101 108 108 111 for \"hello\". When every number is 255 or less they are read as the bytes of UTF-8 text; otherwise they are read as Unicode character codes. Inside String.fromCharCode(...) they are UTF-16 code units, as JavaScript reads them.",
             link: "https://www.dcode.fr/ascii-code",
             tags: vec!["decimal", "charcode", "base", "decoder"],
             popularity: 0.6,
@@ -159,8 +162,9 @@ fn decode_decimal(text: &str) -> Option<String> {
     };
 
     let decoded = if from_char_code {
-        // An explicit JavaScript wrapper disambiguates bytes from UTF-16 code units.
-        // String.fromCharCode applies ToUint16 even to values greater than 65535.
+        // The wrapper says how JavaScript reads the numbers: as UTF-16 code units, even
+        // when they would all fit in bytes. String.fromCharCode applies ToUint16, so
+        // numbers above 65535 wrap. A lone surrogate isn't text.
         let code_units: Vec<u16> = codes.iter().map(|&code| code as u16).collect();
         String::from_utf16(&code_units).ok()?
     } else {
@@ -279,31 +283,44 @@ mod tests {
     // `String.fromCharCode` / `String.fromCodePoint`.
 
     #[test]
-    fn qualification_decimal_explicit_js_uses_utf16_code_units() {
-        // ECMAScript String.fromCharCode applies ToUint16 to each argument; it does
-        // not interpret the arguments as a UTF-8 byte stream.
+    fn string_from_char_code_reads_utf16_code_units() {
+        // ECMAScript String.fromCharCode applies ToUint16 to each argument; it does not
+        // read them as UTF-8 bytes. Checked with Node's String.fromCharCode.
         assert_eq!(
             crack("String.fromCharCode(67,97,102,195,169)").as_deref(),
             Some("CafÃ©"),
         );
+        // 128512 (U+1F600) wraps to 0xF600
         assert_eq!(
             crack("String.fromCharCode(104,101,108,108,111,128512)").as_deref(),
             Some("hello\u{F600}"),
         );
-    }
-
-    #[test]
-    fn qualification_decimal_byte_and_ascii_controls() {
-        assert_eq!(crack("67 97 102 195 169").as_deref(), Some("Café"));
+        // ... and 65601 to 65, `A`
         assert_eq!(
-            crack("String.fromCharCode(104,101,108,108,111)").as_deref(),
-            Some("hello"),
+            crack("String.fromCharCode(65601,66,67);").as_deref(),
+            Some("ABC")
         );
         assert_eq!(
             crack("String.fromCharCode(55357,56832,32,104,105)").as_deref(),
             Some("😀 hi"),
         );
+    }
+
+    #[test]
+    fn string_from_char_code_rejects_what_javascript_cannot_make_text_of() {
+        // A lone high surrogate at the end
         assert!(crack("String.fromCharCode(104,101,55357)").is_none());
+        // NUL, which wraps from 65536
+        assert!(crack("String.fromCharCode(104,65536,105)").is_none());
+    }
+
+    #[test]
+    fn the_same_numbers_without_the_wrapper_are_bytes() {
+        assert_eq!(crack("67 97 102 195 169").as_deref(), Some("Café"));
+        assert_eq!(
+            crack("String.fromCharCode(104,101,108,108,111)").as_deref(),
+            Some("hello"),
+        );
     }
 
     #[test]
