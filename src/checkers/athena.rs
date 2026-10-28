@@ -308,8 +308,8 @@ mod tests {
     fn checking_again_gives_the_same_answer_at_each_sensitivity() {
         // Rejections are only remembered once the config is set
         set_global_config(Config::default());
-        // Gibberish at Low sensitivity, English at High (see the English checker's tests)
-        let text = "Rcl maocr otmwi lit dnoen oehc 13 iron seah.";
+        // Not English at Low sensitivity, English at High (see the English checker's tests)
+        let text = "let me jnow whdn you gdt home";
         let low = Checker::<Athena>::new().with_sensitivity(Sensitivity::Low);
         let high = Checker::<Athena>::new().with_sensitivity(Sensitivity::High);
         for _ in 0..2 {

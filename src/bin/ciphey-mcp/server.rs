@@ -355,8 +355,8 @@ impl CipheyMcp {
         description = "Check whether text is already plaintext, and identify what it is, \
             without decoding anything. Runs ciphey's plaintext checks: LemmeKnow, which \
             recognises over 100 formats (IP and email addresses, URLs, API keys and tokens, \
-            crypto wallets, credit card numbers, CTF flags, ...), a list of common passwords, \
-            and an English checker. Returns `is_plaintext` and the `detection`: which `checker` \
+            crypto wallets, CTF flags in any format, ...), JSON, a list of common passwords, \
+            an English checker and a source code checker. Returns `is_plaintext` and the `detection`: which `checker` \
             accepted the text, its `description` (such as `Internet Protocol (IP) Address \
             Version 4` or `Words` for English) and, for LemmeKnow, a `confidence` from 0 to 1. \
             Use it to check a decoding, to choose between candidates, or to see whether text \
@@ -949,7 +949,10 @@ mod tests {
         // Plain enums, inlined: no `$ref` or `oneOf` for clients to resolve.
         let items = &properties["checkers"]["items"];
         assert_eq!(items["type"], json!("string"));
-        assert_eq!(items["enum"], json!(["lemmeknow", "password", "english"]));
+        assert_eq!(
+            items["enum"],
+            json!(["lemmeknow", "json", "password", "english", "code"])
+        );
         assert_eq!(
             properties["sensitivity"]["enum"],
             json!(["low", "medium", "high", null])

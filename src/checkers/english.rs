@@ -1,4 +1,6 @@
 use crate::checkers::checker_result::CheckResult;
+use crate::checkers::lemmeknow_checker::{has_control_characters, is_ctf_flag_shaped};
+use crate::decoders::nato_phonetic_decoder::decode_nato;
 use crate::storage::ngrams::{is_short_word, quadgram_score, quadgram_score_and_letters};
 use gibberish_or_not::{is_gibberish, Sensitivity};
 use lemmeknow::Identifier;
@@ -127,12 +129,19 @@ impl Check for Checker<EnglishChecker> {
 
 /// Whether `text` reads as English at `sensitivity`. See [`EnglishChecker`].
 pub(crate) fn is_english(text: &str, sensitivity: Sensitivity) -> bool {
+    // Control characters (other than tabs and line breaks) are decoder bytes, not writing:
+    // `hello\u{17}world` is a wrong decoding of `hello world`
+    if has_control_characters(text) {
+        return false;
+    }
+    let without_opaque = without_opaque_tokens(text);
+    let text = without_opaque.as_ref();
     let normalised = normalise_string(text);
     if normalised.is_empty() {
         return false;
     }
     let trimmed = text.trim();
-    if looks_like_decoder_output(trimmed) {
+    if looks_like_decoder_output(trimmed) || is_spelled_with_code_words(trimmed) {
         return false;
     }
     let spaceless = !trimmed.contains(char::is_whitespace);
@@ -191,14 +200,88 @@ pub(crate) fn is_english(text: &str, sensitivity: Sensitivity) -> bool {
         return words.len() == 1 && is_single_word(words[0], sensitivity);
     }
     // Two words that aren't both words, like `terces pot` (reversed) or `peg knioge` (a
-    // wrong railfence key)
+    // wrong railfence key). One word passes on its own, but not as the label of a number
+    // longer than itself: `flag = 50937517511040843800...` is a number to decode.
     if alpha_words.len() <= 2 {
-        return alpha_words.len() == 1 && is_single_word(alpha_words[0], sensitivity);
+        return alpha_words.len() == 1
+            && is_single_word(alpha_words[0], sensitivity)
+            && count_bytes(trimmed, u8::is_ascii_digit)
+                <= count_bytes(trimmed, u8::is_ascii_alphabetic);
     }
     if known == Known::None || (known == Known::Few && !is_other_language(&alpha_words)) {
         return false;
     }
     !is_gibberish(&normalised, sensitivity)
+}
+
+/// How many bytes of `text` `matches` accepts.
+fn count_bytes(text: &str, matches: fn(&u8) -> bool) -> usize {
+    text.bytes().filter(matches).count()
+}
+
+/// `text` without the CTF flags and secrets in it, when it has other words too: the
+/// `IW{N0_0ne_can_st0p_y0u}` of `Well done! Flag: IW{N0_0ne_can_st0p_y0u}`, or the
+/// password of `The password is IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR` (see [`is_secret`]).
+///
+/// These tokens are neither English nor not, like numbers: a flag's contents are
+/// leetspeak, hex or random letters by design, and a password, key or hash is random.
+/// Counting them as words rejected the text, so the search went on and changed them
+/// (Leetspeak turned the flag into `IW{No_one_can_stop_you}`), or found nothing. A text
+/// that is only a flag is LemmeKnow's to identify, and one that is only a secret is
+/// decoder output to decode further. Secrets need two other words, flags one.
+fn without_opaque_tokens(text: &str) -> std::borrow::Cow<'_, str> {
+    let has_brace = text.contains('{');
+    // 0 for a word, 1 for a flag, 2 for a secret
+    let kind = |token: &str| {
+        let token = token.trim_matches(|c: char| WRITING_PUNCTUATION.contains(c));
+        if has_brace && is_ctf_flag_shaped(token) {
+            1
+        } else if is_secret(token) {
+            2
+        } else {
+            0
+        }
+    };
+    let (mut flags, mut secrets, mut alpha_words) = (0usize, 0usize, 0usize);
+    for token in text.split_whitespace() {
+        match kind(token) {
+            1 => flags += 1,
+            2 => secrets += 1,
+            _ => alpha_words += usize::from(token.contains(char::is_alphabetic)),
+        }
+    }
+    let needed = if secrets > 0 { 2 } else { 1 };
+    if flags + secrets == 0 || alpha_words < needed {
+        return text.into();
+    }
+    text.split_whitespace()
+        .filter(|token| kind(token) == 0)
+        .collect::<Vec<_>>()
+        .join(" ")
+        .into()
+}
+
+/// Secrets are at least this long.
+const SECRET_MIN_CHARS: usize = 16;
+
+/// Whether `token` looks like a password, key, token or hash: at least
+/// [`SECRET_MIN_CHARS`] letters, digits and `+/=_-`, with both letters and digits in it,
+/// such as `IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR` or `5f4dcc3b5aa765d61d8327deb882cf99`.
+fn is_secret(token: &str) -> bool {
+    token.len() >= SECRET_MIN_CHARS
+        && token
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"+/=_-".contains(&b))
+        && token.bytes().any(|b| b.is_ascii_digit())
+        && token.bytes().any(|b| b.is_ascii_alphabetic())
+}
+
+/// Whether `text` is spelled out with the code words of the NATO phonetic alphabet, like
+/// `Hotel-Echo-Lima-Lima-Oscar Whiskey-Oscar-Romeo-Lima-Delta`: they are English words,
+/// but the text is `hello world` to decode. Code words that only spell digits (`one two
+/// three`) are left to the other rules.
+fn is_spelled_with_code_words(text: &str) -> bool {
+    decode_nato(text).is_some_and(|decoded| decoded.bytes().any(|b| b.is_ascii_alphabetic()))
 }
 
 /// Text with spaces needs at least this share of English words (one to three letter words
@@ -363,8 +446,9 @@ fn looks_like_decoder_output(text: &str) -> bool {
 }
 
 /// Whether a run of ASCII letters is cased the way written words are: all lower case, all
-/// upper case, capitalised, or capitalised words run together (`GitHub`, `iPhone`,
-/// `McDonald`, `URLs`).
+/// upper case, capitalised, capitalised words run together (`GitHub`, `iPhone`,
+/// `McDonald`, `URLs`), or long runs of words in alternating case
+/// (see [`has_alternating_word_case`]).
 fn has_word_case(token: &[u8]) -> bool {
     let upper = token.iter().filter(|c| c.is_ascii_uppercase()).count();
     if token.len() < 2 || upper == 0 || upper == token.len() {
@@ -379,10 +463,28 @@ fn has_word_case(token: &[u8]) -> bool {
         .iter()
         .zip(token.iter().skip(1).map(Some).chain(std::iter::once(None)))
         .all(|(c, next)| !c.is_ascii_uppercase() || next.is_some_and(u8::is_ascii_lowercase))
+        || has_alternating_word_case(token)
 }
 
-/// Punctuation that separates words in writing.
-const WRITING_PUNCTUATION: &str = ".,!?;:'\"-()";
+/// Whether `token`, at least [`ALTERNATING_CASE_MIN_LETTERS`] ASCII letters, changes case
+/// only between runs of two letters or more, like the CTF flag text
+/// `hiTHEREwelcomeTOlinearALGEBRA`: words run together, each in one case. Caesar and
+/// Vigenère keep the random case of the Base64 they are wrongly applied to, which changes
+/// every letter or two (`hHeREoUtHo`), and a long token of random case almost never has no
+/// run of one letter. The quadgram score still has to say the letters are English.
+fn has_alternating_word_case(token: &[u8]) -> bool {
+    token.len() >= ALTERNATING_CASE_MIN_LETTERS
+        && token
+            .chunk_by(|a, b| a.is_ascii_uppercase() == b.is_ascii_uppercase())
+            .all(|run| run.len() >= 2)
+}
+
+/// See [`has_alternating_word_case`].
+const ALTERNATING_CASE_MIN_LETTERS: usize = 12;
+
+/// Punctuation that separates words in writing, and the `_` of `snake_case` and CTF flag
+/// contents (`beware_the_ides_of_march`).
+const WRITING_PUNCTUATION: &str = ".,!?;:'\"-()_";
 
 /// Whether every character of `text` that isn't a letter or digit is
 /// [`WRITING_PUNCTUATION`].
@@ -411,12 +513,15 @@ fn is_single_word(word: &str, sensitivity: Sensitivity) -> bool {
 /// See [`is_single_word`].
 const LOW_MIN_WORD_LETTERS: usize = 5;
 
-/// At least [`SPACELESS_MIN_LETTERS`] ASCII letters, and at least 90% of the characters.
+/// At least [`SPACELESS_MIN_LETTERS`] ASCII letters, at least 90% of the characters, and
+/// nothing but ASCII. A non-ASCII character among ASCII letters is a decoder's: ROT47
+/// shifts the ASCII and leaves the rest, so `0-447è?7:4,` became `HELLOèWORLD`.
 fn is_mostly_letters(text: &str) -> bool {
-    let (letters, chars) = text.chars().fold((0, 0), |(letters, chars), c| {
-        (letters + usize::from(c.is_ascii_alphabetic()), chars + 1)
-    });
-    letters >= SPACELESS_MIN_LETTERS && letters * 10 >= chars * 9
+    if !text.is_ascii() {
+        return false;
+    }
+    let letters = text.bytes().filter(u8::is_ascii_alphabetic).count();
+    letters >= SPACELESS_MIN_LETTERS && letters * 10 >= text.len() * 9
 }
 
 /// Whether at least `min_ratio` of the words in `text` are English words, counting the
@@ -995,5 +1100,90 @@ mod tests {
     fn quadgram_thresholds_get_more_lenient_from_low_to_high() {
         assert!(quadgram_threshold(Sensitivity::Low) > quadgram_threshold(Sensitivity::Medium));
         assert!(quadgram_threshold(Sensitivity::Medium) > quadgram_threshold(Sensitivity::High));
+    }
+
+    #[test]
+    fn control_characters_are_not_writing() {
+        // A wrong Base100 decoding of `hello world`
+        for sensitivity in [Sensitivity::Low, Sensitivity::Medium, Sensitivity::High] {
+            assert!(!english("hello\u{17}world", sensitivity));
+            assert!(english("hello world", sensitivity));
+            assert!(english("hello\tworld, how are\r\nyou?", sensitivity));
+        }
+    }
+
+    #[test]
+    fn nato_code_words_are_not_english() {
+        // They are words, but the text is `hello world` to decode
+        for text in [
+            "Hotel-Echo-Lima-Lima-Oscar Whiskey-Oscar-Romeo-Lima-Delta",
+            "Hotel Echo Lima Lima Oscar  Whiskey Oscar Romeo Lima Delta",
+            "Hotel/Echo/Lima/Lima/Oscar  Whiskey/Oscar/Romeo/Lima/Delta",
+        ] {
+            assert!(!english(text, Sensitivity::Medium), "{text}");
+        }
+        // Words that only spell digits are left to the other rules
+        assert!(english("one two three four", Sensitivity::Medium));
+    }
+
+    #[test]
+    fn flags_and_secrets_inside_english_are_skipped() {
+        for text in [
+            "Well done!\n\nFlag: IW{N0_0ne_can_st0p_y0u}\n",
+            "Welcome to HSCTF! This is your flag: hsctf{w0w_th1s_1s_my_f1rst_crypt0_chall3ng3?}",
+            "The password is IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR\n",
+            "the md5 hash is 5f4dcc3b5aa765d61d8327deb882cf99",
+        ] {
+            assert!(english(text, Sensitivity::Low), "{text:?}");
+        }
+        // Not on their own, and a secret needs two other words
+        for text in [
+            "IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR",
+            "password IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR",
+            "IW{N0_0ne_can_st0p_y0u}",
+        ] {
+            assert!(!english(text, Sensitivity::Medium), "{text:?}");
+        }
+        assert!(is_secret("IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR"));
+        assert!(!is_secret("understandingly"));
+        assert!(!is_secret("SGVsbG8gV29ybGQ"), "no digits");
+        assert!(!is_secret("2024-10-28"), "too short");
+    }
+
+    #[test]
+    fn snake_case_words_are_english() {
+        // A CTF flag's contents, without the flag around them
+        assert!(english("beware_the_ides_of_march", Sensitivity::Low));
+        assert!(english("this_is_the_flag", Sensitivity::Low));
+        assert!(!english("tuoroughth_ksl_qpw", Sensitivity::Low));
+    }
+
+    #[test]
+    fn words_in_alternating_case_run_together_are_english() {
+        // JerseyCTF III "jack-and-jill": the Hill decryption keeps the ciphertext's case
+        assert!(english("hiTHEREwelcomeTOlinearALGEBRAZ", Sensitivity::Low));
+        assert!(has_alternating_word_case(b"hiTHEREwelcomeTOlinearALGEBRAZ"));
+        // Caesar of Base64 changes case every letter or two
+        assert!(!has_alternating_word_case(b"hHeREoUtHoTHEreWASaLLoNe"));
+        assert!(!english("hHeREoUtHoTHEreWASaLLoNe", Sensitivity::High));
+        // Too short to tell
+        assert!(!has_alternating_word_case(b"heLLOthere"));
+    }
+
+    #[test]
+    fn spaceless_text_with_non_ascii_letters_is_not_scored() {
+        // ROT47 of `0-447è?7:4,` shifts the ASCII and leaves the è
+        assert!(!english("HELLOèWORLD", Sensitivity::High));
+        assert!(english("HELLOWORLD", Sensitivity::Low));
+    }
+
+    #[test]
+    fn one_word_labelling_a_long_number_is_not_english() {
+        // The number is what's left to decode (Big integer)
+        let rsa = "flag = 50937517511040843800057610630687734629648772740622533002167079526478786571835272839786109";
+        for sensitivity in [Sensitivity::Low, Sensitivity::Medium, Sensitivity::High] {
+            assert!(!english(rsa, sensitivity), "{sensitivity:?}");
+        }
+        assert!(english("Flag 2024", Sensitivity::Medium));
     }
 }

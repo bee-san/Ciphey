@@ -490,10 +490,11 @@ mod tests {
 
     #[test]
     fn line_feed_is_a_new_line() {
-        // HI LF THERE. Athena doesn't identify it, so it is a candidate.
-        assert_candidates(
+        // HI LF THERE
+        assert_cracks(
             "10100 00110 00010 10000 10100 00001 01010 00001",
-            &["HI\nTHERE"],
+            "HI\nTHERE",
+            "MSB-first, US-TTY",
         );
     }
 
@@ -540,11 +541,10 @@ mod tests {
         let reversed: Vec<u8> = codes.iter().map(|&code| REV5[usize::from(code)]).collect();
         let junk = readings(&reversed, KEYS[1], FOX);
         assert_eq!(junk[0].text, FOX_REVERSED_READING);
-        assert!(
-            get_athena_checker()
-                .check(FOX_REVERSED_READING)
-                .is_identified
-        );
+        assert!(!gibberish_or_not::is_gibberish(
+            FOX_REVERSED_READING,
+            gibberish_or_not::Sensitivity::High
+        ));
         let result = crack(FOX);
         let outputs = result.unencrypted_text.unwrap();
         assert!(!outputs.contains(&junk[0].text), "{outputs:?}");

@@ -71,9 +71,9 @@ fn beaufort_inside_base64_is_cracked() {
 #[test]
 #[serial]
 fn unspaced_beaufort_ciphertext_is_cracked() {
-    // Key CIPHEY, the Dickens text without spaces or punctuation. Checked with Medium
-    // sensitivity, where Vigenère can also find something in the same step; Beaufort
-    // comes first in the decoder list, so it wins the tie.
+    // Key CIPHEY, the Dickens text without spaces or punctuation. Vigenère can also find
+    // something in the same step; Beaufort comes first in the decoder list, so it wins
+    // the tie.
     let result = crack(
         "UPTHMFVEODMFODWZSUKAWLEGJBLLQHKPBCLQQEXZLCCQWAAYWEBCIQKFBVWFGIXOXUCCLTZTOUEZMRPEXPWFGIXOXUYTBFXKXHLWWUXAWLEGJBLDPKABBCWLARLEKNUPRZLCCQWAAGYIXTRKXXHBXFUPTHMFVEXDEGOVBCBYLYCDMG",
     );

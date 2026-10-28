@@ -217,7 +217,7 @@ Nothing is filtered out: you get what the decoder hands on to the search. The ca
 
 ### Is it plaintext?
 
-`detect_plaintext` runs the checks the search uses (a regex crib, a wordlist, LemmeKnow, common passwords and English) and says which one accepted the text and what it took it for:
+`detect_plaintext` runs the checks the search uses (a regex crib, a wordlist, LemmeKnow, JSON, common passwords, English and code) and says which one accepted the text and what it took it for:
 
 ```rust
 use ciphey::detection::{detect_plaintext, CheckerKind, DetectOptions, Sensitivity};
@@ -260,7 +260,7 @@ It provides four tools:
 
 - `decode` decodes `text` when you don't know how it was encoded, and returns the `plaintext` and the `path` of decoders used, with keys such as the Caesar shift. Optional arguments: `timeout_secs` (1 to 30, default 10) and `regex`, a crib the plaintext must match, such as `flag\{`.
 - `decode_with` runs one decoder you choose on `text`: give it the `decoder`'s id, name or an alias (`base64`, `rot13`, `vigenere`, `xor_single_byte`, ...). Without a `key` it decodes the text, or cracks the cipher by trying every key; with one it decrypts, for ciphers that take a key (`13`, `LEMON`, `a=5, b=8`, `rails=3, offset=1`). It returns every candidate decoding and whether each passes Ciphey's plaintext check. `regex` works as for `decode`.
-- `detect_plaintext` checks whether `text` already is plaintext, without decoding it, and says which checker accepted it, what it took it for and, for LemmeKnow's formats, how sure it is. Optional arguments: `checkers` (any of `lemmeknow`, `password` and `english`, by default all three), `sensitivity` of the English checker (`low`, `medium` or `high`) and a `regex` crib.
+- `detect_plaintext` checks whether `text` already is plaintext, without decoding it, and says which checker accepted it, what it took it for and, for LemmeKnow's formats, how sure it is. Optional arguments: `checkers` (any of `lemmeknow`, `json`, `password`, `english` and `code`, by default all five), `sensitivity` of the English checker (`low`, `medium` or `high`) and a `regex` crib.
 - `list_decoders` lists the encodings and ciphers Ciphey supports, with the ids and aliases `decode_with` takes and the key format of each cipher that takes one.
 
 A `decode` result looks like this. `status` is `decoded`, `not_found` or `timed_out`.
@@ -304,7 +304,7 @@ A `decode` result looks like this. `status` is `decoded`, `not_found` or `timed_
     "description": "Internet Protocol (IP) Address Version 4",
     "confidence": 0.7
   },
-  "checkers": ["lemmeknow", "password", "english"]
+  "checkers": ["lemmeknow", "json", "password", "english", "code"]
 }
 ```
 

@@ -23,7 +23,9 @@ microseconds.
    rules](#decoder-side-rules)).
 4. **The A\* search** (`src/searchers/astar.rs`): candidates a decoder's checker accepted
    become result nodes. When several turn up in one step, they are ordered by
-   `result_confidence` (strict English hits and format hits first, then cheaper paths), and
+   `result_confidence` (strict English hits and format hits first, then cheaper paths;
+   results that still tie keep the order of the decoder list in
+   `filter_and_get_decoders`, whose comments say why each decoder is where it is), and
    `result_passes_sanity` rejects results no answer could look like: under 3 characters,
    mostly unprintable, under 5% of the input's length, an English hit that is more than a
    third punctuation, or a flag without a flag word when the input was flag-shaped.
@@ -77,7 +79,15 @@ decoder junk matches them. Ignored:
   an IP in brackets. A Caesar shift of an address is still shaped like one
   (`uryyb@jbeyq.pbz`);
 - any text with a control character other than tab and line breaks: it isn't a format,
-  and it is a fifth of what a search checks, so LemmeKnow's regexes are skipped for it.
+  and it is a fifth of what a search checks, so LemmeKnow's regexes are skipped for it;
+- LemmeKnow's own flag formats (`flag{.*}`, `thm{.*}` …) with more braces inside, like
+  `THM{UyLgUqMJU}LjUkM^U}` from a chain of wrong decoders: a flag has one pair.
+
+LemmeKnow's patterns are ASCII-only, so the checker also identifies a **domain name or
+email address with a non-ASCII letter** (`hello.müller.example.com`, `müller@example.com`),
+what the Punycode decoder makes of `xn--` labels, if it ends in one of `EMAIL_TLDS`. The
+DTMF decoder still takes keys that LemmeKnow's phone number pattern matches for the number
+dialled (`18005551234`), with the human checker's agreement.
 
 When LemmeKnow finds nothing, the checker looks for a **CTF flag** in any format,
 `^[A-Za-z][A-Za-z0-9_]{1,19}\{[^{}\n]{1,200}\}$` (matched by hand: the regex crate compiles
@@ -116,7 +126,12 @@ Text longer than the longest entry (23 bytes) skips the lookup.
 
 `src/checkers/english.rs`. The text is normalised for the decision only (the result keeps
 the original): lower case, ASCII punctuation becomes a space except apostrophes inside
-words (`don't`), whitespace collapses. Then:
+words (`don't`), whitespace collapses. Text with a control character other than tab and
+line breaks is rejected outright (`hello\u{17}world`). CTF flags and secrets (16+
+letters, digits and `+/=_-` with both letters and digits: passwords, keys, hashes)
+between whitespace are left out when the rest has a word (two for a secret), like
+numbers: `Well done! Flag: IW{N0_0ne_can_st0p_y0u}`, `The password is
+IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR`. Then:
 
 1. **Decoder output is rejected first** (`looks_like_decoder_output`, one pass):
    - *case*: more than a third of the words, or any of three words or fewer, cased like no
@@ -125,8 +140,13 @@ words (`don't`), whitespace collapses. Then:
      capitalised, or capitalised words run together (`GitHub`, `iPhone`, `URLs`);
    - *symbols*: more than a third of the characters are symbols, one of them
      `\^[]{}|~=<>%*+` or a backtick: `!%TOO(NO`;
-   - *brackets*: square or curly brackets that don't balance: `[bede 'cab'  'ea`.
-2. **Space-less letters** (no whitespace, 8+ letters, 90%+ letters), what classical ciphers
+   - *brackets*: square or curly brackets that don't balance: `[bede 'cab'  'ea`;
+   - *NATO code words*: text the NATO phonetic decoder reads as letters
+     (`Hotel-Echo-Lima-Lima-Oscar`) is words, but not the plaintext.
+
+   Words of 12+ letters that change case only between runs of two letters or more are
+   cased like writing too: alternating-case words run together, `hiTHEREwelcomeTOlinear`.
+2. **Space-less letters** (no whitespace, only ASCII, 8+ letters, 90%+ letters), what classical ciphers
    leave plaintext as: a single word (rule 5), or a mean quadgram score of at least -5.1 (Low),
    -5.3 (Medium) or -5.6 (High). Up to 12 letters it must also split into words
    (`HELLOWORLD`, not the railfence shuffle `HWORLDELLO`), unless it has 10+ letters scoring
@@ -135,11 +155,13 @@ words (`don't`), whitespace collapses. Then:
    is far from any language: rejected (wrong Caesar shifts, reversed text).
 4. **Mostly words**: two or more words, one of three letters or more, more than 80% of
    them English words, accepted. Numbers don't count either way (`number 1 1 operation`).
-   Without spaces the words must be separated by writing's punctuation (`Hello,world!How`,
-   not `9=inn@on`), and numbers count against.
+   Without spaces the words must be separated by writing's punctuation or `_`
+   (`Hello,world!How`, `beware_the_ides_of_march`, not `9=inn@on`), and numbers count
+   against.
 5. A **single word** must be a dictionary word, of 5+ letters at Low: one in 150 strings of
    four letters is a dictionary word, and the ciphers that check at Low ask about their
-   most English-looking key, so they found `SHAG` and `MEAN` in junk.
+   most English-looking key, so they found `SHAG` and `MEAN` in junk. It doesn't label a
+   number with more digits than its letters (`flag = 5093751751…`, Big integer's input).
 6. **Two words** that aren't both words are rejected (`terces pot`, `peg knioge`).
 7. **No English word at all** is rejected, and so are **fewer than half English words**
    (35% at High) unless two different common words of French, German, Spanish, Italian,
@@ -187,7 +209,7 @@ gibberish-or-not's `Sensitivity` (its own docs have Low and High the wrong way r
 
 | | Low | Medium | High |
 |---|---|---|---|
-| Used by | Caesar, ROT47, railfence, Vigenère | every other decoder, the input check | nothing in Ciphey |
+| Used by | Caesar, ROT47, railfence, Vigenère and the other classical ciphers (Beaufort, Hill, Vigenère Autokey, …) | every other decoder, the input check | nothing in Ciphey |
 | Space-less text, minimum quadgram score | -5.1 | -5.3 | -5.6 |
 | Text with spaces, quadgram veto below | -6.5 | -6.5 | -7.5 |
 | Share of English words needed (3+ words) | 50% | 50% | 35% |

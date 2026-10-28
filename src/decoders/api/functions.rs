@@ -159,10 +159,10 @@ decoder_functions! {
     /// key, use [`affine_with_key`](super::affine_with_key).
     ///
     /// ```
-    /// let decoded = ciphey::decoders::affine("IHHWVC SWFRCP");
+    /// let decoded = ciphey::decoders::affine("Afccx, Bxscy!");
     /// let plaintext = decoded.plaintext().unwrap();
-    /// assert_eq!(plaintext.text, "AFFINE CIPHER");
-    /// assert_eq!(plaintext.key.as_deref(), Some("a=5, b=8"));
+    /// assert_eq!(plaintext.text, "Hello, World!");
+    /// assert_eq!(plaintext.key.as_deref(), Some("a=7, b=3"));
     /// ```
     affine: AffineDecoder, aliases [], key Some(keys::AFFINE);
 

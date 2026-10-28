@@ -149,7 +149,7 @@ impl Crack for Decoder<NatoPhoneticDecoder> {
 
 /// Decodes NATO phonetic alphabet code words to lower-case text, or returns `None` if
 /// `text` isn't NATO text.
-fn decode_nato(text: &str) -> Option<String> {
+pub(crate) fn decode_nato(text: &str) -> Option<String> {
     let mut tokens = Tokens {
         rest: text.as_bytes(),
     }

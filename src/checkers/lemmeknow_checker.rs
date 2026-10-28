@@ -373,11 +373,12 @@ pub(crate) fn identify(identifier: &Identifier, text: &str) -> Option<String> {
         .find(|data| is_trusted_match(data, text))
         .map(format_data_result)
         .or_else(|| is_ctf_flag(text).then(|| CTF_FLAG.to_string()))
+        .or_else(|| identify_idn(text))
 }
 
 /// Whether `text` has a control character other than a tab or line break: C0 controls,
 /// DEL, or C1 controls (U+0080 to U+009F, which decoders' bytes become as Latin-1).
-fn has_control_characters(text: &str) -> bool {
+pub(crate) fn has_control_characters(text: &str) -> bool {
     text.as_bytes()
         .windows(2)
         .any(|pair| pair[0] == 0xC2 && (0x80..0xA0).contains(&pair[1]))
@@ -397,6 +398,11 @@ fn is_trusted_match(data: &Data, text: &str) -> bool {
     if data.name == URL {
         let text = text.trim_start().to_ascii_lowercase();
         return text.contains("://") || text.starts_with("www.");
+    }
+    // `(?i)^(flag\{.*\}|...)$` takes junk with more braces inside, like
+    // `THM{UyLgUqMJU}LjUkM^U}` from a chain of wrong decoders: a flag has one pair
+    if data.tags.contains(&"CTF Flag") {
+        return matches_flag_pattern(text.trim());
     }
     match data.name {
         EC2_INSTANCE_ID => is_ec2_instance_id(text),
@@ -465,6 +471,58 @@ fn has_known_tld(text: &str) -> bool {
     EMAIL_TLDS
         .binary_search(&tld.to_ascii_lowercase().as_str())
         .is_ok()
+}
+
+/// LemmeKnow's name for its phone number pattern.
+const PHONE_NUMBER: &str = "Phone Number";
+
+/// Whether LemmeKnow's phone number pattern matches `text`. The checker ignores that
+/// pattern, which only counts digits (see [`EXCLUDED_TAGS`]); the DTMF decoder uses it
+/// for keys pressed on a telephone keypad, which do make a number.
+pub(crate) fn is_phone_number(text: &str) -> bool {
+    !has_control_characters(text)
+        && Checker::<LemmeKnow>::new()
+            .lemmeknow_config
+            .identify(text)
+            .iter()
+            .any(|found| found.data.name == PHONE_NUMBER)
+}
+
+/// Shown for an internationalised domain name such as `bücher.example.com`.
+const IDN: &str = "Internationalized Domain Name (IDN)";
+
+/// What `text` is if it is a domain name or email address with a non-ASCII letter in it,
+/// such as `hello.müller.example.com` or `müller@example.com`: what the Punycode decoder
+/// turns `xn--` labels into. LemmeKnow's patterns are ASCII-only. Like an email address,
+/// the domain has to end in one of [`EMAIL_TLDS`], which a Caesar shift of it doesn't.
+/// ASCII domains without a scheme aren't URLs (see [`URL`]), so these need a non-ASCII
+/// letter too.
+fn identify_idn(text: &str) -> Option<String> {
+    let text = text.trim();
+    if text.is_ascii() {
+        return None;
+    }
+    let (local, domain) = match text.split_once('@') {
+        Some((local, domain)) => (Some(local), domain),
+        None => (None, text),
+    };
+    if let Some(local) = local {
+        let is_local_char = |c: char| c.is_alphanumeric() || "._%+-".contains(c);
+        if local.is_empty() || local.len() > 64 || !local.chars().all(is_local_char) {
+            return None;
+        }
+    }
+    let labels: Vec<&str> = domain.split('.').collect();
+    let is_label = |label: &&str| {
+        (1..=63).contains(&label.chars().count())
+            && label.chars().all(|c| {
+                c.is_ascii_alphanumeric() || c == '-' || (!c.is_ascii() && c.is_alphabetic())
+            })
+            && !label.starts_with('-')
+            && !label.ends_with('-')
+    };
+    let is_domain = labels.len() >= 2 && labels.iter().all(is_label) && has_known_tld(domain);
+    is_domain.then(|| if local.is_some() { EMAIL } else { IDN }.to_string())
 }
 
 /// Formats the data result to a string
@@ -794,6 +852,47 @@ mod tests {
         ] {
             assert_eq!(identify(not_a_flag), None, "{not_a_flag:?}");
         }
+    }
+
+    #[test]
+    fn internationalised_domains_and_addresses_are_identified() {
+        // What the Punycode decoder makes of `xn--` labels
+        for (text, name) in [
+            ("bücher.example.com", IDN),
+            ("hello.müller.example.com", IDN),
+            ("müller@example.com", EMAIL),
+            ("пример.рф.com", IDN),
+        ] {
+            assert_eq!(identify(text).as_deref(), Some(name), "{text}");
+        }
+        for junk in [
+            // An unknown top-level domain, as a Caesar shift gives
+            "oüpure.rknzcyr.pbz",
+            // Not a domain
+            "loginsbücherse)amplescom",
+            "bücher",
+            "bücher..com",
+            "-bücher.com",
+        ] {
+            assert_eq!(identify(junk), None, "{junk}");
+        }
+        // ASCII domains without a scheme still aren't URLs
+        assert_eq!(identify("example.com"), None);
+    }
+
+    #[test]
+    fn lemmeknow_flag_formats_need_one_pair_of_braces() {
+        // `(?i)^(thm\{.*\})$` takes this chain of wrong decodings
+        assert_eq!(identify("THM{UyLgUqMJU}LjUkM^U}"), None);
+        assert!(identify("THM{h4ck_th3_pl4n3t}").is_some());
+        assert!(identify("flag{a_b}").is_some());
+    }
+
+    #[test]
+    fn phone_numbers_are_recognised_but_not_identified() {
+        assert!(is_phone_number("18005551234"));
+        assert!(!is_phone_number("hello"));
+        assert_eq!(identify("18005551234"), None);
     }
 
     /// Texts LemmeKnow identifies, across rarities and tags, including the slowest

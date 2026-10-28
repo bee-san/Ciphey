@@ -470,7 +470,7 @@ fn detect_plaintext_identifies_text() {
                 "description": "Internet Protocol (IP) Address Version 4",
                 "confidence": 0.7,
             },
-            "checkers": ["lemmeknow", "password", "english"],
+            "checkers": ["lemmeknow", "json", "password", "english", "code"],
         })
     );
 

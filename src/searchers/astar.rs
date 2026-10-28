@@ -273,10 +273,11 @@ fn expand_node(
                             path,
                         },
                         depth: current_node.depth + 1,
-                        // Results that tie on confidence go to the cheaper path, so this
-                        // has to depend on the decoder: with a flat cost the tie fell back
-                        // to decoder order, and Vigenere is first.
-                        cost: current_node.cost + edge_cost(decoder.as_ref(), 1),
+                        // Every result step costs the same, so results found in the same
+                        // step that tie on confidence keep the decoder list's order:
+                        // `filter_and_get_decoders` puts each decoder before the ones that
+                        // turn its input into junk the checkers accept.
+                        cost: current_node.cost + 1.0,
                         total_cost: f32::NEG_INFINITY,
                         is_result: true,
                     });
@@ -343,12 +344,13 @@ fn result_confidence(node: &AStarNode) -> (u8, f32) {
     (class, node.cost)
 }
 
-/// Keeps only the first result for each text, in the order the decoders are listed.
+/// Keeps only the first result for each text, in batch order (for one node's results, the
+/// order the decoders are listed in).
 ///
 /// When two decoders find the same plaintext in one step, the list order says which one
 /// describes it (Quoted-Printable before Hexadecimal for `=48=65`). Results are then
-/// sorted by path cost, which depends on the decoder, so a duplicate from a cheaper
-/// decoder must not get the chance to come first.
+/// sorted by checker class and path cost, so a duplicate found from a cheaper node of the
+/// same batch must not get the chance to come first.
 fn keep_first_of_each_text(results: &mut Vec<AStarNode>) {
     let mut seen = std::collections::HashSet::new();
     results.retain(|node| {

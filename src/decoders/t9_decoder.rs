@@ -824,23 +824,25 @@ mod tests {
 
     #[test]
     fn returns_three_candidates_when_none_is_identified() {
-        // RING and SING in 2 places make 4 sentences, and Athena accepts none of them
-        let text = "7464 7464";
-        assert_eq!(
-            candidates(text).unwrap(),
-            ["ring ring", "ring sing", "sing ring", "sing sing"]
-        );
+        // One word of four letters has many readings, and Athena accepts none of them at
+        // Low sensitivity: a single word needs five letters there
+        let text = "4663";
+        let readings = candidates(text).unwrap();
+        assert!(readings.len() > 3, "{readings:?}");
         let result = Decoder::<T9Decoder>::new().crack(text, &get_athena_checker());
         assert!(!result.success);
-        assert_eq!(
-            result.unencrypted_text.unwrap(),
-            ["ring ring", "ring sing", "sing ring"]
-        );
+        assert_eq!(result.unencrypted_text.unwrap(), ["good", "gone", "home"]);
 
         // Fewer if there are fewer
-        let result = Decoder::<T9Decoder>::new().crack("47 48 843", &get_athena_checker());
+        let result = Decoder::<T9Decoder>::new().crack("6253", &get_athena_checker());
         assert!(!result.success);
-        assert_eq!(result.unencrypted_text.unwrap(), ["is it the", "is it tie"]);
+        assert_eq!(result.unencrypted_text.unwrap(), ["make", "male"]);
+
+        // Sentences of two words or more are English: RING and SING in 2 places make 4
+        // sentences, and the first is accepted
+        let result = Decoder::<T9Decoder>::new().crack("7464 7464", &get_athena_checker());
+        assert!(result.success);
+        assert_eq!(result.unencrypted_text.unwrap(), ["ring ring"]);
     }
 
     #[test]
