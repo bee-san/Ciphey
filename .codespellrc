@@ -4,6 +4,7 @@
 # "fpr" is the plaintext benchmark's false-positive-rate key (benches/plaintext.rs).
 ignore-words-list = ue,sais,ist,sie,fpr
 # Encoded benchmark inputs and near misses are gibberish by design, and the plaintext
-# benchmark's data has Gutenberg prose and other languages; the ngram tables are binary
-# counts and word lists (with archaic words like "fro")
-skip = ./benches/data/*,benches/data/*,./src/storage/ngrams/*.bin,src/storage/ngrams/*.bin,./src/storage/ngrams/*.txt,src/storage/ngrams/*.txt
+# benchmark's data has Gutenberg prose and other languages; the n-gram tables are binary
+# counts, letter sequences and word lists (with archaic words like "fro"); and the CTF
+# corpus quotes ciphertexts and challenge names (misspellings included) exactly as published
+skip = ./benches/data/*,benches/data/*,./src/storage/ngrams/*.bin,src/storage/ngrams/*.bin,./src/storage/ngrams/*.txt,src/storage/ngrams/*.txt,./tests/data/*,tests/data/*

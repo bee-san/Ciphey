@@ -1,0 +1,2295 @@
+[
+  {
+    "id": "hackvent-2014-day03-candle-1",
+    "event": "Hackvent 2014",
+    "year": 2014,
+    "challenge": "Day 03: Candle 1",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/shiltemann/CTF-writeups-public/master/Hackvent_2014/dec03.md",
+    "ciphertext": "WAIYTELZEREMSOK3TEBZWETUE2EB2HIRMRYGBUGKSRASIIXGQ5HYSESYWCZDYCACBS43JIOHNRAA3DAURDES2DGO",
+    "plaintext": "WEWISHYOUAMERRYCHRISTMASANDYOURSECRETKEYISBASE32GIYSA2LTEBXW43DZEBUGC3DGEB2GQZJAORZHK5DI",
+    "flag": "",
+    "chain": [
+      "Scytale"
+    ],
+    "notes": "Scytale (hint: 'really old school (500 b.c.)' + octagonal candle). 88 letters written in 9 rows (first 7 rows of 10, last 2 of 9 - i.e. an even split into 9 rows) and read column by column. The decoded text says the secret key is BASE32 + 'GIYSA2LTEBXW43DZEBUGC3DGEB2GQZJAORZHK5DI', which Base32-decodes to '21 is only half the truth' (the ball-o-matic password; the final HV14 key came from a QR code so flag is left empty)."
+  },
+  {
+    "id": "easyctf-2015-i-love-sleeping",
+    "event": "EasyCTF 2015",
+    "year": 2015,
+    "challenge": "I <3 SLEEPING",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/shiltemann/CTF-writeups-public/master/easyCTF_2015/writeup.md",
+    "ciphertext": "3845281945283805284526053525260547380516453748164748478317454508",
+    "plaintext": "serversarehadchaosagentgotosleep",
+    "flag": "serversarehadchaosagentgotosleep",
+    "chain": [
+      "Polybius"
+    ],
+    "notes": "Polybius square over a-y (Z omitted, hint 'Where'd my Z's go?'), 'blocks of 2'. Non-standard coordinates: columns are labelled 0-4 and rows 5-9 (a=05, b=15, ..., e=45, f=06, ...), each pair written column-digit first. The 28th pair '83' is written row-first (should be 38 = s); decode pairs order-agnostically (digit 0-4 = column, digit 5-9 = row)."
+  },
+  {
+    "id": "easyctf-2015-julius-save-me",
+    "event": "EasyCTF 2015",
+    "year": 2015,
+    "challenge": "Julius Save Me",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2015/master/easyctf-2015/cryptography/julius-save-me/README.md",
+    "ciphertext": "Cnebnl Vtxltk bl max uxlm unm fr ykbxgw ebdxl Gtihexhg uxmmxk yhk patmxoxk kxtlhg. Ha pxee. Max yetz bl xtlrvmy{Gti0exhg_ol_Vt3l4k}",
+    "plaintext": "Julius Caesar is the best but my friend likes Napoleon better for whatever reason. Oh well. The flag is easyctf{Nap0leon_vs_Ca3s4r}",
+    "flag": "easyctf{Nap0leon_vs_Ca3s4r}",
+    "chain": [
+      "Caesar (shift 7)"
+    ],
+    "notes": "Caesar cipher; decrypt by shifting forward 7 (encryption shift 19)."
+  },
+  {
+    "id": "ibteam-blackvalentine-2015-crypto2",
+    "event": "IBTeam Blackvalentine CTF 2015",
+    "year": 2015,
+    "challenge": "Crypto2",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2015/master/ibteam-blackvalentine-ctf-2015/crypto/crypto-2/README.md",
+    "ciphertext": "3 444 0 22 2 555 444 55 0 8 444 777 2 444 0 6 33 777 2 44",
+    "plaintext": "di balik tirai merah",
+    "flag": "di balik tirai merah",
+    "chain": [
+      "Multi-tap (T9 keypad)"
+    ],
+    "notes": "Multi-tap ABC phone keypad: digit pressed n times = n-th letter on that key, 0 = space. Plaintext is Indonesian ('behind the red curtain'). The writeup prints it as 'di balik terai merah' (typo for tirai); decoding gives 'di balik tirai merah'."
+  },
+  {
+    "id": "icectf-2015-numb3rs",
+    "event": "IceCTF 2015",
+    "year": 2015,
+    "challenge": "Numb3rs",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2015/master/icectf-2015/cryptography/numb3rs/README.md",
+    "ciphertext": "05110006_00111507000104190802_08130308020418",
+    "plaintext": "FLAG_ALPHABETIC_INDICES",
+    "flag": "FLAG_ALPHABETIC_INDICES",
+    "chain": [
+      "A1Z26"
+    ],
+    "notes": "Two-digit zero-indexed alphabet positions (00=A ... 25=Z); underscores kept. Hint: 'I think they come in pairs'."
+  },
+  {
+    "id": "icectf-2015-rot13",
+    "event": "IceCTF 2015",
+    "year": 2015,
+    "challenge": "ROT13",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2015/master/icectf-2015/cryptography/rot13/code.txt",
+    "ciphertext": "V srry yvxr guvf vf n tbbq cynpr gb fgber nyy zl frpher syntf.\nVasnpg, urer'f gur synt: ebg_13_vfag_frpher",
+    "plaintext": "I feel like this is a good place to store all my secure flags.\nInfact, here's the flag: rot_13_isnt_secure",
+    "flag": "rot_13_isnt_secure",
+    "chain": [
+      "ROT13"
+    ],
+    "notes": "Contents of code.txt; plain ROT13."
+  },
+  {
+    "id": "nullcon-hackim-2015-crypto-1",
+    "event": "nullcon HackIM 2015",
+    "year": 2015,
+    "challenge": "Crypto Question 1",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2015/master/nullcon-hackim-2015/crypto-1/README.md",
+    "ciphertext": "TaPoGeTaBiGePoHfTmGeYbAtPtHoPoTaAuPtGeAuYbGeBiHoTaTmPtHoTmGePoAuGeErTaBiHoAuRnTmPbGePoHfTmGeTmRaTaBiPoTmPtHoTmGeAuYbGeTbGeLuTmPtTmPbTbOsGePbTmTaLuPtGeAuYbGeAuPbErTmPbGeTaPtGePtTbPoAtPbTmGeTbPtErGePoAuGeYbTaPtErGePoHfTmGeHoTbAtBiTmBiGeLuAuRnTmPbPtTaPtLuGePoHfTaBiGeAuPbErTmPbPdGeTbPtErGePoHfTaBiGePbTmYbTmPbBiGeTaPtGeTmTlAtTbOsGeIrTmTbBiAtPbTmGePoAuGePoHfTmGePbTmOsTbPoTaAuPtBiGeAuYbGeIrTbPtGeRhGeBiAuHoTaTbOsGeTbPtErGeHgAuOsTaPoTaHoTbOsGeRhGeTbPtErGePoAuGePoHfTmGeTmPtPoTaPbTmGeAtPtTaRnTmPbBiTmGeTbBiGeTbGeFrHfAuOsTmPd",
+    "plaintext": "IT IS THE FUNCTION OF SCIENCE TO DISCOVER THE EXISTENCE OF A GENERAL REIGN OF ORDER IN NATURE AND TO FIND THE CAUSES GOVERNING THIS ORDER. AND THIS REFERS IN EQUAL MEASURE TO THE RELATIONS OF MAN - SOCIAL AND POLITICAL - AND TO THE ENTIRE UNIVERSE AS A WHOLE.",
+    "flag": "Periodic table",
+    "chain": [
+      "Periodic table (atomic numbers)",
+      "Decimal"
+    ],
+    "notes": "Each chemical element symbol is replaced by its atomic number, which is the ASCII code of the plaintext character (Ta=73='I', Po=84='T', Ge=32=' ' ...). The flag was the thing the Mendeleev quote refers to ('Periodic table', per https://blog.ka0labs.net/post/20/)."
+  },
+  {
+    "id": "otw-krypton-level0",
+    "event": "OverTheWire Krypton",
+    "year": 2015,
+    "challenge": "Level 0",
+    "category": "Wargame",
+    "source_url": "https://raw.githubusercontent.com/dc865/writeups/master/Krypton.md",
+    "ciphertext": "S1JZUFRPTklTR1JFQVQ=",
+    "plaintext": "KRYPTONISGREAT",
+    "flag": "",
+    "chain": [
+      "Base64"
+    ],
+    "notes": "The level 1 password. Year is that of the writeup; the wargame is older. Also in https://axcheron.github.io/writeups/otw/krypton/"
+  },
+  {
+    "id": "otw-krypton-level1",
+    "event": "OverTheWire Krypton",
+    "year": 2015,
+    "challenge": "Level 1",
+    "category": "Wargame",
+    "source_url": "https://raw.githubusercontent.com/dc865/writeups/master/Krypton.md",
+    "ciphertext": "YRIRY GJB CNFFJBEQ EBGGRA",
+    "plaintext": "LEVEL TWO PASSWORD ROTTEN",
+    "flag": "",
+    "chain": [
+      "ROT13"
+    ],
+    "notes": "The level 2 password is ROTTEN. Year is that of the writeup."
+  },
+  {
+    "id": "otw-krypton-level2",
+    "event": "OverTheWire Krypton",
+    "year": 2015,
+    "challenge": "Level 2",
+    "category": "Wargame",
+    "source_url": "https://raw.githubusercontent.com/dc865/writeups/master/Krypton.md",
+    "ciphertext": "OMQEMDUEQMEK",
+    "plaintext": "CAESARISEASY",
+    "flag": "",
+    "chain": [
+      "Caesar (shift 12)"
+    ],
+    "notes": "Caesar with shift 12 (decode by shifting each letter back 12). Year is that of the writeup."
+  },
+  {
+    "id": "otw-krypton-level3",
+    "event": "OverTheWire Krypton",
+    "year": 2015,
+    "challenge": "Level 3",
+    "category": "Wargame",
+    "source_url": "https://raw.githubusercontent.com/dc865/writeups/master/Krypton.md",
+    "ciphertext": "KSVVW BGSJD SVSIS VXBMN YQUUK BNWCU ANMJS",
+    "plaintext": "WELLD ONETH ELEVE LFOUR PASSW ORDIS BRUTE",
+    "flag": "BRUTE",
+    "chain": [
+      "Substitution"
+    ],
+    "notes": "Monoalphabetic substitution; the key comes from frequency analysis of three longer ciphertexts (found1-3) encrypted with the same key. Decoded spacing follows the 5-letter groups. Year is that of the writeup."
+  },
+  {
+    "id": "otw-krypton-level4",
+    "event": "OverTheWire Krypton",
+    "year": 2015,
+    "challenge": "Level 4",
+    "category": "Wargame",
+    "source_url": "https://raw.githubusercontent.com/dc865/writeups/master/Krypton.md",
+    "ciphertext": "HCIKV RJOX",
+    "plaintext": "CLEAR TEXT",
+    "flag": "",
+    "chain": [
+      "Vigenère"
+    ],
+    "notes": "Vigenère with key FREKEY (key length 6 given, key recovered from two longer ciphertexts). Year is that of the writeup."
+  },
+  {
+    "id": "otw-krypton-level5",
+    "event": "OverTheWire Krypton",
+    "year": 2015,
+    "challenge": "Level 5",
+    "category": "Wargame",
+    "source_url": "https://raw.githubusercontent.com/dc865/writeups/master/Krypton.md",
+    "ciphertext": "BELOS Z",
+    "plaintext": "RANDO M",
+    "flag": "",
+    "chain": [
+      "Vigenère"
+    ],
+    "notes": "Vigenère with key KEYLENGTH (recovered from longer ciphertexts). The password is RANDOM; spacing follows the ciphertext. Year is that of the writeup."
+  },
+  {
+    "id": "pragyan-ctf-2015-crack-this",
+    "event": "Pragyan CTF 2015",
+    "year": 2015,
+    "challenge": "Crack this",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2015/master/pragyan-ctf-2015/crypto/crack_this/README.md",
+    "ciphertext": "qsbfvdmdpjtmamrY",
+    "plaintext": "pragyanctfrocksx",
+    "flag": "pragyanctfrocksX",
+    "chain": [
+      "Playfair"
+    ],
+    "notes": "Playfair with an empty key (plain alphabetical 5x5 square) and V merged into U (omit V; the 'v' in the ciphertext is read as 'u'). Solver used rumkin.com with these settings; the final X is a Playfair padding letter. Challenge hint: \"'We' do better than 'You'\"."
+  },
+  {
+    "id": "pragyan-ctf-2015-roman",
+    "event": "Pragyan CTF 2015",
+    "year": 2015,
+    "challenge": "Roman",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2015/master/pragyan-ctf-2015/crypto/roman/README.md",
+    "ciphertext": "ghowdirufhdwqlw",
+    "plaintext": "deltaforceatnit",
+    "flag": "deltaforceatnit",
+    "chain": [
+      "Caesar (shift 23)"
+    ],
+    "notes": "Content of the 'encrypt' file from question2.tar.gz; the 'clue' file said '#greatest roman generals of all time'. Caesar, decrypt by shifting forward 23 (= back 3). Plaintext reads 'delta force at nit' (NIT Trichy, the organisers)."
+  },
+  {
+    "id": "school-ctf-2015-affine-cipher",
+    "event": "School CTF 2015",
+    "year": 2015,
+    "challenge": "Affine cipher",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2015/master/school-ctf-2015/crypto/affine-cipher-100/README.md",
+    "ciphertext": "ifpmluglesecdlqp_rclfrseljpkq",
+    "plaintext": "flag_is_every_haxor_love_math",
+    "flag": "flag_is_every_haxor_love_math",
+    "chain": [
+      "Affine"
+    ],
+    "notes": "Affine cipher over the 27-symbol alphabet 'abcdefghijklmnopqrstuvwxyz_' (a=0 ... z=25, _=26) with encryption c = 4p + 15 mod 27, as stated in the challenge; decrypt with p = 7*(c - 15) mod 27."
+  },
+  {
+    "id": "sctf-2015-cipherception",
+    "event": "sCTF 2015",
+    "year": 2015,
+    "challenge": "Cipherception",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2015/master/sCTF-2015/crypto/Cipherception/README.md",
+    "ciphertext": "OCBnbCB0bCAxMCBmZGFuIHlkIGxkIFlndiBydnogYmQgcG1qcHpkX2Z4Y3liY3R2X2FibGxiY2w=",
+    "plaintext": "8 hg ug 10 csdq ts gs The key is always_continue_digging",
+    "flag": "always_continue_digging",
+    "chain": [
+      "Base64",
+      "Atbash",
+      "Caesar (shift 18)",
+      "Affine"
+    ],
+    "notes": "Challenge hint: '5Affine2 > 8Caesar > Atbash > B64'. Base64 -> '8 gl tl 10 fdan yd ld Ygv rvz bd pmjpzd_fxcybctv_abllbcl'; Atbash -> '8 to go 10 uwzm bw ow Bte iea yw knqkaw_ucxbyxge_zyooyxo'; Caesar shift back 8 (= forward 18) -> '8 lg yg 10 more to go Tlw aws qo cficso_muptqpyw_rqggqpg'; Affine decrypt with a=5, b=2 -> 'The key is always_continue_digging'. Each layer reveals some words in plaintext ('8 to go', '10 more to go'); the plaintext given here is the result of applying all four layers to the entire string."
+  },
+  {
+    "id": "sctf-2015-i-like-bacon",
+    "event": "sCTF 2015",
+    "year": 2015,
+    "challenge": "I Like Bacon",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2015/master/sCTF-2015/crypto/I%20Like%20Bacon/README.md",
+    "ciphertext": "... .- -- ..- . .-.. ..--.- -- --- .-. ... . ..--.- .. ... ..--.- -.-. --- --- .-.. ..--.- -... ..- - ..--.- -... .- -.-. --- -. ..--.- .. ... ..--.- -.-. --- --- .-.. . .-. ..--.- -... .- .- -... -... .- .- -... -... -... .- -... .- .- .- -... .- .- -... .- .- -... .- .- .- -... .- .- -... .- -... .- .- -... -... .- .- -... -... -... .- .- -... .- .- .- .- -... .- -... .- -... .- -... -... .- .- .- .- .- .- .- -... -... .-",
+    "plaintext": "THISISTHEFLAG",
+    "flag": "THISISTHEFLAG",
+    "chain": [
+      "Morse",
+      "Bacon"
+    ],
+    "notes": "Morse decodes to 'SAMUEL_MORSE_IS_COOL_BUT_BACON_IS_COOLER_BAABBAABBBABAAABAABAABAAABAABABAABBAABBBAABAAAABABABABBAAAAAAABBA'; the trailing A/B string is a 26-letter Baconian cipher (A=00000 ... Z=11001) giving THISISTHEFLAG."
+  },
+  {
+    "id": "abctf-2016-ceasar-salad",
+    "event": "ABCTF 2016",
+    "year": 2016,
+    "challenge": "Ceasar Salad",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2016/master/abctf-2016/crypto/ceasar-salad-10/README.md",
+    "ciphertext": "xyzqc{t3_qelrdeq_t3_k33a3a_lk3_lc_qe3p3}",
+    "plaintext": "abctf{w3_thought_w3_n33d3d_on3_of_th3s3}",
+    "flag": "abctf{w3_thought_w3_n33d3d_on3_of_th3s3}",
+    "chain": [
+      "Caesar (shift 3)"
+    ],
+    "notes": "Caesar cipher; decrypt by shifting forward 3 (encryption shift 23)."
+  },
+  {
+    "id": "angstromctf-2016-spqr",
+    "event": "ångstromCTF 2016",
+    "year": 2016,
+    "challenge": "SPQR",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2016/master/angstromctf-2016/crypto/spqr-10/README.md",
+    "ciphertext": "uxptkx_max_bwxl_hy_ftkva",
+    "plaintext": "beware_the_ides_of_march",
+    "flag": "beware_the_ides_of_march",
+    "chain": [
+      "Caesar (shift 7)"
+    ],
+    "notes": "Caesar cipher, decrypt by shifting forward 7 (encryption shift 19). Flag confirmed in https://raw.githubusercontent.com/MrMugiwara/WriteupsCTF/master/AngstromCTF2016/Crypto10/README.md"
+  },
+  {
+    "id": "angstromctf-2016-what-the-hex",
+    "event": "ångstromCTF 2016",
+    "year": 2016,
+    "challenge": "What the Hex",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/MrMugiwara/WriteupsCTF/master/AngstromCTF2016/What-the-Hex/README.md",
+    "ciphertext": "6236343a20615735305a584a755a58526659323975646d567963326c76626c3930623239736331397962324e72",
+    "plaintext": "internet_conversion_tools_rock",
+    "flag": "internet_conversion_tools_rock",
+    "chain": [
+      "Hexadecimal",
+      "Base64"
+    ],
+    "notes": "Hex decodes to 'b64: aW50ZXJuZXRfY29udmVyc2lvbl90b29sc19yb2Nr'; the Base64 part (after the 'b64: ' label) decodes to the flag. The ctfs/write-ups-2016 copy of the hex is missing the last digit."
+  },
+  {
+    "id": "breakin-ctf-2016-eighth-circles-of-hell",
+    "event": "Break In CTF 2016",
+    "year": 2016,
+    "challenge": "Eighth Circles of Hell",
+    "category": "Steganography",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2016/master/breakin-ctf-2016/steganography/eighth-circles-of-hell-200/README.md",
+    "ciphertext": "RCdgJHFwIkp9fXtGeXk2L2V0MmJOTkwnLGwqaignZ2dle0FjP2A8eykoeHdZb3Rzcmsxb1FQbGtkKilKSWVkY2JbIUJYV1ZbWlN3V1ZVN1NSS29JSGxGLkpDQkdAZERDQiQjPzhcNnw6MzJWNjU0MzIxKnAoTG0lSSMiJ34lJHtBYn59dnV0OnhxWXV0bTNUcGluZ2xrZCpoZ2BIXiRiRFpfXl1WelRTWFdWVU5yTFFKT05NTEVEaEJBZShEQ0JBOl44PTw7NDkyVjA1LjMyK08vKC0sKyojRyEmfSR7ekB+d197enM5WnZvdG0zcXBvbm1mTitpS2dmZV4kXFtaWV5XXFV5U1hRdVVUU0xLbzJOR0ZqLUlIR0BkPkM8YCM/OFw8NXszVzc2djQzLCtPL28nLCskI0cnJmZlI3p5eD5fe3R5cjhZdW40bGtwaWguT2tkY2IoYGVeY1xbIUJeV1ZVeVlYOlBPVE1xUTMySEdMS0RoSCpGRT5iJUE6Pzg3Wzs0M1c3dzUuUixyMC8uLSwlSWooJ35EfHt6eT9gX3t0eXJ3cDZuc3JxcGkvbWxlamloZ2ZfXl0jYWBCQV1cW1R4WFdWOE5TUktKbjFNTEtKQ2dBRkVEPWEkOj8+PTw1NFg4eDYvU3RzMTApTS0sbGsjRycmJXxkInk/YF91dHM5d3ZYdG1sazFvbm1sZU0qdQ==",
+    "plaintext": "Good work finding this shit. Your flag is dafuck_how_did_you_find_this!",
+    "flag": "dafuck_how_did_you_find_this!",
+    "chain": [
+      "Base64",
+      "Malbolge"
+    ],
+    "notes": "The Base64 string is the text printed by the Piet program in the challenge image (quoted verbatim in the writeup). Base64-decoding gives a 529-char Malbolge program; running it prints the sentence containing the flag. Verified with a Python Malbolge interpreter."
+  },
+  {
+    "id": "hackvent-2016-day02-free-giveaway",
+    "event": "Hackvent 2016",
+    "year": 2016,
+    "challenge": "Day 02: Free Giveaway",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/shiltemann/CTF-writeups-public/master/Hackvent_2016/writeup.md",
+    "ciphertext": "DK16[OEdo[''lu[;\"Nl[R\"D4[2Qmi",
+    "plaintext": "HV16-SDhs-qqpf-zQLp-OQH4-2Xmg",
+    "flag": "HV16-SDhs-qqpf-zQLp-OQH4-2Xmg",
+    "chain": [
+      "Keyboard layout swap (Dvorak to QWERTY)"
+    ],
+    "notes": "Hint: 'the keys are the key'. Each character is the US-Dvorak symbol on the physical key; map it to the QWERTY symbol at the same key position (shifted and unshifted rows, e.g. '[' -> '-', 'D' -> 'H', 'K' -> 'V')."
+  },
+  {
+    "id": "icectf-2016-all-your-base-are-belong-to-us",
+    "event": "IceCTF 2016",
+    "year": 2016,
+    "challenge": "All your Base are belong to us",
+    "category": "Misc",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2016/master/icectf-2016/misc/all-your-base-are-belong-to-us-15/flag_63c24d48595eae318c9a174f37ffb0f128758e5c16fea0ffebf12b0ba5f5b26a.txt",
+    "ciphertext": "01001001 01100011 01100101 01000011 01010100 01000110 01111011 01100001 01101100 00110001 01011111 01101101 01111001 01011111 01100010 01100001 01110011 01100101 01110011 01011111 01100001 01110010 01100101 01011111 01111001 01101111 01110101 01110010 01110011 01011111 01100001 01101110 01100100 01011111 01100001 01101100 01101100 01011111 01111001 00110000 01110101 01110010 01011111 01100010 01100001 01110011 01100101 01110011 01011111 01100001 01110010 01100101 01011111 01101101 01101001 01101110 01100101 01111101",
+    "plaintext": "IceCTF{al1_my_bases_are_yours_and_all_y0ur_bases_are_mine}",
+    "flag": "IceCTF{al1_my_bases_are_yours_and_all_y0ur_bases_are_mine}",
+    "chain": [
+      "Binary"
+    ],
+    "notes": "Space-separated 8-bit binary ASCII; the original flag.txt had line wraps (joined here with spaces)."
+  },
+  {
+    "id": "icectf-2016-rotated",
+    "event": "IceCTF 2016",
+    "year": 2016,
+    "challenge": "Rotated",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2016/master/icectf-2016/crypto/rotated-20/readme.md",
+    "ciphertext": "VprPGS{jnvg_bar_cyhf_1_vf_3?}",
+    "plaintext": "IceCTF{wait_one_plus_1_is_3?}",
+    "flag": "IceCTF{wait_one_plus_1_is_3?}",
+    "chain": [
+      "ROT13"
+    ],
+    "notes": "Challenge says it was ROTated by 5 then by 8, i.e. ROT13 overall."
+  },
+  {
+    "id": "internetwache-ctf-2016-the-hidden-message",
+    "event": "Internetwache CTF 2016",
+    "year": 2016,
+    "challenge": "The hidden message",
+    "category": "Misc",
+    "source_url": "https://raw.githubusercontent.com/internetwache/Internetwache-CTF-2016/master/tasks/misc50/task/README.txt",
+    "ciphertext": "0000000 126 062 126 163 142 103 102 153 142 062 065 154 111 121 157 113\n0000020 122 155 170 150 132 172 157 147 123 126 144 067 124 152 102 146\n0000040 115 107 065 154 130 062 116 150 142 154 071 172 144 104 102 167\n0000060 130 063 153 167 144 130 060 113 012\n0000071",
+    "plaintext": "Well done!\n\nFlag: IW{N0_0ne_can_st0p_y0u}\n",
+    "flag": "IW{N0_0ne_can_st0p_y0u}",
+    "chain": [
+      "Octal",
+      "Base64"
+    ],
+    "notes": "Output of `od` (octal dump): the first column of each line is an octal byte offset and must be dropped; remaining octal bytes spell the Base64 string 'V2VsbCBkb25lIQoKRmxhZzogSVd7TjBfMG5lX2Nhbl9zdDBwX3kwdX0K'. Also quoted verbatim in https://raw.githubusercontent.com/WesternCyber/CTF-WriteUp/master/2016/Internetwache/Misc/Misc50.md"
+  },
+  {
+    "id": "otw-natas-level8",
+    "event": "OverTheWire Natas",
+    "year": 2016,
+    "challenge": "Level 8",
+    "category": "Wargame",
+    "source_url": "https://www.abatchy.com/2016/10/natas-level-6-level-10",
+    "ciphertext": "3d3d516343746d4d6d6c315669563362",
+    "plaintext": "oubWYf2kBq",
+    "flag": "",
+    "chain": [
+      "Hexadecimal",
+      "Reverse",
+      "Base64"
+    ],
+    "notes": "The page's $encodedSecret, made with bin2hex(strrev(base64_encode($secret))). The decoded secret is a random-looking string. Year is that of the writeup."
+  },
+  {
+    "id": "pragyan-ctf-2016-k",
+    "event": "Pragyan CTF 2016",
+    "year": 2016,
+    "challenge": "K",
+    "category": "Misc",
+    "source_url": "https://raw.githubusercontent.com/shiltemann/CTF-writeups-public/master/Pragyan_2016/writeup.md",
+    "ciphertext": ". . . . . . . . . . . . . . .\n. . . . . ! ? ! ! . ? . . . .\n. . . . . . . . . . . . . . .\n. ? . ? ! . ? . . . . . . . .\n! . ? . . . . . . . ! ? ! ! .\n? . . . . . . ? . ? ! . ? . .\n. . . . . . . . ! . ! ! ! ! !\n! ! . . . ! . . . . . . . . .\n. . . . ! . ? . . . . . . . !\n? ! ! . ? ! ! ! ! ! ! ? . ? !\n. ? ! ! ! ! ! . . . . . . . .\n. . . . . ! . . . . . ! . ? .\n. . . . . . . . ! ? ! ! . ? !\n! ! ! ! ! ! ! ? . ? ! . ? ! .\n! ! ! ! ! ! ! ! ! . ! . ? . .\n. . . . . . . ! ? ! ! . ? . .\n. . . . . . ? . ? ! . ? . . .\n. . . . . . . . . ! . ! ! ! !\n! . ? . . . . . . . . . ! ? !\n! . ? ! ! ! ! ! ! ! ! ? . ? !\n. ? ! . ! ! ! ! ! ! ! ! ! ! !\n. . . ! . . . . . . . . . . .\n! . ! ! ! . ! ! ! ! ! ! ! ! !\n. ? . . . . . . . . . ! ? ! !\n. ? . . . . . . . . ? . ? ! .\n? ! . ! ! ! ! ! ! ! ! ! . ! !\n! ! ! ! ! ! ! ! ! ! ! ! ! ! !\n. . . . . . . . . . . . . ! .\n? .",
+    "plaintext": "theflagisookisnotsoeasy",
+    "flag": "theflagisookisnotsoeasy",
+    "chain": [
+      "Ook! (short form)",
+      "Brainfuck",
+      "Caesar (shift 14)"
+    ],
+    "notes": "Short-form Ook! (each pair of . ! ? tokens is one Ook! instruction: '. .'=+, '! !'=-, '. ?'=>, '? .'=<, '! ?'=[, '? !'=], '! .'=., '. !'=,). Running the program prints 'hvstzouwgccywgbchgcsogm', which is a Caesar shift: add 12 (writeup calls it ROT-12; encryption shift was 14) to get the flag. Original file writeupfiles/K_problem in the same repo uses CRLF line endings."
+  },
+  {
+    "id": "sctf-2016-q1-when-in-rome",
+    "event": "sCTF 2016 Q1",
+    "year": 2016,
+    "challenge": "When in Rome",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2016/master/sctf-2016-q1/crypto/when-in-rome-10/README.md",
+    "ciphertext": "Nvctfdv kf jTKW! Nv yfgv pfl veafp kyv gifscvdj nv yrmv nizkkve wfi kyv wzijk hlrikvi fw 2016. Yviv zj pfli wzijk fw (yfgvwlccp) drep wcrxj! jtkw{ny3e_1e_tkw_u0_r5_tkw3i5_u0}",
+    "plaintext": "Welcome to sCTF! We hope you enjoy the problems we have written for the first quarter of 2016. Here is your first of (hopefully) many flags! sctf{wh3n_1n_ctf_d0_a5_ctf3r5_d0}",
+    "flag": "sctf{wh3n_1n_ctf_d0_a5_ctf3r5_d0}",
+    "chain": [
+      "Caesar (shift 9)"
+    ],
+    "notes": "Caesar cipher, decrypt by shifting forward 9 (encryption shift 17)."
+  },
+  {
+    "id": "tjctf-2016-znzarmt-mvd-hproo",
+    "event": "TJCTF 2016",
+    "year": 2016,
+    "challenge": "Znzarmt Mvd Hproo",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/ctfs/write-ups-2016/master/tjctf-2016/crypto/znzarmt-mvd-hproo-10/README.md",
+    "ciphertext": "gqxgu{m0g_z_xz3h4i_x1ks3i}",
+    "plaintext": "tjctf{n0t_a_ca3s4r_c1ph3r}",
+    "flag": "tjctf{n0t_a_ca3s4r_c1ph3r}",
+    "chain": [
+      "Atbash"
+    ],
+    "notes": "Atbash (reversed alphabet); the challenge title 'Znzarmt Mvd Hproo' is Atbash for 'Amazing New Skill'."
+  },
+  {
+    "id": "angstromctf-2018-back-to-base-ics",
+    "event": "ångstromCTF 2018",
+    "year": 2018,
+    "challenge": "Back to Base-ics",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/zst-ctf/angstromctf-2018-writeups/master/Solved/Back_to_Base_ics/problem.txt",
+    "ciphertext": "011000010110001101110100011001100111101100110000011011100110010101011111011101000111011100110000010111110110011000110000",
+    "plaintext": "actf{0ne_tw0_f0",
+    "flag": "actf{0ne_tw0_f0ur_eight_sixt33n_th1rtytw0_s1xtyf0ur_no_m0re}",
+    "chain": [
+      "Binary"
+    ],
+    "notes": "Part 1 of 4; unspaced 8-bit binary. The flag is the concatenation of the four decoded parts (binary, octal, hex, Base64)."
+  },
+  {
+    "id": "angstromctf-2018-back-to-base-ics-2",
+    "event": "ångstromCTF 2018",
+    "year": 2018,
+    "challenge": "Back to Base-ics",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/zst-ctf/angstromctf-2018-writeups/master/Solved/Back_to_Base_ics/problem.txt",
+    "ciphertext": "165 162 137 145 151 147 150 164 137 163 151 170 164 63 63",
+    "plaintext": "ur_eight_sixt33",
+    "flag": "actf{0ne_tw0_f0ur_eight_sixt33n_th1rtytw0_s1xtyf0ur_no_m0re}",
+    "chain": [
+      "Octal"
+    ],
+    "notes": "Part 2 of 4; space-separated octal ASCII codes."
+  },
+  {
+    "id": "angstromctf-2018-back-to-base-ics-3",
+    "event": "ångstromCTF 2018",
+    "year": 2018,
+    "challenge": "Back to Base-ics",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/zst-ctf/angstromctf-2018-writeups/master/Solved/Back_to_Base_ics/problem.txt",
+    "ciphertext": "dHlmMHVyX25vX20wcmV9",
+    "plaintext": "tyf0ur_no_m0re}",
+    "flag": "actf{0ne_tw0_f0ur_eight_sixt33n_th1rtytw0_s1xtyf0ur_no_m0re}",
+    "chain": [
+      "Base64"
+    ],
+    "notes": "Part 4 of 4; Base64. (Part 3, '6e5f7468317274797477305f733178', is hex for 'n_th1rtytw0_s1x'.)"
+  },
+  {
+    "id": "angstromctf-2018-warmup",
+    "event": "ångstromCTF 2018",
+    "year": 2018,
+    "challenge": "Warmup",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/zst-ctf/angstromctf-2018-writeups/master/Solved/Warmup/ciphertext.txt",
+    "ciphertext": "myjd{ij_fkwizq}",
+    "plaintext": "actf{it_begins}",
+    "flag": "actf{it_begins}",
+    "chain": [
+      "Affine"
+    ],
+    "notes": "Affine cipher with encryption key a=19, b=12 (c = 19p + 12 mod 26); decrypt with p = 11*(c - 12) mod 26. Writeup: https://raw.githubusercontent.com/zst-ctf/angstromctf-2018-writeups/master/Solved/Warmup/README.md"
+  },
+  {
+    "id": "angstromctf-2018-xor",
+    "event": "ångstromCTF 2018",
+    "year": 2018,
+    "challenge": "XOR",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/zst-ctf/angstromctf-2018-writeups/master/Solved/XOR/ciphertext.txt",
+    "ciphertext": "fbf9eefce1f2f5eaffc5e3f5efc5efe9fffec5fbc5e9f9e8f3eaeee7",
+    "plaintext": "actf{hope_you_used_a_script}",
+    "flag": "actf{hope_you_used_a_script}",
+    "chain": [
+      "Hexadecimal",
+      "Single-byte XOR"
+    ],
+    "notes": "Hex-encoded bytes XORed with the single key byte 0x9a. Writeup: https://raw.githubusercontent.com/zst-ctf/angstromctf-2018-writeups/master/Solved/XOR/README.md"
+  },
+  {
+    "id": "easyctf-iv-2018-soupreme-encoder",
+    "event": "EasyCTF IV",
+    "year": 2018,
+    "challenge": "Soupreme Encoder",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/mohamedaymenkarmous/CTF/master/EasyCTF_IV/README.md",
+    "ciphertext": "68657869745f6d6174655f3432386533653538623765623463636232633436",
+    "plaintext": "hexit_mate_428e3e58b7eb4ccb2c46",
+    "flag": "easyctf{hexit_mate_428e3e58b7eb4ccb2c46}",
+    "chain": [
+      "Hexadecimal"
+    ],
+    "notes": "Hex-encoded ASCII; the flag is the plaintext wrapped in easyctf{}. Auto-generated per team; this is the instance in the writeup."
+  },
+  {
+    "id": "easyctf-iv-2018-the-oldest-trick-in-the-book",
+    "event": "EasyCTF IV",
+    "year": 2018,
+    "challenge": "The Oldest Trick in the Book",
+    "category": "Intro",
+    "source_url": "https://raw.githubusercontent.com/mohamedaymenkarmous/CTF/master/EasyCTF_IV/README.md",
+    "ciphertext": "lhzfjam{d3sj0t3_70_345fj7m_799h21}",
+    "plaintext": "easyctf{w3lc0m3_70_345yc7f_799a21}",
+    "flag": "easyctf{w3lc0m3_70_345yc7f_799a21}",
+    "chain": [
+      "Caesar (shift 19)"
+    ],
+    "notes": "Caesar cipher; decrypt by shifting forward 19 (encryption shift 7). The problem was auto-generated per team, this is the instance shown in the writeup."
+  },
+  {
+    "id": "neverlanctf-2018-how-much-can-you-throw-on-a-caesar-salad",
+    "event": "NeverLAN CTF 2018",
+    "year": 2018,
+    "challenge": "How much can you throw on a Caesar salad?",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/ozancetin/CTF-Writeups/master/2018/NeverLAN%20CTF%202018/How%20much%20can%20you%20throw%20on%20a%20Caesar%20salad%3F/README.md",
+    "ciphertext": "MDEwMDExMDAgMDExMDAxMDEgMDExMTAxMTEgMDExMDExMDAgMDExMTEwMDEgMDExMTAwMDAgMDExMDExMDAgMDExMTAxMDEgMDExMDEwMTAgMDExMDExMDAgMDAxMDAwMDAgMDExMTAwMDAgMDExMTEwMTAgMDAxMDAwMDAgMDExMDAwMDEgMDExMDExMTEgMDExMDExMDAgMDAxMDAwMDAgMDEwMDAwMDEgMDExMDExMDAgMDExMDEwMDAgMDExMDEwMTAgMDExMDExMTEgMDExMDExMDAgMDExMTEwMDEgMDAxMDAwMDAgMDExMTAxMTAgMDExMDExMDEgMDAxMDAwMDAgMDExMDEwMDAgMDExMTAwMTEgMDExMTAwMTEgMDAxMDAwMDAgMDExMDAwMDEgMDExMDExMTEgMDExMTAwMDAgMDExMTAxMDEgMDExMDExMTAgMDExMTEwMTAgMDAwMTAxMA==",
+    "plaintext": "Experience is the Teacher of all things\n",
+    "flag": "flag{CAIVS_IVLIVS_CAESAR}",
+    "chain": [
+      "Base64",
+      "Binary",
+      "Caesar (shift 19)"
+    ],
+    "notes": "Content of WhyS0CuR1o5.txt (extracted with steghide from the challenge JPEG, password 'neverlanctf'). Base64 -> space-separated 8-bit binary (last byte is a 7-bit '0001010' newline) -> 'Lewlyplujl pz aol Alhjoly vm hss aopunz' -> Caesar shift back 7 (= forward 19). The decoded quote is by Julius Caesar; the flag was his Latin name, not the decoded text."
+  },
+  {
+    "id": "otw-natas-level11",
+    "event": "OverTheWire Natas",
+    "year": 2018,
+    "challenge": "Level 11",
+    "category": "Wargame",
+    "source_url": "https://gist.githubusercontent.com/thlor/d5f68cb7c62549687552bb56f0a8d4a7/raw",
+    "ciphertext": "ClVLIh4ASCsCBE8lAxMacFMZV2hdVVotEhhUJQNVAmhSEV4sFxFeaAw%3D",
+    "plaintext": "{\"showpassword\":\"no\",\"bgcolor\":\"#ffffff\"}",
+    "flag": "",
+    "chain": [
+      "URL",
+      "Base64",
+      "Repeating-key XOR"
+    ],
+    "notes": "The data cookie: URL-encoded Base64 of json_encode($data) XORed with the key qw8J. Year is that of the writeup."
+  },
+  {
+    "id": "pactf-2018-straight-from-the-emperor",
+    "event": "PACTF 2018",
+    "year": 2018,
+    "challenge": "Straight From The Emperor",
+    "category": "Lovelace (round 1)",
+    "source_url": "https://raw.githubusercontent.com/zst-ctf/pactf-2018-writeups/master/Lovelace/Straight_From_The_Emperor/README.md",
+    "ciphertext": "ny_nx_tsq3_zumnqq_kwtr_mjwj_68aad68ba8",
+    "plaintext": "it_is_only_uphill_from_here_1355813653",
+    "flag": "it_is_only_uphill_from_here_1355813653",
+    "chain": [
+      "Caesar (shift 31, alphabet a-z0-9)"
+    ],
+    "notes": "Caesar cipher over the 36-symbol alphabet 'abcdefghijklmnopqrstuvwxyz0123456789' (digits appended to the alphabet). Decrypt by shifting back 5 positions (= forward 31) in that alphabet; underscores unchanged. Letters alone are a plain Caesar shift of 21."
+  },
+  {
+    "id": "picoctf-2018-caesar-cipher-1",
+    "event": "picoCTF 2018",
+    "year": 2018,
+    "challenge": "caesar cipher 1",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/mzfr/ctf-writeups/master/picoCTF-2018/Cryptography/caesar%20cipher%201/readme.md",
+    "ciphertext": "picoCTF{payzgmuujurjigkygxiovnkxlcgihubb}",
+    "plaintext": "picoCTF{justagoodoldcaesarcipherfwacbovv}",
+    "flag": "picoCTF{justagoodoldcaesarcipherfwacbovv}",
+    "chain": [
+      "Caesar (shift 6)"
+    ],
+    "notes": "Caesar shift 6 (decrypt by shifting back 6; the writeup says 5 but 6 is what yields the flag). Only the text inside the braces is enciphered; per-instance flag suffix."
+  },
+  {
+    "id": "picoctf-2018-caesar-cipher-2",
+    "event": "picoCTF 2018",
+    "year": 2018,
+    "challenge": "caesar cipher 2",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/mzfr/ctf-writeups/master/picoCTF-2018/Cryptography/caesar%20cipher%202/readme.md",
+    "ciphertext": "e^Xd8I;pX6ZhVGT8^E]:gHT_jHITVG:cITh:XJg:r",
+    "plaintext": "picoCTF{cAesaR_CiPhErS_juST_aREnT_sEcUrE}",
+    "flag": "picoCTF{cAesaR_CiPhErS_juST_aREnT_sEcUrE}",
+    "chain": [
+      "Caesar over printable ASCII (shift 83)"
+    ],
+    "notes": "Shift cipher over the 94-character alphabet chr(32)..chr(125); decrypt by adding 11 (i.e. encrypted with shift 83). ROT47-like but on a 94-char alphabet starting at space."
+  },
+  {
+    "id": "picoctf-2018-crypto-warmup-1",
+    "event": "picoCTF 2018",
+    "year": 2018,
+    "challenge": "Crypto Warmup 1",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/shiltemann/CTF-writeups-public/master/PicoCTF_2018/writeup.md",
+    "ciphertext": "llkjmlmpadkkc",
+    "plaintext": "SECRETMESSAGE",
+    "flag": "picoCTF{SECRETMESSAGE}",
+    "chain": [
+      "Vigenère"
+    ],
+    "notes": "Vigenère with key 'thisisalilkey' (tabula recta given). Decrypts to 'secretmessage'; challenge asks for all caps inside picoCTF{}."
+  },
+  {
+    "id": "angstromctf-2019-classy-cipher",
+    "event": "ångstromCTF 2019",
+    "year": 2019,
+    "challenge": "Classy Cipher",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/zst-ctf/angstromctf-2019-writeups/master/Solved/Classy_Cipher/classy_cipher.py",
+    "ciphertext": ":<M?TLH8<A:KFBG@V",
+    "plaintext": "actf{so_charming}",
+    "flag": "actf{so_charming}",
+    "chain": [
+      "ASCII shift (add 39 mod 255)"
+    ],
+    "notes": "Caesar-style shift over the whole character range: encrypt was chr((ord(c)+shift) % 0xff) with shift = 216; decrypt by adding 39 (mod 255) to each code point. Writeup: https://raw.githubusercontent.com/zst-ctf/angstromctf-2019-writeups/master/Solved/Classy_Cipher/README.md"
+  },
+  {
+    "id": "encryptctf-2019-hard-looks",
+    "event": "encryptCTF 2019",
+    "year": 2019,
+    "challenge": "Hard Looks",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/zst-ctf/encryptctf-2019-writeups/master/Solved/Hard_Looks/README.md",
+    "ciphertext": "--_--___--_-_-__--_--__--__-_-__--_--___--__--__--_---__--__-___--_---__---__-__--_---__--______--_---__--_-____--_-____--__--__--_-_-__--_-____--_-____--_--___--_---_--___-___--_-_-__--_---__--__--__--_-____--__--__--_-_-__--_-_-_--__--___--__--__--___-__--__--__--_---__--_-_-_--__--___--_-____---_____--__--__--_-____--_-_-__--__-___--_-____--_-____--_-_-_--__--___--__--__--__--__--_-___--__-_-__--__--__--______--_-_-__--_-_-__--_-____--_---__--_-____---_____--__--_--__--___--__-___--___-__--_---_--__-__",
+    "plaintext": "encryptCTF{W45_17_H4RD_3N0UGH?!}",
+    "flag": "encryptCTF{W45_17_H4RD_3N0UGH?!}",
+    "chain": [
+      "Binary",
+      "Hexadecimal"
+    ],
+    "notes": "Binary written with '-' = 1 and '_' = 0 (510 symbols; left-pad with two zeros to 512 bits). The decoded ASCII is the hex string 656e63727970744354467b5734355f31375f483452445f334e305547483f217d, which decodes to the flag."
+  },
+  {
+    "id": "encryptctf-2019-julius",
+    "event": "encryptCTF 2019",
+    "year": 2019,
+    "challenge": "Julius",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/zst-ctf/encryptctf-2019-writeups/master/Solved/Julius/README.md",
+    "ciphertext": "fYZ7ipGIjFtsXpNLbHdPbXdaam1PS1c5lQ",
+    "plaintext": "encryptCTF{3T_7U_BRU73?!}",
+    "flag": "encryptCTF{3T_7U_BRU73?!}",
+    "chain": [
+      "Base64",
+      "Byte-wise Caesar (subtract 0x18)"
+    ],
+    "notes": "Unpadded Base64 (add '==' to decode) of the flag with 0x18 (24) added to every byte; subtract 24 from each byte to recover the flag. Challenge title hint: 'Julius,Q2Flc2FyCg==' (Base64 for 'Caesar')."
+  },
+  {
+    "id": "hsctf-2019-welcome-to-crypto-land",
+    "event": "HSCTF 6 (2019)",
+    "year": 2019,
+    "challenge": "Welcome to Crypto Land",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/zst-ctf/hsctf-2019-writeups/master/Solved/Welcome_to_Crypto_Land/README.md",
+    "ciphertext": "KZ6UaztNnau6z39oMHUu8UTvdmq1bhob3CcEFdWXRfxJqdUAiNep4pkvkAZUSn9CvEvPNT5r2zt6JPg9bVBPYuTW4xr8v2PuPxVuCT6MLJWDJp84",
+    "plaintext": "Welcome to HSCTF! This is your flag: hsctf{w0w_th1s_1s_my_f1rst_crypt0_chall3ng3?}",
+    "flag": "hsctf{w0w_th1s_1s_my_f1rst_crypt0_chall3ng3?}",
+    "chain": [
+      "Base58"
+    ],
+    "notes": "Base58 (Bitcoin alphabet)."
+  },
+  {
+    "id": "neverlanctf-2019-alphabet-soup",
+    "event": "NeverLAN CTF 2019",
+    "year": 2019,
+    "challenge": "Alphabet Soup",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/zst-ctf/neverlanctf-2019-writeups/master/Solved/Alphabet_Soup/README.md",
+    "ciphertext": "MKXU IDKMI DM BDASKMI NLU XCPJNDICFQ! K VDMGUC KW PDT GKG NLKB HP LFMG DC TBUG PDTC CUBDTCXUB. K'Q BTCU MDV PDT VFMN F WAFI BD LUCU KN KB WAFI GDKMINLKBHPLFMGKBQDCUWTMNLFMFMDMAKMUNDDA",
+    "plaintext": "NICE GOING ON SOLVING THE CRYPTOGRAM! I WONDER IF YOU DID THIS BY HAND OR USED YOUR RESOURCES. I'M SURE NOW YOU WANT A FLAG SO HERE IT IS FLAG DOINGTHISBYHANDISMOREFUNTHANANONLINETOOL",
+    "flag": "FLAG{DOINGTHISBYHANDISMOREFUNTHANANONLINETOOL}",
+    "chain": [
+      "Substitution"
+    ],
+    "notes": "Monoalphabetic substitution (solved with quipqiup). Cipher->plain mapping: A=L B=S C=R D=O F=A G=D H=B I=G J=P K=I L=H M=N N=T P=Y Q=M S=V T=U U=E V=W W=F X=C. Also quoted at https://mandu-mandu.tistory.com/240. Flag format FLAG{...} per https://raw.githubusercontent.com/ryokubaka/CTF-Write-Ups/master/NeverLAN-CTF-2019/Crypto/README.md"
+  },
+  {
+    "id": "picoctf-2019-13",
+    "event": "picoCTF 2019",
+    "year": 2019,
+    "challenge": "13",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2019/Cryptography/13.md",
+    "ciphertext": "cvpbPGS{abg_gbb_onq_bs_n_ceboyrz}",
+    "plaintext": "picoCTF{not_too_bad_of_a_problem}",
+    "flag": "picoCTF{not_too_bad_of_a_problem}",
+    "chain": [
+      "ROT13"
+    ],
+    "notes": "ROT13"
+  },
+  {
+    "id": "picoctf-2019-based",
+    "event": "picoCTF 2019",
+    "year": 2019,
+    "challenge": "Based",
+    "category": "General Skills",
+    "source_url": "https://raw.githubusercontent.com/Dvd848/CTFs/master/2019_picoCTF/Based.md",
+    "ciphertext": "01100011 01101000 01100001 01101001 01110010",
+    "plaintext": "chair",
+    "flag": "",
+    "chain": [
+      "Binary"
+    ],
+    "notes": "First round of the nc game: 8-bit binary ASCII words. Answer is typed back to the server; no flag for this step."
+  },
+  {
+    "id": "picoctf-2019-based-2",
+    "event": "picoCTF 2019",
+    "year": 2019,
+    "challenge": "Based",
+    "category": "General Skills",
+    "source_url": "https://raw.githubusercontent.com/Dvd848/CTFs/master/2019_picoCTF/Based.md",
+    "ciphertext": "146 141 154 143 157 156",
+    "plaintext": "falcon",
+    "flag": "",
+    "chain": [
+      "Octal"
+    ],
+    "notes": "Second round of the nc game: octal ASCII codes. Answer is typed back to the server; no flag for this step."
+  },
+  {
+    "id": "picoctf-2019-bases",
+    "event": "picoCTF 2019",
+    "year": 2019,
+    "challenge": "Bases",
+    "category": "General Skills",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2019/General_Skills/Bases.md",
+    "ciphertext": "bDNhcm5fdGgzX3IwcDM1",
+    "plaintext": "l3arn_th3_r0p35",
+    "flag": "picoCTF{l3arn_th3_r0p35}",
+    "chain": [
+      "Base64"
+    ],
+    "notes": "Base64; wrap result in picoCTF{}"
+  },
+  {
+    "id": "picoctf-2019-caesar",
+    "event": "picoCTF 2019",
+    "year": 2019,
+    "challenge": "caesar",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2019/Cryptography/caesar.md",
+    "ciphertext": "picoCTF{tifjjzexkyvilsztfehnahooda}",
+    "plaintext": "picoCTF{crossingtherubiconqwjqxxmj}",
+    "flag": "picoCTF{crossingtherubiconqwjqxxmj}",
+    "chain": [
+      "Caesar (shift 17)"
+    ],
+    "notes": "Only the text inside the braces is enciphered. Decrypt by rotating forward 9 (equivalently it was encrypted with shift 17). Per-instance flag suffix."
+  },
+  {
+    "id": "picoctf-2019-easy1",
+    "event": "picoCTF 2019",
+    "year": 2019,
+    "challenge": "Easy1",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/Dvd848/CTFs/master/2019_picoCTF/Easy1.md",
+    "ciphertext": "UFJKXQZQUNB",
+    "plaintext": "CRYPTOISFUN",
+    "flag": "picoCTF{CRYPTOISFUN}",
+    "chain": [
+      "Vigenère"
+    ],
+    "notes": "Vigenère with key SOLVECRYPTO (given in the challenge with a tabula recta). Wrap result in picoCTF{}."
+  },
+  {
+    "id": "picoctf-2019-tapping",
+    "event": "picoCTF 2019",
+    "year": 2019,
+    "challenge": "Tapping",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/Dvd848/CTFs/master/2019_picoCTF/Tapping.md",
+    "ciphertext": ".--. .. -.-. --- -.-. - ..-. { -- ----- .-. ... ...-- -.-. ----- -.. ...-- .---- ... ..-. ..- -. ..... ---.. ...-- ----. ----- ----- ----. ---.. .---- }",
+    "plaintext": "PICOCTF{M0RS3C0D31SFUN583900981}",
+    "flag": "PICOCTF{M0RS3C0D31SFUN583900981}",
+    "chain": [
+      "Morse"
+    ],
+    "notes": "Morse code, letters separated by single spaces; the braces are literal. Flag is uppercase PICOCTF{...}."
+  },
+  {
+    "id": "picoctf-2019-the-numbers",
+    "event": "picoCTF 2019",
+    "year": 2019,
+    "challenge": "The Numbers",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2019/Cryptography/The_Numbers.md",
+    "ciphertext": "16 9 3 15 3 20 6 { 20 8 5 14 21 13 2 5 18 19 13 1 19 15 14 }",
+    "plaintext": "PICOCTF{THENUMBERSMASON}",
+    "flag": "PICOCTF{THENUMBERSMASON}",
+    "chain": [
+      "A1Z26"
+    ],
+    "notes": "A1Z26 (1=A..26=Z). The challenge gives the numbers in an image; this is the writeup's transcription with literal braces. Flag format PICOCTF{}."
+  },
+  {
+    "id": "ritsec-ctf-2019-pre-legend",
+    "event": "RITSEC CTF 2019",
+    "year": 2019,
+    "challenge": "pre-legend",
+    "category": "Crypto",
+    "source_url": "https://samirettali.com/writeups/ritsec-2019/",
+    "ciphertext": "9EEADi^^8:E9F3]4@>^4=2J32==^D@>6E9:?8\\FD67F=\\C:ED64",
+    "plaintext": "https://github.com/clayball/something-useful-ritsec",
+    "flag": "https://github.com/clayball/something-useful-ritsec",
+    "chain": [
+      "ROT47"
+    ],
+    "notes": "ROT47; the decoded URL itself was the flag. Also linked from https://ctftime.org/writeup/17236 (task https://ctftime.org/task/9751)."
+  },
+  {
+    "id": "sunshinectf-2019-welcome-crypto",
+    "event": "Sunshine CTF 2019",
+    "year": 2019,
+    "challenge": "Welcome Crypto",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/Dvd848/CTFs/master/2019_SunshineCTF/WelcomeCrypto.md",
+    "ciphertext": "~C8 =39 A?2V8 73J:C 8FG7 AF?JJC2ECP",
+    "plaintext": "Bet you can't solve this challenge!",
+    "flag": "",
+    "chain": [
+      "ROT47",
+      "ROT13"
+    ],
+    "notes": "First line of the challenge text. ROT47 gives 'Org lbh pna'g fbyir guvf punyyratr!', then ROT13 gives the English sentence. Not the flag (the flag is in the second line)."
+  },
+  {
+    "id": "sunshinectf-2019-welcome-crypto-2",
+    "event": "Sunshine CTF 2019",
+    "year": 2019,
+    "challenge": "Welcome Crypto",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/Dvd848/CTFs/master/2019_SunshineCTF/WelcomeCrypto.md",
+    "ciphertext": "DF?LHb=r_>b0%_0520<c8bPN",
+    "plaintext": "sun{w3lC0m3_T0_da_k4g3!}",
+    "flag": "sun{w3lC0m3_T0_da_k4g3!}",
+    "chain": [
+      "ROT47"
+    ],
+    "notes": "Second line of the challenge text; plain ROT47."
+  },
+  {
+    "id": "tjctf-2019-double-duty",
+    "event": "TJCTF 2019",
+    "year": 2019,
+    "challenge": "Double Duty",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/zst-ctf/tjctf-2019-writeups/master/Writeups/Double_Duty/README.md",
+    "ciphertext": "yfn uzu pfl tirtb dp katkw{jvbivk_tfuv}",
+    "plaintext": "how did you crack my tjctf{sekret_code}",
+    "flag": "tjctf{sekret_code}",
+    "chain": [
+      "Caesar (shift 9)"
+    ],
+    "notes": "Challenge claims the message was 'caesared 2000 times'; net effect is a Caesar shift, decrypt by shifting forward 9 (encryption shift 17)."
+  },
+  {
+    "id": "tjctf-2019-touch-base",
+    "event": "TJCTF 2019",
+    "year": 2019,
+    "challenge": "Touch Base",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/zst-ctf/tjctf-2019-writeups/master/Writeups/Touch_Base/README.md",
+    "ciphertext": "dGpjdGZ7ajJzdF9zMG0zX2I0c2U2NH0=",
+    "plaintext": "tjctf{j2st_s0m3_b4se64}",
+    "flag": "tjctf{j2st_s0m3_b4se64}",
+    "chain": [
+      "Base64"
+    ],
+    "notes": "Plain Base64."
+  },
+  {
+    "id": "cyberyoddha-ctf-2020-beware-the-ides-of-march",
+    "event": "CyberYoddha CTF 2020",
+    "year": 2020,
+    "challenge": "Beware the Ides of March",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/CTSecUK/CyberYoddha-CTF-2020/main/Write-ups/Beware%20the%20Ides%20of%20March.md",
+    "ciphertext": "JFJAM{j@3$@y_j!wo3y}",
+    "plaintext": "CYCTF{c@3$@r_c!ph3r}",
+    "flag": "CYCTF{c@3$@r_c!ph3r}",
+    "chain": [
+      "Caesar (shift 19)"
+    ],
+    "notes": "Caesar cipher; decrypt by shifting forward 19 (encryption shift 7)."
+  },
+  {
+    "id": "dawgctf-2020-qwerky-qwerty",
+    "event": "DawgCTF 2020",
+    "year": 2020,
+    "challenge": "Qwerky Qwerty",
+    "category": "Misc",
+    "source_url": "https://raw.githubusercontent.com/o621/c4r0-ctf/master/DawgCTF2020/Misc/Qwerky%20Qwerty/README.md",
+    "ciphertext": "Oh no... whays.. ,dats hall.bing yr me... nr br brw ,df M>vv ,df BR<vvvvv Xgy ,day-o ydcovv yd.p. co a bry. cb mf dabeS U.ap bry e.ap jdcnew ydco co rbnf a ep.amvv A ep.am yday dao x..b jago.e xf JRKCE[19v Mabf 'g.oycrbo frg dak.w ,dcn. frg-k. x..b aon..lv D.p.cb ydco bry. nc.o yd. abo,.p frg o..tS Ea,iJYU?L4ydu1be3p+",
+    "plaintext": "Sj lseee ,jat;ee whak; jappenglu to mdeee lo no no, why ME.. why NOW..... But what's this.. there is a note in my hand: Fear not dear child, this is only a dream.. A dream that has been caused by COVID-19. Many questions you have, while you've been asleep. Herein this note lies the answer you seek: DawgCTF{P4thf1nd3r}",
+    "flag": "DawgCTF{P4thf1nd3r}",
+    "chain": [
+      "Keyboard layout swap (Dvorak to QWERTY)"
+    ],
+    "notes": "Keyboard-layout substitution: the text was typed on a QWERTY keyboard while the layout was set to Dvorak; map each character from its Dvorak position back to the QWERTY key (Dvorak->QWERTY). The first few words ('Oh no... what's happening to me') were apparently typed before the layout switch and come out garbled, the rest decodes cleanly. Also on https://ctftime.org/writeup/19876"
+  },
+  {
+    "id": "downunderctf-2020-rot-i",
+    "event": "DownUnderCTF 2020",
+    "year": 2020,
+    "challenge": "rot-i",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/csivitu/CTF-Write-ups/master/DUCTF/crypto/rot-i/README.md",
+    "ciphertext": "Ypw'zj zwufpp hwu txadjkcq dtbtyu kqkwxrbvu! Mbz cjzg kv IAJBO{ndldie_al_aqk_jjrnsxee}. Xzi utj gnn olkd qgq ftk ykaqe uei mbz ocrt qi ynlu, etrm mff'n wij bf wlny mjcj :).",
+    "plaintext": "You've solved the beginner crypto challenge! The flag is DUCTF{crypto_is_fun_kjqlptzy}. Now get out some pen and paper for the rest of them, they won't all be this easy :).",
+    "flag": "DUCTF{crypto_is_fun_kjqlptzy}",
+    "chain": [
+      "Trithemius"
+    ],
+    "notes": "Progressive Caesar (Trithemius-style): character at 0-based index i (counting every character, including spaces and punctuation) is shifted back by i mod 26. Ciphertext also shown on https://ctftime.org/writeup/23544 (flag part)."
+  },
+  {
+    "id": "htb-challenge-bank-heist",
+    "event": "HackTheBox challenge",
+    "year": 2020,
+    "challenge": "Bank Heist",
+    "category": "Crypto",
+    "source_url": "https://0xavrilyn.wordpress.com/2020/05/19/htb-crypto-challenge-bank-heist-20-points/",
+    "ciphertext": "444333 99966688 277733 7773323444664 84433 22244474433777, 99966688 277733 666552999. 99966688777 777744277733 666333 84433 443344477778 4447777 44466 99966688777 4466688777733. 84433 5533999 8666 84433 55566622255 4447777 22335556669. 4666 8666 727774447777. 47777888 995559888 4555 47777888 44999988 666555997 : 8555444888477744488866888648833369!!",
+    "plaintext": "IF YOU ARE READING THE CIPHER, YOU ARE OKAY. YOUR SHARE OF THE HEIST IS IN YOUR HOUSE. THE KEY TO THE LOCK IS BELOW. GO TO PARIS. GSV XLWV GL GSV HZU OLXP : TLIVGRIVNVMGUFMW!!",
+    "flag": "HTB{GORETIREMENTFUND!!}",
+    "chain": [
+      "T9",
+      "Atbash"
+    ],
+    "notes": "Multi-tap phone keypad (T9) decode of the whole message gives the plaintext above; the final part 'GSV XLWV GL GSV HZU OLXP : TLIVGRIVNVMGUFMW!!' is Atbash for 'THE CODE TO THE SAF LOCK : GORETIREMENTFUND!!' and the code is the flag. Standalone HTB crypto challenge (release year approximate)."
+  },
+  {
+    "id": "htb-challenge-xorxorxor",
+    "event": "HackTheBox challenge",
+    "year": 2020,
+    "challenge": "xorxorxor",
+    "category": "Crypto",
+    "source_url": "https://gist.github.com/aleff-github/1134dd258af61b31c116a452477c88df",
+    "ciphertext": "134af6e1297bc4a96f6a87fe046684e8047084ee046d84c5282dd7ef292dc9",
+    "plaintext": "HTB{rep34t3d_x0r_n0t_s0_s3cur3}",
+    "flag": "HTB{rep34t3d_x0r_n0t_s0_s3cur3}",
+    "chain": [
+      "Hexadecimal",
+      "Repeating-key XOR"
+    ],
+    "notes": "Hex of plaintext XORed with a random 4-byte key (5b 1e b4 9a), recovered from known prefix 'HTB{'. Standalone HTB crypto challenge (release year approximate)."
+  },
+  {
+    "id": "otw-bandit-level10",
+    "event": "OverTheWire Bandit",
+    "year": 2020,
+    "challenge": "Level 10 -> Level 11",
+    "category": "Wargame",
+    "source_url": "https://dev.to/shubham2503/overthewire-bandit-level-10-15-ctf-33fb",
+    "ciphertext": "VGhlIHBhc3N3b3JkIGlzIElGdWt3S0dzRlc4TU9xM0lSRnFyeEUxaHhUTkViVVBSCg==",
+    "plaintext": "The password is IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR\n",
+    "flag": "",
+    "chain": [
+      "Base64"
+    ],
+    "notes": "data.txt; Bandit passwords rotate, this is the one in the writeup. Year is that of the writeup."
+  },
+  {
+    "id": "otw-bandit-level11",
+    "event": "OverTheWire Bandit",
+    "year": 2020,
+    "challenge": "Level 11 -> Level 12",
+    "category": "Wargame",
+    "source_url": "https://dev.to/shubham2503/overthewire-bandit-level-10-15-ctf-33fb",
+    "ciphertext": "Gur cnffjbeq vf 5Gr8L4qetPEsPk8htqjhRK8XSP6x2RHh",
+    "plaintext": "The password is 5Te8Y4drgCRfCx8ugdwuEX8KFC6k2EUu",
+    "flag": "",
+    "chain": [
+      "ROT13"
+    ],
+    "notes": "data.txt. Also in https://jhalon.github.io/over-the-wire-bandit2/. Year is that of the writeup."
+  },
+  {
+    "id": "thm-c4ptur3-th3-fl4g-base32",
+    "event": "TryHackMe c4ptur3-th3-fl4g",
+    "year": 2020,
+    "challenge": "Translation & Shifting 3",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/c4ptur3-th3-fl4g/README.md",
+    "ciphertext": "MJQXGZJTGIQGS4ZAON2XAZLSEBRW63LNN5XCA2LOEBBVIRRHOM======",
+    "plaintext": "base32 is super common in CTF's",
+    "flag": "",
+    "chain": [
+      "Base32"
+    ],
+    "notes": "Year is that of the writeup."
+  },
+  {
+    "id": "thm-c4ptur3-th3-fl4g-binary",
+    "event": "TryHackMe c4ptur3-th3-fl4g",
+    "year": 2020,
+    "challenge": "Translation & Shifting 2",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/c4ptur3-th3-fl4g/README.md",
+    "ciphertext": "01101100 01100101 01110100 01110011 00100000 01110100 01110010 01111001 00100000 01110011 01101111 01101101 01100101 00100000 01100010 01101001 01101110 01100001 01110010 01111001 00100000 01101111 01110101 01110100 00100001",
+    "plaintext": "lets try some binary out!",
+    "flag": "",
+    "chain": [
+      "Binary"
+    ],
+    "notes": "Year is that of the writeup."
+  },
+  {
+    "id": "thm-c4ptur3-th3-fl4g-decimal",
+    "event": "TryHackMe c4ptur3-th3-fl4g",
+    "year": 2020,
+    "challenge": "Translation & Shifting 9",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/c4ptur3-th3-fl4g/README.md",
+    "ciphertext": "85 110 112 97 99 107 32 116 104 105 115 32 66 67 68",
+    "plaintext": "Unpack this BCD",
+    "flag": "",
+    "chain": [
+      "Decimal"
+    ],
+    "notes": "Decimal ASCII codes. Year is that of the writeup."
+  },
+  {
+    "id": "thm-c4ptur3-th3-fl4g-leet",
+    "event": "TryHackMe c4ptur3-th3-fl4g",
+    "year": 2020,
+    "challenge": "Translation & Shifting 1",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/c4ptur3-th3-fl4g/README.md",
+    "ciphertext": "c4n y0u c4p7u23 7h3 f149?",
+    "plaintext": "can you capture the flag?",
+    "flag": "",
+    "chain": [
+      "Leetspeak"
+    ],
+    "notes": "Answers are the decoded texts. Year is that of the writeup."
+  },
+  {
+    "id": "thm-c4ptur3-th3-fl4g-morse",
+    "event": "TryHackMe c4ptur3-th3-fl4g",
+    "year": 2020,
+    "challenge": "Translation & Shifting 8",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/c4ptur3-th3-fl4g/README.md",
+    "ciphertext": "- . .-.. . -.-. --- -- -- ..- -. .. -.-. .- - .. --- -. . -. -.-. --- -.. .. -. --.",
+    "plaintext": "TELECOMMUNICATION ENCODING",
+    "flag": "",
+    "chain": [
+      "Morse"
+    ],
+    "notes": "The writeup's copy has no word separator, so it decodes to TELECOMMUNICATIONENCODING. Year is that of the writeup."
+  },
+  {
+    "id": "thm-c4ptur3-th3-fl4g-rot13",
+    "event": "TryHackMe c4ptur3-th3-fl4g",
+    "year": 2020,
+    "challenge": "Translation & Shifting 6",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/c4ptur3-th3-fl4g/README.md",
+    "ciphertext": "Ebgngr zr 13 cynprf!",
+    "plaintext": "Rotate me 13 places!",
+    "flag": "",
+    "chain": [
+      "ROT13"
+    ],
+    "notes": "Year is that of the writeup."
+  },
+  {
+    "id": "thm-c4ptur3-th3-fl4g-rot47",
+    "event": "TryHackMe c4ptur3-th3-fl4g",
+    "year": 2020,
+    "challenge": "Translation & Shifting 7",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/c4ptur3-th3-fl4g/README.md",
+    "ciphertext": "*@F DA:? >6 C:89E C@F?5 323J C:89E C@F?5 Wcf E:>6DX",
+    "plaintext": "You spin me right round baby right round (47 times)",
+    "flag": "",
+    "chain": [
+      "ROT47"
+    ],
+    "notes": "Year is that of the writeup."
+  },
+  {
+    "id": "thm-ctf-collection-vol1-an-exclusive",
+    "event": "TryHackMe CTF collection Vol.1",
+    "year": 2020,
+    "challenge": "An exclusive!",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/CTF%20collection%20Vol.1/README.md",
+    "ciphertext": "44585d6b2368737c65252166234f20626d",
+    "plaintext": "THM{3xclu51v3_0r}",
+    "flag": "THM{3xclu51v3_0r}",
+    "chain": [
+      "Hexadecimal",
+      "Single-byte XOR"
+    ],
+    "notes": "S1; the challenge also gives S2 = 1010...10, i.e. the key 0x10 for every byte. Year is that of the writeup."
+  },
+  {
+    "id": "thm-ctf-collection-vol1-base58",
+    "event": "TryHackMe CTF collection Vol.1",
+    "year": 2020,
+    "challenge": "Another decoding stuff",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/CTF%20collection%20Vol.1/README.md",
+    "ciphertext": "3agrSy1CewF9v8ukcSkPSYm3oKUoByUpKG4L",
+    "plaintext": "THM{17_h45_l3553r_l3773r5}",
+    "flag": "THM{17_h45_l3553r_l3773r5}",
+    "chain": [
+      "Base58"
+    ],
+    "notes": "Bitcoin alphabet. Year is that of the writeup."
+  },
+  {
+    "id": "thm-ctf-collection-vol1-base64",
+    "event": "TryHackMe CTF collection Vol.1",
+    "year": 2020,
+    "challenge": "What does the base said?",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/CTF%20collection%20Vol.1/README.md",
+    "ciphertext": "VEhNe2p1NTdfZDNjMGQzXzdoM19iNDUzfQ==",
+    "plaintext": "THM{ju57_d3c0d3_7h3_b453}",
+    "flag": "THM{ju57_d3c0d3_7h3_b453}",
+    "chain": [
+      "Base64"
+    ],
+    "notes": "Year is that of the writeup."
+  },
+  {
+    "id": "thm-ctf-collection-vol1-left-or-right",
+    "event": "TryHackMe CTF collection Vol.1",
+    "year": 2020,
+    "challenge": "Left or right",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/CTF%20collection%20Vol.1/README.md",
+    "ciphertext": "MAF{atbe_max_vtxltk}",
+    "plaintext": "THM{hail_the_caesar}",
+    "flag": "THM{hail_the_caesar}",
+    "chain": [
+      "Caesar (shift 19)"
+    ],
+    "notes": "Caesar with shift 19 (decode by shifting each letter forward 7). Year is that of the writeup."
+  },
+  {
+    "id": "thm-ctf-collection-vol1-small-bases",
+    "event": "TryHackMe CTF collection Vol.1",
+    "year": 2020,
+    "challenge": "Small bases",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/CTF%20collection%20Vol.1/README.md",
+    "ciphertext": "581695969015253365094191591547859387620042736036246486373595515576333693",
+    "plaintext": "THM{17_ju57_4n_0rd1n4ry_b4535}",
+    "flag": "THM{17_ju57_4n_0rd1n4ry_b4535}",
+    "chain": [
+      "Big integer to bytes (long_to_bytes)"
+    ],
+    "notes": "One decimal integer; convert to hex, then the bytes are ASCII. Year is that of the writeup."
+  },
+  {
+    "id": "thm-ctf-collection-vol1-spin-my-head",
+    "event": "TryHackMe CTF collection Vol.1",
+    "year": 2020,
+    "challenge": "Spin my head",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/CTF%20collection%20Vol.1/README.md",
+    "ciphertext": "++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++++++++++++++.------------.+++++.>+++++++++++++++++++++++.<<++++++++++++++++++.>>-------------------.---------.++++++++++++++.++++++++++++.<++++++++++++++++++.+++++++++.<+++.+.>----.>++++.",
+    "plaintext": "THM{0h_my_h34d}",
+    "flag": "THM{0h_my_h34d}",
+    "chain": [
+      "Brainfuck"
+    ],
+    "notes": "Year is that of the writeup."
+  },
+  {
+    "id": "thm-ctf-collection-vol1-uncrackable",
+    "event": "TryHackMe CTF collection Vol.1",
+    "year": 2020,
+    "challenge": "Uncrackable!",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/AfvanMoopen/tryhackme-/master/CTF%20collection%20Vol.1/README.md",
+    "ciphertext": "MYKAHODTQ{RVG_YVGGK_FAL_WXF}",
+    "plaintext": "TRYHACKME{YOU_FOUND_THE_KEY}",
+    "flag": "TRYHACKME{YOU_FOUND_THE_KEY}",
+    "chain": [
+      "Vigenère"
+    ],
+    "notes": "Vigenère with key THM ('I lost the key'; flag format TRYHACKME{...} given). Year is that of the writeup."
+  },
+  {
+    "id": "bcactf-2021-cipher-mishap",
+    "event": "BCACTF 2.0",
+    "year": 2021,
+    "challenge": "Cipher Mishap",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/HuntClauss/Writeups/main/bcactf/cipher-mishap.md",
+    "ciphertext": "126-Y, 113-N, 122-N, 130-N, 117-N, 107-N, 137, 114-N, 127-Y, 137, 113-Y, 104-N, 131-N, 110-N, 137, 105-Y, 110-N, 110-N, 121-Y, 137, 131-Y, 114-N, 112-N, 110-N, 121-N, 110-N, 125-N, 110-N, 137, 114-Y, 121-N, 126-N, 127-N, 110-N, 104-N, 107-N",
+    "plaintext": "Should_iT_Have_BeeN_Vigenere_Instead",
+    "flag": "bcactf{Should_iT_Have_BeeN_Vigenere_Instead}",
+    "chain": [
+      "Octal",
+      "Caesar (shift 3)"
+    ],
+    "notes": "Each token is an octal ASCII code of an uppercase letter (137 = '_'); the -Y/-N suffix marks whether the letter is uppercase (Y) or lowercase (N). After octal decoding the text is Caesar-shifted by 3 (VKRXOG... -> SHOULD...)"
+  },
+  {
+    "id": "ctflearn-5x5-crypto",
+    "event": "CTFlearn",
+    "year": 2021,
+    "challenge": "5x5 Crypto",
+    "category": "Cryptography",
+    "source_url": "https://github.com/rishitsaiya/CTFlearn-Writeups/blob/master/Cryptography/5x5%20Crypto/README.md",
+    "ciphertext": "1-3,4-4,2-1,{,4-4,2-3,4-5,3-2,1-2,4-3,_,4-5,3-5,}",
+    "plaintext": "CTF{THUMBS_UP}",
+    "flag": "CTF{THUMBS_UP}",
+    "chain": [
+      "Polybius"
+    ],
+    "notes": "Polybius square (row-column) with alphabet A-Z omitting K; non-numeric tokens pass through. CTFlearn is an undated wargame; year is that of the writeup used as source."
+  },
+  {
+    "id": "ctflearn-base-2-2-the-6",
+    "event": "CTFlearn",
+    "year": 2021,
+    "challenge": "Base 2 2 the 6",
+    "category": "Cryptography",
+    "source_url": "https://github.com/rishitsaiya/CTFlearn-Writeups/blob/master/Cryptography/Base%202%202%20the%206/README.md",
+    "ciphertext": "Q1RGe0ZsYWdneVdhZ2d5UmFnZ3l9",
+    "plaintext": "CTF{FlaggyWaggyRaggy}",
+    "flag": "CTF{FlaggyWaggyRaggy}",
+    "chain": [
+      "Base64"
+    ],
+    "notes": "Base64. CTFlearn is an undated wargame; year is that of the writeup used as source."
+  },
+  {
+    "id": "ctflearn-bruxor",
+    "event": "CTFlearn",
+    "year": 2021,
+    "challenge": "BruXOR",
+    "category": "Cryptography",
+    "source_url": "https://github.com/rishitsaiya/CTFlearn-Writeups/blob/master/Cryptography/BruXOR/README.md",
+    "ciphertext": "q{vpln'bH_varHuebcrqxetrHOXEj",
+    "plaintext": "flag{y0u_Have_bruteforce_XOR}",
+    "flag": "flag{y0u_Have_bruteforce_XOR}",
+    "chain": [
+      "Single-byte XOR"
+    ],
+    "notes": "Single-byte XOR, key 0x17 (23). CTFlearn is an undated wargame; year is that of the writeup used as source."
+  },
+  {
+    "id": "ctflearn-character-encoding",
+    "event": "CTFlearn",
+    "year": 2021,
+    "challenge": "Character Encoding",
+    "category": "Cryptography",
+    "source_url": "https://github.com/rishitsaiya/CTFlearn-Writeups/blob/master/Cryptography/Character%20Encoding/README.md",
+    "ciphertext": "41 42 43 54 46 7B 34 35 43 31 31 5F 31 35 5F 55 35 33 46 55 4C 7D",
+    "plaintext": "ABCTF{45C11_15_U53FUL}",
+    "flag": "ABCTF{45C11_15_U53FUL}",
+    "chain": [
+      "Hexadecimal"
+    ],
+    "notes": "Space-separated hex bytes. CTFlearn is an undated wargame; year is that of the writeup used as source."
+  },
+  {
+    "id": "ctflearn-encryption-master",
+    "event": "CTFlearn",
+    "year": 2021,
+    "challenge": "Encryption Master",
+    "category": "Cryptography",
+    "source_url": "https://github.com/rishitsaiya/CTFlearn-Writeups/blob/master/Cryptography/Encryption%20Master/README.md",
+    "ciphertext": "TmljZSEgTm93IGtlZXAgZ29pbmcuIDU0Nzc2ZjIwNmQ2ZjcyNjUyZTIwMzAzMTMwMzAzMDMxMzEzMDIwMzAzMTMxMzAzMTMwMzAzMTIwMzAzMTMxMzAzMTMxMzEzMDIwMzAzMTMxMzAzMDMwMzAzMTIwMzAzMTMxMzAzMTMxMzAzMDIwMzAzMDMxMzAzMDMwMzAzMDIwMzAzMTMwMzAzMDMxMzAzMDIwMzAzMTMxMzAzMDMxMzAzMTIwMzAzMTMxMzAzMDMwMzEzMTIwMzAzMTMxMzEzMDMwMzEzMDIwMzAzMTMxMzEzMTMwMzAzMTIwMzAzMTMxMzEzMDMwMzAzMDIwMzAzMTMxMzEzMDMxMzAzMDIwMzAzMTMxMzAzMTMwMzAzMTIwMzAzMTMxMzAzMTMxMzEzMTIwMzAzMTMxMzAzMTMxMzEzMDIwMzAzMDMxMzAzMDMwMzAzMTIwMzAzMDMxMzAzMDMwMzAzMDIwMzAzMTMwMzEzMDMwMzAzMTIwMzAzMDMxMzEzMDMwMzAzMTIwMzAzMTMwMzEzMDMwMzEzMDIwMzAzMTMwMzAzMDMxMzEzMTIwMzAzMTMxMzAzMDMxMzAzMTIwMzAzMDMxMzEzMDMwMzAzMDIwMzAzMTMxMzAzMTMxMzAzMDIwMzAzMTMxMzAzMDMxMzEzMDIwMzAzMTMwMzEzMDMwMzAzMTIwMzAzMTMwMzEzMDMxMzAzMTIwMzAzMDMxMzEzMDMwMzAzMTIwMzAzMTMxMzAzMDMxMzEzMDIwMzAzMTMwMzEzMDMxMzAzMTIwMzAzMTMwMzAzMDMxMzEzMDIwMzAzMTMwMzAzMTMwMzEzMDIwMzAzMTMwMzEzMDMwMzAzMDIwMzAzMTMwMzEzMDMxMzEzMDIwMzAzMTMwMzEzMDMxMzAzMTIwMzAzMTMwMzEzMDMwMzEzMDIwMzAzMTMxMzAzMDMxMzEzMDIwMzAzMTMwMzEzMDMxMzAzMDIwMzAzMDMxMzEzMDMwMzAzMDIwMzAzMTMwMzEzMTMwMzEzMDIwMzAzMTMxMzAzMDMxMzEzMDIwMzAzMTMwMzEzMDMxMzEzMTIwMzAzMTMwMzEzMDMxMzAzMTIwMzAzMDMxMzEzMTMwMzAzMTIwMzAzMTMwMzEzMDMxMzEzMDIwMzAzMTMxMzAzMDMxMzEzMDIwMzAzMTMwMzEzMDMwMzAzMTIwMzAzMDMxMzEzMTMxMzAzMTIwMzAzMDMxMzEzMTMxMzAzMQ==",
+    "plaintext": "CTF{I_AM_PROUD_OF_YOU}",
+    "flag": "CTF{I_AM_PROUD_OF_YOU}",
+    "chain": [
+      "Base64",
+      "Hexadecimal",
+      "Binary",
+      "Base64"
+    ],
+    "notes": "Contents of 'Here ya go!.txt' (after the first line 'This is NOT going to be fun.'). Each layer carries a prefix: Base64 -> 'Nice! Now keep going. <hex>', hex -> 'Two more. <space-separated 8-bit binary>', binary -> 'Final Decryption! Q1RGe0lfQU1fUFJPVURfT0ZfWU9VfQ==', Base64 -> flag. CTFlearn is an undated wargame; year is that of the writeup used as source."
+  },
+  {
+    "id": "ctflearn-hyperstream-test-2",
+    "event": "CTFlearn",
+    "year": 2021,
+    "challenge": "HyperStream Test #2",
+    "category": "Cryptography",
+    "source_url": "https://github.com/rishitsaiya/CTFlearn-Writeups/blob/master/Cryptography/HyperStream%20Test%20%232/README.md",
+    "ciphertext": "ABAAAABABAABBABBAABBAABAAAAAABAAAAAAAABAABBABABBAAAAABBABBABABBAABAABABABBAABBABBAABB",
+    "plaintext": "ILOUEBACONDONTYOU",
+    "flag": "ILOUEBACONDONTYOU",
+    "chain": [
+      "Bacon"
+    ],
+    "notes": "Baconian cipher, 24-letter variant (I/J and U/V merged), hence 'ILOUE' for 'I LOVE'. CTFlearn is an undated wargame; year is that of the writeup used as source."
+  },
+  {
+    "id": "ctflearn-modern-gaius-julius-caesar",
+    "event": "CTFlearn",
+    "year": 2021,
+    "challenge": "Modern Gaius Julius Caesar",
+    "category": "Cryptography",
+    "source_url": "https://github.com/rishitsaiya/CTFlearn-Writeups/blob/master/Cryptography/Modern%20Gaius%20Julius%20Caesar/README.md",
+    "ciphertext": "BUH'tdy,|Bim5y~Bdt76yQ",
+    "plaintext": "CTFlearn{Cyb3r_Cae54r}",
+    "flag": "CTFlearn{Cyb3r_Cae54r}",
+    "chain": [
+      "Keyboard shift"
+    ],
+    "notes": "QWERTY keyboard shift: each character moved 2 keys to the left on a US keyboard (shifted/unshifted state preserved). CTFlearn is an undated wargame; year is that of the writeup used as source."
+  },
+  {
+    "id": "ctflearn-morse-code",
+    "event": "CTFlearn",
+    "year": 2021,
+    "challenge": "Morse Code",
+    "category": "Cryptography",
+    "source_url": "https://github.com/rishitsaiya/CTFlearn-Writeups/blob/master/Cryptography/Morse%20Code/README.md",
+    "ciphertext": "..-. .-.. .- --. ... .- -- ..- . .-.. -- --- .-. ... . .. ... -.-. --- --- .-.. -... -.-- - .... . .-- .- -.-- .. .-.. .. -.- . -.-. .... . . ...",
+    "plaintext": "FLAGSAMUELMORSEISCOOLBYTHEWAYILIKECHEES",
+    "flag": "flagsamuelmorseiscoolbythewayilikechees",
+    "chain": [
+      "Morse"
+    ],
+    "notes": "Morse with single spaces between letters, no word separators; flag submitted in lowercase. CTFlearn is an undated wargame; year is that of the writeup used as source."
+  },
+  {
+    "id": "ctflearn-otpyrc",
+    "event": "CTFlearn",
+    "year": 2021,
+    "challenge": "otpyrC",
+    "category": "Cryptography",
+    "source_url": "https://github.com/rishitsaiya/CTFlearn-Writeups/blob/master/Cryptography/otpyrC/README.md",
+    "ciphertext": "d733432373937303734373666343730373937323733343b7644534",
+    "plaintext": "CryptotpyrC",
+    "flag": "CryptotpyrC",
+    "chain": [
+      "Reverse",
+      "Hexadecimal",
+      "Hexadecimal"
+    ],
+    "notes": "Reverse the string, hex-decode to 'CTF{43727970746f7470797243}', then hex-decode the braces content to get the accepted flag 'CryptotpyrC'. CTFlearn is an undated wargame; year is that of the writeup used as source."
+  },
+  {
+    "id": "ctflearn-reversal-of-fortune",
+    "event": "CTFlearn",
+    "year": 2021,
+    "challenge": "Reversal of Fortune",
+    "category": "Cryptography",
+    "source_url": "https://github.com/anushkavirgaonkar/CTFLearn_writeups/blob/master/REVERSAL_OF_FORTUNE.md",
+    "ciphertext": ".nac uoy fi tIe$reveRpilF eldnah ym gnisu em egassem ,avaj yllacificeps ,gnidoc emos htiw pleh deen I ,deifitnedi tegrat txeN",
+    "plaintext": "Next target identified, I need help with some coding, specifically java, message me using my handle FlipRever$eIt if you can.",
+    "flag": "FlipRever$eIt",
+    "chain": [
+      "Reverse"
+    ],
+    "notes": "Reversed text; the flag is the hacker handle mentioned in the plaintext. CTFlearn is an undated wargame; year is that of the writeup used as source."
+  },
+  {
+    "id": "ctflearn-reverse-polarity",
+    "event": "CTFlearn",
+    "year": 2021,
+    "challenge": "Reverse Polarity",
+    "category": "Cryptography",
+    "source_url": "https://github.com/rishitsaiya/CTFlearn-Writeups/blob/master/Cryptography/Reverse%20Polarity/README.md",
+    "ciphertext": "01000011010101000100011001111011010000100110100101110100010111110100011001101100011010010111000001110000011010010110111001111101",
+    "plaintext": "CTF{Bit_Flippin}",
+    "flag": "CTF{Bit_Flippin}",
+    "chain": [
+      "Binary"
+    ],
+    "notes": "8-bit binary, no separators. CTFlearn is an undated wargame; year is that of the writeup used as source."
+  },
+  {
+    "id": "ctflearn-symbolic-decimals",
+    "event": "CTFlearn",
+    "year": 2021,
+    "challenge": "Symbolic Decimals",
+    "category": "Cryptography",
+    "source_url": "https://github.com/rishitsaiya/CTFlearn-Writeups/blob/master/Cryptography/Symbolic%20Decimals/README.md",
+    "ciphertext": "^&,*$,&),!@#,*#,!!^,(&,!!$,(%,$^,(%,*&,(&,!!$,!!%,(%,$^,(%,&),!!!,!!$,(%,$^,(%,&^,!)%,!)@,!)!,!@%",
+    "plaintext": "CTF{Star_._Wars_._For_._Life}",
+    "flag": "CTF{Star_._Wars_._For_._Life}",
+    "chain": [
+      "Shifted digit symbols",
+      "Decimal"
+    ],
+    "notes": "Shifted-number-row symbols !@#$%^&*() stand for digits 1234567890; result is comma-separated decimal ASCII codes. CTFlearn is an undated wargame; year is that of the writeup used as source."
+  },
+  {
+    "id": "ctflearn-vigenere-cipher",
+    "event": "CTFlearn",
+    "year": 2021,
+    "challenge": "Vigenere Cipher",
+    "category": "Cryptography",
+    "source_url": "https://github.com/rishitsaiya/CTFlearn-Writeups/blob/master/Cryptography/Vigenere%20Cipher/README.md",
+    "ciphertext": "gwox{RgqssihYspOntqpxs}",
+    "plaintext": "flag{CiphersAreAwesome}",
+    "flag": "flag{CiphersAreAwesome}",
+    "chain": [
+      "Vigenère"
+    ],
+    "notes": "Vigenère key 'blorpy' (given in challenge text as 'blorpy gwox{RgqssihYspOntqpxs}'). CTFlearn is an undated wargame; year is that of the writeup used as source."
+  },
+  {
+    "id": "cybergrabs-0x02-2021-w4rm-up",
+    "event": "Cyber Grabs CTF 0x02",
+    "year": 2021,
+    "challenge": "W4rm_up",
+    "category": "Crypto",
+    "source_url": "https://ctftime.org/writeup/25721",
+    "ciphertext": "@$$@@@$$@$$$$@@$@$$@@@$@@$$@@$@$@$$$@@$@@$$@@$$$@$$$@@$@@$$@@@@$@$$@@@$@@$$$@@$$@$$$$@$$@$$$@@@$@$$$@$@$@$$@$@@$@$$$@$@@@@$$@@$$@$@$$$$$@$$@@$$$@@$$@@@@@@$$@@@@@$$@@$@@@$@$$$$$@$$$@$$$@@$$@$@@@$$$@@$@@$$@$$@$@$$$@$@$@$$$@@@@@$@$$$$$@$$@$@@$@$$$@@$$@$$@$$$@@@$@@$$$@$$$@$@@@$@$$$$$@$$@$@@$@$$$@$@@@$$$$$@$",
+    "plaintext": "cybergrabs{quit3_g00d_w4rmup_isn't_it}",
+    "flag": "cybergrabs{quit3_g00d_w4rmup_isn't_it}",
+    "chain": [
+      "Binary"
+    ],
+    "notes": "Binary written with @ = 0 and $ = 1, 8 bits per character, no separators"
+  },
+  {
+    "id": "davincictf-2021-substitution",
+    "event": "DaVinciCTF 2021",
+    "year": 2021,
+    "challenge": "Substitution",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/Kasimir123/CTFWriteUps/main/2021-03-dvCTF/substitution/README.md",
+    "ciphertext": "Rm xibkgltizksb, z hfyhgrgfgrlm xrksvi rh z nvgslw lu vmxibkgrmt rm dsrxs fmrgh lu kozrmgvcg ziv ivkozxvw drgs xrksvigvcg, zxxliwrmt gl z urcvw hbhgvn; gsv \"fmrgh\" nzb yv hrmtov ovggvih (gsv nlhg xlnnlm), kzrih lu ovggvih, girkovgh lu ovggvih, nrcgfivh lu gsv zylev, zmw hl uligs. Gsv ivxvrevi wvxrksvih gsv gvcg yb kviulinrmt gsv rmevihv hfyhgrgfgrlm.\n\nHfyhgrgfgrlm xrksvih xzm yv xlnkzivw drgs gizmhklhrgrlm xrksvih. Rm z gizmhklhrgrlm xrksvi, gsv fmrgh lu gsv kozrmgvcg ziv ivziizmtvw rm z wruuvivmg zmw fhfzoob jfrgv xlnkovc liwvi, yfg gsv fmrgh gsvnhvoevh ziv ovug fmxszmtvw. Yb xlmgizhg, rm z hfyhgrgfgrlm xrksvi, gsv fmrgh lu gsv kozrmgvcg ziv ivgzrmvw rm gsv hznv hvjfvmxv rm gsv xrksvigvcg, yfg gsv fmrgh gsvnhvoevh ziv zogvivw.\n\nGsviv ziv z mfnyvi lu wruuvivmg gbkvh lu hfyhgrgfgrlm xrksvi. Ru gsv xrksvi lkvizgvh lm hrmtov ovggvih, rg rh gvinvw z hrnkov hfyhgrgfgrlm xrksvi; z xrksvi gszg lkvizgvh lm ozitvi tilfkh lu ovggvih rh gvinvw klobtizksrx. Z nlmlzokszyvgrx xrksvi fhvh urcvw hfyhgrgfgrlm levi gsv vmgriv nvhhztv, dsvivzh z klobzokszyvgrx xrksvi fhvh z mfnyvi lu hfyhgrgfgrlmh zg wruuvivmg klhrgrlmh rm gsv nvhhztv, dsviv z fmrg uiln gsv kozrmgvcg rh nzkkvw gl lmv lu hvevizo klhhryrorgrvh rm gsv xrksvigvcg zmw erxv evihz.\nweXGU{xi1kg3w_x1ks3i}",
+    "plaintext": "In cryptography, a substitution cipher is a method of encrypting in which units of plaintext are replaced with ciphertext, according to a fixed system; the \"units\" may be single letters (the most common), pairs of letters, triplets of letters, mixtures of the above, and so forth. The receiver deciphers the text by performing the inverse substitution.\n\nSubstitution ciphers can be compared with transposition ciphers. In a transposition cipher, the units of the plaintext are rearranged in a different and usually quite complex order, but the units themselves are left unchanged. By contrast, in a substitution cipher, the units of the plaintext are retained in the same sequence in the ciphertext, but the units themselves are altered.\n\nThere are a number of different types of substitution cipher. If the cipher operates on single letters, it is termed a simple substitution cipher; a cipher that operates on larger groups of letters is termed polygraphic. A monoalphabetic cipher uses fixed substitution over the entire message, whereas a polyalphabetic cipher uses a number of substitutions at different positions in the message, where a unit from the plaintext is mapped to one of several possibilities in the ciphertext and vice versa.\ndvCTF{cr1pt3d_c1ph3r}",
+    "flag": "dvCTF{cr1pt3d_c1ph3r}",
+    "chain": [
+      "Atbash"
+    ],
+    "notes": "Atbash substitution applied to the Wikipedia paragraph on substitution ciphers; the flag is on the last line"
+  },
+  {
+    "id": "deadface-2021-he-thrusts-his-fists-against-the-post",
+    "event": "DEADFACE CTF 2021",
+    "year": 2021,
+    "challenge": "He Thrusts His Fists Against the Post",
+    "category": "Cryptography",
+    "source_url": "https://ctftime.org/writeup/31011",
+    "ciphertext": "{ea-vetgaytereoreh-na}fan--wshbestpasslds-s-hm",
+    "plaintext": "flag{and-yet-swears-he-observes-the-phantasms}",
+    "flag": "flag{and-yet-swears-he-observes-the-phantasms}",
+    "chain": [
+      "Rail fence"
+    ],
+    "notes": "Rail fence with 4 rails and offset 2"
+  },
+  {
+    "id": "deadface-2021-to-be-xor-not-to-be",
+    "event": "DEADFACE CTF 2021",
+    "year": 2021,
+    "challenge": "To Be Xor Not to Be",
+    "category": "Cryptography",
+    "source_url": "https://ctftime.org/writeup/31013",
+    "ciphertext": ".$)/3<'e-)<e':e&'<e<'e-)<5",
+    "plaintext": "flag{to-eat-or-not-to-eat}",
+    "flag": "flag{to-eat-or-not-to-eat}",
+    "chain": [
+      "Single-byte XOR"
+    ],
+    "notes": "Single-byte XOR with key 0x48 ('H'); found by XOR brute force with crib flag{"
+  },
+  {
+    "id": "hacktivitycon-2021-six-four-over-two",
+    "event": "H@cktivityCon 2021 CTF",
+    "year": 2021,
+    "challenge": "Six Four Over Two",
+    "category": "Warmups",
+    "source_url": "https://raw.githubusercontent.com/piyagehi/CTF-Writeups/main/2021-HacktivityCon-CTF/01-SixFour-OverTwo.md",
+    "ciphertext": "EBTGYYLHPNQTINLEGRSTOMDCMZRTIMBXGY2DKMJYGVSGIOJRGE2GMOLDGBSWM7IK",
+    "plaintext": " flag{a45d4e70bfc407645185dd9114f9c0ef}\n",
+    "flag": "flag{a45d4e70bfc407645185dd9114f9c0ef}",
+    "chain": [
+      "Base32"
+    ],
+    "notes": "Base32 (64/2 = 32); decoded text has a leading space and a trailing newline"
+  },
+  {
+    "id": "htb-cyber-apocalypse-2021-nintendo-base64",
+    "event": "HTB Cyber Apocalypse 2021",
+    "year": 2021,
+    "challenge": "Nintendo Base64",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/cryptohack/Cyber-Apocalypse-CTF-2021/main/%5BEasy%5D%20Nintendo%20Base64/release/output.txt",
+    "ciphertext": "            Vm                                                   0w               eE5GbFdWW         GhT            V0d4VVYwZ\n            G9              XV                                   mx              yWk    ZOV       1JteD           BaV     WRH\n                            YW                                   xa             c1              NsWl dS   M1   JQ WV       d4\nS2RHVkljRm  Rp UjJoMlZrZH plRmRHV m5WaVJtUl hUVEZLZVZk   V1VrZFpWMU  pHVDFaV1Z  tSkdXazlXYW   twdl   Yx    Wm Fj  bHBFVWxWTlZ\nXdz     BWa 2M xVT     FSc  1d   uTl     hi R2h     XWW taS     1dG VXh     XbU ZTT     VdS elYy     cz     FWM    kY2VmtwV2\nJU       RX dZ ak       Zr  U0   ZOc2JGWmlS a3       BY V1       d0 YV       lV MH       hj RVpYYlVaVFRWW  mF lV  mt       3V\nlR       GV 01 ER       kh  Zak  5rVj   JFe VR       Ya Fdha   3BIV mpGU   2NtR kdX     bWx          oT   TB   KW VYxW   lNSM\nWx       XW kV kV       mJ  GWlRZ bXMxY2xWc 1V       sZ  FRiR1J5VjJ  0a1YySkdj   RVpWVmxKV           1V            GRTlQUT09\n\n\n",
+    "plaintext": "CHTB{3nc0d1ng_n0t_3qu4l_t0_3ncrypt10n}",
+    "flag": "CHTB{3nc0d1ng_n0t_3qu4l_t0_3ncrypt10n}",
+    "chain": [
+      "Base64",
+      "Base64",
+      "Base64",
+      "Base64",
+      "Base64",
+      "Base64",
+      "Base64",
+      "Base64"
+    ],
+    "notes": "Base64 applied 8 times; the ciphertext is laid out as N64-logo ASCII art, so all whitespace/newlines must be stripped before decoding (416 base64 chars). Challenge by CryptoHack."
+  },
+  {
+    "id": "htb-cyber-apocalypse-2021-phasestream-1",
+    "event": "HTB Cyber Apocalypse 2021",
+    "year": 2021,
+    "challenge": "PhaseStream 1",
+    "category": "Crypto",
+    "source_url": "https://github.com/cryptohack/Cyber-Apocalypse-CTF-2021/blob/main/%5BEasy%5D%20PS1%20(PhaseStream1)/README.md",
+    "ciphertext": "2e313f2702184c5a0b1e321205550e03261b094d5c171f56011904",
+    "plaintext": "CHTB{u51ng_kn0wn_pl41nt3xt}",
+    "flag": "CHTB{u51ng_kn0wn_pl41nt3xt}",
+    "chain": [
+      "Hexadecimal",
+      "Repeating-key XOR"
+    ],
+    "notes": "Hex of plaintext XORed with repeating 5-byte key 'mykey'; key recovered from known flag prefix 'CHTB{'."
+  },
+  {
+    "id": "imaginaryctf-2021-chicken-caesar-salad",
+    "event": "ImaginaryCTF 2021",
+    "year": 2021,
+    "challenge": "Chicken Caesar Salad",
+    "category": "Crypto",
+    "source_url": "https://kashmir54.github.io/ctfs/ImaginaryCTF2021/",
+    "ciphertext": "qkbn{ePmv_lQL_kIMamZ_kQxpMZa_oMb_aW_pIZl}",
+    "plaintext": "ictf{wHen_dID_cAEseR_cIphERs_gEt_sO_hARd}",
+    "flag": "ictf{wHen_dID_cAEseR_cIphERs_gEt_sO_hARd}",
+    "chain": [
+      "Caesar (shift 8)"
+    ],
+    "notes": "Caesar cipher, encryption shift 8 (decrypt by shifting back 8 / ROT18); mixed case preserved"
+  },
+  {
+    "id": "killerqueen-2021-deoxyencoded-nucleic-acid",
+    "event": "Killer Queen CTF 2021",
+    "year": 2021,
+    "challenge": "Deoxyencoded Nucleic Acid",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/dystobic/writeups/main/2021/KillerQueen/Deoxyencoded%20Nucleic%20Acid/dna1.txt",
+    "ciphertext": "TGGCTCATTGACTCTATGTGTCGCTGGTTCTATCACTTCCTGAGTGATTCACTGGTTGACTGATACATACATTCGTTTCCTGAGTGATTCACTGTTTTCCTGTGTGCCTCTTTCAGTCCT",
+    "plaintext": "kqctf{its_basica11y_base_four}",
+    "flag": "kqctf{its_basica11y_base_four}",
+    "chain": [
+      "DNA (2-bit nucleotides)"
+    ],
+    "notes": "Each nucleotide is 2 bits: A=00, T=01, G=10, C=11; four nucleotides per byte"
+  },
+  {
+    "id": "metactf-2021-a-to-z",
+    "event": "MetaCTF CyberGames 2021",
+    "year": 2021,
+    "challenge": "A to Z",
+    "category": "Cryptography",
+    "source_url": "https://ctftime.org/writeup/31681",
+    "ciphertext": "yzhsufo_rh_nb_uze_wdziu",
+    "plaintext": "bashful_is_my_fav_dwarf",
+    "flag": "MetaCTF{bashful_is_my_fav_dwarf}",
+    "chain": [
+      "Atbash"
+    ],
+    "notes": "Atbash; flag wrapped in MetaCTF{} per the writeup's flag format"
+  },
+  {
+    "id": "metactf-2021-thnks-fr-th-pwds",
+    "event": "MetaCTF CyberGames 2021",
+    "year": 2021,
+    "challenge": "Thnks fr th Pwds",
+    "category": "Cryptography",
+    "source_url": "https://ctftime.org/writeup/31637",
+    "ciphertext": "TWV0YUNURntlbmNvZGluZ19pc19OMFRfdGhlX3NhbWVfYXNfZW5jcnlwdGlvbiEhfQ==",
+    "plaintext": "MetaCTF{encoding_is_N0T_the_same_as_encryption!!}",
+    "flag": "MetaCTF{encoding_is_N0T_the_same_as_encryption!!}",
+    "chain": [
+      "Base64"
+    ],
+    "notes": "Base64"
+  },
+  {
+    "id": "nahamcon-2021-car-keys",
+    "event": "NahamCon CTF 2021",
+    "year": 2021,
+    "challenge": "Car Keys",
+    "category": "Warmups",
+    "source_url": "https://raw.githubusercontent.com/darknezs/NahamCon-2021-CTF/main/README.md",
+    "ciphertext": "ygqa{6y980e0101e8qq361977eqe06508q3rt}",
+    "plaintext": "flag{6f980c0101c8aa361977cac06508a3de}",
+    "flag": "flag{6f980c0101c8aa361977cac06508a3de}",
+    "chain": [
+      "Substitution"
+    ],
+    "notes": "Keyed Caesar / keyword substitution with keyword QWERTY (cipher alphabet QWERTYABCDFGHIJKLMNOPSUVXZ maps to a-z); hint: another key was engraved with the word QWERTY"
+  },
+  {
+    "id": "nahamcon-2021-esab64",
+    "event": "NahamCon CTF 2021",
+    "year": 2021,
+    "challenge": "esab64",
+    "category": "Warmups",
+    "source_url": "https://ctftime.org/writeup/26425",
+    "ciphertext": "mxWYntnZiVjMxEjY0kDOhZWZ4cjYxIGZwQmY2ATMxEzNlFjNl13X",
+    "plaintext": "flag{fb5211b498afe87b1bd0db601117e16e}_",
+    "flag": "flag{fb5211b498afe87b1bd0db601117e16e}",
+    "chain": [
+      "Reverse",
+      "Base64",
+      "Reverse"
+    ],
+    "notes": "esab64 = base64 backwards: reverse the string, Base64-decode, reverse again; the decoded text ends with a stray underscore"
+  },
+  {
+    "id": "picoctf-2021-crackme-py",
+    "event": "picoCTF 2021",
+    "year": 2021,
+    "challenge": "crackme-py",
+    "category": "Reverse Engineering",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2021/Reverse_Engineering/crackme-py.md",
+    "ciphertext": "A:4@r%uL`M-^M0c0AbcM-MFE0cdhb52g2N",
+    "plaintext": "picoCTF{1|\\/|_4_p34|\\|ut_4593da8a}",
+    "flag": "picoCTF{1|\\/|_4_p34|\\|ut_4593da8a}",
+    "chain": [
+      "ROT47"
+    ],
+    "notes": "ROT47 (the script's decode_secret() is literally ROT47 over chr(33)..chr(126)); the 'bezos_cc_secret' string in crackme.py."
+  },
+  {
+    "id": "picoctf-2021-mod-26",
+    "event": "picoCTF 2021",
+    "year": 2021,
+    "challenge": "Mod 26",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2021/Cryptography/Mod_26.md",
+    "ciphertext": "cvpbPGS{arkg_gvzr_V'yy_gel_2_ebhaqf_bs_ebg13_GYpXOHqX}",
+    "plaintext": "picoCTF{next_time_I'll_try_2_rounds_of_rot13_TLcKBUdK}",
+    "flag": "picoCTF{next_time_I'll_try_2_rounds_of_rot13_TLcKBUdK}",
+    "chain": [
+      "ROT13"
+    ],
+    "notes": "ROT13"
+  },
+  {
+    "id": "picoctf-2021-nice-netcat",
+    "event": "picoCTF 2021",
+    "year": 2021,
+    "challenge": "Nice netcat...",
+    "category": "General Skills",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2021/General_Skills/Nice_netcat.md",
+    "ciphertext": "112 105 99 111 67 84 70 123 103 48 48 100 95 107 49 116 116 121 33 95 110 49 99 51 95 107 49 116 116 121 33 95 100 51 100 102 100 54 100 102 125 10",
+    "plaintext": "picoCTF{g00d_k1tty!_n1c3_k1tty!_d3dfd6df}\n",
+    "flag": "picoCTF{g00d_k1tty!_n1c3_k1tty!_d3dfd6df}",
+    "chain": [
+      "Decimal"
+    ],
+    "notes": "Decimal ASCII codes, one per line in the original nc output (joined with spaces here). Trailing 10 is a newline."
+  },
+  {
+    "id": "picoctf-2021-transformation",
+    "event": "picoCTF 2021",
+    "year": 2021,
+    "challenge": "Transformation",
+    "category": "Reverse Engineering",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2021/Reverse_Engineering/Transformation.md",
+    "ciphertext": "灩捯䍔䙻ㄶ形楴獟楮獴㌴摟潦弸弲㘶㠴挲ぽ",
+    "plaintext": "picoCTF{16_bits_inst34d_of_8_26684c20}",
+    "flag": "picoCTF{16_bits_inst34d_of_8_26684c20}",
+    "chain": [
+      "UTF-16"
+    ],
+    "notes": "Pairs of ASCII bytes were packed into one 16-bit code point each: chr((ord(a)<<8)+ord(b)). Decode by re-encoding the text as UTF-16BE and reading the bytes as ASCII."
+  },
+  {
+    "id": "shakti-ctf-2021-classicaly-easy",
+    "event": "Shakti CTF 2021",
+    "year": 2021,
+    "challenge": "Classicaly Easy",
+    "category": "Cryptography",
+    "source_url": "https://ctftime.org/writeup/26914",
+    "ciphertext": "ovmogeqfj{yahe_wgwff_avpv_eszahtmac_qxefowoey!}",
+    "plaintext": "shaktictf{lets_start_with_something_classical!}",
+    "flag": "shaktictf{lets_start_with_something_classical!}",
+    "chain": [
+      "Vigenère"
+    ],
+    "notes": "Vigenère with key WOMEN (shifts 22,14,12,4,13 repeating), recovered from the known prefix shaktictf; non-letters skipped"
+  },
+  {
+    "id": "tfcctf-2021-sea-language-1",
+    "event": "TFC CTF 2021",
+    "year": 2021,
+    "challenge": "SEA LANGUAGE 1",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/palanioffcl/CTF-Writeups/main/TFCCTF/Crypto/sl1.txt",
+    "ciphertext": ".-- .... ....- - -....- .- .-. ...-- -....- -.-- ----- ..- -....- ... .---- -. -.- .---- -. --. -....- .- -... ----- ..- - ..--.. -.-.-- -.-.-- -.-.-- ..--..",
+    "plaintext": "WH4T-AR3-Y0U-S1NK1NG-AB0UT?!!!?",
+    "flag": "TFCCTF{WH4T-AR3-Y0U-S1NK1NG-AB0UT?!!!?}",
+    "chain": [
+      "Morse"
+    ],
+    "notes": "Morse code with space-separated letters (includes -, ? and ! prosigns); challenge said to wrap the result in TFCCTF{}"
+  },
+  {
+    "id": "tfcctf-2021-sea-language-2",
+    "event": "TFC CTF 2021",
+    "year": 2021,
+    "challenge": "SEA LANGUAGE? 2",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/palanioffcl/CTF-Writeups/main/TFCCTF/Crypto/sl2.txt",
+    "ciphertext": "._._._.. ._...__. ._....__ ._....__ ._._._.. ._...__. .____.__ .___.___ ..__._..\n ..__..._ ..__.___ ._._____ ..__._.. ._._____ .__.__._ ..__..._ .__.___. .___._._\n ..__.___ ..__..__ .._.___. .._.___. .._.___. ._._____ ..__.___ .__._... ..__..._\n ..__._._ ._._____ ..__..._ .___..__ ._._____ .__.___. ..__.... ..__.___ ._._____\n .__.__._ ..__.... .___.._. .___..__ ..__..__ .._...._ .._...._ .._...._ .._...._\n .._...._ .___.._. ..__..._ .__..___ .__._... ..__.___ ..______ ._____._",
+    "plaintext": "TFCCTF{w417_4_m1nu73..._7h15_1s_n07_m0rs3!!!!!r1gh7?}",
+    "flag": "TFCCTF{w417_4_m1nu73..._7h15_1s_n07_m0rs3!!!!!r1gh7?}",
+    "chain": [
+      "Binary"
+    ],
+    "notes": "Looks like Morse but is binary: '.' = 0 and '_' = 1, 8 symbols per character separated by spaces/newlines"
+  },
+  {
+    "id": "utctf-2021-sizzling-bacon",
+    "event": "UTCTF 2021",
+    "year": 2021,
+    "challenge": "Sizzling Bacon",
+    "category": "Beginner",
+    "source_url": "https://raw.githubusercontent.com/Kartibok/Capture-the-Flag/master/competitions/UTCTF/001%20-%20utctf%20-%20beginner.md",
+    "ciphertext": "sSsSSsSSssSSsSsSsSssSSSSSSSssS{SSSsSsSSSsSsSSSsSSsSSssssssSSSSSSSsSSSSSSSSsSSsssSSssSsSSSsSSsSSSSssssSSsssSSsSSsSSSs}",
+    "plaintext": "UTFLAG{CRISPYBACONCIPHER}",
+    "flag": "UTFLAG{CRISPYBACONCIPHER}",
+    "chain": [
+      "Bacon"
+    ],
+    "notes": "Baconian cipher, complete 26-letter alphabet, S = A (0) and s = B (1); braces kept as-is"
+  },
+  {
+    "id": "angstromctf-2021-exclusive-cipher",
+    "event": "ångstromCTF 2021",
+    "year": 2021,
+    "challenge": "Exclusive Cipher",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/vivian-dai/angstromCTF-2021-Writeup/main/CRYPTO/Exclusive%20Cipher/Exclusive%20Cipher.md",
+    "ciphertext": "ae27eb3a148c3cf031079921ea3315cd27eb7d02882bf724169921eb3a469920e07d0b883bf63c018869a5090e8868e331078a68ec2e468c2bf13b1d9a20ea0208882de12e398c2df60211852deb021f823dda35079b2dda25099f35ab7d218227e17d0a982bee7d098368f13503cd27f135039f68e62f1f9d3cea7c",
+    "plaintext": "Congratulations on decrypting the message! The flag is actf{who_needs_aes_when_you_have_xor}. Good luck on the other crypto!",
+    "flag": "actf{who_needs_aes_when_you_have_xor}",
+    "chain": [
+      "Hexadecimal",
+      "Repeating-key XOR"
+    ],
+    "notes": "5-byte repeating XOR key ed48855d66 (hex); challenge said the key is 5 bytes long and the flag is somewhere in the message"
+  },
+  {
+    "id": "knightctf-2022-404-not-found",
+    "event": "KnightCTF 2022",
+    "year": 2022,
+    "challenge": "404 Not Found",
+    "category": "Crypto",
+    "source_url": "https://ctftime.org/writeup/32087",
+    "ciphertext": "03MTJ3M2NjcfBDdfR2Mz42X1BTefN3MNFDdz0EMTtnRUN0S",
+    "plaintext": "KCTF{S0M3t1M3s_y0u_n33d_t0_r3v3rS3}",
+    "flag": "KCTF{S0M3t1M3s_y0u_n33d_t0_r3v3rS3}",
+    "chain": [
+      "Reverse",
+      "Base64"
+    ],
+    "notes": "The string (from a URL parameter) is reversed Base64 without padding; reverse then Base64-decode"
+  },
+  {
+    "id": "picoctf-2022-rail-fence",
+    "event": "picoCTF 2022",
+    "year": 2022,
+    "challenge": "rail-fence",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/noamgariani11/picoCTF-2022-Writeup/main/Cryptography/rail-fence/rail-fence.md",
+    "ciphertext": "Ta _7N6D49hlg:W3D_H3C31N__A97ef sHR053F38N43D7B i33___N6",
+    "plaintext": "The flag is: WH3R3_D035_7H3_F3NC3_8361N_4ND_3ND_4A76B997",
+    "flag": "picoCTF{WH3R3_D035_7H3_F3NC3_8361N_4ND_3ND_4A76B997}",
+    "chain": [
+      "Rail fence"
+    ],
+    "notes": "Rail fence with 4 rails (stated in the challenge). Spaces are part of the message. Flag is the decoded message after 'The flag is:' wrapped in picoCTF{}. Per-instance."
+  },
+  {
+    "id": "picoctf-2022-substitution1",
+    "event": "picoCTF 2022",
+    "year": 2022,
+    "challenge": "substitution1",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/Nickguitar/picoCTF2022/main/crypto/substitution-1/message.txt",
+    "ciphertext": "IECj (jqfue cfu ixzelus eqs coxa) xus x emzs fc ifrzlesu jsiludem ifrzsededfy. Ifyesjexyej xus zusjsyesk hdeq x jse fc iqxoosyasj hqdiq esje eqsdu iusxedgdem, esiqydixo (xyk affaodya) jpdooj, xyk zuftosr-jfogdya xtdodem. Iqxoosyasj ljlxoom ifgsu x ylrtsu fc ixesafudsj, xyk hqsy jfogsk, sxiq mdsokj x jeudya (ixoosk x coxa) hqdiq dj jltrdeesk ef xy fyodys jifudya jsugdis. IECj xus x ausxe hxm ef osxuy x hdks xuuxm fc ifrzlesu jsiludem jpdooj dy x jxcs, osaxo sygdufyrsye, xyk xus qfjesk xyk zoxmsk tm rxym jsiludem auflzj xuflyk eqs hfuok cfu cly xyk zuxiedis. Cfu eqdj zuftosr, eqs coxa dj: zdifIEC{CU3NL3YIM_4774IP5_4U3_I001_4871S6CT}",
+    "plaintext": "CTFs (short for capture the flag) are a type of computer security competition. Contestants are presented with a set of challenges which test their creativity, technical (and googling) skills, and problem-solving ability. Challenges usually cover a number of categories, and when solved, each yields a string (called a flag) which is submitted to an online scoring service. CTFs are a great way to learn a wide array of computer security skills in a safe, legal environment, and are hosted and played by many security groups around the world for fun and practice. For this problem, the flag is: picoCTF{FR3QU3NCY_4774CK5_4R3_C001_4871E6FB}",
+    "flag": "picoCTF{FR3QU3NCY_4774CK5_4R3_C001_4871E6FB}",
+    "chain": [
+      "Substitution"
+    ],
+    "notes": "Monoalphabetic substitution of an English paragraph about CTFs (message.txt of this solver's instance; the key and flag suffix are per-instance). Cipher letters for a..z: X T I K S C A Q D ? P O R Y F Z N U J E L G H ? M ? (j, x, z do not occur). Breakable with quipqiup / frequency analysis; the flag is after 'the flag is:'."
+  },
+  {
+    "id": "picoctf-2022-transposition-trial",
+    "event": "picoCTF 2022",
+    "year": 2022,
+    "challenge": "transposition-trial",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2022/Cryptography/transposition-trial.md",
+    "ciphertext": "heTfl g as iicpCTo{7F4NRP051N5_16_35P3X51N3_V091B0AE}2",
+    "plaintext": "The flag is picoCTF{7R4N5P051N6_15_3XP3N51V3_109AB02E}",
+    "flag": "picoCTF{7R4N5P051N6_15_3XP3N51V3_109AB02E}",
+    "chain": [
+      "Block transposition (blocks of 3, order 3-1-2)"
+    ],
+    "notes": "Every block of 3 characters was rotated left by one (abc -> bca). Decode by taking chars [2,0,1] of each block. Per-instance."
+  },
+  {
+    "id": "picoctf-2022-vigenere",
+    "event": "picoCTF 2022",
+    "year": 2022,
+    "challenge": "Vigenere",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2022/Cryptography/Vigenere.md",
+    "ciphertext": "rgnoDVD{O0NU_WQ3_G1G3O3T3_A1AH3S_f85729e7}",
+    "plaintext": "picoCTF{D0NT_US3_V1G3N3R3_C1PH3R_d85729g7}",
+    "flag": "picoCTF{D0NT_US3_V1G3N3R3_C1PH3R_d85729g7}",
+    "chain": [
+      "Vigenère"
+    ],
+    "notes": "Vigenère with key CYLAB (given). Non-letters are passed through and do not advance the key. Per-instance flag suffix."
+  },
+  {
+    "id": "tjctf-2022-flimsy-fingered-latin-teacher",
+    "event": "TJCTF 2022",
+    "year": 2022,
+    "challenge": "flimsy-fingered-latin-teacher",
+    "category": "Crypto",
+    "source_url": "https://ctftime.org/writeup/33821",
+    "ciphertext": "ykvyg}pp[djp,rtpelru[pdoyopm|",
+    "plaintext": "tjctf{oopshomerowkeyposition}",
+    "flag": "tjctf{oopshomerowkeyposition}",
+    "chain": [
+      "Keyboard shift"
+    ],
+    "notes": "QWERTY keyboard shift: every character was typed one key to the right; decode by taking the key to the left"
+  },
+  {
+    "id": "wolvctf-2022-anything",
+    "event": "WolvSec CTF 2022 (Wolverine Security Conference/CTF)",
+    "year": 2022,
+    "challenge": "ANYTHING",
+    "category": "Crypto",
+    "source_url": "https://ctftime.org/writeup/32711",
+    "ciphertext": "wfa{oporteec_gvb_ogd}",
+    "plaintext": "wsc{vigenere_not_bad}",
+    "flag": "wsc{vigenere_not_bad}",
+    "chain": [
+      "Vigenère"
+    ],
+    "notes": "Vigenère key ANYTHING (from the challenge description 'This could be encrypted with ANYTHING!'); non-letters skipped"
+  },
+  {
+    "id": "byuctf-2023-poem",
+    "event": "BYUCTF 2023",
+    "year": 2023,
+    "challenge": "Poem",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/CyberHeroRS/writeups/main/BYUCTF/2023/Crypto/Poem.md",
+    "ciphertext": "epcndkohlxfgvenkzcllkoclivdckskvpkddcyoceipkvrcslkdhycbcscwcsc",
+    "plaintext": "theflagisbyuctfamessagesoclearachallengetohackersalinewerevere",
+    "flag": "byuctf{a message so clear a challenge to hackers a line we revere}",
+    "chain": [
+      "Substitution"
+    ],
+    "notes": "Monoalphabetic substitution ('keyboard change' cipher): ciphertext letter at alphabet position i stands for the i-th key of the QWERTY layout, except that r and l are swapped (cipher alphabet a-z -> qweltyuiopasdfghjkrzxcvbnm). dCode's keyboard-change decode gives 'thefragisbyuctf...'; swapping r/l gives the flag. Spaces were removed"
+  },
+  {
+    "id": "deadface-2023-coin-code",
+    "event": "DEADFACE CTF 2023",
+    "year": 2023,
+    "challenge": "Coin Code",
+    "category": "Cryptography",
+    "source_url": "https://ctftime.org/writeup/38043",
+    "ciphertext": "fwpl lsjywl xgj ew oadd tw smjgjs hzsjes",
+    "plaintext": "next target for me will be aurora pharma",
+    "flag": "flag{Aurora Pharma}",
+    "chain": [
+      "Caesar (shift 18)"
+    ],
+    "notes": "Caesar cipher, encryption shift 18 (decrypt by shifting +8). The challenge presented the text in an image; the writeup transcribes it as text. Flag is the target name wrapped as flag{Aurora Pharma}"
+  },
+  {
+    "id": "deadface-2023-off-the-rails",
+    "event": "DEADFACE CTF 2023",
+    "year": 2023,
+    "challenge": "Off the Rails",
+    "category": "Cryptography",
+    "source_url": "https://ctftime.org/writeup/38041",
+    "ciphertext": "IOBTSHIASKLENJOCMEUAGTGLTNTUYUIIOTEALHVAPOYALWEADNOSMSAYOISORLGSHSADHUSSRBTNRSEOHONEYERVYFIONO",
+    "plaintext": "ITSNOTRUBYBUTITISONTHERAILSHAVEASPOOKYHALLOWEENANDENJOYSOMESCARYMOVIESYOURFLAGISGHOSTANDGHOULS",
+    "flag": "flag{ghostandghouls}",
+    "chain": [
+      "Rail fence"
+    ],
+    "notes": "Rail fence with 3 rails, offset 0. Plaintext says 'YOUR FLAG IS GHOSTANDGHOULS'; the writeup prints the flag as flag{ghostandghoulss} (likely a typo), recorded here as flag{ghostandghouls}"
+  },
+  {
+    "id": "deconstructf-2023-move",
+    "event": "DeconstruCT.F 2023",
+    "year": 2023,
+    "challenge": "MOVE",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/D13David/ctf-writeups/main/deconstructf23/crypto/move/README.md",
+    "ciphertext": "U_E}M28NWV5?28S~",
+    "plaintext": "DSC{V17_QU4L17Y}",
+    "flag": "DSC{V17_QU4L17Y}",
+    "chain": [
+      "ROT13",
+      "Keyboard shift (Dvorak)"
+    ],
+    "notes": "ROT13 gives H_R}Z28AJI5?28F~; then keyboard shift on the US Dvorak layout, one key to the right (decode = take the key to the left, wrapping within the row, shifted/unshifted rows kept). Challenge file KEY.txt: https://raw.githubusercontent.com/D13David/ctf-writeups/main/deconstructf23/crypto/move/KEY.txt"
+  },
+  {
+    "id": "htb-cyber-apocalypse-2023-ancient-encodings",
+    "event": "HTB Cyber Apocalypse 2023",
+    "year": 2023,
+    "challenge": "Ancient Encodings",
+    "category": "Crypto",
+    "source_url": "https://github.com/jon-brandy/hackthebox/blob/main/Categories/Cryptography/Ancient%20Encodings/README.md",
+    "ciphertext": "0x53465243657a51784d56383361444e664d32356a4d475178626a6c664e44497a5832677a4d6a4e664e7a42664e5463306558303d",
+    "plaintext": "HTB{411_7h3_3nc0d1n9_423_h323_70_574y}",
+    "flag": "HTB{411_7h3_3nc0d1n9_423_h323_70_574y}",
+    "chain": [
+      "Hexadecimal",
+      "Base64"
+    ],
+    "notes": "hex(bytes_to_long(b64encode(FLAG))): strip the 0x prefix, hex-decode, then Base64-decode."
+  },
+  {
+    "id": "ideh-v4-fundatur",
+    "event": "IDEH V4 (Moroccan Cybersecurity Day CTF)",
+    "year": 2023,
+    "challenge": "Fundatur",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/BaadMaro/CTF/main/IDEH%20V4/Cryptography/Fundatur/README.md",
+    "ciphertext": "IRKFS6SOLBFFUMTRGVVTOWTLGZCGSR3ZJBIEE22MNRVFONCPNJHGCTZV",
+    "plaintext": "IDEH{b4se_62_then_b4se_32}",
+    "flag": "IDEH{b4se_62_then_b4se_32}",
+    "chain": [
+      "Base32",
+      "Base62"
+    ],
+    "notes": "Base32 gives DTYzNXJZ2q5k7Zk6DiGyHPBkLljW4OjNaO5, which is Base62 (alphabet 0-9A-Za-z, big-integer style, as CyberChef From_Base62) of the flag."
+  },
+  {
+    "id": "jerseyctf-2023-jack-and-jill",
+    "event": "JerseyCTF III",
+    "year": 2023,
+    "challenge": "jack-and-jill",
+    "category": "Crypto",
+    "source_url": "https://ctftime.org/writeup/36829",
+    "ciphertext": "pgQVJFCohpccuyBSbwxcxpVZCAATRT",
+    "plaintext": "hitherewelcometolinearalgebraz",
+    "flag": "jctf{hiTHEREwelcomeTOlinearALGEBRAZ}",
+    "chain": [
+      "Hill cipher"
+    ],
+    "notes": "Hill cipher with the given 2x2 key matrix [[3,9],[4,7]] (column-vector convention). Decryption is case-insensitive; the submitted flag kept the ciphertext's letter cases: jctf{hiTHEREwelcomeTOlinearALGEBRAZ}"
+  },
+  {
+    "id": "jerseyctf-2023-roko-cipher-in-the-console",
+    "event": "JerseyCTF III",
+    "year": 2023,
+    "challenge": "roko-cipher-in-the-console",
+    "category": "Crypto",
+    "source_url": "https://ctftime.org/writeup/36828",
+    "ciphertext": "f1stg}th10_ej{s__act_nam",
+    "plaintext": "jctf{th1s_1s_n0t_a_game}",
+    "flag": "jctf{th1s_1s_n0t_a_game}",
+    "chain": [
+      "Columnar transposition"
+    ],
+    "notes": "Transposition: write the 24 chars in 4 rows of 6, then read column by column taking rows in the order 3,4,2,1"
+  },
+  {
+    "id": "moectf-2023-base-band",
+    "event": "MoeCTF 2023",
+    "year": 2023,
+    "challenge": "base乐队",
+    "category": "Misc",
+    "source_url": "https://raw.githubusercontent.com/XDSEC/MoeCTF_2023/main/Challenges/Misc/base%E4%B9%90%E9%98%9F/base%E4%B9%90%E9%98%9F.txt",
+    "ciphertext": "HFUEULC5HEZG42DGHFGDWSCTHRCUIUSVHFGDWS2EGZMCCRDKG5XG2LDEHFUTYYZGHJSUMKKDGVZDELBRHBIW4UCQGZLGOP2SHEYV44ZOHEZFYXCZHEYUIV2VGEXVK4KRHBWFWY2OHVMWSYCKG5XFCZTBHEZC6I2WHJST2ZK4HEXTSMDSHA3CKZRZGRNHI4LL",
+    "plaintext": "moectf{Th4_6@nd_1nc1ud45_F3nc4_@nd_b@s3}",
+    "flag": "moectf{Th4_6@nd_1nc1ud45_F3nc4_@nd_b@s3}",
+    "chain": [
+      "Base32",
+      "Ascii85",
+      "Base32",
+      "Scytale",
+      "Base64"
+    ],
+    "notes": "Base32 -> Ascii85 (Adobe/btoa alphabet, no <~ ~> delimiters) -> Base32 gives the 56-char string bYeNQXYZXbXZQfW31FGzzD0m0FHQ9RR85FFQYMB9M=lmo2ku11z0uiz= ; scytale: write it in rows of 14 (4 rows) and read column by column (i.e. take chars at stride 14) -> bW9lY3Rme1RoNF82QG5kXzFuYzF1ZDQ1X0YzbmM0X0BuZF9iQHMzfQ== -> Base64. Writeup (XDSEC official repo): https://github.com/XDSEC/MoeCTF_2023/blob/main/WriteUps/constellation/Misc/base%E4%B9%90%E9%98%9F.md"
+  },
+  {
+    "id": "picoctf-2023-hidetosee",
+    "event": "picoCTF 2023",
+    "year": 2023,
+    "challenge": "HideToSee",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2023/Cryptography/HideToSee.md",
+    "ciphertext": "krxlXGU{zgyzhs_xizxp_92533667}",
+    "plaintext": "picoCTF{atbash_crack_92533667}",
+    "flag": "picoCTF{atbash_crack_92533667}",
+    "chain": [
+      "Atbash"
+    ],
+    "notes": "Atbash. The string is the text file extracted from atbash.jpg with steghide (empty passphrase); the decoding step itself is pure Atbash. Per-instance flag suffix."
+  },
+  {
+    "id": "picoctf-2023-repetitions",
+    "event": "picoCTF 2023",
+    "year": 2023,
+    "challenge": "repetitions",
+    "category": "General Skills",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2023/General_Skills/repetitions.md",
+    "ciphertext": "VmpGU1EyRXlUWGxTYmxKVVYwZFNWbGxyV21GV1JteDBUbFpPYWxKdFVsaFpWVlUxWVZaS1ZWWnVhRmRXZWtab1dWWmtSMk5yTlZWWApiVVpUVm10d1VWZFdVa2RpYlZaWFZtNVdVZ3BpU0VKeldWUkNkMlZXVlhoWGJYQk9VbFJXU0ZkcVRuTldaM0JZVWpGS2VWWkdaSGRXCk1sWnpWV3hhVm1KRk5XOVVWVkpEVGxaYVdFMVhSbFZhTTBKUFdXdGtlbVF4V2tkWGJYUllDbUY2UWpSWmEyaFRWakpHZEdWRlZsaGkKYlRrelZERldUMkpzUWxWTlJYTkxDZz09Cg==",
+    "plaintext": "picoCTF{base64_n3st3d_dic0d!n8_d0wnl04d3d_3f81f7be}\n",
+    "flag": "picoCTF{base64_n3st3d_dic0d!n8_d0wnl04d3d_3f81f7be}",
+    "chain": [
+      "Base64",
+      "Base64",
+      "Base64",
+      "Base64",
+      "Base64",
+      "Base64"
+    ],
+    "notes": "Six nested layers of Base64 (the file is line-wrapped at 76 chars; intermediate layers contain newlines). Final plaintext ends with a newline."
+  },
+  {
+    "id": "picoctf-2023-rotation",
+    "event": "picoCTF 2023",
+    "year": 2023,
+    "challenge": "rotation",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/snwau/picoCTF-2023-Writeup/main/Cryptography/rotation/rotation.md",
+    "ciphertext": "xqkwKBN{z0bib1wv_l3kzgxb3l_25l7k61j}",
+    "plaintext": "picoCTF{r0tat1on_d3crypt3d_25d7c61b}",
+    "flag": "picoCTF{r0tat1on_d3crypt3d_25d7c61b}",
+    "chain": [
+      "Caesar (shift 8)"
+    ],
+    "notes": "Caesar: decrypt by rotating forward 18 (ROT18), i.e. encrypted with shift 8. Per-instance flag suffix."
+  },
+  {
+    "id": "picogym-ascii-numbers",
+    "event": "picoGym (Challenge Library Exclusive)",
+    "year": 2023,
+    "challenge": "ASCII Numbers",
+    "category": "General Skills",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/Challenge_Library_Exclusive/General_Skills/ASCII_Numbers.md",
+    "ciphertext": "0x70 0x69 0x63 0x6f 0x43 0x54 0x46 0x7b 0x34 0x35 0x63 0x31 0x31 0x5f 0x6e 0x30 0x5f 0x71 0x75 0x33 0x35 0x37 0x31 0x30 0x6e 0x35 0x5f 0x31 0x6c 0x6c 0x5f 0x74 0x33 0x31 0x31 0x5f 0x79 0x33 0x5f 0x6e 0x30 0x5f 0x6c 0x31 0x33 0x35 0x5f 0x34 0x34 0x35 0x64 0x34 0x31 0x38 0x30 0x7d",
+    "plaintext": "picoCTF{45c11_n0_qu35710n5_1ll_t311_y3_n0_l135_445d4180}",
+    "flag": "picoCTF{45c11_n0_qu35710n5_1ll_t311_y3_n0_l135_445d4180}",
+    "chain": [
+      "Hexadecimal"
+    ],
+    "notes": "Space-separated 0x-prefixed hex ASCII codes."
+  },
+  {
+    "id": "tfcctf-2023-mayday",
+    "event": "TFC CTF 2023",
+    "year": 2023,
+    "challenge": "MAYDAY!",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/sajjadium/ctf-archives/main/ctfs/TFC/2023/crypto/MAYDAY/README.md",
+    "ciphertext": "Whiskey Hotel Four Tango Dash Alpha Romeo Three Dash Yankee Oscar Uniform Dash Sierra One November Kilo India November Golf Dash Four Bravo Zero Uniform Seven",
+    "plaintext": "WH4T-AR3-YOU-S1NKING-4B0U7",
+    "flag": "TFCCTF{WH4T-AR3-YOU-S1NKING-4B0U7}",
+    "chain": [
+      "NATO phonetic alphabet"
+    ],
+    "notes": "NATO phonetic alphabet with spelled-out digits (Four, Three, One, Zero, Seven) and 'Dash' for '-'. Flag format TFCCTF{RESUL7-H3R3}. Source is the challenge text archived in sajjadium/ctf-archives; flag confirmed by writeup https://yocchin.hatenablog.com/entry/2023/08/01/213500"
+  },
+  {
+    "id": "wolvctf-2023-switcharoo",
+    "event": "WolvCTF 2023",
+    "year": 2023,
+    "challenge": "Switcharoo",
+    "category": "Misc",
+    "source_url": "https://ctftime.org/writeup/37656",
+    "ciphertext": "YmN0ZntoMzExMF93MHIxZF9nMWY3X2ZyMG1fN2gzX2IwMWxlcl9zMWQzfQ==",
+    "plaintext": "bctf{h3110_w0r1d_g1f7_fr0m_7h3_b01ler_s1d3}",
+    "flag": "bctf{h3110_w0r1d_g1f7_fr0m_7h3_b01ler_s1d3}",
+    "chain": [
+      "Base64"
+    ],
+    "notes": "Base64 'gift' given in the WolvCTF challenge description; it decodes to the flag of the paired b01lers CTF 2023 challenge 'switcheroo'"
+  },
+  {
+    "id": "wolvctf-2023-switcharoo-2",
+    "event": "WolvCTF 2023",
+    "year": 2023,
+    "challenge": "Switcharoo",
+    "category": "Misc",
+    "source_url": "https://ctftime.org/writeup/36420",
+    "ciphertext": "d2N0ZntNNDF6M180bmRfQmx1M30K",
+    "plaintext": "wctf{M41z3_4nd_Blu3}\n",
+    "flag": "wctf{M41z3_4nd_Blu3}",
+    "chain": [
+      "Base64"
+    ],
+    "notes": "Base64 string taken from the b01lers CTF 2023 'switcheroo' description; decodes to the WolvCTF flag plus a trailing newline"
+  },
+  {
+    "id": "downunderctf-2024-intercepted-transmissions",
+    "event": "DownUnderCTF 2024",
+    "year": 2024,
+    "challenge": "Intercepted Transmissions",
+    "category": "Beginner / Misc",
+    "source_url": "https://raw.githubusercontent.com/DownUnderCTF/Challenges_2024_Public/main/beginner/intercepted-transmissions/publish/encoding",
+    "ciphertext": "101101001101101101001110100110110101110100110100101101101010110101110010110100101110100111001101100101101101101000111100011110011011010101011001011101101010010111011100100011110101010110110101011010111001011010110100101101101010110101101011001011010011101110001101100101110101101010110011011100001101101101101010101101101000111010110110010111010110101100101100110111101000101011101110001101101101001010111001011101110001010111001011100011011",
+    "plaintext": "##TH3 QU0KK4'S AR3 H3LD 1N F4C1LITY #11911!",
+    "flag": "DUCTF{##TH3 QU0KK4'S AR3 H3LD 1N F4C1LITY #11911!}",
+    "chain": [
+      "CCIR476"
+    ],
+    "notes": "CCIR 476 (SITOR/ITA2-style 7-bit radioteletype code): 7 bits per symbol, LTRS (1011010) and FIGS (0110110) shift codes, 1011100 = space. US figures variant (H->#, F->!, S->'). The organisers also accepted ...QU0KK4BELLS... (ITU variant where S-figure is BELL). Challenge: wrap the decoded message in DUCTF{}"
+  },
+  {
+    "id": "htb-cyber-apocalypse-2024-dynastic",
+    "event": "HTB Cyber Apocalypse 2024",
+    "year": 2024,
+    "challenge": "Dynastic",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/CheesyChocolate/Cyber_Apocalypse_2024/master/crypto_Dynastic/crypto_dynastic/output.txt",
+    "ciphertext": "DJF_CTA_SWYH_NPDKK_MBZ_QPHTIGPMZY_KRZSQE?!_ZL_CN_PGLIMCU_YU_KJODME_RYGZXL",
+    "plaintext": "DID_YOU_KNOW_ABOUT_THE_TRITHEMIUS_CIPHER?!_IT_IS_SIMILAR_TO_CAESAR_CIPHER",
+    "flag": "HTB{DID_YOU_KNOW_ABOUT_THE_TRITHEMIUS_CIPHER?!_IT_IS_SIMILAR_TO_CAESAR_CIPHER}",
+    "chain": [
+      "Trithemius"
+    ],
+    "notes": "Trithemius cipher: letter at index i (0-based, counting non-letters too) is shifted by i; non-letters unchanged. output.txt also contains the line 'Make sure you wrap the decrypted text with the HTB flag format :-]'. Official writeup: https://github.com/hackthebox/cyber-apocalypse-2024"
+  },
+  {
+    "id": "jerseyctf-2024-attn-agents",
+    "event": "JerseyCTF IV",
+    "year": 2024,
+    "challenge": "Attn-Agents",
+    "category": "Crypto",
+    "source_url": "https://raw.githubusercontent.com/Nightxade/ctf-writeups/master/assets/CTFs/Jersey-CTF-IV-2024/ATTN.txt",
+    "ciphertext": "Dwwhqwlrq MFWI djhqwv! Dq xqnqrzq DSW lv klmdfnlqj qhwzrunv wr vsuhdg vwhdowk pdozduh xvlqj vwrohq vrxufh frgh. Brxu plvvlrq: wudfn grzq wkh vrxufh ri wkh ohdnv dqg vwrs wkh zlgh-vsuhdg dwwdfnv dfurvv rxu qhwzrunv. Wlph lv uxqqlqj rxw. Wkh {idwh-ri-wkh-zhe} lv lq brxu kdqgv!",
+    "plaintext": "Attention JCTF agents! An unknown APT is hijacking networks to spread stealth malware using stolen source code. Your mission: track down the source of the leaks and stop the wide-spread attacks across our networks. Time is running out. The {fate-of-the-web} is in your hands!",
+    "flag": "jctf{fate-of-the-web}",
+    "chain": [
+      "Caesar (shift 3)"
+    ],
+    "notes": "Caesar cipher shift 3 (encryption); the braced phrase becomes the flag jctf{fate-of-the-web}"
+  },
+  {
+    "id": "n00bzctf-2024-brain",
+    "event": "n00bzCTF 2024",
+    "year": 2024,
+    "challenge": "Brain",
+    "category": "Misc",
+    "source_url": "https://moormaster.github.io/CtfWriteups/brain.html",
+    "ciphertext": ">+++++++++++[<++++++++++>-]<[-]>++++++++[<++++++>-]<[-]>++++++++[<++++++>-]<[-]>++++++++++++++[<+++++++>-]<[-]>+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[<++>-]<[-]>+++++++++++++++++++++++++++++++++++++++++[<+++>-]<[-]>+++++++[<+++++++>-]<[-]>+++++++++++++++++++[<+++++>-]<[-]>+++++++++++[<+++++++++>-]<[-]>+++++++++++++[<++++>-]<[-]>+++++++++++[<++++++++++>-]<[-]>+++++++++++++++++++[<+++++>-]<[-]>+++++++++++[<+++++++++>-]<[-]>++++++++[<++++++>-]<[-]>++++++++++[<++++++++++>-]<[-]>+++++++++++++++++[<+++>-]<[-]>+++++++++++++++++++[<+++++>-]<[-]>+++++++[<+++++++>-]<[-]>+++++++++++[<++++++++++>-]<[-]>+++++++++++++++++++[<+++++>-]<[-]>++++++++++++++[<+++++++>-]<[-]>+++++++++++++++++++[<++++++>-]<[-]>+++++++++++++[<++++>-]<[-]>+++++++[<+++++++>-]<[-]>+++++++++++[<++++++++++>-]<[-]>+++++++++++++++++[<++++++>-]<[-]>+++++++[<++++++>-]<[-]>+++++++++++[<+++++++++>-]<[-]>+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[<+>-]<[-]>+++++++++++[<+++>-]<[-]>+++++++++++++++++++++++++[<+++++>-]<[-]",
+    "plaintext": "n00bz{1_c4n_c0d3_1n_br41nf*ck!}",
+    "flag": "n00bz{1_c4n_c0d3_1n_br41nf*ck!}",
+    "chain": [
+      "Brainfuck"
+    ],
+    "notes": "Brainfuck program that computes each flag character into a cell and then clears it with [-] without ever printing (no '.' commands). Running it as-is outputs nothing; insert '.' before each '[-]' (or dump cell values) to read the flag"
+  },
+  {
+    "id": "n00bzctf-2024-vinegar",
+    "event": "n00bzCTF 2024",
+    "year": 2024,
+    "challenge": "Vinegar",
+    "category": "Crypto",
+    "source_url": "https://ctftime.org/writeup/39382",
+    "ciphertext": "nmivrxbiaatjvvbcjsf",
+    "plaintext": "vigenerecipherisfun",
+    "flag": "n00bz{vigenerecipherisfun}",
+    "chain": [
+      "Vigenère"
+    ],
+    "notes": "Vigenère with the given key 'secretkey'; flag wrapped in n00bz{}"
+  },
+  {
+    "id": "picoctf-2024-interencdec",
+    "event": "picoCTF 2024",
+    "year": 2024,
+    "challenge": "interencdec",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2024/Cryptography/interencdec.md",
+    "ciphertext": "YidkM0JxZGtwQlRYdHFhR3g2YUhsZmF6TnFlVGwzWVROclh6ZzJhMnd6TW1zeWZRPT0nCg==",
+    "plaintext": "picoCTF{caesar_d3cr9pt3d_86de32d2}",
+    "flag": "picoCTF{caesar_d3cr9pt3d_86de32d2}",
+    "chain": [
+      "Base64",
+      "Python bytes literal b'...'",
+      "Base64",
+      "Caesar (shift 7)"
+    ],
+    "notes": "Base64 -> b'd3BqdkpBTXtqaGx6aHlfazNqeTl3YTNrXzg2a2wzMmsyfQ==' (strip the b'' literal) -> Base64 -> wpjvJAM{jhlzhy_k3jy9wa3k_86kl32k2} -> Caesar shift 7 (decrypt by -7). Per-instance flag suffix."
+  },
+  {
+    "id": "picoctf-2025-cookie-monster-secret-recipe",
+    "event": "picoCTF 2025",
+    "year": 2025,
+    "challenge": "Cookie Monster Secret Recipe",
+    "category": "Web Exploitation",
+    "source_url": "https://raw.githubusercontent.com/Cajac/picoCTF-Writeups/main/picoCTF_2025/Web_Exploitation/Cookie_Monster_Secret_Recipe.md",
+    "ciphertext": "cGljb0NURntjMDBrMWVfbTBuc3Rlcl9sMHZlc19jMDBraWVzXzZDMkZCN0YzfQ%3D%3D",
+    "plaintext": "picoCTF{c00k1e_m0nster_l0ves_c00kies_6C2FB7F3}",
+    "flag": "picoCTF{c00k1e_m0nster_l0ves_c00kies_6C2FB7F3}",
+    "chain": [
+      "URL",
+      "Base64"
+    ],
+    "notes": "Cookie value: URL-encoded (%3D = '=') Base64. Per-instance flag suffix."
+  },
+  {
+    "id": "utctf-2025-autokey-cipher",
+    "event": "UTCTF 2025",
+    "year": 2025,
+    "challenge": "Autokey Cipher",
+    "category": "Cryptography",
+    "source_url": "https://raw.githubusercontent.com/utisss/UTCTF-25/main/crypto-autokey/challenge.yml",
+    "ciphertext": "lpqwma{rws_ywpqaauad_rrqfcfkq_wuey_ifwo_xlkvxawjh_pkbgrzf}",
+    "plaintext": "utflag{why_frequency_analysis_when_know_beginning_letters}",
+    "flag": "utflag{why_frequency_analysis_when_know_beginning_letters}",
+    "chain": [
+      "Vigenère Autokey"
+    ],
+    "notes": "Plaintext-autokey (Vigenère autokey), primer key 'rwllmuvp' (8 letters, recovered from the known 'utflag' prefix). Non-letters ({ _ }) pass through. Official writeup: https://github.com/utisss/UTCTF-25/blob/main/crypto-autokey/README.md"
+  }
+]

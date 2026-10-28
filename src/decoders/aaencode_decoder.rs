@@ -1,0 +1,694 @@
+//! Decode AAEncode, Yosuke Hasegawa's encoding of JavaScript as Japanese-style emoticons
+//! (`ﾟωﾟﾉ= /｀ｍ´）ﾉ ~┻━┻ …`), back to the JavaScript source. Nothing is executed.
+//!
+//! An AAEncode program is a preamble of about 900 characters that is the same for every
+//! input, then the payload:
+//!
+//! ```text
+//! (ﾟДﾟ)['_']((ﾟДﾟ)['_'](ﾟεﾟ+(ﾟДﾟ)[ﾟoﾟ]+ <escapes> +(ﾟДﾟ)[ﾟoﾟ])(ﾟΘﾟ))('_');
+//! ```
+//!
+//! The preamble makes `(ﾟДﾟ)['_']` the `Function` constructor, `ﾟεﾟ` the string `return`
+//! and `(ﾟДﾟ)[ﾟoﾟ]` a quote character, so the payload is
+//! `Function(Function('return"\143\157…"')(1))('_')`: the inner function returns the
+//! string literal, which is the source, and the outer one runs it. Each UTF-16 code unit
+//! of the source is one escape in that literal: a backslash and the unit's octal digits if
+//! it is 127 or less (`c` is `\143`), else a backslash, `u` and four hex digits (`é` is
+//! `\u00e9`). Every backslash, digit and `u` is one of the fixed expressions in
+//! [`TOKENS`], so the source is read straight back from the expressions.
+//!
+//! The rules:
+//!
+//! * The program starts with `ﾟωﾟﾉ`, after any leading whitespace, and ends with
+//!   `('_');` or `("_");`. Whitespace anywhere is ignored, so a program can be wrapped,
+//!   have CRLFs, a trailing newline or no spaces at all.
+//! * Both spellings decode: the original encoder at utf-8.jp writes `['_']`, `['c']` and
+//!   `('_')`, and npm `aaencode-cli` writes `["_"]`, `["c"]` and `("_")`.
+//! * The payload has to be exactly what the encoder writes; anything else is not
+//!   AAEncode. The preamble isn't checked, so the statement the utf-8.jp encoder adds to
+//!   it for one particular plaintext doesn't matter.
+//! * The source has to be valid UTF-16 (characters above U+FFFF arrive as surrogate
+//!   pairs, since the encoder works on `charCodeAt`) and not empty.
+//!
+//! References: the encoder in the source of <https://utf-8.jp/public/aaencode.html>,
+//! `index.js` of npm `aaencode-cli` 0.0.2 (<https://www.npmjs.com/package/aaencode-cli>),
+//! and cat-in-136's AADecode, which de4js uses
+//! (<https://github.com/lelinhtinh/de4js/blob/master/third_party/cat-in-136/aadecode.js>).
+//! AADecode decodes by running the payload with `eval`.
+
+use crate::checkers::CheckerTypes;
+use crate::decoders::interface::check_string_success;
+
+use super::crack_results::CrackResult;
+use super::interface::Crack;
+use super::interface::Decoder;
+
+use log::{debug, trace};
+
+/// How every AAEncode program starts: the variable `ﾟωﾟﾉ`. Its first byte is 0xEF, so
+/// ASCII text and the inputs of the other decoders fail this check on their first byte.
+const HEAD: &str = "ﾟωﾟﾉ";
+
+/// What comes right before the escapes, without whitespace, in the utf-8.jp and npm
+/// spellings: `(ﾟДﾟ)['_']((ﾟДﾟ)['_'](ﾟεﾟ+`.
+const PAYLOAD_STARTS: [&str; 2] = ["(ﾟДﾟ)['_']((ﾟДﾟ)['_'](ﾟεﾟ+", "(ﾟДﾟ)[\"_\"]((ﾟДﾟ)[\"_\"](ﾟεﾟ+"];
+
+/// How the program ends, without whitespace, in both spellings: `)(ﾟΘﾟ))('_');`.
+const PAYLOAD_ENDS: [&str; 2] = [")(ﾟΘﾟ))('_');", ")(ﾟΘﾟ))(\"_\");"];
+
+/// An expression in the payload.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Token {
+    /// A digit from 0 to 15
+    Digit(u8),
+    /// A backslash, the start of an escape
+    Backslash,
+    /// The `u` of a `\u` escape
+    U,
+    /// The quote on each side of the string literal
+    Quote,
+}
+
+/// Every expression the encoder writes in the payload, without whitespace, and what it
+/// stands for. The digits 0 to 9 are sums of `(c^_^o)` = 0, `(ﾟΘﾟ)` = 1, `(o^_^o)` = 3
+/// and `(ﾟｰﾟ)` = 4. The letters `a` to `f` and the `u` are characters of `"false"`,
+/// `"undefined"`, `"true"` and `"[object Object]"` that the preamble stores in
+/// variables, and so are the backslash and the quote. Only `c` is spelled with quotes, so
+/// it is listed in both spellings. No expression is a prefix of another, so at most one
+/// matches.
+const TOKENS: [(&str, Token); 20] = [
+    ("(c^_^o)", Token::Digit(0)),
+    ("(ﾟΘﾟ)", Token::Digit(1)),
+    ("((o^_^o)-(ﾟΘﾟ))", Token::Digit(2)),
+    ("(o^_^o)", Token::Digit(3)),
+    ("(ﾟｰﾟ)", Token::Digit(4)),
+    ("((ﾟｰﾟ)+(ﾟΘﾟ))", Token::Digit(5)),
+    ("((o^_^o)+(o^_^o))", Token::Digit(6)),
+    ("((ﾟｰﾟ)+(o^_^o))", Token::Digit(7)),
+    ("((ﾟｰﾟ)+(ﾟｰﾟ))", Token::Digit(8)),
+    ("((ﾟｰﾟ)+(ﾟｰﾟ)+(ﾟΘﾟ))", Token::Digit(9)),
+    ("(ﾟДﾟ).ﾟωﾟﾉ", Token::Digit(10)),
+    ("(ﾟДﾟ).ﾟΘﾟﾉ", Token::Digit(11)),
+    ("(ﾟДﾟ)['c']", Token::Digit(12)),
+    ("(ﾟДﾟ)[\"c\"]", Token::Digit(12)),
+    ("(ﾟДﾟ).ﾟｰﾟﾉ", Token::Digit(13)),
+    ("(ﾟДﾟ).ﾟДﾟﾉ", Token::Digit(14)),
+    ("(ﾟДﾟ)[ﾟΘﾟ]", Token::Digit(15)),
+    ("(ﾟДﾟ)[ﾟεﾟ]", Token::Backslash),
+    ("(oﾟｰﾟo)", Token::U),
+    ("(ﾟДﾟ)[ﾟoﾟ]", Token::Quote),
+];
+
+/// The AAEncode decoder, call:
+/// `let aaencode_decoder = Decoder::<AAEncodeDecoder>::new()` to create a new instance
+/// And then call:
+/// `result = aaencode_decoder.crack(input)` to decode an AAEncode program
+/// The struct generated by new() comes from interface.rs
+/// ```
+/// use ciphey::decoders::aaencode_decoder::AAEncodeDecoder;
+/// use ciphey::decoders::interface::{Crack, Decoder};
+/// use ciphey::checkers::{athena::Athena, CheckerTypes, checker_type::{Check, Checker}};
+///
+/// let aaencode_decoder = Decoder::<AAEncodeDecoder>::new();
+/// let athena_checker = Checker::<Athena>::new();
+/// let checker = CheckerTypes::CheckAthena(athena_checker);
+///
+/// // The example in issue #988, made by npm aaencode-cli 0.0.2 (1,660 characters)
+/// let program = concat!(
+///     r#"ﾟωﾟﾉ= /｀ｍ´）ﾉ ~┻━┻   //*´∇｀*/ ["_"]; o=(ﾟｰﾟ)  =_=3; c=(ﾟΘﾟ) =(ﾟｰﾟ)-(ﾟｰﾟ); "#,
+///     // ... the rest of the 1,660 characters ...
+/// #   r#"(ﾟДﾟ) =(ﾟΘﾟ)= (o^_^o)/ (o^_^o);(ﾟДﾟ)={ﾟΘﾟ: "_" ,ﾟωﾟﾉ : ((ﾟωﾟﾉ==3) +"_") [ﾟΘﾟ] ,ﾟｰﾟﾉ :(ﾟωﾟﾉ+ "#,
+/// #   r#""_")[o^_^o -(ﾟΘﾟ)] ,ﾟДﾟﾉ:((ﾟｰﾟ==3) +"_")[ﾟｰﾟ] }; (ﾟДﾟ) [ﾟΘﾟ] =((ﾟωﾟﾉ==3) +"_") [c^_^o];"#,
+/// #   r#"(ﾟДﾟ) ["c"] = ((ﾟДﾟ)+"_") [ (ﾟｰﾟ)+(ﾟｰﾟ)-(ﾟΘﾟ) ];(ﾟДﾟ) ["o"] = ((ﾟДﾟ)+"_") [ﾟΘﾟ];"#,
+/// #   r#"(ﾟoﾟ)=(ﾟДﾟ) ["c"]+(ﾟДﾟ) ["o"]+(ﾟωﾟﾉ +"_")[ﾟΘﾟ]+ ((ﾟωﾟﾉ==3) +"_") [ﾟｰﾟ] + "#,
+/// #   r#"((ﾟДﾟ) +"_") [(ﾟｰﾟ)+(ﾟｰﾟ)]+ ((ﾟｰﾟ==3) +"_") [ﾟΘﾟ]+((ﾟｰﾟ==3) +"_") [(ﾟｰﾟ) - (ﾟΘﾟ)]+(ﾟДﾟ) ["c"]+((ﾟДﾟ)+"_") [(ﾟｰﾟ)+(ﾟｰﾟ)]+ "#,
+/// #   r#"(ﾟДﾟ) ["o"]+((ﾟｰﾟ==3) +"_") [ﾟΘﾟ];(ﾟДﾟ) ["_"] =(o^_^o) [ﾟoﾟ] [ﾟoﾟ];(ﾟεﾟ)=((ﾟｰﾟ==3) +"_") [ﾟΘﾟ]+ "#,
+/// #   r#"(ﾟДﾟ) .ﾟДﾟﾉ+((ﾟДﾟ)+"_") [(ﾟｰﾟ) + (ﾟｰﾟ)]+((ﾟｰﾟ==3) +"_") [o^_^o -ﾟΘﾟ]+((ﾟｰﾟ==3) +"_") [ﾟΘﾟ]+ "#,
+/// #   r#"(ﾟωﾟﾉ +"_") [ﾟΘﾟ]; (ﾟｰﾟ)+=(ﾟΘﾟ); (ﾟДﾟ)[ﾟεﾟ]="\\"; (ﾟДﾟ).ﾟΘﾟﾉ=(ﾟДﾟ+ ﾟｰﾟ)[o^_^o -(ﾟΘﾟ)];"#,
+/// #   r#"(oﾟｰﾟo)=(ﾟωﾟﾉ +"_")[c^_^o];(ﾟДﾟ) [ﾟoﾟ]="\'";(ﾟДﾟ) ["_"] ( (ﾟДﾟ) ["_"] (ﾟεﾟ+(ﾟДﾟ)[ﾟoﾟ]+ "#,
+/// #   r#"(ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (ﾟｰﾟ)+ (o^_^o)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ ((ﾟｰﾟ) + "#,
+/// #   r#"(o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ ((o^_^o) +(o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ "#,
+/// #   r#"((o^_^o) +(o^_^o))+ (o^_^o)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ ((ﾟｰﾟ) + "#,
+/// #   r#"(o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟｰﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (ﾟｰﾟ)+ "#,
+/// #   r#"((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟДﾟ)[ﾟεﾟ]+((ﾟｰﾟ) + (ﾟΘﾟ))+ ((o^_^o) +(o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ "#,
+/// #   r#"((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟｰﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ ((ﾟｰﾟ) + (o^_^o))+ "#,
+/// #   r#"(ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (ﾟｰﾟ)+ ((ﾟｰﾟ) + (o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+((ﾟｰﾟ) + (ﾟΘﾟ))+ "#,
+/// #   r#"(c^_^o)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟｰﾟ)+ ((o^_^o) - (ﾟΘﾟ))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + "#,
+/// #   r#"(ﾟΘﾟ))+ (c^_^o)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟΘﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟｰﾟ)+ "#,
+/// #   r#"((o^_^o) - (ﾟΘﾟ))+ (ﾟДﾟ)[ﾟεﾟ]+((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟΘﾟ)+ "#,
+///     r#"(ﾟДﾟ)[ﾟoﾟ]) (ﾟΘﾟ)) ("_");"#,
+/// );
+/// let result = aaencode_decoder.crack(program, &checker);
+/// // Athena doesn't take this source for plaintext, so `result.success` is false, but
+/// // the source is the one candidate
+/// assert_eq!(result.unencrypted_text.unwrap()[0], r#"console.log("hi")"#);
+/// ```
+pub struct AAEncodeDecoder;
+
+impl Crack for Decoder<AAEncodeDecoder> {
+    fn new() -> Decoder<AAEncodeDecoder> {
+        Decoder {
+            name: "AAEncode",
+            description: "AAEncode (Yosuke Hasegawa) hides JavaScript in Japanese-style emoticons. The payload's escape sequences are read back directly; nothing is executed.",
+            link: "https://utf-8.jp/public/aaencode.html",
+            tags: vec!["aaencode", "javascript", "esoteric", "decoder", "program"],
+            popularity: 0.2,
+            phantom: std::marker::PhantomData,
+        }
+    }
+
+    /// Reads the JavaScript source back out of an AAEncode program and checks it: one
+    /// candidate, one checker call. Anything that doesn't start with `ﾟωﾟﾉ` fails on its
+    /// first byte.
+    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+        trace!("Trying AAEncode with text {:?}", text);
+        let mut results = CrackResult::new(self, text.to_string());
+
+        let Some(source) = decode(text) else {
+            debug!("Failed to decode AAEncode: the text isn't an AAEncode program");
+            return results;
+        };
+
+        if !check_string_success(&source, text) {
+            debug!(
+                "Failed to decode AAEncode because check_string_success returned false on string {}",
+                source
+            );
+            return results;
+        }
+
+        let checker_result = checker.check(&source);
+        results.unencrypted_text = Some(vec![source]);
+        results.update_checker(&checker_result);
+
+        results
+    }
+    /// Gets all tags for this decoder
+    fn get_tags(&self) -> &Vec<&str> {
+        &self.tags
+    }
+    /// Gets the name for the current decoder
+    fn get_name(&self) -> &str {
+        self.name
+    }
+    /// Gets the popularity for the current decoder
+    fn get_popularity(&self) -> f32 {
+        self.popularity
+    }
+    /// Gets the description for the current decoder
+    fn get_description(&self) -> &str {
+        self.description
+    }
+    /// Gets the link for the current decoder
+    fn get_link(&self) -> &str {
+        self.link
+    }
+}
+
+/// The JavaScript source of the AAEncode program `text`, or `None` if it isn't one. The
+/// checks, cheapest first:
+///
+/// 1. After leading whitespace, `text` starts with [`HEAD`]. Every other kind of input
+///    stops here.
+/// 2. With all whitespace removed, it ends with one of [`PAYLOAD_ENDS`] and contains one
+///    of [`PAYLOAD_STARTS`]. The payload is what lies between the last start and the end.
+/// 3. The payload is [`TOKENS`] joined by `+`: a quote, escapes and a quote
+///    ([`read_escapes`]).
+/// 4. The escapes make valid UTF-16, and at least one character.
+fn decode(text: &str) -> Option<String> {
+    let text = text.trim_start();
+    if !text.starts_with(HEAD) {
+        return None;
+    }
+    let program: String = text.chars().filter(|c| !c.is_whitespace()).collect();
+    let end = PAYLOAD_ENDS.iter().find(|end| program.ends_with(*end))?;
+    let start = PAYLOAD_STARTS
+        .iter()
+        .filter_map(|start| program.rfind(start).map(|at| at + start.len()))
+        .max()?;
+    let payload = program.get(start..program.len() - end.len())?;
+    let units = read_escapes(&tokenise(payload)?)?;
+    let source = String::from_utf16(&units).ok()?;
+    (!source.is_empty()).then_some(source)
+}
+
+/// Splits `payload` into its expressions, or `None` unless it is [`TOKENS`] joined by
+/// single `+`s.
+fn tokenise(mut payload: &str) -> Option<Vec<Token>> {
+    let mut tokens = Vec::new();
+    loop {
+        let &(expression, token) = TOKENS
+            .iter()
+            .find(|(expression, _)| payload.starts_with(expression))?;
+        tokens.push(token);
+        payload = &payload[expression.len()..];
+        if payload.is_empty() {
+            return Some(tokens);
+        }
+        payload = payload.strip_prefix('+')?;
+    }
+}
+
+/// The UTF-16 code units of the string literal that `tokens` spell: a quote, then escapes,
+/// then a quote. An escape is a backslash and 1 to 3 octal digits, up to 0o377, or a
+/// backslash, `u` and 4 hex digits. `None` for anything else.
+fn read_escapes(tokens: &[Token]) -> Option<Vec<u16>> {
+    let [Token::Quote, inside @ .., Token::Quote] = tokens else {
+        return None;
+    };
+    let mut units = Vec::with_capacity(inside.len() / 3);
+    let mut rest = inside;
+    while let [Token::Backslash, escape @ ..] = rest {
+        let (unit, length) = match escape {
+            [Token::U, Token::Digit(a), Token::Digit(b), Token::Digit(c), Token::Digit(d), ..] => {
+                let unit = [a, b, c, d]
+                    .into_iter()
+                    .fold(0, |unit, &digit| unit << 4 | u16::from(digit));
+                (unit, 5)
+            }
+            _ => octal_escape(escape)?,
+        };
+        units.push(unit);
+        rest = &escape[length..];
+    }
+    // A digit, `u` or quote that isn't part of an escape
+    rest.is_empty().then_some(units)
+}
+
+/// The code unit of the octal escape at the start of `escape` (after its backslash) and
+/// the number of digits it takes. The digits run to the next backslash or the end.
+fn octal_escape(escape: &[Token]) -> Option<(u16, usize)> {
+    let length = escape
+        .iter()
+        .take_while(|token| matches!(token, Token::Digit(_)))
+        .count();
+    if !(1..=3).contains(&length) {
+        return None;
+    }
+    let mut unit: u16 = 0;
+    for token in &escape[..length] {
+        match *token {
+            Token::Digit(digit) if digit < 8 => unit = unit * 8 + u16::from(digit),
+            _ => return None,
+        }
+    }
+    // JavaScript reads at most `\377` as one escape
+    (unit <= 0o377).then_some((unit, length))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::checkers::athena::Athena;
+    use crate::checkers::checker_type::{Check, Checker};
+
+    /// The Athena checker, as the search uses it
+    fn get_athena_checker() -> CheckerTypes {
+        let athena_checker = Checker::<Athena>::new();
+        CheckerTypes::CheckAthena(athena_checker)
+    }
+
+    /// Runs the decoder with the Athena checker
+    fn crack(text: &str) -> CrackResult {
+        Decoder::<AAEncodeDecoder>::new().crack(text, &get_athena_checker())
+    }
+
+    /// Asserts `program` decodes to `source`, whether or not Athena identifies it
+    #[track_caller]
+    fn assert_decodes(program: &str, source: &str) -> CrackResult {
+        let result = crack(program);
+        assert_eq!(
+            result.unencrypted_text,
+            Some(vec![source.to_string()]),
+            "{program:?}"
+        );
+        result
+    }
+
+    /// Asserts `program` decodes to `source` and Athena identifies it as plaintext
+    #[track_caller]
+    fn assert_cracks(program: &str, source: &str) {
+        let result = assert_decodes(program, source);
+        assert!(result.success, "{source:?} was not identified: {result:?}");
+        assert!(!result.checker_name.is_empty());
+    }
+
+    /// Asserts `text` is not decoded, without panicking
+    #[track_caller]
+    fn assert_rejected(text: &str) {
+        assert_eq!(decode(text), None, "{text:?}");
+        let result = crack(text);
+        assert!(!result.success, "{text:?}: {result:?}");
+        assert!(result.unencrypted_text.is_none(), "{text:?}: {result:?}");
+    }
+
+    // Reference vectors: `plaintext<TAB>program` per line, made by the two encoders (see
+    // the comment at the top of each file). Every program was decoded back to its
+    // plaintext in node 22 by cat-in-136's AADecode (the npm spelling with its quotes
+    // turned into the utf-8.jp spelling first, since AADecode only knows that one) and by
+    // running the program with the `Function` constructor replaced by one that records
+    // its argument.
+
+    /// Made by `aaencode()` in npm aaencode-cli 0.0.2's index.js (double quotes). The
+    /// first line is the example in issue #988, byte for byte.
+    const NPM_VECTORS: &str = include_str!("../../tests/test_fixtures/aaencode_npm.tsv");
+    /// Made by `aaencode()` in the source of https://utf-8.jp/public/aaencode.html
+    /// (single quotes), for the same plaintexts.
+    const UTF8JP_VECTORS: &str = include_str!("../../tests/test_fixtures/aaencode_utf8jp.tsv");
+
+    /// The `(plaintext, program)` pairs of a vector file
+    fn vectors(file: &str) -> Vec<(&str, &str)> {
+        file.lines()
+            .filter(|line| !line.starts_with('#'))
+            .map(|line| line.split_once('\t').expect("plaintext<TAB>program"))
+            .collect()
+    }
+
+    /// The program for `plaintext` in a vector file
+    fn program<'a>(file: &'a str, plaintext: &str) -> &'a str {
+        vectors(file)
+            .into_iter()
+            .find(|(text, _)| *text == plaintext)
+            .unwrap_or_else(|| panic!("no vector for {plaintext:?}"))
+            .1
+    }
+
+    /// The example in issue #988, as pasted there
+    const ISSUE_EXAMPLE: &str = r#"ﾟωﾟﾉ= /｀ｍ´）ﾉ ~┻━┻   //*´∇｀*/ ["_"]; o=(ﾟｰﾟ)  =_=3; c=(ﾟΘﾟ) =(ﾟｰﾟ)-(ﾟｰﾟ); (ﾟДﾟ) =(ﾟΘﾟ)= (o^_^o)/ (o^_^o);(ﾟДﾟ)={ﾟΘﾟ: "_" ,ﾟωﾟﾉ : ((ﾟωﾟﾉ==3) +"_") [ﾟΘﾟ] ,ﾟｰﾟﾉ :(ﾟωﾟﾉ+ "_")[o^_^o -(ﾟΘﾟ)] ,ﾟДﾟﾉ:((ﾟｰﾟ==3) +"_")[ﾟｰﾟ] }; (ﾟДﾟ) [ﾟΘﾟ] =((ﾟωﾟﾉ==3) +"_") [c^_^o];(ﾟДﾟ) ["c"] = ((ﾟДﾟ)+"_") [ (ﾟｰﾟ)+(ﾟｰﾟ)-(ﾟΘﾟ) ];(ﾟДﾟ) ["o"] = ((ﾟДﾟ)+"_") [ﾟΘﾟ];(ﾟoﾟ)=(ﾟДﾟ) ["c"]+(ﾟДﾟ) ["o"]+(ﾟωﾟﾉ +"_")[ﾟΘﾟ]+ ((ﾟωﾟﾉ==3) +"_") [ﾟｰﾟ] + ((ﾟДﾟ) +"_") [(ﾟｰﾟ)+(ﾟｰﾟ)]+ ((ﾟｰﾟ==3) +"_") [ﾟΘﾟ]+((ﾟｰﾟ==3) +"_") [(ﾟｰﾟ) - (ﾟΘﾟ)]+(ﾟДﾟ) ["c"]+((ﾟДﾟ)+"_") [(ﾟｰﾟ)+(ﾟｰﾟ)]+ (ﾟДﾟ) ["o"]+((ﾟｰﾟ==3) +"_") [ﾟΘﾟ];(ﾟДﾟ) ["_"] =(o^_^o) [ﾟoﾟ] [ﾟoﾟ];(ﾟεﾟ)=((ﾟｰﾟ==3) +"_") [ﾟΘﾟ]+ (ﾟДﾟ) .ﾟДﾟﾉ+((ﾟДﾟ)+"_") [(ﾟｰﾟ) + (ﾟｰﾟ)]+((ﾟｰﾟ==3) +"_") [o^_^o -ﾟΘﾟ]+((ﾟｰﾟ==3) +"_") [ﾟΘﾟ]+ (ﾟωﾟﾉ +"_") [ﾟΘﾟ]; (ﾟｰﾟ)+=(ﾟΘﾟ); (ﾟДﾟ)[ﾟεﾟ]="\\"; (ﾟДﾟ).ﾟΘﾟﾉ=(ﾟДﾟ+ ﾟｰﾟ)[o^_^o -(ﾟΘﾟ)];(oﾟｰﾟo)=(ﾟωﾟﾉ +"_")[c^_^o];(ﾟДﾟ) [ﾟoﾟ]="\'";(ﾟДﾟ) ["_"] ( (ﾟДﾟ) ["_"] (ﾟεﾟ+(ﾟДﾟ)[ﾟoﾟ]+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (ﾟｰﾟ)+ (o^_^o)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ ((ﾟｰﾟ) + (o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ ((o^_^o) +(o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((o^_^o) +(o^_^o))+ (o^_^o)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ ((ﾟｰﾟ) + (o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟｰﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (ﾟｰﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟДﾟ)[ﾟεﾟ]+((ﾟｰﾟ) + (ﾟΘﾟ))+ ((o^_^o) +(o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟｰﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ ((ﾟｰﾟ) + (o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ (ﾟｰﾟ)+ ((ﾟｰﾟ) + (o^_^o))+ (ﾟДﾟ)[ﾟεﾟ]+((ﾟｰﾟ) + (ﾟΘﾟ))+ (c^_^o)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟｰﾟ)+ ((o^_^o) - (ﾟΘﾟ))+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ (c^_^o)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟΘﾟ)+ ((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟΘﾟ)+ (ﾟДﾟ)[ﾟεﾟ]+(ﾟｰﾟ)+ ((o^_^o) - (ﾟΘﾟ))+ (ﾟДﾟ)[ﾟεﾟ]+((ﾟｰﾟ) + (ﾟΘﾟ))+ (ﾟΘﾟ)+ (ﾟДﾟ)[ﾟoﾟ]) (ﾟΘﾟ)) ("_");"#;
+
+    /// The standard plaintexts of the benchmarks (84 and 576 characters)
+    const MEDIUM: &str =
+        "Meet me at the old lighthouse after midnight and bring the map, the key and a torch.";
+    const LONG: &str = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file.";
+
+    /// The bench `miss` string
+    const MISS: &str =
+        "T00 l3= ox+#G WKyV pajU6j qxH@ %B4+a 5Pn^ 7p_v1q 9sLvu *+36i R5rL&3 mVJZI iO0 Ut8_m COTV";
+
+    /// The utf-8.jp encoder's preamble: everything before the first escape
+    const PREAMBLE: &str = concat!(
+        r#"ﾟωﾟﾉ= /｀ｍ´）ﾉ ~┻━┻   //*´∇｀*/ ['_'];"#,
+        r#" o=(ﾟｰﾟ)  =_=3;"#,
+        r#" c=(ﾟΘﾟ) =(ﾟｰﾟ)-(ﾟｰﾟ);"#,
+        r#" (ﾟДﾟ) =(ﾟΘﾟ)= (o^_^o)/ (o^_^o);"#,
+        r#"(ﾟДﾟ)={ﾟΘﾟ: '_' ,ﾟωﾟﾉ : ((ﾟωﾟﾉ==3) +'_') [ﾟΘﾟ] ,ﾟｰﾟﾉ :(ﾟωﾟﾉ+ '_')[o^_^o -(ﾟΘﾟ)] ,ﾟДﾟﾉ:((ﾟｰﾟ==3) +'_')[ﾟｰﾟ] };"#,
+        r#" (ﾟДﾟ) [ﾟΘﾟ] =((ﾟωﾟﾉ==3) +'_') [c^_^o];"#,
+        r#"(ﾟДﾟ) ['c'] = ((ﾟДﾟ)+'_') [ (ﾟｰﾟ)+(ﾟｰﾟ)-(ﾟΘﾟ) ];"#,
+        r#"(ﾟДﾟ) ['o'] = ((ﾟДﾟ)+'_') [ﾟΘﾟ];"#,
+        r#"(ﾟoﾟ)=(ﾟДﾟ) ['c']+(ﾟДﾟ) ['o']+(ﾟωﾟﾉ +'_')[ﾟΘﾟ]+ ((ﾟωﾟﾉ==3) +'_') [ﾟｰﾟ] + ((ﾟДﾟ) +'_') [(ﾟｰﾟ)+(ﾟｰﾟ)]+ ((ﾟｰﾟ==3) +'_') [ﾟΘﾟ]+((ﾟｰﾟ==3) +'_') [(ﾟｰﾟ) - (ﾟΘﾟ)]+(ﾟДﾟ) ['c']+((ﾟДﾟ)+'_') [(ﾟｰﾟ)+(ﾟｰﾟ)]+ (ﾟДﾟ) ['o']+((ﾟｰﾟ==3) +'_') [ﾟΘﾟ];"#,
+        r#"(ﾟДﾟ) ['_'] =(o^_^o) [ﾟoﾟ] [ﾟoﾟ];"#,
+        r#"(ﾟεﾟ)=((ﾟｰﾟ==3) +'_') [ﾟΘﾟ]+ (ﾟДﾟ) .ﾟДﾟﾉ+((ﾟДﾟ)+'_') [(ﾟｰﾟ) + (ﾟｰﾟ)]+((ﾟｰﾟ==3) +'_') [o^_^o -ﾟΘﾟ]+((ﾟｰﾟ==3) +'_') [ﾟΘﾟ]+ (ﾟωﾟﾉ +'_') [ﾟΘﾟ];"#,
+        r#" (ﾟｰﾟ)+=(ﾟΘﾟ);"#,
+        r#" (ﾟДﾟ)[ﾟεﾟ]='\\';"#,
+        r#" (ﾟДﾟ).ﾟΘﾟﾉ=(ﾟДﾟ+ ﾟｰﾟ)[o^_^o -(ﾟΘﾟ)];"#,
+        r#"(oﾟｰﾟo)=(ﾟωﾟﾉ +'_')[c^_^o];"#,
+        r#"(ﾟДﾟ) [ﾟoﾟ]='\"';"#,
+        r#"(ﾟДﾟ) ['_'] ( (ﾟДﾟ) ['_'] (ﾟεﾟ+(ﾟДﾟ)[ﾟoﾟ]+ "#,
+    );
+
+    /// The utf-8.jp encoder's digit expressions, 0 to f, with its spaces
+    const ENCODER_DIGITS: [&str; 16] = [
+        "(c^_^o)",
+        "(ﾟΘﾟ)",
+        "((o^_^o) - (ﾟΘﾟ))",
+        "(o^_^o)",
+        "(ﾟｰﾟ)",
+        "((ﾟｰﾟ) + (ﾟΘﾟ))",
+        "((o^_^o) +(o^_^o))",
+        "((ﾟｰﾟ) + (o^_^o))",
+        "((ﾟｰﾟ) + (ﾟｰﾟ))",
+        "((ﾟｰﾟ) + (ﾟｰﾟ) + (ﾟΘﾟ))",
+        "(ﾟДﾟ) .ﾟωﾟﾉ",
+        "(ﾟДﾟ) .ﾟΘﾟﾉ",
+        "(ﾟДﾟ) ['c']",
+        "(ﾟДﾟ) .ﾟｰﾟﾉ",
+        "(ﾟДﾟ) .ﾟДﾟﾉ",
+        "(ﾟДﾟ) [ﾟΘﾟ]",
+    ];
+
+    /// The utf-8.jp encoder's ending
+    const ENDING: &str = "(ﾟДﾟ)[ﾟoﾟ]) (ﾟΘﾟ)) ('_');";
+
+    /// A port of the utf-8.jp encoder (without the statement it adds to the preamble for
+    /// one plaintext). With `npm`, npm aaencode-cli 0.0.2's spelling instead: every `'`
+    /// written `"`, except the quote character itself, which becomes `"\'"`. Checked
+    /// against both encoders' output in `encoder_port_matches_the_reference_vectors`.
+    fn aaencode(source: &str, npm: bool) -> String {
+        let mut program = String::from(PREAMBLE);
+        for unit in source.encode_utf16() {
+            program.push_str("(ﾟДﾟ)[ﾟεﾟ]+");
+            let digits = if unit <= 127 {
+                format!("{unit:o}")
+            } else {
+                program.push_str("(oﾟｰﾟo)+ ");
+                format!("{unit:04x}")
+            };
+            for digit in digits.chars() {
+                program.push_str(ENCODER_DIGITS[digit.to_digit(16).unwrap() as usize]);
+                program.push_str("+ ");
+            }
+        }
+        program.push_str(ENDING);
+        if npm {
+            program.replace('\'', "\"").replace(r#"="\"""#, r#"="\'""#)
+        } else {
+            program
+        }
+    }
+
+    /// A utf-8.jp-style program with `payload`, quotes included, as the string literal,
+    /// for malformed payloads
+    fn with_payload(payload: &str) -> String {
+        let before = PREAMBLE.strip_suffix("(ﾟДﾟ)[ﾟoﾟ]+ ").unwrap();
+        let after = ENDING.strip_prefix("(ﾟДﾟ)[ﾟoﾟ]").unwrap();
+        format!("{before}{payload}{after}")
+    }
+
+    #[test]
+    fn decodes_issue_example() {
+        // Athena doesn't identify console.log("hi"), so only the decoding is asserted
+        assert_decodes(ISSUE_EXAMPLE, r#"console.log("hi")"#);
+        assert_eq!(program(NPM_VECTORS, r#"console.log("hi")"#), ISSUE_EXAMPLE);
+    }
+
+    #[test]
+    fn decodes_every_reference_vector() {
+        for file in [NPM_VECTORS, UTF8JP_VECTORS] {
+            let vectors = vectors(file);
+            assert_eq!(vectors.len(), 14);
+            for (plaintext, program) in vectors {
+                assert_decodes(program, plaintext);
+            }
+        }
+    }
+
+    #[test]
+    fn identifies_english_flags_and_source_in_both_spellings() {
+        for file in [NPM_VECTORS, UTF8JP_VECTORS] {
+            for plaintext in [
+                "hello world",
+                "flag{aaencode}",
+                r#"console.log("hello world")"#,
+                MEDIUM,
+            ] {
+                assert_cracks(program(file, plaintext), plaintext);
+            }
+        }
+    }
+
+    #[test]
+    fn decodes_the_long_plaintext() {
+        // 24,922 characters, the `long` bench fixture
+        for npm in [true, false] {
+            let program = aaencode(LONG, npm);
+            assert_eq!(program.chars().count(), 24_922);
+            assert_cracks(&program, LONG);
+        }
+    }
+
+    #[test]
+    fn decodes_non_ascii_source() {
+        // \u escapes, and a surrogate pair for the emoji. Athena counts non-ASCII
+        // characters as unprintable and rejects these, so only the decoding is asserted.
+        for file in [NPM_VECTORS, UTF8JP_VECTORS] {
+            for plaintext in [
+                "café €",
+                "日本語",
+                "😀 ok",
+                "01234567 \u{123}\u{4567}\u{89ab}\u{cdef}",
+            ] {
+                assert_decodes(program(file, plaintext), plaintext);
+            }
+        }
+    }
+
+    #[test]
+    fn encoder_port_matches_the_reference_vectors() {
+        for (plaintext, program) in vectors(NPM_VECTORS) {
+            assert_eq!(aaencode(plaintext, true), program, "{plaintext:?}");
+        }
+        for (plaintext, program) in vectors(UTF8JP_VECTORS) {
+            assert_eq!(aaencode(plaintext, false), program, "{plaintext:?}");
+        }
+    }
+
+    #[test]
+    fn round_trips_every_ascii_character_and_more() {
+        // One-, two- and three-digit octal escapes (\0 to \177), every hex digit, the
+        // edges of the BMP and a character above it
+        let ascii: String = (0..=127).map(char::from).collect();
+        let source = format!("{ascii}\u{80}\u{ff}\u{100}\u{7ff}\u{800}\u{d7ff}\u{e000}\u{fffd}\u{ffff}\u{10000}\u{1f600}\u{10ffff}");
+        for npm in [true, false] {
+            assert_eq!(
+                decode(&aaencode(&source, npm)).as_deref(),
+                Some(source.as_str())
+            );
+        }
+    }
+
+    #[test]
+    fn whitespace_is_ignored() {
+        let program = program(NPM_VECTORS, "hello world");
+        let spaceless: String = program.split_whitespace().collect();
+        let wrapped = program
+            .chars()
+            .collect::<Vec<_>>()
+            .chunks(60)
+            .map(|line| line.iter().collect::<String>())
+            .collect::<Vec<_>>()
+            .join("\n");
+        for text in [
+            // What the aaencode CLI prints: console.log adds a newline
+            format!("{program}\n"),
+            format!("  \r\n\t{program} \r\n"),
+            program.replace("; ", ";\r\n"),
+            program.replace('+', " + ").replace('(', " ( "),
+            spaceless,
+            wrapped,
+        ] {
+            assert_cracks(&text, "hello world");
+        }
+    }
+
+    #[test]
+    fn easter_egg_in_the_preamble_is_skipped() {
+        // For plaintexts that mention Hidamari Sketch, the utf-8.jp encoder adds this
+        // statement to its preamble. Checked against its output for
+        // `ひだまりスケッチ×365 来週も見てくださいね!`.
+        let anchor = "c=(ﾟΘﾟ) =(ﾟｰﾟ)-(ﾟｰﾟ); ";
+        let egg = "X=_=3; \r\n\r\n    X / _ / X < \"来週も見てくださいね!\";\r\n\r\n";
+        let program =
+            program(UTF8JP_VECTORS, "hello world").replacen(anchor, &format!("{anchor}{egg}"), 1);
+        assert!(program.contains(egg));
+        assert_cracks(&program, "hello world");
+    }
+
+    #[test]
+    fn rejects_text_that_is_not_aaencode() {
+        let issue: Vec<char> = ISSUE_EXAMPLE.chars().collect();
+        let preamble_end = ISSUE_EXAMPLE.find(r#"["_"];"#).unwrap() + r#"["_"];"#.len();
+        let payload_start = ISSUE_EXAMPLE.find("(ﾟεﾟ+").unwrap();
+        let corrupted = format!(
+            "{}{}",
+            &ISSUE_EXAMPLE[..payload_start],
+            ISSUE_EXAMPLE[payload_start..].replacen("(o^_^o)", "(x^_^o)", 1)
+        );
+        for text in [
+            String::new(),
+            "   \n\t ".to_string(),
+            "😀".to_string(),
+            "hello world".to_string(),
+            MISS.to_string(),
+            HEAD.to_string(),
+            // The head only, and the program cut short or without its final `;`
+            ISSUE_EXAMPLE[..preamble_end].to_string(),
+            issue[..1200].iter().collect(),
+            ISSUE_EXAMPLE.strip_suffix(';').unwrap().to_string(),
+            // One digit expression in the payload broken
+            corrupted,
+            // JJEncode and JSFuck, the other JavaScript encodings
+            "$=~[];$={___:++$,$$$$:(![]+\"\")[$],__$:++$};".to_string(),
+            "(![]+[])[+[]]+([][[]]+[])[+[]]+([][[]]+[])[+!+[]]".to_string(),
+        ] {
+            assert_rejected(&text);
+        }
+    }
+
+    #[test]
+    fn rejects_malformed_payloads() {
+        let quote = "(ﾟДﾟ)[ﾟoﾟ]";
+        let backslash = "(ﾟДﾟ)[ﾟεﾟ]";
+        // h is \150, and a lone surrogate is \ud800
+        for payload in [
+            // Nothing between the quotes, as in the program for the empty string
+            format!("{quote}+{quote}"),
+            // One quote
+            quote.to_string(),
+            // No closing quote, or a quote in the middle
+            format!("{quote}+{backslash}+(ﾟΘﾟ)+((ﾟｰﾟ)+(ﾟΘﾟ))+(c^_^o)"),
+            format!("{quote}+{backslash}+(ﾟΘﾟ)+{quote}+{backslash}+(ﾟΘﾟ)+{quote}"),
+            // Two expressions without a `+`, or two `+`s
+            format!("{quote}+{backslash}+(ﾟΘﾟ)((ﾟｰﾟ)+(ﾟΘﾟ))+(c^_^o)+{quote}"),
+            format!("{quote}+{backslash}++(ﾟΘﾟ)+{quote}"),
+            // A digit without a backslash, a backslash without digits, a stray `u`
+            format!("{quote}+(ﾟΘﾟ)+{quote}"),
+            format!("{quote}+{backslash}+{quote}"),
+            format!("{quote}+{backslash}+(ﾟΘﾟ)+(oﾟｰﾟo)+{quote}"),
+            // Four octal digits, a digit above 7 in an octal escape, above \377
+            format!("{quote}+{backslash}+(ﾟΘﾟ)+(ﾟΘﾟ)+(ﾟΘﾟ)+(ﾟΘﾟ)+{quote}"),
+            format!("{quote}+{backslash}+(ﾟΘﾟ)+((ﾟｰﾟ)+(ﾟｰﾟ))+{quote}"),
+            format!("{quote}+{backslash}+(ﾟｰﾟ)+(c^_^o)+(c^_^o)+{quote}"),
+            // \u with three hex digits, and with five
+            format!("{quote}+{backslash}+(oﾟｰﾟo)+(c^_^o)+(c^_^o)+(ﾟΘﾟ)+{quote}"),
+            format!("{quote}+{backslash}+(oﾟｰﾟo)+(c^_^o)+(c^_^o)+(ﾟΘﾟ)+(ﾟΘﾟ)+(ﾟΘﾟ)+{quote}"),
+            // A lone surrogate, \ud800
+            format!("{quote}+{backslash}+(oﾟｰﾟo)+(ﾟДﾟ).ﾟｰﾟﾉ+((ﾟｰﾟ)+(ﾟｰﾟ))+(c^_^o)+(c^_^o)+{quote}"),
+            // An expression the encoder doesn't write
+            format!("{quote}+{backslash}+(ﾟΘﾟ)+(o^_^c)+{quote}"),
+        ] {
+            assert_rejected(&with_payload(&payload));
+        }
+        // The same frame with a valid payload decodes: h is \150
+        assert_decodes(
+            &with_payload(&format!(
+                "{quote}+{backslash}+(ﾟΘﾟ)+((ﾟｰﾟ)+(ﾟΘﾟ))+(c^_^o)+{quote}"
+            )),
+            "h",
+        );
+    }
+
+    #[test]
+    fn miss_input_is_rejected_on_its_first_byte() {
+        // HEAD starts with U+FF9F, whose UTF-8 starts with 0xEF; ASCII never does
+        assert_eq!(HEAD.as_bytes()[0], 0xef);
+        assert!(MISS.is_ascii());
+        assert_eq!(decode(MISS), None);
+    }
+
+    #[test]
+    fn tokens_are_the_encoders_expressions() {
+        // The table without spaces, in the encoder's order, plus the npm spelling of c
+        for (digit, expression) in ENCODER_DIGITS.iter().enumerate() {
+            let spaceless: String = expression.split_whitespace().collect();
+            let found = TOKENS.iter().find(|(token, _)| *token == spaceless);
+            assert_eq!(
+                found.map(|(_, token)| *token),
+                Some(Token::Digit(digit as u8))
+            );
+        }
+        assert!(TOKENS.contains(&("(ﾟДﾟ)[\"c\"]", Token::Digit(12))));
+        // No expression is a prefix of another, so the first match is the only one
+        for (a, _) in TOKENS {
+            for (b, _) in TOKENS {
+                assert!(a == b || !b.starts_with(a), "{a} is a prefix of {b}");
+            }
+        }
+    }
+
+    #[test]
+    fn is_registered() {
+        let decoders = crate::filtration_system::get_decoder_by_name("AAEncode");
+        assert_eq!(decoders.components.len(), 1);
+        assert!(crate::decoders::DECODER_MAP.contains_key("AAEncode"));
+    }
+}

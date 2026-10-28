@@ -20,6 +20,7 @@
   <a href="#quick-start">Quick start</a> ·
   <a href="#features">Features</a> ·
   <a href="#use-it-as-a-library">Library</a> ·
+  <a href="#mcp-server-ai-assistants">MCP</a> ·
   <a href="#documentation">Docs</a> ·
   <a href="http://discord.skerritt.blog">Discord</a>
   <br><sub>▶ <a href="https://cdn.jsdelivr.net/gh/bee-san/Ciphey@d41d19946234477346fede14dadf8c351cc469e6/media/tui-video/out/ciphey-tui-promo.mp4">Watch the one-minute tour</a> (MP4, 61 s)</sub>
@@ -151,6 +152,8 @@ The `ciphey` binary is a thin wrapper around the `ciphey` crate. The [Discord bo
 
 ## Use it as a library
 
+`perform_cracking` runs the whole search, as the `ciphey` binary does:
+
 ```rust
 use ciphey::config::Config;
 use ciphey::{perform_cracking, CipheyError};
@@ -176,9 +179,173 @@ fn main() {
 
 This prints `hello there general (via Base64)`.
 
-- `perform_cracking` returns `Result<Option<DecoderResult>, CipheyError>` on `master` ([#915](https://github.com/bee-san/Ciphey/pull/915)). The last release on crates.io (0.12.0) still returns `Option<DecoderResult>`, so until the next release use the git version: `ciphey = { git = "https://github.com/bee-san/Ciphey" }`.
-- The config is global to the process. The first call's `Config` is used for every later call.
+### One decoder
+
+If you know what you're looking at, call that decoder. Each one is a function in `ciphey::decoders`: encodings come back decoded, ciphers are cracked, and the ones that take a key can decrypt with yours.
+
+```rust
+use ciphey::decoders;
+
+let decoded = decoders::base64("aGVsbG8gd29ybGQ=");
+assert_eq!(decoded.candidates[0].text, "hello world");
+
+// No key: Ciphey tries every shift and marks the one its checks accept
+let cracked = decoders::caesar("Uryyb jbeyq");
+let plaintext = cracked.plaintext().expect("a shift reads as English");
+assert_eq!(plaintext.text, "Hello world");
+assert_eq!(plaintext.key.as_deref(), Some("13"));
+
+// With the key
+let decrypted = decoders::vigenere_with_key("Rijvs uyvjn", "KEY")?;
+assert_eq!(decrypted.candidates[0].text, "Hello world");
+```
+
+To choose the decoder at run time, `decode_with` takes its name or an alias, and `list_decoders` lists them all with their aliases, tags and the key they take:
+
+```rust
+use ciphey::{decode_with, list_decoders, DecodeOptions};
+
+let cracked = decode_with("rot13", "Uryyb jbeyq", &DecodeOptions::default())?;
+let decrypted = decode_with("affine", "IHHWVC SWFRCP", &DecodeOptions::with_key("a=5, b=8"))?;
+
+for decoder in list_decoders() {
+    println!("{}: {}", decoder.name, decoder.key_format.unwrap_or("no key"));
+}
+```
+
+Nothing is filtered out: you get what the decoder hands on to the search. The candidate Ciphey's plaintext checks accept comes first and carries a `detection`; if they accept none, you get the decodings unmarked, for you to judge (all 25 Caesar shifts, say, though crackers with many keys hand on only their best few).
+
+### Is it plaintext?
+
+`detect_plaintext` runs the checks the search uses (a regex crib, a wordlist, LemmeKnow, common passwords and English) and says which one accepted the text and what it took it for:
+
+```rust
+use ciphey::detection::{detect_plaintext, CheckerKind, DetectOptions, Sensitivity};
+
+let found = detect_plaintext("192.168.0.1", &DetectOptions::default()).unwrap();
+assert_eq!(found.checker, CheckerKind::LemmeKnow);
+assert_eq!(found.description, "Internet Protocol (IP) Address Version 4");
+assert_eq!(found.confidence, Some(0.7)); // the format's rarity in pyWhat
+
+// Pick the checkers and how strict the English checker is, or give a crib
+let english_only = DetectOptions::new()
+    .checkers([CheckerKind::English])
+    .sensitivity(Sensitivity::Low);
+let crib = DetectOptions::new().regex(r"^flag\{")?;
+```
+
+`cargo run --example decode` tours all of this, and `cargo run --example decode -- list` lists the decoders.
+
+- `perform_cracking` returns `Result<Option<DecoderResult>, CipheyError>` on `master` ([#915](https://github.com/bee-san/Ciphey/pull/915)), and the single-decoder and detection functions are only on `master` so far. The last release on crates.io (0.12.0) still returns `Option<DecoderResult>`, so until the next release use the git version: `ciphey = { git = "https://github.com/bee-san/Ciphey" }`.
+- The config is global to the process. The first call's `Config` is used for every later call, and the single decoders follow it too (a `regex` crib, a wordlist). They never prompt.
 - The API is documented on [docs.rs](https://docs.rs/ciphey).
+
+## MCP server (AI assistants)
+
+<a href="https://cdn.jsdelivr.net/gh/bee-san/Ciphey@5aa9760b2912611755d037c01b9d2ed14fd3bf81/media/mcp-video/out/ciphey-mcp.mp4"><img src="https://cdn.jsdelivr.net/gh/bee-san/Ciphey@5aa9760b2912611755d037c01b9d2ed14fd3bf81/media/mcp-video/out/ciphey-mcp.gif" alt="An AI assistant (Kiro CLI) is asked to decode a Base64 string from a CTF challenge. It calls ciphey's decode tool over MCP, which returns the plaintext flag{ciphey_speaks_mcp} and the decoders it used, Base64 → Hexadecimal → caesar with key 13. The assistant then answers with the flag. Click to watch the 30-second video."></a>
+
+<sub>▶ <a href="https://cdn.jsdelivr.net/gh/bee-san/Ciphey@5aa9760b2912611755d037c01b9d2ed14fd3bf81/media/mcp-video/out/ciphey-mcp.mp4">Watch the video</a> (29.5 s). The chat replays a real Kiro CLI session with ciphey-mcp.</sub>
+
+`ciphey-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server, so AI assistants such as Claude Desktop and Kiro can decode text with Ciphey. It's behind the `mcp` feature, so the normal `ciphey` build doesn't include it:
+
+```sh
+cargo install ciphey --features mcp --bin ciphey-mcp
+# or, from a clone of this repository:
+cargo install --path . --features mcp --bin ciphey-mcp
+```
+
+The `mcp` feature isn't in a crates.io release yet (0.12.0 is the latest), so until the next one, install from git: `cargo install --git https://github.com/bee-san/Ciphey ciphey --features mcp --bin ciphey-mcp`.
+
+It provides four tools:
+
+- `decode` decodes `text` when you don't know how it was encoded, and returns the `plaintext` and the `path` of decoders used, with keys such as the Caesar shift. Optional arguments: `timeout_secs` (1 to 30, default 10) and `regex`, a crib the plaintext must match, such as `flag\{`.
+- `decode_with` runs one decoder you choose on `text`: give it the `decoder`'s id, name or an alias (`base64`, `rot13`, `vigenere`, `xor_single_byte`, ...). Without a `key` it decodes the text, or cracks the cipher by trying every key; with one it decrypts, for ciphers that take a key (`13`, `LEMON`, `a=5, b=8`, `rails=3, offset=1`). It returns every candidate decoding and whether each passes Ciphey's plaintext check. `regex` works as for `decode`.
+- `detect_plaintext` checks whether `text` already is plaintext, without decoding it, and says which checker accepted it, what it took it for and, for LemmeKnow's formats, how sure it is. Optional arguments: `checkers` (any of `lemmeknow`, `password` and `english`, by default all three), `sensitivity` of the English checker (`low`, `medium` or `high`) and a `regex` crib.
+- `list_decoders` lists the encodings and ciphers Ciphey supports, with the ids and aliases `decode_with` takes and the key format of each cipher that takes one.
+
+A `decode` result looks like this. `status` is `decoded`, `not_found` or `timed_out`.
+
+```json
+{
+  "status": "decoded",
+  "plaintext": "hello there general",
+  "path": [{ "decoder": "Base64", "key": null }],
+  "checker": "English Checker",
+  "timeout_secs": 10
+}
+```
+
+`decode_with` with `{"decoder": "rot13", "text": "Uryyb jbeyq"}` gives the result below. `status` is `plaintext_found`, `no_plaintext` (none of the candidates passed the check, so judge them yourself) or `no_candidates` (the text isn't in that decoder's format). A result holds at most 100 candidates and 65,536 characters of their text; `total_candidates` says how many there were, and a candidate cut short has `truncated` set.
+
+```json
+{
+  "decoder": "caesar",
+  "status": "plaintext_found",
+  "candidates": [
+    {
+      "text": "Hello world",
+      "truncated": false,
+      "key": "13",
+      "is_plaintext": true,
+      "detection": { "checker": "english", "description": "Words", "confidence": null }
+    }
+  ],
+  "total_candidates": 1
+}
+```
+
+`detect_plaintext` with `{"text": "192.168.0.1"}` gives:
+
+```json
+{
+  "is_plaintext": true,
+  "detection": {
+    "checker": "lemmeknow",
+    "description": "Internet Protocol (IP) Address Version 4",
+    "confidence": 0.7
+  },
+  "checkers": ["lemmeknow", "password", "english"]
+}
+```
+
+Every call except `list_decoders` runs in its own short-lived process. Input is limited to 65,536 characters (keys too) and regexes to 1,000. A `decode` searches for at most 30 seconds and may use 1 GiB of memory; a `decode_with` call may run for 30 seconds and a `detect_plaintext` call for 10, with 256 MiB each. At most two decodes and four other calls run at once. The server doesn't read or write `~/.ciphey`, so there's no config file and no cache.
+
+### Claude Desktop
+
+Open Settings → Developer → Edit Config, add the server to `claude_desktop_config.json`, then restart Claude Desktop. Use the full path printed by `which ciphey-mcp` (`where ciphey-mcp` on Windows, for example `C:\\Users\\you\\.cargo\\bin\\ciphey-mcp.exe`), because Claude Desktop may not see your shell's `PATH`.
+
+```json
+{
+  "mcpServers": {
+    "ciphey": {
+      "command": "/Users/you/.cargo/bin/ciphey-mcp"
+    }
+  }
+}
+```
+
+### Kiro
+
+```sh
+kiro-cli mcp add --name ciphey --command ciphey-mcp
+```
+
+Or add the entry below to `~/.kiro/settings/mcp.json` (all projects) or `.kiro/settings/mcp.json` (one project).
+
+### Other clients
+
+Most MCP clients take the same `mcpServers` entry: a stdio server started by `ciphey-mcp` with no arguments.
+
+```json
+{
+  "mcpServers": {
+    "ciphey": {
+      "command": "ciphey-mcp",
+      "args": []
+    }
+  }
+}
+```
 
 ## Good to know
 

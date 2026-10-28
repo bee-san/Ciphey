@@ -72,38 +72,44 @@ impl Crack for Decoder<CaesarDecoder> {
             return results;
         }
 
-        // With a crib every shift is checked: the crib says which one is right.
-        // Otherwise a shift that gives a CTF flag (`picoCTF{...}`) goes first, since a
-        // flag's contents are often hex or random letters and the right shift needn't
-        // rank best, then the best-ranked shift.
-        let to_check: Vec<usize> = if get_config().regex.is_some() {
-            (0..decoded_strings.len()).collect()
-        } else if is_json_object_or_array(text) {
-            // A shift keeps JSON's shape, so every shift would pass as JSON
-            Vec::new()
-        } else {
-            let flag = decoded_strings
-                .iter()
-                .position(|text| is_marked_ctf_flag(text));
-            let best = best_ranked(decoded_strings.iter().map(String::as_str));
-            let mut to_check: Vec<usize> = flag.into_iter().chain(best).collect();
-            to_check.dedup();
-            // A shift keeps a flag's shape, so only a flag word in the prefix says this
-            // shift is the right one
-            to_check.retain(|&index| !is_unmarked_ctf_flag(&decoded_strings[index]));
-            to_check
-        };
         let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
-        for index in to_check {
-            let checker_result = checker_with_sensitivity.check(&decoded_strings[index]);
-            if checker_result.is_identified {
-                let shift = index + 1;
-                trace!("Found a match with caesar shift {}", shift);
-                results.unencrypted_text = Some(vec![decoded_strings[index].clone()]);
-                results.update_checker(&checker_result);
-                results.key = Some(shift.to_string());
-                return results;
-            }
+        let hit = if get_config().regex.is_some() {
+            // With a crib every shift is checked, in order: the crib says which one is
+            // right. A long text's shifts are checked in parallel (see `first_identified`).
+            checker_with_sensitivity.first_identified(&decoded_strings)
+        } else {
+            // Otherwise a shift that gives a CTF flag (`picoCTF{...}`) goes first, since a
+            // flag's contents are often hex or random letters and the right shift needn't
+            // rank best, then the best-ranked shift.
+            let to_check: Vec<usize> = if is_json_object_or_array(text) {
+                // A shift keeps JSON's shape, so every shift would pass as JSON
+                Vec::new()
+            } else {
+                let flag = decoded_strings
+                    .iter()
+                    .position(|text| is_marked_ctf_flag(text));
+                let best = best_ranked(decoded_strings.iter().map(String::as_str));
+                let mut to_check: Vec<usize> = flag.into_iter().chain(best).collect();
+                to_check.dedup();
+                // A shift keeps a flag's shape, so only a flag word in the prefix says this
+                // shift is the right one
+                to_check.retain(|&index| !is_unmarked_ctf_flag(&decoded_strings[index]));
+                to_check
+            };
+            to_check.into_iter().find_map(|index| {
+                let checker_result = checker_with_sensitivity.check(&decoded_strings[index]);
+                checker_result
+                    .is_identified
+                    .then_some((index, checker_result))
+            })
+        };
+        if let Some((index, checker_result)) = hit {
+            let shift = index + 1;
+            trace!("Found a match with caesar shift {}", shift);
+            results.unencrypted_text = Some(vec![decoded_strings[index].clone()]);
+            results.update_checker(&checker_result);
+            results.key = Some(shift.to_string());
+            return results;
         }
         results.unencrypted_text = Some(decoded_strings);
         results
@@ -131,7 +137,7 @@ impl Crack for Decoder<CaesarDecoder> {
 }
 
 /// Caesar cipher to rotate cipher text by shift and return an owned String.
-fn caesar(cipher: &str, shift: u8) -> String {
+pub(crate) fn caesar(cipher: &str, shift: u8) -> String {
     cipher
         .chars()
         .map(|c| {

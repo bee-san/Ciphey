@@ -2,8 +2,7 @@ name: Scorecards Supply-Chain Security
 
 on:
   branch_protection_rule:
-  schedule:
-    - cron: "45 4 * * 1"
+  # The weekly schedule was removed (GitHub Actions cost audit, 2026-10-13).
   workflow_dispatch:
 
 permissions: read-all

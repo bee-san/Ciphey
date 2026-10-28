@@ -57,24 +57,37 @@ impl Crack for Decoder<ROT47Decoder> {
         // Use the checker with Low sensitivity for ROT47 cipher
         let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
         let rot47 = ROT47_SHIFT as usize - 1;
-        let others: Vec<usize> = (0..decoded_strings.len()).filter(|&i| i != rot47).collect();
-        // With a crib every shift is checked: the crib says which one is right
-        let to_check: Vec<usize> = if get_config().regex.is_some() {
-            std::iter::once(rot47).chain(others).collect()
+        let hit = if get_config().regex.is_some() {
+            // With a crib every shift is checked, ROT47 itself first: the crib says which
+            // one is right. A long text's shifts are checked in parallel (see
+            // `first_identified`).
+            [rot47..rot47 + 1, 0..rot47, rot47 + 1..decoded_strings.len()]
+                .into_iter()
+                .find_map(|shifts| {
+                    let first = shifts.start;
+                    checker_with_sensitivity
+                        .first_identified(&decoded_strings[shifts])
+                        .map(|(i, checker_result)| (first + i, checker_result))
+                })
         } else {
+            let others: Vec<usize> = (0..decoded_strings.len()).filter(|&i| i != rot47).collect();
             let ranked_other =
                 best_ranked(others.iter().map(|&i| decoded_strings[i].as_str())).map(|i| others[i]);
-            std::iter::once(rot47).chain(ranked_other).collect()
+            std::iter::once(rot47)
+                .chain(ranked_other)
+                .find_map(|index| {
+                    let checker_result = checker_with_sensitivity.check(&decoded_strings[index]);
+                    checker_result
+                        .is_identified
+                        .then_some((index, checker_result))
+                })
         };
-        for index in to_check {
-            let checker_result = checker_with_sensitivity.check(&decoded_strings[index]);
-            // If checkers return true, exit early with the correct result
-            if checker_result.is_identified {
-                trace!("Found a match with rot47 shift {}", index + 1);
-                results.unencrypted_text = Some(vec![decoded_strings[index].clone()]);
-                results.update_checker(&checker_result);
-                return results;
-            }
+        // If checkers return true, exit early with the correct result
+        if let Some((index, checker_result)) = hit {
+            trace!("Found a match with rot47 shift {}", index + 1);
+            results.unencrypted_text = Some(vec![decoded_strings[index].clone()]);
+            results.update_checker(&checker_result);
+            return results;
         }
         results.unencrypted_text = Some(decoded_strings);
         results
@@ -105,7 +118,7 @@ impl Crack for Decoder<ROT47Decoder> {
 const ROT47_SHIFT: u8 = 47;
 
 /// Maps rot47 to the alphabet (up to ROT94 with the ROT47 alphabet)
-fn rot47_to_alphabet(text: &str, shift: u8) -> String {
+pub(crate) fn rot47_to_alphabet(text: &str, shift: u8) -> String {
     let mut result = String::new();
     for c in text.chars() {
         let mut c = c as u8;
