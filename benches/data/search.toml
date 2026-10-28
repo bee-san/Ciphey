@@ -879,9 +879,12 @@ input = "9HJJw TR!V H=cH Z&I2 X3J_@ Snyh _IP ~EoSLoS GYs XrRp0 t0Kx Ee~ qCAT O?7
 expected = ""
 
 [[case]]
+# Accented Latin letters. Every decoder used to reject them at once, so the search ran
+# out of candidates; ASCII shift, railfence and others read them now, and the search
+# runs until the timeout without accepting any of what they make.
 kind = "no_solution"
-name = "unicode_exhausts"
-outcome = "exhausted"
+name = "unicode_times_out"
+outcome = "timeout"
 layers = []
 input = "éèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüç"
 expected = ""

@@ -890,7 +890,7 @@ mod tests {
             assert_eq!(crack(text), None, "{text:?}");
         }
         // Base65536 and Base100 (the library API's examples), Braille, and the bench's
-        // accented `unicode_exhausts` input
+        // accented `unicode_times_out` input
         for text in [
             "𒅓鹨𖡮𒀠啦ꍢ顡啫𓍱𓁡𠁴唬𓍪鱤啥𖥭𔐠𔕯ᔮ",
             "👟👜👣👣👦🐗👮👦👩👣👛",

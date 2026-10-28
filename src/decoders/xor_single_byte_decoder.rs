@@ -855,7 +855,7 @@ mod tests {
     fn accented_text_has_no_raw_view() {
         // Accented letters alone are text, not bytes from an earlier decoder. Reading them
         // as bytes made every such node cost five checks; the search suite's
-        // `unicode_exhausts` input is 48 of them.
+        // `unicode_times_out` input is 48 of them.
         for text in [
             "éèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüçéèêëàâäôöûüç",
             "Où est la bibliothèque ? Déjà vu, garçon, à bientôt",
