@@ -192,6 +192,13 @@ fn each_search_has_its_own_options() {
     assert_eq!(found.plaintext, "hello there general");
     let found = Search::new(input, crib).unwrap().run().unwrap().unwrap();
     assert_eq!(found.plaintext, input);
+    // The crib search's config is still in place, but detect_plaintext only reads its own
+    // options
+    let english = ciphey::detect_plaintext(
+        "hello there general kenobi",
+        &ciphey::DetectOptions::default(),
+    );
+    assert_eq!(english.unwrap().checker, CheckerKind::English);
 
     // A crib that doesn't compile
     let mut bad = options();
