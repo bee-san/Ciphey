@@ -76,8 +76,12 @@
 @media (max-width: 720px) {
   .site-header__inner { flex-wrap: wrap; gap: var(--space-2) var(--space-3); padding-block: var(--space-2); }
   .tools-nav { order: 3; flex-basis: 100%; }
-  .tools-nav ul { justify-content: space-between; }
-  .tools-nav a { padding: 8px 12px; }
+  /* Wraps rather than overflows where the system font is wide (DejaVu Sans at 320 px) */
+  .tools-nav ul { flex-wrap: wrap; }
+  .tools-nav a { padding: 8px 12px; min-height: 40px; display: flex; align-items: center; }
+}
+@media (max-width: 360px) {
+  .tools-nav a { padding: 8px 10px; }
 }
 
 .page {

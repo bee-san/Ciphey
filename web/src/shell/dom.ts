@@ -41,6 +41,7 @@ const ICONS = {
   ok: '<circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.3 2.6 2.6 5-5.4"/>',
   no: '<circle cx="12" cy="12" r="8.5"/><path d="m9 9 6 6M15 9l-6 6"/>',
   arrow: '<path d="M12 5v14M6.5 13.5 12 19l5.5-5.5"/>',
+  search: '<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 4.5 4.5"/>',
 } as const;
 
 export function icon(name: keyof typeof ICONS): SVGSVGElement {

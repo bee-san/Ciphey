@@ -100,8 +100,6 @@ progress::-moz-progress-bar { background: var(--accent-border); border-radius: 9
   text-overflow: ellipsis;
 }
 .path__step--last .path__text { color: var(--text); }
-.path__check { display: flex; align-items: center; gap: 6px; color: var(--success); font-size: 0.875rem; font-weight: 550; }
-.path__check .icon { width: 16px; height: 16px; flex: none; }
 
 /* The search tree */
 .tree-panel .disclosure__body { padding-top: 0; }

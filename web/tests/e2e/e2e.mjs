@@ -147,6 +147,21 @@ async function axe(page, label) {
   return found.length;
 }
 
+/** How far the page scrolls sideways, and the elements that stick out (for the message). */
+async function sideways(page) {
+  return page.evaluate(() => {
+    const w = window.innerWidth;
+    const overflow = document.documentElement.scrollWidth - w;
+    const out = [...document.querySelectorAll("body *")]
+      .filter((el) => el.getBoundingClientRect().right > w + 0.5)
+      // Only the outermost: an element whose parent sticks out is covered by its parent
+      .filter((el) => !(el.parentElement && el.parentElement.getBoundingClientRect().right > w + 0.5))
+      .slice(0, 4)
+      .map((el) => `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}${el.classList.length ? `.${[...el.classList].join(".")}` : ""}`);
+    return { overflow, out: out.join(", ") };
+  });
+}
+
 let axeRuns = 0;
 async function axeEverywhere(name, path, prepare) {
   for (const theme of ["light", "dark"]) {
@@ -160,8 +175,8 @@ async function axeEverywhere(name, path, prepare) {
           await prepare(page);
           await axe(page, `${name} ${theme} ${width}`);
           axeRuns++;
-          const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-          assert(overflow <= 0, `the page scrolls sideways by ${overflow} px`);
+          const { overflow, out } = await sideways(page);
+          assert(overflow <= 0, `the page scrolls sideways by ${overflow} px (${out})`);
           return "0 violations";
         } finally {
           await page.closeAll();
@@ -231,6 +246,30 @@ await check("decode: Escape cancels a search, and the next search runs", async (
   const next = await decodeResult(decode);
   assert(next.plaintext === EXAMPLES[0].plaintext, `then got ${next.plaintext ?? next.notice}`);
   return r.notice;
+});
+
+await check("decode: input that is already plaintext says so", async () => {
+  await setValue(decode, "#regex", "");
+  await setValue(decode, "#input", "hello there general kenobi");
+  await decode.click("#decode");
+  const r = await decodeResult(decode);
+  const badge = await text(decode, "#result .result__head .badge");
+  assert(r.plaintext === "hello there general kenobi" && badge === "Already plaintext", `got ${badge}: ${r.plaintext}`);
+  return badge;
+});
+
+await check("decode: Find every plaintext lists more than one", async () => {
+  await setValue(decode, "#timeout", "2");
+  await decode.$eval("#top-results", (el) => (el.checked = true));
+  await setValue(decode, "#input", "aGVsbG8gdGhlcmUgZ2VuZXJhbA==");
+  await decode.click("#decode");
+  const r = await decodeResult(decode, 20_000);
+  const more = await decode.$$eval("#result .result__more > li", (els) => els.length);
+  await decode.$eval("#top-results", (el) => (el.checked = false));
+  await setValue(decode, "#timeout", "5");
+  assert(r.plaintext === "hello there general", `first ${r.plaintext ?? r.notice}`);
+  assert(more >= 1, "only one plaintext listed");
+  return `${more + 1} plaintexts`;
 });
 
 await check("decode: a crib that isn't a valid regex is reported at the crib", async () => {
@@ -498,8 +537,8 @@ await check("narrow screens: no page scrolls sideways at 320 px", async () => {
     try {
       await engineReady(page);
       await fill(page);
-      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-      assert(overflow <= 0, `${path || "decode"} scrolls sideways by ${overflow} px`);
+      const { overflow, out } = await sideways(page);
+      assert(overflow <= 0, `${path || "decode"} scrolls sideways by ${overflow} px (${out})`);
       widths.push(`${path || "decode"} ok`);
     } finally {
       await page.closeAll();

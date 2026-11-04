@@ -74,8 +74,10 @@ await shot("decode-nothing-found-light", "", DESKTOP, "light", async (p) => {
   await p.click("#options summary");
   await setValue(p, "#timeout", "2");
   await setValue(p, "#input", "kq8vZ2mXw!9tLr#");
+  await p.click("#options summary");
   await p.click("#decode");
   await p.waitForSelector("#result:not([hidden]) .notice", { timeout: 30_000 });
+  await scrollTo(p, "#output");
 });
 for (const theme of ["light", "dark"]) {
   await shot(`identify-${theme}-desktop`, "identify/", DESKTOP, theme, async (p) => {

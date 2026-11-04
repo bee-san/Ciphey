@@ -52,6 +52,7 @@ export function verdictSentence(result: Pick<DecodeResult, "checker" | "checkerN
   if (!who && !what) return null;
   const sure = result.confidence !== null && result.confidence !== undefined ? ` (rarity ${result.confidence.toFixed(2)})` : "";
   if (who === "pyWhat" && what) return `pyWhat identified it as ${what}${sure}.`;
+  if (who === "the English checker" && (!what || what === "Words")) return "The English checker accepted it as English words.";
   if (who === "your crib") return "It matches your crib.";
   if (who && what) return `Accepted by ${who} as ${what}${sure}.`;
   return who ? `Accepted by ${who}.` : `Identified as ${what}${sure}.`;

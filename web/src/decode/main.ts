@@ -339,6 +339,7 @@ function start(): void {
   treePanel.hidden = false;
   treePanel.open = true;
   treeSummary.textContent = "";
+  treeHint.textContent = "Each row is a text Ciphey ran every decoder on, under the text it came from.";
   outputMeta.textContent = "";
   resultBox.replaceChildren();
   showOnly(searchBox);
@@ -360,7 +361,8 @@ function tick(): void {
   if (!search) return;
   const elapsed = performance.now() - search.started;
   progress.value = Math.min(elapsed, progress.max);
-  searchText.textContent = `${ready || !waiting ? "Searching" : "Loading Ciphey"}… ${duration(elapsed)} of ${search.options.timeout} s`;
+  const found = search.results.length ? ` · ${plural(search.results.length, "plaintext")} found` : "";
+  searchText.textContent = `${ready || !waiting ? "Searching" : "Loading Ciphey"}… ${duration(elapsed)} of ${search.options.timeout} s${found}`;
   searchStats.textContent = search.expanded
     ? `${plural(search.expanded, "node")} explored · depth ${search.depth} · ${plural(search.queued, "branch", "branches")} waiting`
     : "";
@@ -429,10 +431,16 @@ function finish(status: Ending, message: string | null, elapsedMs?: number): voi
 
   showOnly(resultBox);
   outputMeta.textContent = `${duration(elapsed)}${s.expanded ? ` · ${plural(s.expanded, "node")} explored` : ""}`;
-  if (status === "decoded" && s.results.length) {
+  // Plaintexts found before a cancel or the time limit ("Find every plaintext") still count
+  if (s.results.length && status !== "error") {
     renderResults(s);
+    if (status === "cancelled" || status === "timed_out") {
+      const why = status === "cancelled" ? `Search cancelled after ${duration(elapsed)}` : `The time limit (${s.options.timeout} s) ended the search`;
+      resultBox.prepend(h("p", { class: "field__hint" }, `${why}; these were found before it.`));
+    }
     const first = s.results[0] as DecodeResult;
-    announce(`Found the plaintext in ${duration(first.elapsedMs)}: ${preview(first.plaintext, 140)}. Path: ${pathSpeech(first.path)}.`);
+    const how = first.path.length ? ` Path: ${pathSpeech(first.path)}.` : " The input is already plaintext.";
+    announce(`Found the plaintext in ${duration(first.elapsedMs)}: ${preview(first.plaintext, 140)}.${how}`);
     return;
   }
   if (status === "error" && message && /regex|crib/i.test(message)) {
@@ -490,11 +498,12 @@ function renderResults(s: Search): void {
 function renderResult(r: DecodeResult, s: Search, main: boolean): HTMLElement {
   const verdict = verdictSentence(r);
   const plaintextId = `plaintext-${s.id}-${Math.round(r.elapsedMs)}-${main ? "main" : "more"}`;
+  const already = r.path.length === 0;
   const head = h(
     "div",
     { class: "result__head" },
-    h("span", { class: "badge badge--success" }, icon("check"), "Plaintext found"),
-    h("span", { class: "field__meta" }, `in ${duration(r.elapsedMs)} · ${plural(r.path.length, "layer")}`),
+    h("span", { class: "badge badge--success" }, icon("check"), already ? "Already plaintext" : "Plaintext found"),
+    h("span", { class: "field__meta" }, already ? `checked in ${duration(r.elapsedMs)}` : `in ${duration(r.elapsedMs)} · ${plural(r.path.length, "layer")}`),
   );
   // Focusable, so a long plaintext can be scrolled with the keyboard
   const text = h("pre", { class: "plaintext", id: plaintextId, tabindex: 0, role: "group", "aria-label": "Plaintext" }, r.plaintext);
@@ -502,9 +511,9 @@ function renderResult(r: DecodeResult, s: Search, main: boolean): HTMLElement {
     "div",
     { class: "actions result__actions" },
     copyButton("Copy plaintext", () => r.plaintext),
-    copyButton("Copy path", () => pathText(r.path)),
+    already ? null : copyButton("Copy path", () => pathText(r.path)),
     main ? shareButton(s) : null,
-    main ? identifyLink(r.plaintext, "Identify the plaintext", "button button--small button--ghost") : null,
+    main ? identifyLink(r.plaintext, "Identify the plaintext", "button button--small") : null,
   );
   const steps = h(
     "ol",
@@ -527,7 +536,6 @@ function renderResult(r: DecodeResult, s: Search, main: boolean): HTMLElement {
           step.key ? h("span", { class: "badge badge--accent" }, `key ${step.key}`) : null,
         ),
         h("code", { class: "path__text" }, preview(last ? r.plaintext : (step.text ?? ""), 160)),
-        last && verdict ? h("p", { class: "path__check" }, icon("ok"), verdict) : null,
       );
     }),
   );
@@ -538,14 +546,15 @@ function renderResult(r: DecodeResult, s: Search, main: boolean): HTMLElement {
     text,
     verdict ? h("p", { class: "result__verdict" }, verdict) : null,
     actions,
-    h("h3", { class: "result__path-title" }, "Path ", h("span", { class: "field__meta" }, r.path.map(stepLabel).join(" → "))),
-    steps,
+    already ? h("p", { class: "field__hint" }, "Ciphey's checkers accept the input as it is, so there was nothing to decode.") : null,
+    already ? null : h("h3", { class: "result__path-title" }, "Path ", h("span", { class: "field__meta" }, r.path.map(stepLabel).join(" → "))),
+    already ? null : steps,
   );
 }
 
 /** A link to the Identify page that takes `text` along (sessionStorage, not the URL). */
 function identifyLink(text: string, label: string, cls = ""): HTMLAnchorElement {
-  return h("a", { href: "identify/", class: cls || null, onclick: () => handOff(text) }, label);
+  return h("a", { href: "identify/", class: cls || null, onclick: () => handOff(text) }, cls ? icon("search") : null, label);
 }
 
 // --- Sharing ----------------------------------------------------------------------------------

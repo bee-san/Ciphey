@@ -113,7 +113,10 @@ describe("Decode's words", () => {
   });
   it("says what accepted the plaintext", () => {
     expect(verdictSentence({ checker: "english", checkerName: "English Checker", description: "Words", confidence: null })).toBe(
-      "Accepted by the English checker as Words.",
+      "The English checker accepted it as English words.",
+    );
+    expect(verdictSentence({ checker: "json", checkerName: "JSON Checker", description: "JSON object", confidence: null })).toBe(
+      "Accepted by the JSON checker as JSON object.",
     );
     expect(verdictSentence({ checker: "lemmeknow", checkerName: "LemmeKnow Checker", description: "Email Address", confidence: 0.5 })).toBe(
       "pyWhat identified it as Email Address (rarity 0.50).",
