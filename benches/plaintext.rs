@@ -2227,6 +2227,17 @@ fn main() {
     report_overview(&samples, &tsv);
     if args.checkers {
         let probes = selected(probes());
+        if args.latency {
+            // pyWhat compiles each of its regexes the first time a text gets past that
+            // regex's cheap checks, which the first 200 samples `run_probe` warms up with
+            // don't all do. A search compiles them all in the background when it starts
+            // (`pywhat_checker::warm_up`), so compile them here before timing anything,
+            // with the pyWhat checker: Athena would remember its rejections.
+            let pywhat = Checker::<PyWhat>::new();
+            for s in &samples {
+                black_box(pywhat.check(&s.text));
+            }
+        }
         let runs: Vec<Run> = probes
             .iter()
             .map(|p| run_probe(p, &samples, args.latency))
