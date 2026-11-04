@@ -94,6 +94,13 @@ jobs:
       - name: Run cargo test
         run: cargo test
 
+      # The end-to-end benchmark's 10-case smoke subset (benches/README.md) on the debug ciphey
+      # binary cargo test just built: about 2 s. Fails if the benchmark can't run or a case
+      # stops decoding.
+      - name: End-to-end benchmark smoke run
+        if: matrix.os == 'ubuntu-latest'
+        run: python3 benches/e2e/run.py --subset smoke --timeout 20 --check target/debug/ciphey
+
       - name: Run MCP server tests (mcp feature)
         # The library's tests already ran above; only run the ciphey-mcp unit tests and the
         # JSON-RPC-over-stdio integration test.

@@ -23,3 +23,6 @@ doc/
 /.idea
 .aider*
 .cursor
+
+# Python bytecode (benches/e2e)
+__pycache__/
