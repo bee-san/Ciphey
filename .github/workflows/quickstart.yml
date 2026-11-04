@@ -75,6 +75,12 @@ jobs:
     # NOTE: this must reference the matrix, otherwise every job runs on Linux
     # and the Windows/macOS entries are no-ops.
     runs-on: ${{ matrix.os }}
+    env:
+      # The Ubuntu 26.04 image has less free disk: full debug info for every test binary,
+      # built twice (with and without `mcp`), filled it on 2026-11-04 ("No space left on
+      # device" while linking ciphey-mcp). Line tables keep file:line in panics and backtraces.
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
+      CARGO_PROFILE_TEST_DEBUG: line-tables-only
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
