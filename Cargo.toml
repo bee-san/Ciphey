@@ -82,7 +82,7 @@ bs58 = "0.5.0"
 bzip2 = "0.6.1"
 data-encoding = "2.11.0"
 encoding_rs = "0.8.35"
-html-escape = "0.2.15"
+html-escape = "0.3.0"
 flate2 = "1.1.10"
 # Only idna::punycode is used. 1.0.3 is the version gibberish-or-not already pulls in.
 idna = "1.0.3"
