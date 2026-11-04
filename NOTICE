@@ -1,0 +1,23 @@
+Ciphey
+Copyright (c) bee-san and Ciphey's contributors. MIT License (LICENSE).
+
+Ciphey's binaries include data from its dependencies. That data and its sources:
+
+pyWhat (https://github.com/bee-san/pyWhat, MIT License)
+--------------------------------------------------------
+Its regex database (pywhat/Data/regex.json) is pyWhat's, under the MIT License. Five of its
+regexes are based on entries of the regex101 community library (https://regex101.com/library,
+no licence stated): Browser User Agent, Regex101 Permalink, ISO 8601 Timestamp, United
+Kingdom (UK) Postcode and Cron Schedule. Some bug bounty regexes are based on the regex
+database of Dora (https://github.com/sdushantha/dora), Copyright (c) 2021 Siddharth
+Dushantha, under the MIT License.
+
+The pywhat crate also embeds, for the descriptions of some matches:
+- pywhat/Data/file_signatures.json, derived from the Wikipedia article "List of file
+  signatures" by its contributors (revision 1011793547 of 2021-03-12,
+  https://en.wikipedia.org/w/index.php?title=List_of_file_signatures&oldid=1011793547):
+  CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/
+- pywhat/Data/phone_codes.json, country calling codes: licence not recorded.
+- pywhat/Data/mastercard_companies.json, MasterCard issuer prefixes and their banks:
+  licence not recorded.
+pyWhat's NOTICE and its issue #302 have the details.
