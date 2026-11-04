@@ -22,7 +22,7 @@ use crate::timer;
 use crate::{CipheyError, DecoderResult};
 /// This module provides access to the A* search algorithm
 /// which uses a heuristic to prioritize decoders.
-mod astar;
+pub(crate) mod astar;
 /// This module provides access to the breadth first search
 /// which searches for the plaintext.
 #[cfg(not(target_family = "wasm"))]
