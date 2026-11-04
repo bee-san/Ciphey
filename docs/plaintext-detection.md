@@ -190,8 +190,9 @@ Text that rules 5 to 7 reject is still accepted if gibberish-or-not finds it is 
 and so on, in the result, the human checker's prompt and `--top-results`.
 
 A **word** (`is_known_word`) is a word of 1 to 3 letters from `english_short_words.txt`
-(`a`, `is`, `me`, `i'm`: gibberish-or-not's word list has many more short "words", such as
-`ii` and `nd`, which wrong keys make all the time), a word of 4 or more letters in
+(`a`, `is`, `me`, `i'm`: gibberish-or-not's word list has many more short "words", 246 of
+the 676 strings of two letters such as `bk` and `cx`, which wrong keys make all the time),
+a word of 4 or more letters in
 gibberish-or-not's English word list, or a word of 10+ letters it doesn't have that splits
 into words (`understanding`) or scores -4.6 or better with varied letters
 (`decompresses`, not `otstontnottr`).

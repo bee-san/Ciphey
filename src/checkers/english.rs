@@ -709,8 +709,8 @@ pub(crate) fn is_known_word(word: &str) -> bool {
     }
     match word.chars().count() {
         0 => false,
-        // gibberish-or-not's list has many more short "words" (`ii`, `nd`, `tion`), which
-        // wrong keys make all the time
+        // gibberish-or-not's list has many more short "words": 246 of the 676 strings of
+        // two letters (`bk`, `cx`), which wrong keys make all the time
         1..=3 => is_short_word(word),
         4..=9 => is_dictionary_word(word),
         _ => is_word(word) || is_long_word(word),
