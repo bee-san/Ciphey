@@ -75,7 +75,12 @@ Base58 isn't a Bitcoin or Litecoin address any more. On top of that, the checker
 - by name: JSON Web Tokens (the JWT decoder decodes them: the payload is the plaintext),
   the Facebook Access Token (`EA` and 190+ letters and digits, which a Vigenère decryption
   of Base64 can be: pyWhat's validator only asks for a lower-case letter, an upper-case
-  letter and a digit) and the AWS Organization ID (`o-` and 10 to 32 letters and digits);
+  letter and a digit), the Google ReCaptcha key (`6L` and 38 letters and digits: wrong
+  decoders on a SHA-1 hash make those) and the AWS Organization ID (`o-` and 10 to 32
+  letters and digits);
+- IPv6 addresses outside the ranges IANA has assigned (global unicast `2000::/3`, unique
+  local, link-local, multicast, NAT64, and `::1`-style addresses): pyWhat takes any hex
+  groups with colons, such as the decoder junk `DB:F::E9` or a reversed address;
 - URLs without `://` or a leading `www.`: pyWhat's URL regex takes bare domains
   (`example.com`);
 - email addresses whose top-level domain isn't one of 112 common ones (`EMAIL_TLDS`), or
@@ -442,8 +447,8 @@ picoCTF's `l3arn_th3_r0p35` (leetspeak without a flag around it).
   out of results.
 - **Flags without a flag word** whose contents aren't words (`SECCON{7e1b9e3a}`) and any
   such flag under Caesar, ROT13 or Atbash need a crib.
-- **Formats**: a reversed IPv6 address is an IPv6 address, as a reversed IPv4 address is an
-  IPv4 address (`7.41.01.01`), so the Reverse decoder's output can end a search on one.
+- **Formats**: a reversed IPv4 address is an IPv4 address (`7.41.01.01`), so the Reverse
+  decoder's output can end a search on one.
 - **Words**: gibberish-or-not's dictionary only answers for words of 4 to 9 letters, so
   long rare words (`cryptography`) count as unknown unless they score well, and names
   count as unknown.

@@ -78,9 +78,14 @@ pub struct PyWhat;
 
 /// pyWhat regexes whose matches aren't plaintext for Ciphey, by name. A match is only
 /// dropped if no other regex matched too.
-const EXCLUDED_NAMES: [&str; 3] = [
+const EXCLUDED_NAMES: [&str; 4] = [
     // Ciphey's JWT decoder decodes a token: its payload is the plaintext, not the token
     "JSON Web Token (JWT)",
+    // `6L` and 38 letters, digits, `-` or `_`. Wrong decoders on a SHA-1 hash (40 hex
+    // digits) make strings of that length all the time, and one in 4,000 starts with `6L`:
+    // `6L85I67MIB85M476LBRI5E947559OCRL5I4O6CML` (atbash, rot47 and keyboard shift of one)
+    // ended a search as a "Google ReCaptcha API Key".
+    "Google ReCaptcha API Key",
     // `EA` and 190 or more letters and digits. pyWhat's validator wants a lower-case
     // letter, an upper-case letter and a digit, which Base64 has, and so has a Vigenère
     // decryption of it: a wrong key that happened to start one with `EA` ended a search as
@@ -407,7 +412,8 @@ pub(crate) fn has_control_characters(text: &str) -> bool {
 /// * a URL needs a scheme or `www.` (see [`URL`]);
 /// * a CTF flag has one pair of braces: pyWhat's `(?i)^(thm\{.*\})$` takes junk with more
 ///   braces inside, like `THM{UyLgUqMJU}LjUkM^U}` from a chain of wrong decoders;
-/// * an email address needs a known top-level domain (see [`EMAIL_TLDS`]).
+/// * an email address needs a known top-level domain (see [`EMAIL_TLDS`]);
+/// * an IPv6 address must be in a range that is assigned (see [`is_assigned_ipv6`]).
 fn is_trusted_match(found: &Match, text: &str) -> bool {
     let name = found.regex.name.as_str();
     if EXCLUDED_NAMES.contains(&name) {
@@ -420,7 +426,45 @@ fn is_trusted_match(found: &Match, text: &str) -> bool {
     if found.tags.iter().any(|tag| tag == "CTF Flag") {
         return matches_flag_pattern(text.trim());
     }
-    name != EMAIL || has_known_tld(text)
+    match name {
+        EMAIL => has_known_tld(text),
+        IPV6 => is_assigned_ipv6(text),
+        _ => true,
+    }
+}
+
+/// pyWhat's name for IPv6 addresses.
+const IPV6: &str = "Internet Protocol (IP) Address Version 6";
+
+/// Whether the IPv6 address `text` (which pyWhat's regex matched) is in a range IANA has
+/// assigned: global unicast (`2000::/3`, the first group `2000` to `3fff`), unique local
+/// (`fc00::/7`), link-local (`fe80::/10`), multicast (`ff00::/8`), NAT64 (`64:ff9b::`), or
+/// an address starting with `::` (`::1`, `::ffff:192.0.2.1`). pyWhat takes any groups of
+/// hex digits with colons, so decoder junk such as `DB:F::E9` and `1:6189::7823`, and a
+/// reversed address (`4337:0730:e2a8:...`), were IPv6 addresses to it. A port or a zone
+/// after the address doesn't change its first group.
+fn is_assigned_ipv6(text: &str) -> bool {
+    let address = text.trim().trim_start_matches('[');
+    if address.starts_with("::") {
+        return true;
+    }
+    let Some(first) = address.split(':').next() else {
+        return false;
+    };
+    if first.eq_ignore_ascii_case("64") {
+        return address
+            .get(3..)
+            .is_some_and(|rest| rest.to_ascii_lowercase().starts_with("ff9b:"));
+    }
+    match u16::from_str_radix(first, 16) {
+        Ok(group) => {
+            (0x2000..=0x3fff).contains(&group)
+                || (0xfc00..=0xfdff).contains(&group)
+                || (0xfe80..=0xfebf).contains(&group)
+                || group >= 0xff00
+        }
+        Err(_) => false,
+    }
 }
 
 /// pyWhat's name for email addresses.
@@ -629,6 +673,45 @@ mod tests {
         ] {
             assert_eq!(identify(text).as_deref(), Some(name), "{text}");
         }
+    }
+
+    #[test]
+    fn ipv6_addresses_must_be_in_an_assigned_range() {
+        for address in [
+            "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+            "2001:db8::1",
+            "fe80::1ff:fe23:4567:890a",
+            "fd12:3456:789a::1",
+            "ff02::1",
+            "::1",
+            "::ffff:192.0.2.1",
+            "64:ff9b::192.0.2.33",
+            "2a03:2880:f12f:83:face:b00c::25de",
+        ] {
+            assert_eq!(identify(address).as_deref(), Some(IPV6), "{address}");
+        }
+        // Junk from searches, and a reversed address
+        for junk in [
+            "DB:F::E9",
+            "1:6189::7823",
+            "4337:0730:e2a8:0000:0000:3a58:8bd0:1002",
+            "64:abcd::1",
+        ] {
+            assert_eq!(identify(junk), None, "{junk}");
+        }
+        assert!(is_assigned_ipv6("[2001:db8::1]"));
+        assert!(!is_assigned_ipv6(""));
+    }
+
+    #[test]
+    fn recaptcha_keys_are_not_plaintext() {
+        // pyWhat's regex takes it; decoder junk of SHA-1 hashes is shaped like it
+        let junk = "6L85I67MIB85M476LBRI5E947559OCRL5I4O6CML";
+        assert!(Identifier::default()
+            .identify_whole(junk)
+            .iter()
+            .any(|m| m.regex.name == "Google ReCaptcha API Key"));
+        assert_eq!(identify(junk), None);
     }
 
     #[test]
