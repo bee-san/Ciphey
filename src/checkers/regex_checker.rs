@@ -33,6 +33,13 @@ impl Check for Checker<RegexChecker> {
         trace!("Checking {} with regex", text);
         let config = get_config();
         let pattern = config.regex.as_deref().unwrap();
+        // A search compiles its crib once, see `Search::new`
+        if let Some(re) = crate::config::search_config()
+            .and_then(|search| search.regex.as_ref())
+            .filter(|re| re.as_str() == pattern)
+        {
+            return self.check_regex(re, text);
+        }
         // The config can't change once it is set, so the pattern is compiled once. If it
         // ever differs from the cached one, compile it fresh like before.
         let cached =

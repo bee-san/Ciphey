@@ -151,6 +151,13 @@ static DICTIONARY: Lazy<Dictionary> =
 /// Search results of every thread, by letter pattern.
 static CACHE: Lazy<SearchCache> = Lazy::new(SearchCache::new);
 
+/// Forgets what earlier searches found. Their results depend on the checker's config (a
+/// crib or a wordlist), so they are forgotten when a search with another config starts,
+/// see `config::use_search_config`.
+pub(crate) fn forget_search_cache() {
+    CACHE.forget();
+}
+
 /// The monoalphabetic substitution cracker. Call:
 /// `let decoder = Decoder::<MonoalphabeticSubstitutionDecoder>::new()` to create one,
 /// and `decoder.crack(text, &checker)` to crack `text`.
@@ -1514,6 +1521,11 @@ impl SearchCache {
                 })
             }
         }
+    }
+
+    /// Forgets every finished search's result. Searches still running keep their markers.
+    fn forget(&self) {
+        self.entries().retain(|_, cached| cached.is_none());
     }
 
     /// Records the result for `pattern`.
