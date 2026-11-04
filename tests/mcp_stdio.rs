@@ -505,7 +505,7 @@ fn detect_plaintext_identifies_text() {
     assert_eq!(output["checkers"], json!(["regex"]), "{output}");
 
     // English with typos: only `high` sensitivity takes it for English.
-    let noisy = "let me jnow whdn you gdt home";
+    let noisy = "can you pibk up some mhlk on the wzy back";
     for (sensitivity, is_plaintext) in [("low", false), ("high", true)] {
         let output = detect(
             &mut client,

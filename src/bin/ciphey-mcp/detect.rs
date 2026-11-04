@@ -364,7 +364,7 @@ mod tests {
     #[test]
     fn sensitivity_changes_the_english_checker() {
         // English with typos: only `high` takes it for English.
-        let text = "let me jnow whdn you gdt home";
+        let text = "can you pibk up some mhlk on the wzy back";
         let at = |sensitivity| {
             detect(DetectParams {
                 sensitivity: Some(sensitivity),

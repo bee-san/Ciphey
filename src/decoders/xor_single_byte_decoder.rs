@@ -595,13 +595,14 @@ mod tests {
 
     #[test]
     fn unidentified_english_is_handed_to_the_search() {
-        // "Affine cipher" XORed with 0x2a, as hex. The checker doesn't take it for English
-        // ("affine" isn't in its dictionary), but it scores like English
-        let result = crack("6b4c4c43444f0a49435a424f58");
+        // "Ciphey rocks" XORed with 0x2a, as hex. The checker doesn't take it for English
+        // (two words need both to be dictionary words, and "ciphey" isn't), but it scores
+        // like English
+        let result = crack("69435a424f530a5845494159");
         assert!(!result.success);
         assert_eq!(
             result.unencrypted_text,
-            Some(vec!["Affine cipher".to_string()])
+            Some(vec!["Ciphey rocks".to_string()])
         );
         assert_eq!(result.key.as_deref(), Some("0x2a"));
     }

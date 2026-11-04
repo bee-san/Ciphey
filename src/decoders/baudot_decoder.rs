@@ -536,15 +536,12 @@ mod tests {
     #[test]
     fn junk_reversed_reading_is_not_returned() {
         // Read least significant bit first, the pangram is the junk below, which a
-        // lenient English check accepts. It must never reach the search unverified.
+        // lenient English check accepted (gibberish-or-not 5 at High). It must never reach
+        // the search unverified.
         let codes = parse_codes(FOX).unwrap();
         let reversed: Vec<u8> = codes.iter().map(|&code| REV5[usize::from(code)]).collect();
         let junk = readings(&reversed, KEYS[1], FOX);
         assert_eq!(junk[0].text, FOX_REVERSED_READING);
-        assert!(!gibberish_or_not::is_gibberish(
-            FOX_REVERSED_READING,
-            gibberish_or_not::Sensitivity::High
-        ));
         let result = crack(FOX);
         let outputs = result.unencrypted_text.unwrap();
         assert!(!outputs.contains(&junk[0].text), "{outputs:?}");

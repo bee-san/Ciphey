@@ -1716,10 +1716,11 @@ mod tests {
 
     #[test]
     fn plaintext_athena_does_not_identify_is_still_returned() {
-        // Athena counts non-ASCII as unprintable, so this isn't identified, but it decodes
-        let result = crack(&vector("0.5.0", "café €", false));
+        // Athena doesn't take two words for plaintext unless both are words ("jsfuck"
+        // isn't), but it decodes
+        let result = crack(&vector("0.5.0", "I 😀 JSFuck", false));
         assert!(!result.success);
-        assert_eq!(result.unencrypted_text.unwrap(), vec!["café €"]);
+        assert_eq!(result.unencrypted_text.unwrap(), vec!["I 😀 JSFuck"]);
     }
 
     #[test]

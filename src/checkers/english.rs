@@ -1,60 +1,48 @@
 use crate::checkers::checker_result::CheckResult;
 use crate::checkers::lemmeknow_checker::{has_control_characters, is_ctf_flag_shaped};
 use crate::decoders::nato_phonetic_decoder::decode_nato;
-use crate::storage::ngrams::{is_short_word, quadgram_score, quadgram_score_and_letters};
-use gibberish_or_not::{is_gibberish, is_word, Sensitivity};
+use crate::storage::ngrams::{is_short_word, quadgram_score};
+use gibberish_or_not::{is_word, Detector, Lang, Sensitivity};
 use lemmeknow::Identifier;
+use once_cell::sync::Lazy;
 
 use crate::checkers::checker_type::{Check, Checker};
 
-/// Checks English plaintext.
+/// Checks English plaintext, and text in the other languages Ciphey's
+/// [gibberish-or-not](https://crates.io/crates/gibberish-or-not) packs know.
 ///
-/// The candidate is normalised first (see `normalise_string`), rejected if it looks like
-/// decoder output (`looks_like_decoder_output`: words cased like `hHeREoUtHo`, mostly
-/// symbols such as `!%TOO(NO`, unbalanced brackets), and then classified by shape. The
-/// full list of rules and thresholds, and the benchmark they were tuned with, are in
-/// `docs/plaintext-detection.md`.
+/// gibberish-or-not 6 decides whether a text is natural language, with or without spaces.
+/// On top of it, the checker has the rules a search needs: it asks about tens of
+/// thousands of short candidates, nearly all of them junk, and junk that happens to be
+/// language (a common word, two short words) is still junk there. The full list of rules,
+/// what each is measured to do, and the benchmark, are in `docs/plaintext-detection.md`.
 ///
-/// 1. **Space-less letters** (no whitespace, at least `SPACELESS_MIN_LETTERS` (8) letters,
-///    at least 90% letters), the usual output of Caesar, railfence and other classical
-///    ciphers: the mean [quadgram score](crate::storage::ngrams::quadgram_score) must
-///    reach the sensitivity's threshold, or the text must be one dictionary word. Up to
-///    12 letters it must also split into known words (`HELLOWORLD`, not the railfence
-///    shuffle `HWORLDELLO`), unless its quadgram score is very high: a long single word
-///    like `experience` can't be looked up, since the dictionary only answers for 4 to
-///    9 letters.
-/// 2. **Mostly known words**: two or more words, at least one of three or more letters, of
+/// 1. **Decoder output is rejected first**: control characters, words cased like
+///    `hHeREoUtHo`, mostly symbols such as `!%TOO(NO`, unbalanced brackets, and NATO code
+///    words (`looks_like_decoder_output`, `is_spelled_with_code_words`).
+/// 2. **Space-less letters** (no whitespace, at least [`SPACELESS_MIN_LETTERS`] letters, at
+///    least 90% letters), the usual output of Caesar, railfence and other classical
+///    ciphers: gibberish-or-not decides.
+/// 3. **Mostly known words**: two or more words, at least one of three or more letters, of
 ///    which more than 80% are English words, counting the common one to three letter
-///    words gibberish-or-not's dictionary lacks (`a`, `is`, `me` ...) and leaving numbers
-///    out. So `call me` and `meet me at noon` pass, but not decoder output like `I A`.
-///    Without whitespace the words must be separated by writing's punctuation.
-/// 3. **Other text without whitespace** (digits or symbols mixed in, like
+///    words (`a`, `is`, `me` ...) and leaving numbers out. So `call me` and `meet me at
+///    noon` pass, but not decoder output like `I A`. Without whitespace the words must be
+///    separated by writing's punctuation.
+/// 4. **Other text without whitespace** (digits or symbols mixed in, like
 ///    `ThI2THAtThE2THe0`), **one or two words**: only a single dictionary word passes, of
-///    five or more letters at Low. gibberish-or-not's letter-pair scores accept too much
-///    of this decoder junk.
-/// 4. **Everything else**: rejected if its letters' quadgram score is below
-///    `quadgram_veto`, far from any natural language (wrong Caesar shifts such as
-///    `Max mkxtlnkx bl unkbxw ngwxk`), if no word is English, or if fewer than
+///    five or more letters at Low.
+/// 5. **Everything else**: rejected if no word is English, or if fewer than
 ///    `min_known_ratio` of the words are and it isn't in another language (reversed text,
-///    wrong railfence keys, partly decrypted Vigenère); otherwise gibberish-or-not's
-///    `is_gibberish` at the checker's sensitivity decides.
+///    wrong railfence keys, partly decrypted Vigenère); otherwise gibberish-or-not decides.
+///
+/// Text the English rules reject is still accepted if gibberish-or-not finds it is
+/// another language Ciphey has a pack for ([`OTHER_LANGUAGES`]), and reported as that
+/// language: `Words (French)`.
 pub struct EnglishChecker;
 
-/// Space-less text needs at least this many letters for its quadgram score to mean
-/// anything. Shorter words are looked up in the dictionary instead.
+/// Space-less text with at least this many letters is gibberish-or-not's to decide.
+/// Shorter words are looked up in the dictionary instead.
 const SPACELESS_MIN_LETTERS: usize = 8;
-
-/// Space-less text up to this many letters must split into known words: a few quadgrams
-/// can't tell English from a shuffle of it, like railfence's wrong keys.
-const SPLIT_MAX_LETTERS: usize = 12;
-
-/// ...unless it has at least [`SPLIT_EXEMPT_MIN_LETTERS`] letters and its quadgram score is
-/// at least this. Most real words of 10 to 12 letters that can't be split score above it,
-/// and the shuffles in the #1031 corpora below.
-const SPLIT_EXEMPT_SCORE: f64 = -4.4;
-
-/// Words up to 9 letters are in the dictionary, so only longer ones may need the exemption.
-const SPLIT_EXEMPT_MIN_LETTERS: usize = 10;
 
 /// A space-less candidate from a cipher whose key search games letter statistics (see
 /// [`has_mostly_words`]) needs at least this share of its letters inside known words.
@@ -62,29 +50,51 @@ const SPLIT_EXEMPT_MIN_LETTERS: usize = 10;
 /// level, Vigenère's wrong keys in the search 4%.
 const SPACELESS_MIN_WORD_COVERAGE: f64 = 0.85;
 
-/// Text with at least [`QUADGRAM_VETO_MIN_LETTERS`] letters that scores below this is not
-/// English, whatever gibberish-or-not says. English, even ALL CAPS, names and code,
-/// scores above -5.3 in the #1031 corpora, and French, German and Spanish above -6.5.
-/// Reversed English and wrong Caesar shifts mostly score below. High, the most lenient
-/// sensitivity, only vetoes text further away.
-fn quadgram_veto(sensitivity: Sensitivity) -> f64 {
-    match sensitivity {
-        Sensitivity::Low | Sensitivity::Medium => -6.5,
-        Sensitivity::High => -7.5,
+/// [`has_mostly_words`] doesn't split space-less text whose mean quadgram score is below
+/// this into words: nothing that low is English, and splitting costs a dictionary lookup
+/// per letter and word length.
+const SPACELESS_SPLIT_MIN_SCORE: f64 = -5.6;
+
+/// The languages Ciphey accepts text in besides English: the gibberish-or-not language
+/// packs it compiles in, one Cargo feature each (`Cargo.toml`). Which ones is decided by
+/// measurement, their recall against the false positives they add on junk
+/// (`docs/plaintext-detection.md`, "Languages").
+static OTHER_LANGUAGES: Lazy<Vec<Lang>> = Lazy::new(|| {
+    Detector::new()
+        .enabled()
+        .filter(|&lang| lang != Lang::En)
+        .collect()
+});
+
+/// gibberish-or-not with every language Ciphey compiles in, at its most lenient
+/// sensitivity: [`language`] compares the score with the sensitivity asked for.
+static ALL_LANGUAGES: Lazy<Detector> = Lazy::new(|| Detector::new().sensitivity(Sensitivity::High));
+
+/// gibberish-or-not with the [`OTHER_LANGUAGES`] only (none while Ciphey compiles in English
+/// only), at its most lenient sensitivity.
+static OTHER_LANGUAGE_DETECTOR: Lazy<Detector> = Lazy::new(|| {
+    Detector::new()
+        .languages(&OTHER_LANGUAGES)
+        .sensitivity(Sensitivity::High)
+});
+
+/// The language `detector` finds `text` to be at `sensitivity`, if any.
+fn language(detector: &Detector, text: &str, sensitivity: Sensitivity) -> Option<Lang> {
+    let found = detector.detect(text);
+    if found.score >= sensitivity.min_score() {
+        found.language
+    } else {
+        None
     }
 }
 
-/// Fewer letters give too few quadgrams for the veto to be reliable.
-const QUADGRAM_VETO_MIN_LETTERS: usize = 12;
-
-/// The minimum mean quadgram score for space-less text at each sensitivity (Low is the
-/// strictest). Chosen with the #1031 harness so that the issue's corpus
-/// has no more false positives than before, and checked on held-out text.
-fn quadgram_threshold(sensitivity: Sensitivity) -> f64 {
-    match sensitivity {
-        Sensitivity::Low => -5.1,
-        Sensitivity::Medium => -5.3,
-        Sensitivity::High => -5.6,
+/// What the checker reports text in `language` as: `Words` for English, `Words (French)`
+/// for another language.
+pub(crate) fn words_in(language: Lang) -> String {
+    if language == Lang::En {
+        "Words".to_string()
+    } else {
+        format!("Words ({})", language.name())
     }
 }
 
@@ -105,14 +115,15 @@ impl Check for Checker<EnglishChecker> {
     }
 
     fn check(&self, text: &str) -> CheckResult {
+        let language = identify(text, self.sensitivity);
         CheckResult {
-            is_identified: is_english(text, self.sensitivity),
+            is_identified: language.is_some(),
             // The text as given, not the normalised copy: this is what the human checker
             // asks about and what top results lists.
             text: text.to_string(),
             checker_name: self.name,
             checker_description: self.description,
-            description: "Words".to_string(),
+            description: words_in(language.unwrap_or(Lang::En)),
             link: self.link,
         }
     }
@@ -127,43 +138,44 @@ impl Check for Checker<EnglishChecker> {
     }
 }
 
-/// Whether `text` reads as English at `sensitivity`. See [`EnglishChecker`].
+/// Whether `text` reads as English, or another of Ciphey's languages, at `sensitivity`.
+/// See [`EnglishChecker`].
 pub(crate) fn is_english(text: &str, sensitivity: Sensitivity) -> bool {
+    identify(text, sensitivity).is_some()
+}
+
+/// The language `text` is written in at `sensitivity`, if it is natural language: see
+/// [`EnglishChecker`].
+pub(crate) fn identify(text: &str, sensitivity: Sensitivity) -> Option<Lang> {
+    identify_with(text, sensitivity, &ALL_LANGUAGES, &OTHER_LANGUAGE_DETECTOR)
+}
+
+/// [`identify`], with gibberish-or-not's detectors for all of Ciphey's languages and for the
+/// ones other than English.
+fn identify_with(
+    text: &str,
+    sensitivity: Sensitivity,
+    all_languages: &Detector,
+    other_languages: &Detector,
+) -> Option<Lang> {
     // Control characters (other than tabs and line breaks) are decoder bytes, not writing:
     // `hello\u{17}world` is a wrong decoding of `hello world`
     if has_control_characters(text) {
-        return false;
+        return None;
     }
     let without_opaque = without_opaque_tokens(text);
     let text = without_opaque.as_ref();
     let normalised = normalise_string(text);
     if normalised.is_empty() {
-        return false;
+        return None;
     }
     let trimmed = text.trim();
     if looks_like_decoder_output(trimmed) || is_spelled_with_code_words(trimmed) {
-        return false;
+        return None;
     }
     let spaceless = !trimmed.contains(char::is_whitespace);
-
     if spaceless && is_mostly_letters(trimmed) {
-        if is_single_word(&normalised, sensitivity) {
-            return true;
-        }
-        let Some(score) = quadgram_score(trimmed) else {
-            return false;
-        };
-        if score < quadgram_threshold(sensitivity) {
-            return false;
-        }
-        let letters: String = trimmed
-            .chars()
-            .filter(char::is_ascii_alphabetic)
-            .map(|c| c.to_ascii_lowercase())
-            .collect();
-        return letters.len() > SPLIT_MAX_LETTERS
-            || (letters.len() >= SPLIT_EXEMPT_MIN_LETTERS && score >= SPLIT_EXEMPT_SCORE)
-            || splits_into_words(&letters);
+        return language(all_languages, trimmed, sensitivity);
     }
 
     let words: Vec<&str> = normalised.split(' ').collect();
@@ -178,40 +190,41 @@ pub(crate) fn is_english(text: &str, sensitivity: Sensitivity) -> bool {
     // (`Hello,world!How`), and numbers count against them: `9=inn@on` and
     // `SO[\OTSTONTNOTTR` are junk
     let candidates: &[&str] = if spaceless { &words } else { &alpha_words };
-    // Cheapest first: a quadgram score far from any language rejects text with spaces
-    // before its words are looked up
-    if !spaceless {
-        let (score, letters) = quadgram_score_and_letters(trimmed);
-        if letters >= QUADGRAM_VETO_MIN_LETTERS
-            && score.is_some_and(|score| score < quadgram_veto(sensitivity))
-        {
-            return false;
-        }
-    }
     let known = known_words(candidates, min_known_ratio(sensitivity));
     if candidates.len() >= 2
         && known == Known::Mostly
         && (!spaceless || is_separated_like_writing(trimmed))
         && candidates.iter().any(|word| word.chars().count() >= 3)
     {
-        return true;
+        return Some(Lang::En);
     }
+    // What the English rules below reject may still be another language
+    let english = |accepted: bool| {
+        if accepted {
+            Some(Lang::En)
+        } else {
+            language(other_languages, text, sensitivity)
+        }
+    };
     if spaceless {
-        return words.len() == 1 && is_single_word(words[0], sensitivity);
+        return english(words.len() == 1 && is_single_word(words[0], sensitivity));
     }
     // Two words that aren't both words, like `terces pot` (reversed) or `peg knioge` (a
     // wrong railfence key). One word passes on its own, but not as the label of a number
     // longer than itself: `flag = 50937517511040843800...` is a number to decode.
     if alpha_words.len() <= 2 {
-        return alpha_words.len() == 1
-            && is_single_word(alpha_words[0], sensitivity)
-            && count_bytes(trimmed, u8::is_ascii_digit)
-                <= count_bytes(trimmed, u8::is_ascii_alphabetic);
+        return english(
+            alpha_words.len() == 1
+                && is_single_word(alpha_words[0], sensitivity)
+                && count_bytes(trimmed, u8::is_ascii_digit)
+                    <= count_bytes(trimmed, u8::is_ascii_alphabetic),
+        );
     }
     if known == Known::None || (known == Known::Few && !is_other_language(&alpha_words)) {
-        return false;
+        return english(false);
     }
-    !is_gibberish(&normalised, sensitivity)
+    // gibberish-or-not reads the text as written: it splits words at punctuation itself
+    language(all_languages, text, sensitivity)
 }
 
 /// How many bytes of `text` `matches` accepts.
@@ -539,8 +552,7 @@ pub(crate) fn has_mostly_words(text: &str, min_ratio: f64) -> bool {
         // The English checker rejects these anyway, and splitting long text into words
         // costs a dictionary lookup per letter and word length
         if !is_mostly_letters(trimmed)
-            || quadgram_score(trimmed)
-                .is_none_or(|score| score < quadgram_threshold(Sensitivity::High))
+            || quadgram_score(trimmed).is_none_or(|score| score < SPACELESS_SPLIT_MIN_SCORE)
         {
             return true;
         }
@@ -591,7 +603,7 @@ fn splits_into_words(letters: &str) -> bool {
         if !reachable[start] {
             continue;
         }
-        // The dictionary only answers for words of up to 9 letters
+        // Words of up to 9 letters, as in `word_coverage`
         for end in start + 1..=(start + 9).min(letters.len()) {
             if !reachable[end] && is_known_word(&letters[start..end]) {
                 reachable[end] = true;
@@ -647,26 +659,35 @@ fn known_words(words: &[&str], floor: f64) -> Known {
     }
 }
 
-/// Whether `word` (lower case, letters and apostrophes) is an English word.
+/// Whether `word` (lower case, letters and apostrophes) is an English word: one of the
+/// common one to three letter words (`a`, `is`, `me`, `i'm`), a word in
+/// gibberish-or-not's English word list, or a long word that reads like English (see
+/// [`is_long_word`]).
 pub(crate) fn is_known_word(word: &str) -> bool {
     if !word.chars().all(|c| c.is_alphabetic() || c == '\'') {
         return false;
     }
     match word.chars().count() {
         0 => false,
+        // gibberish-or-not's list has many more short "words" (`ii`, `nd`, `tion`), which
+        // wrong keys make all the time
         1..=3 => is_short_word(word),
         4..=9 => is_dictionary_word(word),
-        // Too long to look up on its own (see `is_dictionary_word`): a word if it splits
-        // into words (`understanding`, `throughout`) or its quadgrams are very English
-        // (`congratulations`). Wrong keys make long strings of English letters
-        // (`otstontnottr`, `hegifidded`) that a looser score let through.
-        _ => quadgram_score(word).is_some_and(|score| {
-            (score >= LONG_WORD_MIN_SCORE && has_varied_letters(word))
-                || (score >= LONG_WORD_SPLIT_MIN_SCORE
-                    && word.bytes().all(|b| b.is_ascii_lowercase())
-                    && splits_into_words(word))
-        }),
+        _ => is_word(word) || is_long_word(word),
     }
+}
+
+/// Whether `word`, 10 letters or more, reads as English though gibberish-or-not's word list
+/// doesn't have it (`decompresses`): it splits into words (`understanding`, `throughout`)
+/// or its quadgrams are very English (`congratulations`). Wrong keys make long strings of
+/// English letters (`otstontnottr`, `hegifidded`) that a looser score let through.
+fn is_long_word(word: &str) -> bool {
+    quadgram_score(word).is_some_and(|score| {
+        (score >= LONG_WORD_MIN_SCORE && has_varied_letters(word))
+            || (score >= LONG_WORD_SPLIT_MIN_SCORE
+                && word.bytes().all(|b| b.is_ascii_lowercase())
+                && splits_into_words(word))
+    })
 }
 
 /// Words of 10 or more letters that don't split into words must score at least this. Of
@@ -884,7 +905,7 @@ mod tests {
     }
 
     #[test]
-    fn spaceless_text_uses_quadgrams() {
+    fn spaceless_text_is_decided_by_gibberish_or_not() {
         for text in [
             "THEQUICKBROWNFOXJUMPSOVERTHELAZYDOG",
             "WEAREDISCOVEREDFLEEATONCE",
@@ -908,15 +929,13 @@ mod tests {
     }
 
     #[test]
-    fn short_spaceless_text_must_split_into_words() {
-        assert!(splits_into_words("meetmeatnoon"));
-        assert!(splits_into_words("goodmorning"));
-        assert!(!splits_into_words("katwantatcad"));
-        // A long word the dictionary can't be asked about passes on its quadgram score
+    fn short_spaceless_text() {
         assert!(english("EXPERIENCE", Sensitivity::Low));
         assert!(english("MEETMEATNOON", Sensitivity::Low));
-        // Below 10 letters words are in the dictionary, so a high score isn't enough
-        assert!(!english("THRETHAN", Sensitivity::Low));
+        assert!(
+            !english("ECNOTAEELFDEREVOCSIDERAEW", Sensitivity::Low),
+            "reversed"
+        );
     }
 
     #[test]
@@ -986,6 +1005,62 @@ mod tests {
         assert!((word_coverage("meetmeatnoon") - 1.0).abs() < 1e-9);
     }
 
+    /// gibberish-or-not's English pack under another language's code: a stand-in for a
+    /// language pack, while gibberish-or-not ships English only.
+    fn relabelled_english_pack(code: &[u8; 2]) -> gibberish_or_not::Pack {
+        // `packs` isn't a stable API of gibberish-or-not; it's only used to get the
+        // English pack's bytes here
+        let english = Detector::new().languages(&[Lang::En]);
+        let mut blob = english.packs()[0].to_bytes();
+        // The container is `GONP`, the model's length and the model, whose header is
+        // `GONM`, a version and the language code
+        assert_eq!(&blob[8..12], b"GONM");
+        blob[14..16].copy_from_slice(code);
+        gibberish_or_not::Pack::from_bytes(&blob).unwrap()
+    }
+
+    #[test]
+    fn other_languages_are_reported() {
+        let french = Detector::empty()
+            .with_pack(relabelled_english_pack(b"fr"))
+            .sensitivity(Sensitivity::High);
+        assert_eq!(french.enabled().collect::<Vec<_>>(), [Lang::Fr]);
+        // What gibberish-or-not decides is labelled with its language
+        let text = "Ciphey decompresses lzma files too";
+        assert_eq!(
+            identify_with(text, Sensitivity::Medium, &french, &french),
+            Some(Lang::Fr)
+        );
+        // Text the English rules reject (two words that aren't both words) is still the
+        // other language's if its pack takes it
+        let none = Detector::empty();
+        assert_eq!(
+            identify_with("Ciphey rocks", Sensitivity::Medium, &none, &none),
+            None
+        );
+        assert_eq!(
+            identify_with("Ciphey rocks", Sensitivity::Medium, &none, &french),
+            Some(Lang::Fr)
+        );
+        // Without other languages, what the English rules reject stays rejected
+        let reversed = "rood eht nepo ,edistuo m'i";
+        assert_eq!(
+            identify_with(reversed, Sensitivity::Medium, &french, &none),
+            None
+        );
+        // What the English rules accept on their own is English
+        assert_eq!(
+            identify_with("hello there general", Sensitivity::Low, &french, &french),
+            Some(Lang::En)
+        );
+        assert_eq!(words_in(Lang::Fr), "Words (French)");
+        assert_eq!(words_in(Lang::En), "Words");
+        // Ciphey ships English only, so far
+        assert!(OTHER_LANGUAGES.is_empty());
+        let english = Checker::<EnglishChecker>::new().check("hello there general");
+        assert_eq!(english.description, "Words");
+    }
+
     #[test]
     fn test_default_sensitivity_is_medium() {
         let checker = Checker::<EnglishChecker>::new();
@@ -1003,9 +1078,9 @@ mod tests {
 
     #[test]
     fn test_sensitivity_affects_gibberish_detection() {
-        // A Vigenère decryption with one key letter wrong: about half of its words are
-        // words. High, the most lenient sensitivity, still takes it.
-        let text = "let me jnow whdn you gdt home";
+        // A Vigenère decryption with one key letter wrong: most of its words are words.
+        // High, the most lenient sensitivity, still takes it.
+        let text = "can you pibk up some mhlk on the wzy back";
         assert!(!english(text, Sensitivity::Low));
         assert!(!english(text, Sensitivity::Medium));
         assert!(english(text, Sensitivity::High));
@@ -1091,12 +1166,6 @@ mod tests {
         assert!(english("SHAG", Sensitivity::Medium));
         assert!(english("attack", Sensitivity::Low));
         assert!(english("Hello!", Sensitivity::Low));
-    }
-
-    #[test]
-    fn quadgram_thresholds_get_more_lenient_from_low_to_high() {
-        assert!(quadgram_threshold(Sensitivity::Low) > quadgram_threshold(Sensitivity::Medium));
-        assert!(quadgram_threshold(Sensitivity::Medium) > quadgram_threshold(Sensitivity::High));
     }
 
     #[test]

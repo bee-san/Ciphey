@@ -443,10 +443,11 @@ mod tests {
         ("IHHWVC SWFRCP", 5, 8, "AFFINE CIPHER"),
     ];
 
-    /// How many of `VECTORS`, from the start, the Athena checker identifies. It rejects
-    /// the last one, Wikipedia's "AFFINE CIPHER": a text of two words needs both to be
-    /// dictionary words, and "affine" isn't (see `issue_example_ranks_second`).
-    const IDENTIFIED: usize = 6;
+    /// How many of `VECTORS`, from the start, the Athena checker identifies: all of them.
+    /// The last, Wikipedia's "AFFINE CIPHER", since gibberish-or-not 6: a text of two
+    /// words needs both to be dictionary words, and "affine" is in its word list (see
+    /// `issue_example_ranks_second`).
+    const IDENTIFIED: usize = 7;
 
     #[test]
     fn multipliers_are_the_units_mod_26_except_one() {
@@ -587,19 +588,16 @@ mod tests {
 
     #[test]
     fn issue_example_ranks_second() {
-        // Wikipedia's example, from the issue. The Athena checker rejects the plaintext
-        // (see `IDENTIFIED`), so the cracker can't report success, but the true key ranks
-        // second and its decryption is handed back to the search with the others.
+        // Wikipedia's example, from the issue. The true key ranks second: the checker
+        // rejects the first decryption and accepts the second.
         let (ciphertext, a, b, plaintext) = VECTORS[6];
         assert_eq!(rank_keys(ciphertext)[1], (a, b));
         let affine_decoder = Decoder::<AffineDecoder>::new();
         let result = affine_decoder.crack(ciphertext, &get_athena_checker());
-        assert!(!result.success);
+        assert!(result.success);
         assert_eq!(result.decoder, "Affine");
-        assert!(result.key.is_none());
-        let candidates = result.unencrypted_text.unwrap();
-        assert_eq!(candidates.len(), CANDIDATES_RETURNED);
-        assert_eq!(candidates[1], plaintext);
+        assert_eq!(result.key.unwrap(), format!("a={a}, b={b}"));
+        assert_eq!(result.unencrypted_text.unwrap(), vec![plaintext]);
     }
 
     #[test]

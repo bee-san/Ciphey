@@ -36,7 +36,8 @@ mcp = ["dep:memory-stats", "dep:rmcp", "dep:tokio"]
 [dependencies]
 chrono = "0.4.45"
 termcolor = "1.4"
-# Is a text natural language? One Cargo feature per language (see the English checker)
+# Is a text natural language? One feature per language pack: Ciphey compiles in the ones
+# measured in docs/plaintext-detection.md ("Languages"); 6.0 ships English only
 gibberish-or-not = { git = "https://github.com/bee-san/gibberish-or-not", branch = "gib-lead", default-features = false, features = ["en"] }
 lazy-regex = "3.6.0"
 lazy_static = "1.4.0"

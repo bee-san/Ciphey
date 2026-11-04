@@ -2,7 +2,7 @@
 
 ## Overview
 
-ciphey uses the `gibberish_or_not` library to detect whether decoded text is meaningful English. This library provides three sensitivity levels to fine-tune gibberish detection:
+ciphey uses the `gibberish_or_not` library (6.x) to detect whether decoded text is natural language. Its score is calibrated against the false-positive rate on junk, and each of its three sensitivity levels is a minimum score: 0.9 at Low, 0.75 at Medium and 0.5 at High.
 
 ### Low Sensitivity
 - Most strict classification
@@ -12,7 +12,6 @@ ciphey uses the `gibberish_or_not` library to detect whether decoded text is mea
 
 ### Medium Sensitivity (Default)
 - Balanced approach for general use
-- Combines dictionary and n-gram analysis
 - Default mode suitable for most applications
 - Used by most decoders in ciphey
 
@@ -22,7 +21,7 @@ ciphey uses the `gibberish_or_not` library to detect whether decoded text is mea
 - Best when input is mostly gibberish and any English-like patterns are significant
 - Not used by ciphey itself. The removed `enhanced_detection` setting used to force it on every check, which more than quadrupled false positives ([#1031](https://github.com/bee-san/Ciphey/issues/1031)).
 
-Note that gibberish-or-not's own documentation for `Sensitivity` and `is_gibberish` has High and Low the wrong way round: in its code, Low uses the highest threshold (0.35) and High the lowest (0.15). The descriptions here match the code.
+gibberish-or-not 5's documentation had High and Low the wrong way round; 6.0 documents them as above ([gibberish-or-not#9](https://github.com/bee-san/gibberish-or-not/pull/9)).
 
 ## Implementation in ciphey
 
@@ -37,11 +36,11 @@ In ciphey, different decoders use different sensitivity levels based on their ch
 Besides gibberish-or-not's thresholds, the sensitivity picks the English checker's own
 thresholds (see [plaintext-detection.md](plaintext-detection.md) for all the rules):
 
-| Sensitivity | Minimum mean log10 quadgram probability (space-less text) | Rejected below (other text) | Share of English words needed (3+ words) | Letters in a single word |
-|---|---|---|---|---|
-| Low | -5.1 | -6.5 | 50% | 5+ |
-| Medium | -5.3 | -6.5 | 50% | 4+ |
-| High | -5.6 | -7.5 | 35% | 4+ |
+| Sensitivity | gibberish-or-not's minimum score | Share of English words needed (3+ words) | Letters in a single word |
+|---|---|---|---|
+| Low | 0.9 | 50% | 5+ |
+| Medium | 0.75 | 50% | 4+ |
+| High | 0.5 | 35% | 4+ |
 
 Vigenère also only tries keys up to a fifth of the text's letters long.
 
@@ -57,7 +56,7 @@ let result = checker_with_sensitivity.check(text);
 
 ## Technical Details
 
-The sensitivity level affects the thresholds used for n-gram analysis and dictionary checks:
+The sensitivity level is the minimum calibrated score gibberish-or-not needs, and picks the English checker's own thresholds above:
 
 - **Low Sensitivity**: Stricter thresholds, requiring more evidence to classify text as English
 - **Medium Sensitivity**: Balanced thresholds suitable for most applications

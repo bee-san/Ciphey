@@ -598,14 +598,18 @@ mod tests {
 
     #[test]
     fn decodes_k_as_c() {
-        // ATTACK AT DAWN: K is sent as C
-        assert_identified(
+        // ATTACK AT DAWN: K is sent as C. gibberish-or-not 6 doesn't take the three words
+        // with the typo for English at Medium, so the decoding is handed on unaccepted.
+        for text in [
             "1,1 4,4 4,4 1,1 1,3 1,3  1,1 4,4  1,4 1,1 5,2 3,3",
-            "ATTACC AT DAWN",
-        );
-        assert_identified(
             "* *  **** ****  **** ****  * *  * ***  * ***   * *  **** ****   * ****  * *  ***** **  *** ***",
-            "ATTACC AT DAWN",
+        ] {
+            assert_eq!(crack(text).as_deref(), Some("ATTACC AT DAWN"), "{text:?}");
+        }
+        // A longer text with a K in it is accepted
+        assert_identified(
+            "1,1 4,4 4,4 1,1 1,3 1,3  4,4 2,3 1,5  3,3 3,4 4,2 4,4 2,3  2,2 1,1 4,4 1,5  1,1 4,4  1,4 1,1 5,2 3,3",
+            "ATTACC THE NORTH GATE AT DAWN",
         );
     }
 
