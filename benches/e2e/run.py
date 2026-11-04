@@ -28,7 +28,6 @@ import json
 import math
 import os
 import platform
-import random
 import re
 import shutil
 import signal
@@ -50,6 +49,17 @@ ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 # ---------------------------------------------------------------------------------------
 # Corpus
+
+
+def inside(path, *bases):
+    """`path` made absolute, if it is in the repository or the temp directory (or in `bases`):
+    the benchmark reads and writes nowhere else. Exits otherwise."""
+    full = os.path.realpath(path)
+    for base in bases or (ROOT, tempfile.gettempdir()):
+        base = os.path.realpath(base)
+        if os.path.commonpath([base, full]) == base:
+            return full
+    raise SystemExit(f"{path}: the benchmark only reads and writes in {ROOT} and {tempfile.gettempdir()}")
 
 
 def unesc(s):
@@ -75,7 +85,7 @@ class Case:
 
 
 def load_corpus(path):
-    with open(path, encoding="utf-8") as fh:
+    with open(inside(path), encoding="utf-8") as fh:
         raw = fh.read()
     lines = [ln for ln in raw.split("\n") if ln and not ln.startswith("#")]
     header = lines[0].split("\t")
@@ -328,8 +338,19 @@ def quantile(xs, q):
     return xs[lo] + (xs[hi] - xs[lo]) * (k - lo)
 
 
+T975 = {1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
+        12: 2.179, 15: 2.131, 20: 2.086, 25: 2.060, 30: 2.042, 40: 2.021, 60: 2.000, 120: 1.980}
+
+
+def t975(df):
+    """Student's t, two-sided 95%, for df degrees of freedom (the next smaller tabulated df)."""
+    if df >= 1000:
+        return 1.960
+    return T975[max(k for k in T975 if k <= max(df, 1))]
+
+
 def fmt_s(x):
-    if x != x:
+    if math.isnan(x):
         return "-"
     return f"{x * 1000:.0f} ms" if x < 0.1 else f"{x:.2f} s"
 
@@ -467,10 +488,9 @@ def ab_report(rows, cases, a, b):
         if not pairs:
             return "-"
         logs = [math.log(y / x) for x, y in pairs]
-        gm = math.exp(statistics.mean(logs))
-        rng = random.Random(1)
-        boots = sorted(math.exp(statistics.mean(rng.choices(logs, k=len(logs)))) for _ in range(2000))
-        return f"{gm:.3f} (95% CI {boots[50]:.3f} to {boots[1949]:.3f}, {len(pairs)} cases)"
+        mean = statistics.mean(logs)
+        half = t975(len(logs) - 1) * statistics.stdev(logs) / math.sqrt(len(logs)) if len(logs) > 1 else float("inf")
+        return f"{math.exp(mean):.3f} (95% CI {math.exp(mean - half):.3f} to {math.exp(mean + half):.3f}, {len(pairs)} cases)"
     both = [i for i in ids if first[(a, i)]["verdict"] == "correct" == first[(b, i)]["verdict"] and by_id[i].expected != "-"]
     ta = [first[(a, i)]["seconds"] for i in ids]
     tb = [first[(b, i)]["seconds"] for i in ids]
@@ -501,7 +521,7 @@ def esc(s):
 def read_results(paths):
     rows = []
     for p in paths:
-        with open(p, encoding="utf-8") as fh:
+        with open(inside(p), encoding="utf-8") as fh:
             header = fh.readline().rstrip("\n").split("\t")
             for line in fh:
                 r = dict(zip(header, line.rstrip("\n").split("\t")))
@@ -560,7 +580,7 @@ def main():
         tools[0].name, tools[1].name = tools[0].name + "-A", tools[1].name + "-B"
     names = [t.name for t in tools]
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    out_dir = args.out or os.path.join(ROOT, "target", "e2e", stamp + "-" + "-vs-".join(names))
+    out_dir = inside(args.out or os.path.join(ROOT, "target", "e2e", stamp + "-" + "-vs-".join(names)))
     os.makedirs(out_dir, exist_ok=True)
     meta = {
         "started_utc": stamp, "corpus": os.path.relpath(args.corpus, ROOT), "corpus_sha256": corpus_sha,

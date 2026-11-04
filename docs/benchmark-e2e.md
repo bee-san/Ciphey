@@ -34,7 +34,8 @@ binary), `python-ciphey` (the Python of a venv with Python Ciphey), `cyberchef` 
 `cyberchef-intensive` (a directory with `node_modules/cyberchef`). Every run writes
 `results.tsv` (one line per case and tool: status, verdict, seconds, decoder path, answer),
 `summary.md` and `meta.json` (versions, sha256 of the binary and the corpus, timeout,
-threads, `uptime` before and after) to `target/e2e/<time>/`, or `--out`.
+threads, `uptime` before and after) to `target/e2e/<time>/`, or `--out`. It reads and writes
+only inside the repository and the temp directory.
 
 ## Method
 
@@ -49,7 +50,9 @@ Every run of a case:
   of the whole process.
 
 Cases run one at a time. With two tools, each case runs on both back to back, A first on even
-cases and B first on odd ones, so the host's load affects both alike.
+cases and B first on odd ones, so the host's load affects both alike. The A/B report lists
+every case whose verdict differs and the geometric mean of the per-case time ratios B/A, with
+a 95% confidence interval from Student's t on the log ratios.
 
 **Verdicts.** A case's answer is the text after `The plaintext is:`. It is **correct** if it
 equals the expected plaintext after the case's match rule, **wrong** if it doesn't (a false
@@ -242,9 +245,9 @@ Ciphey, about 0.85 s for Python Ciphey); CyberChef's are calls into a warm proce
 Master against itself over the whole corpus, interleaved (`run.py master=… master=…`, 15:10
 to 15:23 UTC), gave 234/376 correct in both runs, as in the baseline run, with one verdict
 different: `lang.ru.base64`, a false positive found after 5.30 s in one run and nothing at the
-5 s timeout in the other. The time ratio of the two runs was 0.996 (95% interval 0.986 to
-1.006). On the quick subset (76 cases), master against itself took 54 s, changed no verdict
-and had a time ratio of 0.991 (0.956 to 1.023); master against 0.12.0 lists 43 changed
+5 s timeout in the other. The time ratio of the two runs was 0.997 (95% confidence interval
+0.986 to 1.007). On the quick subset (76 cases), master against itself took 54 s, changed no
+verdict and had a time ratio of 0.991 (0.956 to 1.027); master against 0.12.0 lists 43 changed
 verdicts there and `--check` fails, as it should. CyberChef ran twice too (the first runs
 counted the restart of the Node process after a timeout into the next timed-out case): the
 same verdicts by default, and in intensive mode two cases that finish close to the timeout

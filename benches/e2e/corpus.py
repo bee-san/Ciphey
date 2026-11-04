@@ -1039,7 +1039,7 @@ def vigenere(key):
     return text(lambda s, rng: map_letters(s, lambda i, v: v + k[i % len(k)]))
 
 
-def beaufort(key):  # C = K - P
+def beaufort(key):  # the key letter minus the plaintext letter
     k = _key(key)
     return text(lambda s, rng: map_letters(s, lambda i, v: k[i % len(k)] - v))
 
@@ -1175,7 +1175,7 @@ def hash_hex(name):
             from Crypto.Hash import MD4
 
             return MD4.new(u(data).encode("utf-16-le")).hexdigest().encode()
-        return hashlib.new(name, data).hexdigest().encode()
+        return hashlib.new(name, data, usedforsecurity=False).hexdigest().encode()
 
     enc.__name__ = "hash_" + name
     return enc
@@ -1192,7 +1192,7 @@ def load_plaintexts():
             line = line.rstrip("\n")
             if not line or line.startswith("#"):
                 continue
-            pool, pid, source, value = line.split("\t")
+            pool, pid, _source, value = line.split("\t")
             pools.setdefault(pool, []).append((pid, value))
     return pools
 
@@ -1892,6 +1892,9 @@ def main():
     args = ap.parse_args()
     sys.path.insert(0, HERE)
     from cyberchef import CyberChef
+    from run import inside
+
+    args.out = inside(args.out)
 
     CHEF = CyberChef(args.cyberchef)
     try:

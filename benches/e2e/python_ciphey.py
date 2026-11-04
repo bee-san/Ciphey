@@ -17,10 +17,15 @@ of the path too:
 import json
 import os
 import sys
+import tempfile
 
 
 def main():
-    with open(sys.argv[1], encoding="utf-8") as fh:
+    # run.py writes the input to a fresh HOME in the temp directory; read nothing else
+    path, tmp = os.path.realpath(sys.argv[1]), os.path.realpath(tempfile.gettempdir())
+    if os.path.commonpath([tmp, path]) != tmp:
+        raise SystemExit(f"{sys.argv[1]} is not in {tmp}")
+    with open(path, encoding="utf-8") as fh:
         text = fh.read()
 
     from ciphey import iface

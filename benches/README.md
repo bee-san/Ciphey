@@ -69,9 +69,9 @@ with:
 * **Verdicts that changed**: every case one binary got right and the other didn't, with the
   answers and the decoder paths. A decoder PR should have no line that goes from `correct`
   to `wrong` or `nothing`; `--check` exits 1 if there is one.
-* **Time B/A**: the geometric mean of the per-case time ratios, with a 95% bootstrap
-  interval. Master against itself gave 0.991 (0.956 to 1.023) in 54 s on the busy shared
-  host; an interval above 1.05 is a slowdown to explain.
+* **Time B/A**: the geometric mean of the per-case time ratios, with a 95% confidence
+  interval (Student's t on the log ratios). Master against itself gave 0.991 (0.956 to 1.027)
+  in 54 s on the busy shared host; an interval above 1.05 is a slowdown to explain.
 
 Paste those lines and the `uptime` lines into the PR. To show what the new decoder gains, run
 its own cases of the full corpus too (they are tagged with its issue as expected failures),
