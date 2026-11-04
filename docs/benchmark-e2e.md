@@ -307,11 +307,12 @@ lists 43 changed verdicts there and `--check` fails, as it should.
 * CyberChef's comparable cases come from Magic's detection, layer by layer. `flag.28` (ROT13
   over Base64) isn't counted for it, although Magic solves it with its ROT13'd-Base64 preset:
   one operation for two layers. Three tagged cases are ones Magic can't answer although it
-  picks the right operation: `enc.unicode_escape.1` (CyberChef keeps the unescaped accented
-  text as Latin-1 bytes, and Magic's pruning drops a result that isn't UTF-8),
-  `enc.unicode_plus.1` (Unescape Unicode Characters keeps the spaces between the codes) and,
-  in intensive mode, `enc.utf7.1` (the same pruning). They count as CyberChef's misses;
-  corpus v2 should leave them out.
+  picks the right operation: `enc.unicode_escape.1` in default mode (CyberChef keeps the
+  unescaped accented text as Latin-1 bytes, and Magic's pruning drops a result that isn't
+  UTF-8; intensive mode adds an Encode text step and gets it), `enc.unicode_plus.1` in both
+  modes (Unescape Unicode Characters keeps the spaces between the codes) and `enc.utf7.1` in
+  intensive mode (the same pruning). They count as CyberChef's misses; corpus v2 should leave
+  them out.
 * The corpus has one or two cases per encoding, so a single case moving is a large change in
   a small category. Categories, not single encodings, are the unit to compare.
 * Corpus v1's plaintexts are English apart from the `language` category; most are one

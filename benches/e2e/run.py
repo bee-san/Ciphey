@@ -564,28 +564,77 @@ def process_selftest():
             fh.write('#!/bin/sh\nread -r line\nprintf \'{"status": "answer", "plaintext": "%s", "path": []}\\n\' "$line"\n')
         os.chmod(hang, 0o700)  # owner only
         os.chmod(echo, 0o700)
-        c = Case(["p", "encoding", "", "ciphey,python-ciphey", "", "exact", "", "-", "stdin works", "stdin works"])
+        text = "stdin works"
+        c = Case(["p", "encoding", "", "ciphey,python-ciphey", "", "exact", "", "-", text, text])
         tool = CipheyTool("hang", hang, args)
         status, _, _, secs = tool.run(c)
         tool.close()
-        if status != "timeout" or not args.timeout + GRACE - 0.5 < secs < args.timeout + GRACE + 2:
-            failures.append(f"a hanging ciphey: {status} after {secs:.1f} s, want timeout after {args.timeout + GRACE} s")
+        if status != "timeout" or not 1.5 < secs < 3.0:  # --timeout 1: killed at 2 s, as the doc says (timeout + 1 s)
+            failures.append(f"a hanging ciphey: {status} after {secs:.1f} s, want timeout after 2 s")
         try:
             with open(pidfile, encoding="utf-8") as fh:
                 child = int(fh.read())
+        except (FileNotFoundError, ValueError):
+            child = None
+        if child is not None:
             time.sleep(0.2)
-            os.kill(child, 0)
-            failures.append("a hanging ciphey's child process survived the kill")
-            os.kill(child, signal.SIGKILL)
-        except (ProcessLookupError, FileNotFoundError, ValueError):
-            pass
+            # gone, or a zombie that nothing has reaped yet (PID 1 in a container may not be an init)
+            state = subprocess.run(["ps", "-o", "stat=", "-p", str(child)], capture_output=True, text=True).stdout.strip()
+            if state and not state.startswith("Z"):
+                failures.append("a hanging ciphey's child process survived the kill")
+                os.kill(child, signal.SIGKILL)
         tool = PythonCipheyTool("echo", echo, args)
         status, answer, _, _ = tool.run(c)
         tool.close()
-        if (status, answer) != ("answer", "stdin works"):
+        if (status, answer) != ("answer", text):
             failures.append(f"the Python Ciphey adapter didn't get the input on stdin: {status} {answer!r}")
+        failures += main_selftest(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+    return failures
+
+
+def main_selftest(tmp):
+    """main() end to end, with fake ciphey binaries: the selection, the A/B wiring and --check's
+    exit codes (exit 2 for a selection with no case)."""
+    failures = []
+    good = os.path.join(tmp, "good")  # decodes Base64, like a working ciphey
+    with open(good, "w", encoding="utf-8") as fh:
+        fh.write('#!/bin/sh\nfor a; do last="$a"; done\n'
+                 'printf "The plaintext is:\\n%s\\nthe decoder used is Base64\\n" "$(printf %s "${last#--text=}" | base64 -d)"\n')
+    bad = os.path.join(tmp, "bad")  # always gives up
+    with open(bad, "w", encoding="utf-8") as fh:
+        fh.write('#!/bin/sh\necho "ciphey has failed to decode the text."\n')
+    order_log = os.path.join(tmp, "order.log")
+    named = {}
+    for name in ("first", "second"):  # log the order they run in, and give up
+        named[name] = os.path.join(tmp, name)
+        with open(named[name], "w", encoding="utf-8") as fh:
+            fh.write(f'#!/bin/sh\necho {name} >> {order_log}\necho "ciphey has failed to decode the text."\n')
+    for path in (good, bad, *named.values()):
+        os.chmod(path, 0o700)
+    me = [sys.executable, os.path.abspath(__file__)]
+    subprocess.run(me + ["--ids", "enc.base64", named["first"], named["second"]], capture_output=True, timeout=120)
+    with open(order_log, encoding="utf-8") as fh:
+        order = fh.read().split()
+    if order != ["first", "second", "second", "first", "first", "second", "second", "first"]:
+        failures.append(f"run.py A B ran in the order {order}, want A B, B A, ...")
+    category = subprocess.run(me + ["--category", "encodings", good], capture_output=True, text=True, timeout=120)
+    if category.returncode != 2 or "invalid choice" not in category.stderr:
+        failures.append(f"--category encodings: exit {category.returncode}, {category.stderr.strip()[-80:]!r}")
+    probes = [
+        (["--ids", "enc.base64.1", "--check", good], 0),
+        (["--ids", "enc.base64.1", "--check", bad], 1),
+        (["--ids", "enc.base64.1", "--check", good, bad], 1),  # B lost a case
+        (["--ids", "enc.base64.1", "--check", bad, good], 0),  # B gained one
+        (["--ids", "no-such-case", good], 2),
+        (["--repeat", "0", "--ids", "enc.base64.1", good], 2),
+        (["--category", "hash", "--check", "python-ciphey:" + good], 1),  # nothing ran
+    ]
+    for argv, want in probes:
+        rc = subprocess.run(me + argv, capture_output=True, text=True, timeout=120).returncode
+        if rc != want:
+            failures.append(f"run.py {' '.join(argv)} exited {rc}, want {want}")
     return failures
 
 
@@ -623,12 +672,13 @@ def selftest():
         ("", "Traceback ...", 1, ("error", None, "exit 1: Traceback ...")),
         ("", "", None, ("timeout", None, "")),
     ]
+    b64op = "From Base64"
     magic = [
-        ({"results": [{"recipe": ["From Base64"], "output": "first"}, {"recipe": ["From Hex"], "output": "second"}]},
-         ("answer", "first", "From Base64")),  # Magic's first suggestion is its answer
+        ({"results": [{"recipe": [b64op], "output": "first"}, {"recipe": ["From Hex"], "output": "second"}]},
+         ("answer", "first", b64op)),  # Magic's first suggestion is its answer
         ({"results": []}, ("none", "INPUT", "")),
         ({"results": [{"recipe": [], "output": "INPUT"}]}, ("none", "INPUT", "")),
-        ({"results": [{"recipe": ["From Base64"], "output": "hello"}]}, ("answer", "hello", "From Base64")),
+        ({"results": [{"recipe": [b64op], "output": "hello"}]}, ("answer", "hello", b64op)),
         ({"results": [{"recipe": ["Gunzip"], "output": None}]}, ("error", None, "recipe failed: Gunzip")),
     ]
 
@@ -702,6 +752,15 @@ def selftest():
     report = ab_report(ab_rows, ab_cases, "A", "B")
     if "all cases 2.000 (95% CI 2.000 to 2.000, 3 cases)" not in report:  # B twice as slow is 2, not 0.5
         failures.append("ab_report: B taking twice as long isn't a ratio of 2.000: " + report.replace("\n", " ")[:300])
+    # unequal ratios: the interval's t, n and spread, and "cases both solved" (worked out by hand)
+    ab_cases = [Case([f"d{i}", "encoding", "", "ciphey", "", "exact", "", "-", "i", "e"]) for i in range(4)]
+    ab_rows = [{"tool": "A", "id": f"d{i}", "verdict": "correct", "seconds": 1.0, "path": ""} for i in range(4)]
+    ab_rows += [{"tool": "B", "id": f"d{i}", "verdict": v, "seconds": sec, "path": ""}
+                for i, (sec, v) in enumerate(((1.0, "correct"), (2.0, "correct"), (8.0, "correct"), (4.0, "nothing")))]
+    report = ab_report(ab_rows, ab_cases, "A", "B")
+    want = "all cases 2.828 (95% CI 0.681 to 11.745, 4 cases); cases both solved 2.520 (95% CI 0.182 to 34.974, 3 cases)"
+    if want not in report:
+        failures.append(f"ab_report: want {want!r} in " + report.replace("\n", " ")[:400])
     sum_cases = [Case([f"n{k}", "no_answer", "", "ciphey", "", "none", "", "-", f"in{k}", "-"]) for k in range(3)]
     sum_cases.append(Case(["x1", "language", "base64", "ciphey", "gon6", "exact", "", "-", "c", "d"]))
     sum_rows = [{"tool": "T", "id": i, "verdict": v, "seconds": 1.0, "repeat": 1, "path": ""}
@@ -721,6 +780,11 @@ def selftest():
                                           ("enc.base45.1", "enc.base64.1")], ids="base45")]
     if picked != ["enc.base45.1"]:
         failures.append(f"--ids base45 picked {picked}")
+    picked = [c.id for c in select_cases([Case([i, cat, "", "ciphey", "", "exact", sub, "-", "i", "e"]) for i, cat, sub in
+                                          (("chain5.01", "chain", "quick"), ("enc.base64.1", "encoding", "quick"),
+                                           ("enc.hex.1", "encoding", ""))], subset="quick", categories=["encoding"])]
+    if picked != ["enc.base64.1"]:
+        failures.append(f"--subset quick --category encoding picked {picked}")
     if [run_order(["A", "B"], k) for k in range(3)] != [["A", "B"], ["B", "A"], ["A", "B"]]:
         failures.append("the A/B order doesn't alternate")
 
@@ -731,17 +795,26 @@ def selftest():
             raise CyberChefError("CyberChef worker exited")
 
         def close(self):
-            pass
+            """Nothing to stop: it never started."""
 
     chef_tool = CyberChefTool.__new__(CyberChefTool)
     chef_tool.chef, chef_tool.intensive = DeadChef(), False
     chef_tool.args = argparse.Namespace(timeout=1, depth=3)
     if chef_tool.run(sum_cases[0])[0] != "error":
         failures.append("a dead CyberChef worker isn't an error for its case")
+    h2h_cases = [Case([i, cat, "", "ciphey", "", "exact", "", "-", "i", e]) for i, cat, e in
+                 (("n0", "no_answer", "-"), ("n1", "no_answer", "-"), ("a1", "encoding", "e"))]
+    h2h_rows = [{"tool": t, "id": i, "verdict": v, "seconds": 1.0, "repeat": 1, "path": ""} for t, i, v in
+                (("T", "n0", "wrong"), ("T", "n1", "correct"), ("T", "a1", "wrong"),
+                 ("U", "n0", "correct"), ("U", "n1", "correct"), ("U", "a1", "nothing"))]
+    text = summarize(h2h_rows, h2h_cases, ["T", "U"], {"T": "ciphey", "U": "ciphey"})
+    for want in ("| T | 0 (0.0%) | 1 | 0 | 1 (50.0%) |", "| U | 0 (0.0%) | 0 | 1 | 0 (0.0%) |"):
+        if want not in text:
+            failures.append(f"summarize head to head: no {want!r} in " + text.replace("\n", " ")[-400:])
     failures += process_selftest()
     for f in failures:
         print("SELFTEST FAILED: " + f)
-    n = len(checks) + len(ciphey) + len(python) + len(magic) + len(verdicts) + 5 + 1 + 4 + 4 + 3
+    n = len(checks) + len(ciphey) + len(python) + len(magic) + len(verdicts) + 5 + 2 + 4 + 2 + 5 + 3 + 9
     print(f"SELFTEST {'FAILED' if failures else 'OK'} ({n - len(failures)} of {n} checks)")
     return 1 if failures else 0
 
@@ -836,6 +909,8 @@ def main():
         return
     if not 1 <= len(args.tools) <= 2:
         ap.error("give one tool, or two for an A/B run")
+    if args.repeat < 1:
+        ap.error("--repeat must be at least 1")
     sel = select_cases(cases, args.subset, args.category, args.ids)
     if not sel:
         ap.error("no case matches the selection (--subset, --category, --ids)")
@@ -910,6 +985,9 @@ def main():
     print(f"wrote {out_dir}/results.tsv, summary.md, meta.json")
     if args.check:
         failed = check_failures(rows, sel, names)
+        if not rows:
+            print("CHECK FAILED: no case ran (none of the selected cases is comparable on the tool)")
+            sys.exit(1)
         if failed:
             print("CHECK FAILED: " + ", ".join(failed))
             sys.exit(1)
