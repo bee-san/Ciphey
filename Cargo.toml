@@ -31,47 +31,36 @@ default = []
 # library don't pull in the MCP SDK or an async runtime.
 mcp = ["dep:memory-stats", "dep:rmcp", "dep:tokio"]
 
+# Every target, WebAssembly included: see docs/wasm.md before adding one.
 # Please keep this list in alphabetical order
 [dependencies]
-ansi_term = "0.12.1"
 chrono = "0.4.45"
-cipher_identifier = "0.2.0"
-clap = {version = "4.6.1", features = ["derive"]}
 termcolor = "1.4"
-crossbeam = "0.8"
-dirs = "7.0.0"
-env_logger = "0.11.10"
 gibberish-or-not = "5.0.7"
-human-panic = "2.0.8"
-include_dir = "0.7.3"
 lazy-regex = "3.6.0"
 lazy_static = "1.4.0"
 lemmeknow = "0.8.0"
 log = "0.4"
 # Lets `ciphey-mcp` workers watch their own memory use (feature `mcp`).
 memory-stats = { version = "1.2.0", optional = true }
-memmap2 = "0.9.10"
 num = "0.4"
 once_cell = "1.21.4"
 proc-macro2 = "1.0.106" # Required due to https://github.com/rust-lang/rust/issues/113152
-rayon = "1.12.0"
 regex = "1.12.4"
 # Official MCP Rust SDK, only used by `ciphey-mcp` (feature `mcp`). Pinned exactly so
 # `cargo install` (which ignores Cargo.lock) builds against the version we tested.
 rmcp = { version = "=3.8.0", optional = true, default-features = false, features = ["macros", "server", "transport-io"] }
-rusqlite = { version = "0.37", features = ["bundled"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_derive = "1.0.197"
 serde_json = "1.0"
 serial_test = "4.0.1"
-text_io = "0.1.13"
 thiserror = "2.0.17"
 # Async runtime for `ciphey-mcp` (feature `mcp`).
 tokio = { version = "1.48.0", optional = true, features = ["io-util", "macros", "process", "rt", "sync", "time"] }
 toml = "1.1.2"
-uuid = "1.23.3"
-rand = "0.8"  # Required for candle-core compatibility
-half = "=2.3.1"  # Required for candle-core compatibility
+# The search's clock: std::time on native targets, and on wasm32-unknown-unknown the
+# browser's (or Node.js's) clock, because std::time::Instant::now() panics there
+web-time = "1.1.0"
 
 # Dependencies used for decoding
 base64 = "0.23.0"
@@ -94,16 +83,41 @@ z85 = "3.0.7"
 brainfuck-exe = { version = "0.2.4", default-features = false }
 dashmap = "6.2.1"
 
+# Native targets only: threads, files, the terminal and the SQLite cache. WebAssembly has
+# none of them (docs/wasm.md).
+# Please keep this list in alphabetical order
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+clap = {version = "4.6.1", features = ["derive"]}
+crossbeam = "0.8"
+dirs = "7.0.0"
+env_logger = "0.11.10"
+half = "=2.3.1"  # Required for candle-core compatibility
+memmap2 = "0.9.10"
+rand = "0.8"  # Required for candle-core compatibility
+rayon = "1.12.0"
+rusqlite = { version = "0.37", features = ["bundled"] }
+text_io = "0.1.13"
+# v4 for the IDs of cache and human-rejection rows
+uuid = { version = "1.23.3", features = ["v4"] }
+
 # Used to turn on ANSI colour support in the Windows console
 [target.'cfg(windows)'.dependencies]
 winapi-util = "0.1.9"
 
 # Dev dependencies
 [dev-dependencies]
-cargo-nextest = "0.9.117"
-criterion = "0.8.2"
 # The XZ decoder's tests build their own .xz and .lzma files (bombs, size limits)
 lzma-rust2 = { version = "0.21.0", default-features = false, features = ["std", "xz", "encoder"] }
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+cargo-nextest = "0.9.117"
+criterion = "0.8.2"
+
+# Runs the tests marked `wasm_bindgen_test` under Node.js:
+# `cargo test --target wasm32-unknown-unknown --test wasm` (docs/wasm.md). Pinned exactly
+# because the `wasm-bindgen-test-runner` it runs under must be the same version.
+[target.'cfg(all(target_family = "wasm", target_os = "unknown"))'.dev-dependencies]
+wasm-bindgen-test = "=0.3.80"
 
 [profile.release]
 lto = "fat"

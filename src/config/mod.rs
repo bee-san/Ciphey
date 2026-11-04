@@ -1,13 +1,17 @@
 /// import general checker
 use lemmeknow::Identifier;
-use memmap2::Mmap;
 use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::fs::{self, File};
-use std::io;
-use std::io::{Read, Write};
-use std::path::Path;
+// The config file and wordlist files: native targets only (WebAssembly has no files)
+#[cfg(not(target_family = "wasm"))]
+use {
+    memmap2::Mmap,
+    std::fs::{self, File},
+    std::io,
+    std::io::{Read, Write},
+    std::path::Path,
+};
 
 /// Library input is the default API input
 /// The CLI turns its arguments into a LibraryInput struct
@@ -128,6 +132,7 @@ const LEMMEKNOW_DEFAULT_CONFIG: Identifier = Identifier {
 };
 
 /// Convert Config fields into an Identifier
+#[cfg(not(target_family = "wasm"))]
 fn make_identifier_from_config(config: &Config) -> Identifier {
     Identifier {
         min_rarity: config.lemmeknow_min_rarity,
@@ -140,6 +145,7 @@ fn make_identifier_from_config(config: &Config) -> Identifier {
 }
 
 /// Update Config's Identifier field from its serialization fields
+#[cfg(not(target_family = "wasm"))]
 fn update_identifier_in_config(config: &mut Config) {
     config.lemmeknow_config = make_identifier_from_config(config);
 }
@@ -195,6 +201,7 @@ impl Default for Config {
 /// This function will panic if:
 /// - The home directory cannot be found
 /// - The ciphey directory cannot be created
+#[cfg(not(target_family = "wasm"))]
 pub fn get_config_file_path() -> std::path::PathBuf {
     let mut path = dirs::home_dir().expect("Could not find home directory");
     path.push(".ciphey");
@@ -213,6 +220,7 @@ pub fn get_config_file_path() -> std::path::PathBuf {
 ///
 /// This function will panic if the config file path cannot be determined
 /// (see `get_config_file_path`).
+#[cfg(not(target_family = "wasm"))]
 pub fn create_default_config_file() -> std::io::Result<()> {
     let config = Config::default();
     let toml_string = toml::to_string_pretty(&config)
@@ -224,6 +232,7 @@ pub fn create_default_config_file() -> std::io::Result<()> {
 }
 
 /// Read and parse the config file
+#[cfg(not(target_family = "wasm"))]
 fn read_config_file() -> std::io::Result<String> {
     let path = get_config_file_path();
     let mut file = File::open(&path)?;
@@ -235,6 +244,7 @@ fn read_config_file() -> std::io::Result<String> {
 /// Parse a TOML string into a Config struct, warning about unknown keys
 ///
 /// Returns an error if `contents` isn't valid TOML or a setting has the wrong type.
+#[cfg(not(target_family = "wasm"))]
 fn parse_toml_with_unknown_keys(contents: &str) -> Result<Config, toml::de::Error> {
     // First parse into a generic Value to check for unknown keys
     let parsed_value: toml::Value = toml::from_str(contents)?;
@@ -297,6 +307,7 @@ fn parse_toml_with_unknown_keys(contents: &str) -> Result<Config, toml::de::Erro
 /// This implementation uses memory mapping for large files.
 /// `unsafe { Mmap::map(&file) }` is required because the map could become invalid
 /// if the underlying file is modified while the mapping is in use.
+#[cfg(not(target_family = "wasm"))]
 pub fn load_wordlist<P: AsRef<Path>>(path: P) -> io::Result<HashSet<String>> {
     let mut file = File::open(path)?;
     let file_size = file.metadata()?.len();
@@ -320,6 +331,7 @@ pub fn load_wordlist<P: AsRef<Path>>(path: P) -> io::Result<HashSet<String>> {
 
 /// Collects the trimmed, non-empty lines of a wordlist, skipping lines that aren't
 /// valid UTF-8
+#[cfg(not(target_family = "wasm"))]
 fn parse_wordlist(contents: &[u8]) -> HashSet<String> {
     let mut wordlist = HashSet::new();
     let mut skipped = 0;
@@ -341,6 +353,7 @@ fn parse_wordlist(contents: &[u8]) -> HashSet<String> {
 }
 
 /// Get configuration from file or create default if it doesn't exist
+#[cfg(not(target_family = "wasm"))]
 pub fn get_config_file_into_struct() -> Config {
     let path = get_config_file_path();
 
@@ -413,6 +426,7 @@ pub fn get_config_file_into_struct() -> Config {
 ///
 /// The setup returns everything in one map, so the settings are taken out of it
 /// and the colour roles that are left become the colour scheme.
+#[cfg(not(target_family = "wasm"))]
 fn config_from_first_run(mut answers: HashMap<String, String>) -> Config {
     let mut config = Config::default();
     if let Some(timeout) = answers.remove("timeout") {
@@ -427,6 +441,7 @@ fn config_from_first_run(mut answers: HashMap<String, String>) -> Config {
 }
 
 /// Save a Config struct to a file
+#[cfg(not(target_family = "wasm"))]
 fn save_config_to_file(config: &Config, path: &std::path::Path) {
     let toml_string = toml::to_string_pretty(config).expect("Could not serialize config");
     let mut file = File::create(path).expect("Could not create config file");

@@ -3,8 +3,8 @@ use crate::checkers::checker_result::CheckResult;
 use crate::checkers::english::is_known_word as is_english_word;
 use gibberish_or_not::Sensitivity;
 use lemmeknow::{Data, Identifier};
-use rayon::prelude::*;
-use std::sync::Once;
+#[cfg(not(target_family = "wasm"))]
+use {rayon::prelude::*, std::sync::Once};
 
 /// Patterns rarer than this are ignored: they match too much ordinary text.
 const MIN_RARITY: f32 = 0.1;
@@ -29,20 +29,27 @@ const WARM_UP_BANDS: [(f32, f32); 2] = [(1.0, 1.0), (MIN_RARITY, 0.99)];
 /// pattern, not the sum of all of them, sets how long compiling takes. A check that
 /// needs a pattern no task has compiled yet compiles it itself, as before: this only
 /// changes when and on which thread the patterns are compiled, not what is matched.
+///
+/// WebAssembly has no other thread to compile them on, so there this does nothing and
+/// each pattern is compiled when a check first needs it.
 pub fn warm_up() {
-    static STARTED: Once = Once::new();
-    STARTED.call_once(|| {
-        rayon::spawn(|| {
-            warm_up_tasks().par_iter().for_each(|identifier| {
-                identifier.identify("");
+    #[cfg(not(target_family = "wasm"))]
+    {
+        static STARTED: Once = Once::new();
+        STARTED.call_once(|| {
+            rayon::spawn(|| {
+                warm_up_tasks().par_iter().for_each(|identifier| {
+                    identifier.identify("");
+                });
             });
         });
-    });
+    }
 }
 
 /// The [`warm_up`] tasks: for each rarity band, one task per tag in [`WARM_UP_TAGS`]
 /// (skipping patterns an earlier tag's task takes) and one for the patterns with none
 /// of those tags.
+#[cfg_attr(target_family = "wasm", allow(dead_code))]
 fn warm_up_tasks() -> Vec<Identifier> {
     let mut tasks = Vec::new();
     for (min, max) in WARM_UP_BANDS {

@@ -381,8 +381,8 @@ impl DetectOptions {
     }
 
     /// Also accepts text that is exactly one of `words`, checked before the other
-    /// checkers, like `ciphey --wordlist`. [`load_wordlist`] reads one from a
-    /// file.
+    /// checkers, like `ciphey --wordlist`. On native targets [`load_wordlist`] reads one
+    /// from a file.
     ///
     /// [`load_wordlist`]: crate::config::load_wordlist
     pub fn wordlist(mut self, words: HashSet<String>) -> Self {

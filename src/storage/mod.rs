@@ -1,9 +1,11 @@
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
-use std::fs;
-use std::path::Path;
 
 /// Module housing functions for managing SQLite database
+///
+/// Native targets only: WebAssembly has no SQLite and no home directory to keep the
+/// database in, so there is no cache there.
+#[cfg(not(target_family = "wasm"))]
 pub mod database;
 /// English letter statistics (quadgrams, bigrams, short words) for scoring plaintext
 pub mod ngrams;
@@ -23,29 +25,22 @@ pub const ENGLISH_FREQS: [f64; 26] = [
 pub static INVISIBLE_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
     let mut entries: HashSet<char> = HashSet::new();
 
-    // Path to the invisible characters file
-    let chars_file_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("src")
-        .join("storage")
-        .join("invisible_chars")
-        .join("chars.txt");
-
-    // Read the file content
-    if let Ok(content) = fs::read_to_string(&chars_file_path) {
-        let content_lines = content.split('\n');
-        for line in content_lines {
-            if line.is_empty() {
-                continue;
-            }
-            let unicode_line_split: Vec<&str> = line.split_ascii_whitespace().collect();
-            if unicode_line_split.is_empty() {
-                continue;
-            }
-            let unicode_literal = unicode_line_split[0].trim_start_matches("U+");
-            if let Ok(unicode_value) = u32::from_str_radix(unicode_literal, 16) {
-                if let Some(unicode_char) = char::from_u32(unicode_value) {
-                    entries.insert(unicode_char);
-                }
+    // Built into the binary. It used to be read at run time from the source directory,
+    // which only exists on the machine that compiled Ciphey: where a prebuilt release
+    // binary runs, and on WebAssembly, the set was empty.
+    let content_lines = include_str!("invisible_chars/chars.txt").split('\n');
+    for line in content_lines {
+        if line.is_empty() {
+            continue;
+        }
+        let unicode_line_split: Vec<&str> = line.split_ascii_whitespace().collect();
+        if unicode_line_split.is_empty() {
+            continue;
+        }
+        let unicode_literal = unicode_line_split[0].trim_start_matches("U+");
+        if let Ok(unicode_value) = u32::from_str_radix(unicode_literal, 16) {
+            if let Some(unicode_char) = char::from_u32(unicode_value) {
+                entries.insert(unicode_char);
             }
         }
     }

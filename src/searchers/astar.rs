@@ -7,13 +7,13 @@
 //! Nodes are ordered by `f = g + h`, where `g` is the summed [`edge_cost`] of the path and
 //! `h` is [`generate_heuristic`]. Ties go to the deeper node. Up to `PARALLEL_BATCH_SIZE`
 //! nodes are expanded concurrently per iteration, and within a node all decoders run
-//! concurrently.
+//! concurrently (on WebAssembly, one after another: see [`crate::parallel`]).
 
 use crate::cli_pretty_printing::decoded_how_many_times;
+use crate::clock::Deadline;
 use crate::decoders::interface::Crack;
 use crate::decoders::DECODER_MAP;
 use crate::filtration_system::get_all_decoders;
-use crossbeam::channel::Sender;
 
 use log::{debug, trace};
 use std::cmp::Ordering;
@@ -21,8 +21,8 @@ use std::collections::BinaryHeap;
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::sync::{Arc, Mutex};
 
+use crate::parallel::*;
 use dashmap::DashSet;
-use rayon::prelude::*;
 
 use crate::checkers::athena::Athena;
 use crate::checkers::checker_type::{Check, Checker};
@@ -54,9 +54,10 @@ const FREE_IN_BACKGROUND_MIN_NODES: usize = 1_000;
 /// and a search can end with hundreds of thousands of queued nodes, each holding its
 /// text and decoder path: freeing them took up to a quarter of a second. Big leftovers
 /// are therefore freed on a new thread. Small ones are freed here, which is cheaper than
-/// starting a thread, and so are big ones if the thread can't be started.
+/// starting a thread, and so are big ones if the thread can't be started, and on
+/// WebAssembly, which has no threads.
 fn free_leftovers<T: Send + 'static>(leftovers: T, queued_nodes: usize) {
-    if queued_nodes < FREE_IN_BACKGROUND_MIN_NODES {
+    if cfg!(target_family = "wasm") || queued_nodes < FREE_IN_BACKGROUND_MIN_NODES {
         return;
     }
     // If the thread can't be started the closure, and with it `leftovers`, is dropped here.
@@ -226,13 +227,15 @@ fn result_passes_sanity(node: &AStarNode, original_input_len: usize, input_is_fl
     true
 }
 
-/// Run every applicable decoder on the node's text and return the children.
+/// Run every applicable decoder on the node's text and return the children. Decoders that
+/// haven't started when the search is stopped or `deadline` passes are skipped.
 fn expand_node(
     current_node: &AStarNode,
     seen_strings: &DashSet<u64>,
     stop: &Arc<AtomicBool>,
+    deadline: Deadline,
 ) -> Vec<AStarNode> {
-    if stop.load(AtomicOrdering::Relaxed) {
+    if stop.load(AtomicOrdering::Relaxed) || deadline.has_passed() {
         return Vec::new();
     }
 
@@ -248,7 +251,7 @@ fn expand_node(
         .filter(|d| should_try_decoder(d.as_ref(), last_decoder))
         .flat_map_iter(|decoder| {
             let mut children = Vec::new();
-            if stop.load(AtomicOrdering::Relaxed) {
+            if stop.load(AtomicOrdering::Relaxed) || deadline.has_passed() {
                 return children;
             }
 
@@ -361,9 +364,16 @@ fn keep_first_of_each_text(results: &mut Vec<AStarNode>) {
     });
 }
 
-/// Search for a decoder sequence that turns `input` into plaintext. Sends `Some(result)`
-/// on success (repeatedly in `top_results` mode), `None` if the space is exhausted.
-pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Arc<AtomicBool>) {
+/// Search for a decoder sequence that turns `input` into plaintext. Calls `send` with
+/// `Some(result)` on success (repeatedly in `top_results` mode), or `None` if the space is
+/// exhausted. Stops early, without calling `send(None)`, when `stop` is set or `deadline`
+/// passes.
+pub fn astar(
+    input: String,
+    mut send: impl FnMut(Option<DecoderResult>),
+    stop: Arc<AtomicBool>,
+    deadline: Deadline,
+) {
     let original_input_len = input.chars().count();
     // With a crib the crib decides what the flag looks like
     let input_is_flag = is_ctf_flag_shaped(&input) && get_config().regex.is_none();
@@ -389,7 +399,7 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
     let mut curr_depth: u32 = 0;
     let mut expanded_nodes: usize = 0;
 
-    while !open_set.is_empty() && !stop.load(AtomicOrdering::Relaxed) {
+    while !open_set.is_empty() && !stop.load(AtomicOrdering::Relaxed) && !deadline.has_passed() {
         let batch = open_set.extract_batch(PARALLEL_BATCH_SIZE);
         if let Some(deepest) = batch.iter().map(|n| n.depth).max() {
             curr_depth = curr_depth.max(deepest);
@@ -406,7 +416,7 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
 
         let new_nodes: Vec<AStarNode> = batch
             .par_iter()
-            .flat_map(|node| expand_node(node, &seen_strings, &stop))
+            .flat_map(|node| expand_node(node, &seen_strings, &stop, deadline))
             .collect();
 
         let (mut results, children): (Vec<AStarNode>, Vec<AStarNode>) =
@@ -469,9 +479,7 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
                 }
             }
 
-            result_sender
-                .send(Some(node.state.clone()))
-                .expect("Should successfully send the result");
+            send(Some(node.state.clone()));
 
             if !get_config().top_results {
                 stop.store(true, AtomicOrdering::Relaxed);
@@ -494,10 +502,9 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
         }
     }
 
-    if !stop.load(AtomicOrdering::Relaxed) {
-        result_sender
-            .send(None)
-            .expect("Should successfully send the result");
+    // The search space is exhausted, unless the search was stopped or ran out of time
+    if !stop.load(AtomicOrdering::Relaxed) && !deadline.has_passed() {
+        send(None);
     }
     let queued_nodes = open_set.len();
     free_leftovers((open_set, seen_strings, seen_results), queued_nodes);
@@ -512,7 +519,12 @@ mod tests {
     fn astar_handles_empty_input() {
         let (sender, receiver) = bounded::<Option<DecoderResult>>(1);
         let stop = Arc::new(AtomicBool::new(false));
-        astar("".to_string(), sender, stop);
+        astar(
+            "".to_string(),
+            |result| sender.send(result).unwrap(),
+            stop,
+            Deadline::NEVER,
+        );
         let result = receiver.recv().unwrap();
         assert!(result.is_none());
     }
@@ -533,7 +545,12 @@ mod tests {
             })
         };
         let started = std::time::Instant::now();
-        astar("AAAA".to_string(), sender, stop);
+        astar(
+            "AAAA".to_string(),
+            |result| sender.send(result).unwrap(),
+            stop,
+            Deadline::NEVER,
+        );
         assert!(
             started.elapsed() < std::time::Duration::from_secs(60),
             "the search didn't stop"
@@ -545,13 +562,46 @@ mod tests {
     }
 
     #[test]
+    fn astar_stops_at_the_deadline() {
+        // As on WebAssembly: no timer thread sets `stop`, the deadline ends the search. It
+        // isn't exhausted, so nothing is sent.
+        let mut sent = Vec::new();
+        let started = std::time::Instant::now();
+        astar(
+            "AAAA".to_string(),
+            |result| sent.push(result),
+            Arc::new(AtomicBool::new(false)),
+            Deadline::after(std::time::Duration::from_millis(500)),
+        );
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(60),
+            "the search didn't stop"
+        );
+        assert!(sent.is_empty(), "{sent:?}");
+
+        // A deadline that has passed stops it before the first step
+        astar(
+            "SGVsbG8gV29ybGQ=".to_string(),
+            |result| sent.push(result),
+            Arc::new(AtomicBool::new(false)),
+            Deadline::after(std::time::Duration::ZERO),
+        );
+        assert!(sent.is_empty(), "{sent:?}");
+    }
+
+    #[test]
     fn test_parallel_astar() {
         let (sender, receiver) = bounded::<Option<DecoderResult>>(1);
         let stop = Arc::new(AtomicBool::new(false));
         let input = "SGVsbG8gV29ybGQ=".to_string();
         let stop_clone = stop.clone();
         std::thread::spawn(move || {
-            astar(input, sender, stop_clone);
+            astar(
+                input,
+                |result| sender.send(result).unwrap(),
+                stop_clone,
+                Deadline::NEVER,
+            );
         });
         let result = receiver.recv().unwrap();
         assert!(result.is_some());

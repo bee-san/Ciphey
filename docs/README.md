@@ -13,6 +13,7 @@ Welcome to the ciphey documentation! This repository contains comprehensive docu
 
 - [ciphey Architecture](ciphey_architecture.md) - Detailed explanation of ciphey's internal architecture and components
 - [Plaintext Detection](plaintext-detection.md) - How ciphey decides a candidate is the plaintext: every checker and threshold, the quadgram model, the benchmark and its numbers
+- [WebAssembly](wasm.md) - What the library does differently on WebAssembly, how the native-only parts are left out, and how to test it
 
 ### Feature-Specific Documentation
 
