@@ -71,32 +71,51 @@ fn layered_plaintext_is_found_and_the_tree_reported() {
     assert!(found.elapsed <= search.elapsed());
 
     // A zero budget is one batch of nodes per step, so the tree shows up as it grows,
-    // starting with the input
+    // starting with the input, node 0
     assert!(steps.len() > 1, "{} steps", steps.len());
     let expanded: Vec<&SearchNode> = steps.iter().flat_map(|s| &s.expanded).collect();
-    assert!(expanded[0].path.is_empty());
-    assert_eq!(expanded[0].text, input);
-    assert_eq!(expanded[0].text_chars, input.len());
-    assert!(expanded
-        .iter()
-        .any(|node| node.path.len() == 1 && node.path[0].decoder == "Base64"));
-    // Every node's parent was expanded before it
+    let input_node = expanded[0];
+    assert_eq!((input_node.id, input_node.parent), (0, None));
+    assert_eq!((input_node.depth, input_node.decoder), (0, None));
+    assert_eq!(input_node.text, input);
+    assert_eq!(input_node.text_chars, input.len());
+    assert!(input_node.children > 0);
+    // Every node's parent was expanded and reported before it, one level up, and ids are
+    // unique
+    let mut ids = std::collections::HashSet::new();
     for (i, node) in expanded.iter().enumerate() {
-        if let Some((_, parent_path)) = node.path.split_last() {
-            assert!(
-                expanded[..i]
-                    .iter()
-                    .any(|parent| parent.path == parent_path),
-                "{:?} has no parent before it",
-                node.path
-            );
+        assert!(ids.insert(node.id), "node {} reported twice", node.id);
+        if let Some(parent) = node.parent {
+            let parent = expanded[..i]
+                .iter()
+                .find(|earlier| earlier.id == parent)
+                .unwrap_or_else(|| panic!("node {} has no parent before it", node.id));
+            assert_eq!(parent.depth + 1, node.depth);
+            assert!(node.decoder.is_some());
         }
     }
+    let base64 = expanded
+        .iter()
+        .find(|node| node.depth == 1 && node.decoder == Some("Base64"))
+        .expect("the Base64 node is expanded");
+    assert_eq!(base64.parent, Some(0));
+    // The answer came from the end of the winning branch: Hexadecimal, from Base64
+    let winner = found.node_id.expect("decoded from a node");
+    let winner = expanded.iter().find(|node| node.id == winner).unwrap();
+    assert_eq!(winner.decoder, Some("Hexadecimal"));
+    assert_eq!(winner.parent, Some(base64.id));
+    // A preview of the text, and its length
+    let long = "aGVsbG8gdGhlcmUgZ2VuZXJhbA==".repeat(20);
+    let mut short_preview = Search::new(&long, options().preview_chars(10)).unwrap();
+    let first = short_preview.step(Duration::ZERO).expanded.remove(0);
+    assert_eq!(first.text, long[..10]);
+    assert_eq!(first.text_chars, long.len());
     let last = steps.last().unwrap();
     assert_eq!(last.state, SearchState::Found);
     assert_eq!(last.found, search.results());
     assert_eq!(last.nodes_queued, 0);
     assert!(last.nodes_expanded >= expanded.len() && last.depth >= 2);
+    assert!(last.nodes_seen > 0);
     // The counters only grow
     for pair in steps.windows(2) {
         assert!(pair[0].nodes_expanded <= pair[1].nodes_expanded);
@@ -112,6 +131,7 @@ fn plaintext_input_is_found_in_the_first_step() {
     let found = &progress.found[0];
     assert_eq!(found.plaintext, "192.168.0.1");
     assert!(found.path.is_empty());
+    assert_eq!(found.node_id, None);
     let detection = found.detection.as_ref().unwrap();
     assert_eq!(detection.checker, CheckerKind::LemmeKnow);
     assert_eq!(
