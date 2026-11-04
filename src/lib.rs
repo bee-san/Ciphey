@@ -357,6 +357,7 @@ pub(crate) fn check_input(text: &str, sensitivity: gibberish_or_not::Sensitivity
 
 /// Runs the checkers on `text` the way the search does: Athena, or WaitAthena in
 /// `top_results` mode.
+#[cfg(not(target_family = "wasm"))]
 fn check_plaintext(text: &str) -> CheckResult {
     check_plaintext_at(text, gibberish_or_not::Sensitivity::Medium)
 }

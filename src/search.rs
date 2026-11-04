@@ -15,7 +15,7 @@
 //! while search.state() == SearchState::Running {
 //!     let progress = search.step(Duration::from_millis(50));
 //!     for node in &progress.expanded {
-//!         // node.path holds the decoders that turned the input into node.text
+//!         // node.parent is the node node.decoder turned into node.text
 //!     }
 //! }
 //! let found = search.result().expect("the Base64 should be decoded");
@@ -38,11 +38,8 @@ use std::time::Duration;
 use crate::clock::{Deadline, Instant};
 use crate::config::{self, Config, SearchConfig};
 use crate::detection::{self, CheckerKind, Detection, Sensitivity};
-use crate::searchers::astar::{AStar, StepEnd};
+use crate::searchers::astar::{AStar, Expanded, StepEnd};
 use crate::{CipheyError, CrackResult, DecoderResult};
-
-/// How much of a node's text [`SearchNode::text`] keeps, in characters.
-pub const NODE_TEXT_CHARS: usize = 256;
 
 /// Options for one [`Search`].
 ///
@@ -74,6 +71,9 @@ pub struct SearchOptions {
     /// How strict the English checker is, for the decoders that don't choose for
     /// themselves (the ciphers do), and for the input itself. Medium by default.
     pub sensitivity: Sensitivity,
+    /// How much of a node's text [`SearchNode::text`] keeps, in characters. 120 by
+    /// default.
+    pub preview_chars: usize,
 }
 
 impl Default for SearchOptions {
@@ -83,6 +83,7 @@ impl Default for SearchOptions {
             regex: None,
             top_results: false,
             sensitivity: Sensitivity::Medium,
+            preview_chars: 120,
         }
     }
 }
@@ -119,6 +120,12 @@ impl SearchOptions {
     /// Sets [`SearchOptions::sensitivity`].
     pub fn sensitivity(mut self, sensitivity: Sensitivity) -> Self {
         self.sensitivity = sensitivity;
+        self
+    }
+
+    /// Sets [`SearchOptions::preview_chars`].
+    pub fn preview_chars(mut self, chars: usize) -> Self {
+        self.preview_chars = chars;
         self
     }
 }
@@ -170,31 +177,54 @@ impl PathStep {
 /// A node of the search tree that [`Search::step`] expanded: a text the decoders made from
 /// the input, which every decoder then ran on.
 ///
-/// Nodes form a tree by their paths: a node's parent is the node whose path is its path
-/// without the last step. The input itself has an empty path.
+/// The nodes form a tree by their ids: the input is node 0, and every other node has the
+/// id of the node it was decoded from as its parent. A node's parent is always expanded,
+/// and reported, before the node.
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub struct SearchNode {
-    /// The decoders that turned the input into this text, in order.
-    pub path: Vec<PathStep>,
-    /// The text, cut to its first [`NODE_TEXT_CHARS`] characters.
+    /// Unique within the search. The input is 0.
+    pub id: u64,
+    /// The id of the node this one was decoded from, `None` for the input.
+    pub parent: Option<u64>,
+    /// How many decoders turned the input into this text.
+    pub depth: u32,
+    /// The decoder that made this text from its parent's, `None` for the input.
+    pub decoder: Option<&'static str>,
+    /// The key it decoded with, such as `13` for a Caesar shift, if it takes one.
+    pub key: Option<String>,
+    /// The text, cut to its first [`SearchOptions::preview_chars`] characters.
     pub text: String,
     /// How many characters the whole text has.
     pub text_chars: usize,
-    /// The A* search's cost of the path to this node: the lower it is, the more
-    /// promising the search found it. It grows with the path.
+    /// The A* search's priority for the node, f = g + h: the path's cost so far plus an
+    /// estimate of what is left. The search expands the lowest first.
     pub cost: f32,
+    /// How many children expanding it queued. Results and texts the search had already
+    /// seen aren't counted.
+    pub children: usize,
 }
 
 impl SearchNode {
-    /// The node at `state`, with path cost `cost`.
-    fn new(state: &DecoderResult, cost: f32) -> Self {
-        let text = state.text.first().map(String::as_str).unwrap_or_default();
+    /// The node `expanded`, with its text cut to `preview_chars` characters.
+    fn new(expanded: &Expanded<'_>, preview_chars: usize) -> Self {
+        let text = expanded
+            .state
+            .text
+            .first()
+            .map(String::as_str)
+            .unwrap_or_default();
+        let last = expanded.state.path.last();
         SearchNode {
-            path: state.path.iter().map(PathStep::new).collect(),
-            text: text.chars().take(NODE_TEXT_CHARS).collect(),
+            id: expanded.id,
+            parent: expanded.parent,
+            depth: expanded.depth,
+            decoder: last.map(|step| step.decoder),
+            key: last.and_then(|step| step.key.clone()),
+            text: text.chars().take(preview_chars).collect(),
             text_chars: text.chars().count(),
-            cost,
+            cost: expanded.total_cost,
+            children: expanded.children,
         }
     }
 }
@@ -215,6 +245,9 @@ pub struct SearchResult {
     pub elapsed: Duration,
     /// How many nodes the search had expanded by then.
     pub nodes_expanded: usize,
+    /// The id of the node it was decoded from (see [`SearchNode::id`]): the end of the
+    /// winning branch. `None` if the input was already plaintext.
+    pub node_id: Option<u64>,
 }
 
 /// What one [`Search::step`] did.
@@ -231,6 +264,8 @@ pub struct Progress {
     pub nodes_expanded: usize,
     /// How many nodes are waiting to be expanded.
     pub nodes_queued: usize,
+    /// How many texts the search has seen: it doesn't queue a text twice.
+    pub nodes_seen: usize,
     /// The depth of the deepest node expanded so far: the number of decoders in its path.
     pub depth: u32,
     /// How long the search has run, counted from [`Search::new`].
@@ -256,6 +291,8 @@ pub struct Search {
     phase: Phase,
     /// The English checker's sensitivity
     sensitivity: gibberish_or_not::Sensitivity,
+    /// How many characters of each node's text to report
+    preview_chars: usize,
     /// When it started
     started: Instant,
     /// When it times out
@@ -264,8 +301,8 @@ pub struct Search {
     state: SearchState,
     /// What it found
     results: Vec<SearchResult>,
-    /// How many nodes it expanded, how many are queued, and the deepest node's depth
-    counts: (usize, usize, u32),
+    /// How many nodes it expanded, queued and saw, and the deepest node's depth
+    counts: (usize, usize, usize, u32),
     /// Set by the A* search once it found its result
     stop: Arc<AtomicBool>,
 }
@@ -290,11 +327,12 @@ impl Search {
             config,
             phase: Phase::Start(input.to_string()),
             sensitivity: options.sensitivity.into(),
+            preview_chars: options.preview_chars,
             started: Instant::now(),
             deadline: Deadline::after(options.timeout),
             state: SearchState::Running,
             results: Vec::new(),
-            counts: (0, 0, 0),
+            counts: (0, 0, 0, 0),
             stop: Arc::new(AtomicBool::new(false)),
         })
     }
@@ -370,19 +408,27 @@ impl Search {
         let Phase::Searching(astar) = &mut self.phase else {
             return;
         };
+        let preview_chars = self.preview_chars;
         loop {
             let mut found = Vec::new();
-            let mut send = |result: Option<DecoderResult>| found.extend(result);
-            let mut watch = |state: &DecoderResult, _depth: u32, cost: f32| {
-                expanded.push(SearchNode::new(state, cost));
+            let mut send = |result: Option<DecoderResult>, parent: Option<u64>| {
+                found.extend(result.map(|result| (result, parent)));
+            };
+            let mut watch = |node: &Expanded<'_>| {
+                expanded.push(SearchNode::new(node, preview_chars));
             };
             let end = astar.step(&self.stop, self.deadline, &mut send, Some(&mut watch));
             let nodes_expanded = astar.expanded_nodes();
-            self.counts = (nodes_expanded, astar.queued_nodes(), astar.depth());
-            for result in found {
+            self.counts = (
+                nodes_expanded,
+                astar.queued_nodes(),
+                astar.seen(),
+                astar.depth(),
+            );
+            for (result, parent) in found {
                 let elapsed = self.started.elapsed();
                 self.results
-                    .push(search_result(result, elapsed, nodes_expanded));
+                    .push(search_result(result, parent, elapsed, nodes_expanded));
             }
             let over = match end {
                 // The deadline may have passed during the batch: the next step says so
@@ -412,6 +458,7 @@ impl Search {
             detection,
             elapsed: self.started.elapsed(),
             nodes_expanded: 0,
+            node_id: None,
         });
         self.finish(SearchState::Found);
         true
@@ -433,22 +480,28 @@ impl Search {
     /// The [`Progress`] after a step that expanded `expanded` and found the results from
     /// `first_new_result` on.
     fn progress(&self, expanded: Vec<SearchNode>, first_new_result: usize) -> Progress {
-        let (nodes_expanded, nodes_queued, depth) = self.counts;
+        let (nodes_expanded, nodes_queued, nodes_seen, depth) = self.counts;
         Progress {
             state: self.state,
             expanded,
             found: self.results[first_new_result..].to_vec(),
             nodes_expanded,
             nodes_queued,
+            nodes_seen,
             depth,
             elapsed: self.started.elapsed(),
         }
     }
 }
 
-/// The [`SearchResult`] for `result`, found after `elapsed`, with `nodes_expanded` nodes
-/// expanded.
-fn search_result(result: DecoderResult, elapsed: Duration, nodes_expanded: usize) -> SearchResult {
+/// The [`SearchResult`] for `result`, decoded from node `parent`, found after `elapsed`, with
+/// `nodes_expanded` nodes expanded.
+fn search_result(
+    result: DecoderResult,
+    parent: Option<u64>,
+    elapsed: Duration,
+    nodes_expanded: usize,
+) -> SearchResult {
     let plaintext = result.text.into_iter().next().unwrap_or_default();
     let detection = result.path.last().and_then(|last| {
         detection::for_accepted_decoding(last.checker_name, last.checker_description, &plaintext)
@@ -459,6 +512,7 @@ fn search_result(result: DecoderResult, elapsed: Duration, nodes_expanded: usize
         detection,
         elapsed,
         nodes_expanded,
+        node_id: parent,
     }
 }
 
@@ -477,9 +531,10 @@ fn search_config(options: &SearchOptions) -> Result<&'static SearchConfig, Ciphe
     let mut last = LAST
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
-    // Sensitivity isn't part of the config
+    // Neither is part of the config
     let key = SearchOptions {
         sensitivity: Sensitivity::Medium,
+        preview_chars: 0,
         ..options.clone()
     };
     if let Some((last_options, config)) = last.as_ref() {
