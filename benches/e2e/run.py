@@ -562,8 +562,8 @@ def process_selftest():
         echo = os.path.join(tmp, "python")
         with open(echo, "w", encoding="utf-8") as fh:
             fh.write('#!/bin/sh\nread -r line\nprintf \'{"status": "answer", "plaintext": "%s", "path": []}\\n\' "$line"\n')
-        os.chmod(hang, 0o755)
-        os.chmod(echo, 0o755)
+        os.chmod(hang, 0o700)  # owner only
+        os.chmod(echo, 0o700)
         c = Case(["p", "encoding", "", "ciphey,python-ciphey", "", "exact", "", "-", "stdin works", "stdin works"])
         tool = CipheyTool("hang", hang, args)
         status, _, _, secs = tool.run(c)
