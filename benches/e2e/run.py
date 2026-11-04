@@ -85,7 +85,7 @@ class Case:
 
 
 def load_corpus(path):
-    with open(inside(path), encoding="utf-8") as fh:
+    with open(inside(path), encoding="utf-8") as fh:  # NOSONAR: a local benchmark CLI; inside() keeps its paths in the repo and the temp dir
         raw = fh.read()
     lines = [ln for ln in raw.split("\n") if ln and not ln.startswith("#")]
     header = lines[0].split("\t")
@@ -135,13 +135,13 @@ def kill_group(proc):
         pass
 
 
-def run_process(argv, env, timeout, cwd=None):
-    """(stdout, stderr, returncode or None if killed, seconds)."""
+def run_process(argv, env, timeout, cwd=None, stdin=None):
+    """(stdout, stderr, returncode or None if killed, seconds). stdin is /dev/null unless given."""
     t0 = time.perf_counter()
-    proc = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            env=env, cwd=cwd, start_new_session=True)
+    proc = subprocess.Popen(argv, stdin=subprocess.DEVNULL if stdin is None else subprocess.PIPE, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, env=env, cwd=cwd, start_new_session=True)
     try:
-        out, err = proc.communicate(timeout=timeout)
+        out, err = proc.communicate(input=stdin, timeout=timeout)
         rc = proc.returncode
     except subprocess.TimeoutExpired:
         kill_group(proc)
@@ -223,17 +223,14 @@ class CipheyTool(Tool):
 
 
 class PythonCipheyTool(Tool):
-    """Python Ciphey 5.x: `python python_ciphey.py INPUT_FILE` (the human checker off, as `-q`)."""
+    """Python Ciphey 5.x: `python python_ciphey.py < INPUT` (the human checker off, as `-q`)."""
 
     adapter = "python-ciphey"
 
     def run(self, case):
         home, env = self.fresh_home()
-        path = os.path.join(home, "input.txt")
-        with open(path, "w", encoding="utf-8") as fh:
-            fh.write(case.input)
-        out, err, rc, secs = run_process([self.path, os.path.join(HERE, "python_ciphey.py"), path], env,
-                                         self.args.timeout + GRACE)
+        out, err, rc, secs = run_process([self.path, os.path.join(HERE, "python_ciphey.py")], env,
+                                         self.args.timeout + GRACE, stdin=case.input.encode("utf-8"))
         shutil.rmtree(home, ignore_errors=True)
         if rc is None:
             return "timeout", None, "", secs
@@ -521,7 +518,7 @@ def esc(s):
 def read_results(paths):
     rows = []
     for p in paths:
-        with open(inside(p), encoding="utf-8") as fh:
+        with open(inside(p), encoding="utf-8") as fh:  # NOSONAR: a local benchmark CLI; inside() keeps its paths in the repo and the temp dir
             header = fh.readline().rstrip("\n").split("\t")
             for line in fh:
                 r = dict(zip(header, line.rstrip("\n").split("\t")))
@@ -581,7 +578,7 @@ def main():
     names = [t.name for t in tools]
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     out_dir = inside(args.out or os.path.join(ROOT, "target", "e2e", stamp + "-" + "-vs-".join(names)))
-    os.makedirs(out_dir, exist_ok=True)
+    os.makedirs(out_dir, exist_ok=True)  # NOSONAR: a local benchmark CLI; inside() keeps its paths in the repo and the temp dir
     meta = {
         "started_utc": stamp, "corpus": os.path.relpath(args.corpus, ROOT), "corpus_sha256": corpus_sha,
         "cases_selected": len(sel), "timeout_s": args.timeout, "kill_after_s": args.timeout + GRACE,
@@ -592,7 +589,7 @@ def main():
     print(f"uptime before: {meta['uptime_start']}", flush=True)
     print(f"{len(sel)} cases, timeout {args.timeout} s, RAYON_NUM_THREADS={args.threads}, tools: {', '.join(names)}", flush=True)
     rows = []
-    results = open(os.path.join(out_dir, "results.tsv"), "w", encoding="utf-8")
+    results = open(os.path.join(out_dir, "results.tsv"), "w", encoding="utf-8")  # NOSONAR: a local benchmark CLI; inside() keeps its paths in the repo and the temp dir
     results.write("\t".join(RESULT_COLUMNS) + "\n")
     try:
         k = 0
@@ -631,9 +628,9 @@ def main():
     if len(tools) == 2:
         report.append(ab_report(rows, cases, *names))
     text = "\n".join(report)
-    with open(os.path.join(out_dir, "summary.md"), "w", encoding="utf-8") as fh:
+    with open(os.path.join(out_dir, "summary.md"), "w", encoding="utf-8") as fh:  # NOSONAR: a local benchmark CLI; inside() keeps its paths in the repo and the temp dir
         fh.write(text + "\n")
-    with open(os.path.join(out_dir, "meta.json"), "w", encoding="utf-8") as fh:
+    with open(os.path.join(out_dir, "meta.json"), "w", encoding="utf-8") as fh:  # NOSONAR: a local benchmark CLI; inside() keeps its paths in the repo and the temp dir
         json.dump(meta, fh, indent=1)
         fh.write("\n")
     print()

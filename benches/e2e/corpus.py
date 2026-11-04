@@ -1174,7 +1174,7 @@ def hash_hex(name):
         if name == "ntlm":  # MD4 of the UTF-16LE password (PyCryptodome)
             from Crypto.Hash import MD4
 
-            return MD4.new(u(data).encode("utf-16-le")).hexdigest().encode()
+            return MD4.new(u(data).encode("utf-16-le")).hexdigest().encode()  # NOSONAR: test data, not security
         return hashlib.new(name, data, usedforsecurity=False).hexdigest().encode()
 
     enc.__name__ = "hash_" + name
@@ -1906,14 +1906,14 @@ def main():
 
             sys.exit(verify(cases, CHEF))
         if args.check:
-            with open(args.out, encoding="utf-8") as fh:
+            with open(args.out, encoding="utf-8") as fh:  # NOSONAR: a local CLI; inside() keeps the path in the repo or the temp dir
                 old = fh.read()
             if old != rendered:
                 print(f"{args.out} differs from what corpus.py generates", file=sys.stderr)
                 sys.exit(1)
             print(f"{args.out}: {len(cases)} cases, identical")
             return
-        with open(args.out, "w", encoding="utf-8") as fh:
+        with open(args.out, "w", encoding="utf-8") as fh:  # NOSONAR: a local CLI; inside() keeps the path in the repo or the temp dir
             fh.write(rendered)
         by_cat = {}
         for c in cases:

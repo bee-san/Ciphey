@@ -1,9 +1,9 @@
 """Run Python Ciphey (PyPI `ciphey`, 5.x) on one input and print the result as JSON.
 
 run.py starts this once per case with the Python of a venv that has Python Ciphey installed
-(see setup.sh), a fresh HOME and the input in a file:
+(see setup.sh), a fresh HOME and the input on stdin:
 
-    <venv>/bin/python python_ciphey.py INPUT_FILE
+    <venv>/bin/python python_ciphey.py < INPUT
 
 It does what `ciphey -q -t TEXT` does (ciphey/ciphey.py `main`): load the default config,
 lower the verbosity below zero, which turns the human checker (the y/N prompt) off, and run
@@ -14,19 +14,14 @@ of the path too:
     {"status": "none"}
 """
 
+import io
 import json
 import os
 import sys
-import tempfile
 
 
 def main():
-    # run.py writes the input to a fresh HOME in the temp directory; read nothing else
-    path, tmp = os.path.realpath(sys.argv[1]), os.path.realpath(tempfile.gettempdir())
-    if os.path.commonpath([tmp, path]) != tmp:
-        raise SystemExit(f"{sys.argv[1]} is not in {tmp}")
-    with open(path, encoding="utf-8") as fh:
-        text = fh.read()
+    text = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8").read()
 
     from ciphey import iface
 
