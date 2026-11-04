@@ -14,6 +14,7 @@ import tempfile
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.realpath(os.path.join(HERE, "..", ".."))
 
 
 class CyberChefError(RuntimeError):
@@ -22,8 +23,12 @@ class CyberChefError(RuntimeError):
 
 class CyberChef:
     def __init__(self, root, node="node"):
-        """`root` is the directory that holds node_modules/cyberchef (see setup.sh)."""
-        self.root = os.path.abspath(root)
+        """`root` is the directory that holds node_modules/cyberchef (setup.sh's .tools/node). It
+        has to be inside the repository: the benchmark reads nothing outside it."""
+        root = os.path.realpath(root)
+        if not root.startswith(ROOT + os.sep):
+            raise CyberChefError(f"{root} is outside the repository {ROOT} (setup.sh installs CyberChef in .tools/node)")
+        self.root = root
         self.node = node
         self.proc = None
         self.startup_seconds = None

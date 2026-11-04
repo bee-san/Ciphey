@@ -23,6 +23,7 @@ printed too, with the host load (`uptime`) before and after. Standard library on
 
 import argparse
 import datetime
+import fnmatch
 import hashlib
 import json
 import math
@@ -544,7 +545,7 @@ def main():
     ap.add_argument("--corpus", default="corpus-v1.tsv", choices=sorted(corpora()), help="a corpus in benches/data/e2e")
     ap.add_argument("--subset", choices=["quick", "smoke"], help="only the cases of this subset")
     ap.add_argument("--category", action="append", help="only these categories (repeatable)")
-    ap.add_argument("--ids", help="only cases whose id matches this regex")
+    ap.add_argument("--ids", help="only cases whose id contains this text, or matches it as a glob (chain5.*)")
     ap.add_argument("--timeout", type=int, default=5, help="seconds per case (Ciphey's -c), default 5")
     ap.add_argument("--threads", type=int, default=4, help="RAYON_NUM_THREADS for Ciphey, default 4")
     ap.add_argument("--depth", type=int, default=3, help="CyberChef Magic depth, default 3 (Magic's default)")
@@ -588,7 +589,7 @@ def main():
     if args.category:
         sel = [c for c in sel if c.category in args.category]
     if args.ids:
-        sel = [c for c in sel if re.search(args.ids, c.id)]
+        sel = [c for c in sel if args.ids in c.id or fnmatch.fnmatchcase(c.id, args.ids)]
     tools = [make_tool(spec, args, i) for i, spec in enumerate(args.tools)]
     if len(tools) == 2 and tools[0].name == tools[1].name:
         tools[0].name, tools[1].name = tools[0].name + "-A", tools[1].name + "-B"

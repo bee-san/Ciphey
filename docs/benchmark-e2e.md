@@ -21,7 +21,7 @@ Magic. Decoder PRs use its quick subset to show they don't make Ciphey slower or
 cargo build --release
 python3 benches/e2e/run.py target/release/ciphey                        # every case, ~6 minutes
 python3 benches/e2e/run.py --subset quick OLD/ciphey target/release/ciphey   # A/B, ~1 minute
-python3 benches/e2e/run.py --category chain --ids '^chain5' target/release/ciphey
+python3 benches/e2e/run.py --ids 'chain5.*' target/release/ciphey      # ids by substring or glob
 benches/e2e/setup.sh                                                    # the other tools, in .tools/
 python3 benches/e2e/run.py v0.12.0=.tools/ciphey-0.12.0/bin/ciphey
 python3 benches/e2e/run.py python-ciphey:.tools/pyciphey/bin/python
@@ -31,7 +31,7 @@ python3 benches/e2e/run.py --summarize target/e2e/*/results.tsv          # one t
 
 A tool is `[name=][adapter:]path`, the adapter one of `ciphey` (the default: any ciphey
 binary), `python-ciphey` (the Python of a venv with Python Ciphey), `cyberchef` and
-`cyberchef-intensive` (a directory with `node_modules/cyberchef`). Every run writes
+`cyberchef-intensive` (a directory inside the repository with `node_modules/cyberchef`). Every run writes
 `results.tsv` (one line per case and tool: status, verdict, seconds, decoder path, answer),
 `summary.md` and `meta.json` (versions, sha256 of the binary and the corpus, timeout,
 threads, `uptime` before and after) to `target/e2e/<UTC time>/`. `--corpus` picks a corpus
