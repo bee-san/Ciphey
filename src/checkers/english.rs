@@ -22,7 +22,8 @@ use crate::checkers::checker_type::{Check, Checker};
 ///    words (`looks_like_decoder_output`, `is_spelled_with_code_words`).
 /// 2. **Space-less letters** (no whitespace, at least [`SPACELESS_MIN_LETTERS`] letters, at
 ///    least 90% letters), the usual output of Caesar, railfence and other classical
-///    ciphers: gibberish-or-not decides.
+///    ciphers: gibberish-or-not decides, unless the quadgram score is far from English
+///    ([`quadgram_veto`]).
 /// 3. **Mostly known words**: two or more words, at least one of three or more letters, of
 ///    which more than 80% are English words, counting the common one to three letter
 ///    words (`a`, `is`, `me` ...) and leaving numbers out. So `call me` and `meet me at
@@ -57,14 +58,16 @@ const SPACELESS_MIN_WORD_COVERAGE: f64 = 0.85;
 /// per letter and word length.
 const SPACELESS_SPLIT_MIN_SCORE: f64 = -5.6;
 
-/// Text with spaces and at least [`QUADGRAM_VETO_MIN_LETTERS`] letters that scores below
-/// this is rejected before its words are looked up: wrong Caesar shifts such as `Max
-/// mkxtlnkx bl unkbxw ngwxk` and reversed text. English, even ALL CAPS, names and code,
-/// scores above -5.3 in the #1031 corpora, and French, German and Spanish above -6.5.
-/// With gibberish-or-not 6 the veto changes no verdict on the benchmark's data set (the
-/// rules after it reject the same texts); it is kept because it is cheaper than they are,
-/// and almost everything a search checks is junk. High, the most lenient sensitivity,
-/// only vetoes text further away.
+/// Text that scores below this is rejected before its words are looked up or
+/// gibberish-or-not is asked: space-less text, and text with spaces of at least
+/// [`QUADGRAM_VETO_MIN_LETTERS`] letters. Wrong Caesar shifts such as `Max mkxtlnkx bl
+/// unkbxw ngwxk`, reversed text and most wrong railfence keys score below. English, even
+/// ALL CAPS, names and code, scores above -5.3 in the #1031 corpora, and French, German and
+/// Spanish above -6.5. With gibberish-or-not 6 the veto changes no verdict on the
+/// benchmark's data set (the rules after it reject the same texts); it is kept because it
+/// is much cheaper than they are, and almost everything a search checks is junk. High, the
+/// most lenient sensitivity, only vetoes text further away. A language pack for a language
+/// whose letters score lower would need the veto measured again.
 fn quadgram_veto(sensitivity: Sensitivity) -> f64 {
     match sensitivity {
         Sensitivity::Low | Sensitivity::Medium => -6.5,
@@ -197,6 +200,11 @@ fn identify_with(
     }
     let spaceless = !trimmed.contains(char::is_whitespace);
     if spaceless && is_mostly_letters(trimmed) {
+        // Cheapest first, as for text with spaces below: gibberish-or-not takes nothing
+        // this far from English, and scoring space-less text costs it a few microseconds
+        if quadgram_score(trimmed).is_some_and(|score| score < quadgram_veto(sensitivity)) {
+            return None;
+        }
         return language(all_languages, trimmed, sensitivity);
     }
 

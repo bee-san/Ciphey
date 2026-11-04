@@ -158,11 +158,15 @@ IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR`. Then:
    cased like writing too: alternating-case words run together, `hiTHEREwelcomeTOlinear`.
 2. **Space-less letters** (no whitespace, only ASCII, 8+ letters, 90%+ letters), what
    classical ciphers leave plaintext as: gibberish-or-not decides (`MEETMEATNOON`,
-   `HELLOWORLD`, not the railfence shuffle `HWORLDELLO`).
+   `HELLOWORLD`, not the railfence shuffle `HWORLDELLO`), unless the quadgram score is
+   below -6.5 (-7.5 at High).
 3. **Text with spaces** whose quadgram score is below -6.5 (-7.5 at High) over 12+ letters
-   is far from any language: rejected (wrong Caesar shifts, reversed text). With
-   gibberish-or-not 6 this changes no verdict on the data set, since the later rules reject
-   the same texts, but it rejects them before any word is looked up.
+   is far from any language: rejected (wrong Caesar shifts, reversed text).
+
+   With gibberish-or-not 6 these two quadgram vetoes change no verdict on the data set:
+   gibberish-or-not and the later rules reject the same texts. They are kept because they
+   are much cheaper: gibberish-or-not takes a few microseconds over space-less text, and
+   two thirds of the data set's space-less texts score below -6.5.
 4. **Mostly words**: two or more words, one of three letters or more, more than 80% of
    them English words, accepted. Numbers don't count either way (`number 1 1 operation`).
    Without spaces the words must be separated by writing's punctuation or `_`
