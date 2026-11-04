@@ -85,7 +85,7 @@ for (const profile of profiles) {
     const all = [];
     for (let i = 0; i < runs; i++) all.push(await once(path, profile));
     const total = (r) => Object.values(r.bytes).reduce((a, b) => a + b, 0);
-    const m = (f) => median(all.map(f));
+    const m = (f) => median(all.map((run) => f(run)));
     console.log(
       `| ${name} | ${kb(m(total))} | ${kb(m((r) => r.bytes.html))} | ${kb(m((r) => r.bytes.css))} | ${kb(m((r) => r.bytes.js))} | ${kb(m((r) => r.bytes.wasm))} | ${Math.round(m((r) => r.fcp ?? 0))} ms | ${(m((r) => r.ready) / 1000).toFixed(2)} s |`,
     );

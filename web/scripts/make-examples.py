@@ -52,7 +52,8 @@ EXAMPLES = {
     "morse": morse("Ciphey decodes Morse code as well"),
     "vigenere": vigenere(VIGENERE, "BROWSER"),
     "ctf-flag": b64(FLAG.encode().hex()),
-    "md5": hashlib.md5(b"password").hexdigest(),
+    # The example is an MD5 digest (the verified example of #1029), not a use of MD5 for security
+    "md5": hashlib.md5(b"password", usedforsecurity=False).hexdigest(),
     "french": b64(FRENCH),
 }
 

@@ -70,12 +70,12 @@ jobs:
           mkdir -p "$tools/bin"
           cd "$RUNNER_TEMP"
           wb=wasm-bindgen-$WASM_BINDGEN_VERSION-x86_64-unknown-linux-musl
-          curl -sSfL -o wb.tar.gz "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/$WASM_BINDGEN_VERSION/$wb.tar.gz"
+          curl --proto '=https' --tlsv1.2 -sSfL -o wb.tar.gz "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/$WASM_BINDGEN_VERSION/$wb.tar.gz"
           echo "$WASM_BINDGEN_SHA256  wb.tar.gz" | sha256sum -c -
           tar xzf wb.tar.gz
           mv "$wb/wasm-bindgen" "$tools/bin/"
           by=binaryen-version_$BINARYEN_VERSION
-          curl -sSfL -o by.tar.gz "https://github.com/WebAssembly/binaryen/releases/download/version_$BINARYEN_VERSION/$by-x86_64-linux.tar.gz"
+          curl --proto '=https' --tlsv1.2 -sSfL -o by.tar.gz "https://github.com/WebAssembly/binaryen/releases/download/version_$BINARYEN_VERSION/$by-x86_64-linux.tar.gz"
           echo "$BINARYEN_SHA256  by.tar.gz" | sha256sum -c -
           tar xzf by.tar.gz
           mv "$by" "$tools/binaryen"
@@ -107,9 +107,10 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
+      # No dependency's install script runs (none of them needs one on Linux)
       - name: Install the site's dependencies
         working-directory: web
-        run: npm ci --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Build the WebAssembly modules
         working-directory: web
