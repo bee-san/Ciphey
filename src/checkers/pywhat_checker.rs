@@ -419,7 +419,7 @@ impl Check for Checker<PyWhat> {
 
 /// What pyWhat's `identifiers` or the CTF flag pattern identify `text` as, if anything:
 /// the name of the first regex whose match is the whole of `text` and says something about
-/// it (see [`is_trusted_match`]).
+/// it (see [`is_accepted_match`]).
 ///
 /// Text with control characters other than tabs and line breaks isn't plaintext of any
 /// format, and is a fifth of what a search checks (wrong decoders' bytes), so it skips
@@ -428,22 +428,22 @@ pub(crate) fn identify(identifiers: &Identifiers, text: &str) -> Option<String> 
     if has_control_characters(text) {
         return None;
     }
-    first_trusted_match(identifiers, text)
+    first_accepted_match(identifiers, text)
         .map(|found| found.regex.name.clone())
         .or_else(|| (is_ctf_flag(text) && identifiers.uses(CTF_FLAG)).then(|| CTF_FLAG.to_string()))
         .or_else(|| identify_idn(text).filter(|name| identifiers.uses(name)))
 }
 
 /// The first match of `identifiers` that is the whole of `text` and that
-/// [`is_trusted_match`] keeps. The checker's own rules report what they find under the
+/// [`is_accepted_match`] keeps. The checker's own rules report what they find under the
 /// name of a pyWhat regex (the generic CTF flag pattern as "Capture The Flag (CTF) Flag",
 /// an internationalised address as "Email Address"), so a `pywhat_*` setting that leaves
 /// that regex out (`pywhat_exclude_tags = ["CTF Flag"]`, say) leaves out the rule too.
-pub(crate) fn first_trusted_match(identifiers: &Identifiers, text: &str) -> Option<Match> {
+pub(crate) fn first_accepted_match(identifiers: &Identifiers, text: &str) -> Option<Match> {
     identifiers
         .identify_whole(text)
         .into_iter()
-        .find(|found| is_trusted_match(found, text))
+        .find(|found| is_accepted_match(found, text))
 }
 
 /// Whether `text` has a control character other than a tab or line break: C0 controls,
@@ -467,7 +467,7 @@ pub(crate) fn has_control_characters(text: &str) -> bool {
 ///   braces inside, like `THM{UyLgUqMJU}LjUkM^U}` from a chain of wrong decoders;
 /// * an email address needs a known top-level domain (see [`EMAIL_TLDS`]);
 /// * an IPv6 address must be in a range that is assigned (see [`is_assigned_ipv6`]).
-fn is_trusted_match(found: &Match, text: &str) -> bool {
+fn is_accepted_match(found: &Match, text: &str) -> bool {
     let name = found.regex.name.as_str();
     if EXCLUDED_NAMES.contains(&name) {
         return false;
@@ -783,9 +783,10 @@ mod tests {
             .min_rarity(MIN_RARITY)
             .exclude_tags(&[pywhat::CHARSET_ONLY]);
         let split = identifiers_for(&Config::default());
+        let webhook = discord_webhook();
         for text in [
             "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-            "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_abcd",
+            webhook.as_str(),
             "http://10.10.10.5/secret/flag.txt",
             "s3://bucket/path/key",
             "www.google.com",
@@ -1130,13 +1131,23 @@ mod tests {
         assert_eq!(identify("+1 800 555 1234").as_deref(), Some(PHONE_NUMBER));
     }
 
+    /// A Discord webhook URL of made-up digits and letters, built at run time: secret scanners
+    /// (SonarCloud, GitHub) take a committed one for a leaked webhook.
+    fn discord_webhook() -> String {
+        let token: String = ('a'..='z').chain('A'..='Z').chain('0'..='9').collect();
+        format!(
+            "https://{}/api/webhooks/{}/{token}-_abcd",
+            "discord.com",
+            "1234567890".repeat(2).get(..18).unwrap_or_default()
+        )
+    }
+
     /// Texts pyWhat identifies, across rarities and tags, including the slowest regexes to
-    /// compile (Discord Webhook, URL).
-    const IDENTIFIABLE: [&str; 11] = [
+    /// compile (URL; with [`discord_webhook`], Discord Webhook).
+    const IDENTIFIABLE: [&str; 10] = [
         "https://google.com",
         "192.168.1.1",
         "bee@skerritt.blog",
-        "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_abcd",
         "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         "UC11L3JDgDQMyH8iolKkVZ4w",
         "4111111111111111",
@@ -1156,7 +1167,8 @@ mod tests {
         // A second call does nothing
         warm_up();
         let checker = Checker::<PyWhat>::new();
-        for text in IDENTIFIABLE {
+        let webhook = discord_webhook();
+        for text in IDENTIFIABLE.into_iter().chain([webhook.as_str()]) {
             assert!(
                 !Identifier::default()
                     .min_rarity(MIN_RARITY)
