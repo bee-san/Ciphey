@@ -339,7 +339,7 @@ struct Hit<'a> {
 
 impl Hit<'_> {
     /// Whether more than a lenient English check identified the reading: another checker
-    /// did (LemmeKnow, a crib or a wordlist), or a strict English check accepts it too.
+    /// did (pyWhat, a crib or a wordlist), or a strict English check accepts it too.
     /// The search ranks the results of one step the same way.
     fn is_confident(&self) -> bool {
         let strict = Checker::<EnglishChecker>::new().with_sensitivity(Sensitivity::Low);

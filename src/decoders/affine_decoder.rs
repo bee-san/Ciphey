@@ -603,7 +603,7 @@ mod tests {
     }
 
     #[test]
-    fn flag_is_identified_by_lemmeknow() {
+    fn flag_is_identified_by_pywhat() {
         let affine_decoder = Decoder::<AffineDecoder>::new();
         let result = affine_decoder.crack("jhca{cjjips_iw_zewn_ycnr}", &get_athena_checker());
         assert!(result.success);

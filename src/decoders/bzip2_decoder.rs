@@ -560,7 +560,7 @@ mod tests {
     fn decodes_and_identifies_a_ctf_flag() {
         // base64.b64encode(bz2.compress(b"flag{bzip2_block_sorting}"))
         let result = crack("QlpoOTFBWSZTWWimefAAAAOLgBAAAAC5rdwaIAAxTJiZBkYUABso2o0tbq4WS6BPmU+BXUPi7kinChINFM8+AA==");
-        assert!(result.success, "LemmeKnow should identify the CTF flag");
+        assert!(result.success, "pyWhat should identify the CTF flag");
         assert_eq!(
             result.unencrypted_text.unwrap(),
             ["flag{bzip2_block_sorting}"]

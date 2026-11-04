@@ -1040,7 +1040,7 @@ mod tests {
 
     #[test]
     fn best_guess_is_returned_when_the_checker_accepts_nothing() {
-        // LemmeKnow alone doesn't take English for plaintext, so the best decryption comes
+        // pyWhat alone doesn't take English for plaintext, so the best decryption comes
         // back unconfirmed, for the search to decode further
         let checker = CheckerTypes::CheckPyWhat(Checker::<PyWhat>::new());
         let result = Decoder::<VigenereAutokeyDecoder>::new().crack(VECTORS[0].0, &checker);

@@ -560,7 +560,7 @@ mod tests {
 
     #[test]
     fn with_a_crib_a_string_value_must_be_identified() {
-        // The LemmeKnow checker stands in for the regex checker here
+        // The pyWhat checker stands in for the regex checker here
         let checker = CheckerTypes::CheckPyWhat(Checker::<PyWhat>::new());
 
         // The flag is a value, so a crib anchored to it doesn't match the whole payload

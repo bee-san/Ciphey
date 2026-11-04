@@ -45,7 +45,7 @@ pub struct Opts {
     file: Option<String>,
     /// If you have a crib (you know a piece of information in the plaintext)
     /// Or you want to create a custom regex to check against, you can use the Regex checker below.
-    /// This turns off other checkers (English, LemmeKnow)
+    /// This turns off other checkers (English, pyWhat)
     #[arg(short, long)]
     regex: Option<String>,
     /// Path to a wordlist file containing newline-separated words

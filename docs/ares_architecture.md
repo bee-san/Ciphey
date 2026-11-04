@@ -41,7 +41,7 @@ The `CheckResult` structure contains information about whether the text was iden
 
 The main checkers include:
 - **Athena**: The primary checker that orchestrates other checkers
-- **LemmeKnow**: Uses pattern matching to identify known formats
+- **pyWhat**: Uses pyWhat's regexes to identify known formats
 - **EnglishChecker**: Determines if text is valid English
 - **RegexChecker**: Checks if text matches a user-provided regex pattern
 
@@ -108,9 +108,9 @@ Plaintext identification is a critical component of ciphey. The process works as
 
 1. **Athena Checker**: The main checker that orchestrates other checkers
    - If a regex pattern is provided, it checks if the text matches
-   - Otherwise, it tries the LemmeKnow checker and then the English checker
+   - Otherwise, it tries the pyWhat checker and then the English checker
 
-2. **LemmeKnow Checker**: Uses the LemmeKnow library to identify if the text matches known patterns
+2. **pyWhat Checker**: Uses the pyWhat crate to identify if the text matches known patterns
    - IP addresses, URLs, email addresses, etc.
    - Returns true if a match is found with sufficient confidence
 

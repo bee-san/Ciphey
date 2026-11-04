@@ -648,7 +648,7 @@ mod tests {
     }
 
     #[test]
-    fn flag_is_identified_by_lemmeknow() {
+    fn flag_is_identified_by_pywhat() {
         // Not the best scoring key, but among the 5 that are checked
         let rank = best_candidates(FLAG_HEX)
             .iter()

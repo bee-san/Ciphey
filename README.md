@@ -124,7 +124,7 @@ More are on the way: [#1030](https://github.com/bee-san/Ciphey/issues/1030) trac
 
 <sub>▶ <a href="https://cdn.jsdelivr.net/gh/bee-san/Ciphey@d41d19946234477346fede14dadf8c351cc469e6/media/tui-video/out/lemmeknow.mp4">Watch the clip</a> (21 s)</sub>
 
-Every candidate plaintext also goes through [LemmeKnow](https://github.com/swanandx/lemmeknow), the Rust port of [pyWhat](https://github.com/bee-san/pyWhat), which recognises more than 120 formats. So Ciphey doesn't just decode the string, it tells you what it is: a password in a `mount` or `sshpass` command, a TOTP secret, a GitHub token or Stripe key, an IP or MAC address, an email address or URL, a crypto wallet, an AWS ARN, JSON or a CTF flag in any format (`flag{…}`, `picoCTF{…}`, `DUCTF{…}`). LemmeKnow patterns that only check which characters a string has and how long it is (card and phone numbers, for example) are ignored: decoder junk matches them all the time.
+Every candidate plaintext also goes through [pyWhat](https://github.com/bee-san/pyWhat), in its Rust version, which recognises more than 120 formats. So Ciphey doesn't just decode the string, it tells you what it is: a password in a `mount` or `sshpass` command, a TOTP secret, a GitHub token or Stripe key, an IP or MAC address, an email address or URL, a crypto wallet, an AWS ARN, JSON or a CTF flag in any format (`flag{…}`, `picoCTF{…}`, `DUCTF{…}`). Formats that pyWhat marks "Charset Only", because they only say which characters a string has and how long it is (card numbers, for example), are ignored: decoder junk matches them all the time.
 
 ```console
 $ ciphey -t '3139322e3136382e302e31'
@@ -217,13 +217,13 @@ Nothing is filtered out: you get what the decoder hands on to the search. The ca
 
 ### Is it plaintext?
 
-`detect_plaintext` runs the checks the search uses (a regex crib, a wordlist, LemmeKnow, JSON, common passwords, English and code) and says which one accepted the text and what it took it for:
+`detect_plaintext` runs the checks the search uses (a regex crib, a wordlist, pyWhat, JSON, common passwords, English and code) and says which one accepted the text and what it took it for:
 
 ```rust
 use ciphey::detection::{detect_plaintext, CheckerKind, DetectOptions, Sensitivity};
 
 let found = detect_plaintext("192.168.0.1", &DetectOptions::default()).unwrap();
-assert_eq!(found.checker, CheckerKind::LemmeKnow);
+assert_eq!(found.checker, CheckerKind::PyWhat);
 assert_eq!(found.description, "Internet Protocol (IP) Address Version 4");
 assert_eq!(found.confidence, Some(0.7)); // the format's rarity in pyWhat
 
@@ -260,7 +260,7 @@ It provides four tools:
 
 - `decode` decodes `text` when you don't know how it was encoded, and returns the `plaintext` and the `path` of decoders used, with keys such as the Caesar shift. Optional arguments: `timeout_secs` (1 to 30, default 10) and `regex`, a crib the plaintext must match, such as `flag\{`.
 - `decode_with` runs one decoder you choose on `text`: give it the `decoder`'s id, name or an alias (`base64`, `rot13`, `vigenere`, `xor_single_byte`, ...). Without a `key` it decodes the text, or cracks the cipher by trying every key; with one it decrypts, for ciphers that take a key (`13`, `LEMON`, `a=5, b=8`, `rails=3, offset=1`). It returns every candidate decoding and whether each passes Ciphey's plaintext check. `regex` works as for `decode`.
-- `detect_plaintext` checks whether `text` already is plaintext, without decoding it, and says which checker accepted it, what it took it for and, for LemmeKnow's formats, how sure it is. Optional arguments: `checkers` (any of `lemmeknow`, `json`, `password`, `english` and `code`, by default all five), `sensitivity` of the English checker (`low`, `medium` or `high`) and a `regex` crib.
+- `detect_plaintext` checks whether `text` already is plaintext, without decoding it, and says which checker accepted it, what it took it for and, for pyWhat's formats, how sure it is. Optional arguments: `checkers` (any of `pywhat`, `json`, `password`, `english` and `code`, by default all five; `lemmeknow`, its name before 0.13.0, still works), `sensitivity` of the English checker (`low`, `medium` or `high`) and a `regex` crib.
 - `list_decoders` lists the encodings and ciphers Ciphey supports, with the ids and aliases `decode_with` takes and the key format of each cipher that takes one.
 
 A `decode` result looks like this. `status` is `decoded`, `not_found` or `timed_out`.
@@ -300,11 +300,11 @@ A `decode` result looks like this. `status` is `decoded`, `not_found` or `timed_
 {
   "is_plaintext": true,
   "detection": {
-    "checker": "lemmeknow",
+    "checker": "pywhat",
     "description": "Internet Protocol (IP) Address Version 4",
     "confidence": 0.7
   },
-  "checkers": ["lemmeknow", "json", "password", "english", "code"]
+  "checkers": ["pywhat", "json", "password", "english", "code"]
 }
 ```
 
@@ -369,7 +369,7 @@ Bug reports, ideas and pull requests are welcome in [issues](https://github.com/
 
 ## Credits
 
-- [LemmeKnow](https://github.com/swanandx/lemmeknow) by [@swanandx](https://github.com/swanandx) identifies what Ciphey finds, and [gibberish-or-not](https://github.com/bee-san/gibberish-or-not) decides whether it's English.
+- [pyWhat](https://github.com/bee-san/pyWhat) identifies what Ciphey finds, and [gibberish-or-not](https://github.com/bee-san/gibberish-or-not) decides whether it's English. Before 0.13.0, [LemmeKnow](https://github.com/swanandx/lemmeknow) by [@swanandx](https://github.com/swanandx) identified it.
 - [Rayon](https://github.com/rayon-rs/rayon) runs the decoders in parallel.
 - Ciphey started as a Python project; Python Ciphey 5.x is still on [PyPI](https://pypi.org/project/ciphey/). Thank you to everyone who worked on it.
 - The videos are made with [HyperFrames](https://hyperframes.heygen.com/) from real terminal recordings. The source, recordings and build script are in [`media/tui-video`](https://github.com/bee-san/Ciphey/tree/media/readme-videos/media/tui-video) on the `media/readme-videos` branch.

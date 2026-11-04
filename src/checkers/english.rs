@@ -225,7 +225,7 @@ fn count_bytes(text: &str, matches: fn(&u8) -> bool) -> usize {
 /// leetspeak, hex or random letters by design, and a password, key or hash is random.
 /// Counting them as words rejected the text, so the search went on and changed them
 /// (Leetspeak turned the flag into `IW{No_one_can_stop_you}`), or found nothing. A text
-/// that is only a flag is LemmeKnow's to identify, and one that is only a secret is
+/// that is only a flag is pyWhat's to identify, and one that is only a secret is
 /// decoder output to decode further. Secrets need two other words, flags one.
 fn without_opaque_tokens(text: &str) -> std::borrow::Cow<'_, str> {
     let has_brace = text.contains('{');

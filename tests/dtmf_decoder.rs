@@ -48,7 +48,7 @@ fn glued_frequencies_are_cracked() {
 
 #[test]
 fn phone_number_is_cracked() {
-    // LemmeKnow identifies the keys as a phone number
+    // pyWhat identifies the keys as a phone number, with a + in front
     let result = crack("697-1209 852-1336 941-1336 941-1336 770-1336 770-1336 770-1336 697-1209 697-1336 697-1477 770-1209");
     assert_eq!(result.text[0], "18005551234");
     assert_eq!(path(&result), ["DTMF"]);

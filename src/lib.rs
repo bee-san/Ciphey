@@ -20,8 +20,8 @@
 //! ```
 //!
 //! The library is written to build for WebAssembly with its default features and no flags
-//! (`cargo build --lib --target wasm32-unknown-unknown`), once its gibberish-or-not and
-//! LemmeKnow dependencies are replaced by versions that build there. On WebAssembly the
+//! (`cargo build --lib --target wasm32-unknown-unknown`), once its gibberish-or-not
+//! dependency is replaced by version 6, which builds there. On WebAssembly the
 //! search runs on the caller's thread and stops at the timeout by itself, there is no
 //! cache, the human checker never asks, and the CLI, the config file and wordlist files
 //! aren't available. See `docs/wasm.md` in the repository.
@@ -225,7 +225,7 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
         Err(e) => log::warn!("Could not read the cache: {e}"),
     }
 
-    // Every check from here on runs LemmeKnow (unless a regex crib replaces the checkers),
+    // Every check from here on runs pyWhat (unless a regex crib replaces the checkers),
     // so start compiling its regexes now, all at once, instead of one after another
     // during the first check.
     if get_config().regex.is_none() {

@@ -660,7 +660,7 @@ mod tests {
             ("Th15 15 4 735t", "This is a test"), // CC
             // TESTING is a word because TEST is
             ("T3st1ng 1s fun", "Testing is fun"), // CC
-            // LemmeKnow identifies it as a CTF flag
+            // pyWhat identifies it as a CTF flag
             ("flag{h3ll0_w0rld}", "flag{hello_world}"), // CC
             ("Y0u h4v3 b33n pwn3d", "You have been pwned"), // CC
             ("1337", "leet"),                               // proto

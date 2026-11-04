@@ -178,7 +178,7 @@ impl Checker<Athena> {
             }
         }
 
-        // LemmeKnow (known formats and CTF flags), JSON, the common-password list, English
+        // pyWhat (known formats and CTF flags), JSON, the common-password list, English
         // and code, in that order
         identify_plaintext(text, self.sensitivity)
             .map(|found| Hit::identified(found.into_result(text)))
@@ -219,7 +219,7 @@ impl Check for Checker<Athena> {
     /// Runs the checkers in order and stops at the first that identifies `text`:
     ///
     /// * with a `--regex` crib, only the regex checker,
-    /// * otherwise the wordlist (if there is one), LemmeKnow (known formats and CTF
+    /// * otherwise the wordlist (if there is one), pyWhat (known formats and CTF
     ///   flags), JSON, the common-password list, the English checker and finally the code
     ///   checker (source code and shell commands).
     ///
@@ -268,7 +268,7 @@ mod tests {
     }
 
     #[test]
-    fn charset_only_lemmeknow_matches_are_not_plaintext() {
+    fn charset_only_pywhat_matches_are_not_plaintext() {
         for junk in [
             "736563726574",
             "5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8",

@@ -339,7 +339,7 @@ mod tests {
 
     #[test]
     fn base92_sets_unencrypted_text_when_the_checker_rejects_it() {
-        // LemmeKnow only accepts things like IP addresses and URLs
+        // pyWhat only accepts things like IP addresses and URLs
         let checker = CheckerTypes::CheckPyWhat(Checker::<PyWhat>::new());
         let result = Decoder::<Base92Decoder>::new().crack("Fc_$aOTdKnsM*k", &checker);
         assert!(!result.success);

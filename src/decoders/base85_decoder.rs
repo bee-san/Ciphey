@@ -249,7 +249,7 @@ mod tests {
 
     #[test]
     fn base85_sets_unencrypted_text_when_the_checker_rejects_it() {
-        // LemmeKnow only accepts things like IP addresses and URLs
+        // pyWhat only accepts things like IP addresses and URLs
         let checker = CheckerTypes::CheckPyWhat(Checker::<PyWhat>::new());
         let result = Decoder::<Base85Decoder>::new().crack("Xk~0{Zy<MXa%^M", &checker);
         assert!(!result.success);

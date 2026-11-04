@@ -45,7 +45,7 @@ and stop at the first that identifies the text (`identify_plaintext` in
 |---|---|---|---|
 | | Regex (only with `--regex`) | a match of the crib; nothing else runs | Regex matched: *the crib* |
 | 1 | Wordlist (only with a wordlist) | an exact line of the wordlist | Text matches an entry in the provided wordlist |
-| 2 | LemmeKnow | known formats (URLs, emails, IPs, keys, …) and CTF flags | the format's name |
+| 2 | pyWhat | known formats (URLs, emails, IPs, keys, …) and CTF flags | the format's name |
 | 3 | JSON | a non-empty JSON object or array | JavaScript Object Notation (JSON) |
 | 4 | Common passwords | a common password of 5+ characters | Common Password |
 | 5 | English | English text, with or without spaces | Words |
@@ -58,38 +58,42 @@ is the one that has to be fast.
 
 ## The checkers
 
-### LemmeKnow and CTF flags
+### pyWhat and CTF flags
 
-`src/checkers/lemmeknow_checker.rs`. [LemmeKnow](https://github.com/swanandx/lemmeknow) 0.8
-(the Rust port of pyWhat) matches the text against about 130 anchored regexes; those with
-a rarity below 0.1, which match by chance (timestamps, `key:value` pairs), are skipped.
-Many of the others only check which characters a string has and how long it is, so
-decoder junk matches them. Ignored:
+`src/checkers/pywhat_checker.rs`. [pyWhat](https://github.com/bee-san/pyWhat)'s `pywhat`
+crate (6, the Rust port of pyWhat, which replaced LemmeKnow 0.8 in Ciphey 0.13.0) matches
+the whole text against pyWhat's 150-odd regexes (`identify_whole`): a format inside a
+sentence doesn't count. Regexes with a rarity below 0.1, which match by chance (timestamps,
+`key:value` pairs), are not used, and neither are those pyWhat tags **Charset Only**: they
+only check which characters a text has and how long it is (more than 1 in 1,000 random
+strings of a common alphabet and the right length match them, after their checksum), so
+decoder junk matches them: card numbers, Bitly and Visual Studio keys (any SHA-1), ASINs,
+Twilio SIDs, Turkish IDs, the AWS secret key. pyWhat checks the checksums of the formats
+that have one (Luhn for card numbers, Base58Check and CashAddr for wallets), so random
+Base58 isn't a Bitcoin or Litecoin address any more. On top of that, the checker ignores:
 
-- every pattern tagged `Credit Card`, `Phone`, `Bitly`, `Visual Studio` or `Turkish`;
-- by name: ASIN, the Bitcoin Cash, Litecoin, Ripple and Dogecoin wallets, the Google
-  ReCaptcha key, and two letters followed by a character class of fixed length: Facebook
-  Access Token (`EA` and 190+), Twilio Account and Application SIDs (`AC`/`AP` and 32) and
-  the AWS Organization ID (`o-` and 10 to 32);
-- URLs without `://` or a leading `www.`;
-- EC2 instance IDs that aren't `i-` and 8 or 17 lower-case hex digits (the pattern is
-  case-insensitive alphanumeric);
-- ARNs that don't start with `arn:` and a lower-case partition and service;
+- by name: JSON Web Tokens (the JWT decoder decodes them: the payload is the plaintext),
+  the Facebook Access Token (`EA` and 190+ letters and digits, which a Vigenère decryption
+  of Base64 can be: pyWhat's validator only asks for a lower-case letter, an upper-case
+  letter and a digit) and the AWS Organization ID (`o-` and 10 to 32 letters and digits);
+- URLs without `://` or a leading `www.`: pyWhat's URL regex takes bare domains
+  (`example.com`);
 - email addresses whose top-level domain isn't one of 112 common ones (`EMAIL_TLDS`), or
   an IP in brackets. A Caesar shift of an address is still shaped like one
   (`uryyb@jbeyq.pbz`);
 - any text with a control character other than tab and line breaks: it isn't a format,
-  and it is a fifth of what a search checks, so LemmeKnow's regexes are skipped for it;
-- LemmeKnow's own flag formats (`flag{.*}`, `thm{.*}` …) with more braces inside, like
+  and it is a fifth of what a search checks, so pyWhat's regexes are skipped for it;
+- pyWhat's own flag formats (`flag{.*}`, `thm{.*}` …) with more braces inside, like
   `THM{UyLgUqMJU}LjUkM^U}` from a chain of wrong decoders: a flag has one pair.
 
-LemmeKnow's patterns are ASCII-only, so the checker also identifies a **domain name or
+pyWhat's email regex is ASCII-only, so the checker also identifies a **domain name or
 email address with a non-ASCII letter** (`hello.müller.example.com`, `müller@example.com`),
-what the Punycode decoder makes of `xn--` labels, if it ends in one of `EMAIL_TLDS`. The
-DTMF decoder still takes keys that LemmeKnow's phone number pattern matches for the number
-dialled (`18005551234`), with the human checker's agreement.
+what the Punycode decoder makes of `xn--` labels, if it ends in one of `EMAIL_TLDS`. pyWhat
+only takes a phone number with its `+` and country code (`+1 202 555 0156`); the DTMF
+decoder takes the keys of a number dialled on a keypad (`18005551234`) for a phone number
+when pyWhat does with a `+` in front, with the human checker's agreement.
 
-When LemmeKnow finds nothing, the checker looks for a **CTF flag** in any format,
+When pyWhat finds nothing, the checker looks for a **CTF flag** in any format,
 `^[A-Za-z][A-Za-z0-9_]{1,19}\{[^{}\n]{1,200}\}$` (matched by hand: the regex crate compiles
 the bounded repeat into hundreds of states). Caesar shifts, Atbash and Vigenère keep a
 flag's shape, so:
@@ -267,12 +271,19 @@ Regenerate with `python3 src/storage/ngrams/generate.py` (it downloads the books
 | `top_results` / `--top-results` | WaitAthena: collect every accepted candidate until the timeout |
 | `timeout` / `-c` | how long a search may run when nothing is accepted |
 | `api_mode` | no prompts or output (library use) |
+| `pywhat_min_rarity` | the pyWhat checker only uses regexes at least this rare (default 0.1; lower values count as 0.1) |
+| `pywhat_max_rarity` | ... and at most this rare (default 1; 0 means no maximum) |
+| `pywhat_tags` | if not empty, only regexes with one of these tags or names (`["CTF Flag", "IP"]`) |
+| `pywhat_exclude_tags` | no regexes with these tags or names; "Charset Only" ones are never used |
+| `pywhat_boundaryless` | read and ignored: a format only counts as the whole text |
 | `enhanced_detection`, `model_path` | read and ignored (removed in #1031) |
 
-The `lemmeknow_min_rarity`, `lemmeknow_max_rarity`, `lemmeknow_tags`,
-`lemmeknow_exclude_tags` and `lemmeknow_boundaryless` keys are read into the config, but the
-LemmeKnow checker uses its own settings (rarity 0.1 and the filters above), so they
-currently have no effect.
+The `pywhat_*` keys can only make the checker stricter than the defaults. Leaving out pyWhat's
+"Capture The Flag (CTF) Flag" regex (`pywhat_exclude_tags = ["CTF Flag"]`) also leaves out
+the generic flag pattern, which reports under that name, and leaving out "Email Address"
+the internationalised addresses. Config files written before 0.13.0 have the same keys
+named `lemmeknow_*` (`lemmeknow_min_rarity` ...), with 0 for both rarities: they are read
+as the `pywhat_*` keys, so those files keep the defaults.
 
 ## The benchmark
 
@@ -303,10 +314,14 @@ In `benches/data/plaintext/`, all checked in, so runs are comparable:
 - `curated.tsv` (`category<TAB>split<TAB>text`): single words, short phrases, sentences in
   several registers (chat, technical, formal and news, CTF messages, verse), paragraphs,
   CTF flags in 35 formats, JSON, code and shell commands, URLs, emails and IPs, pyWhat's
-  own examples of the formats LemmeKnow knows, common passwords, and the #1031 harness's
+  own examples of the formats it knows (category `lemmeknow`, from before pyWhat replaced
+  LemmeKnow), common passwords, and the #1031 harness's
   lists. Also informational categories, reported but left out of every total because
   Ciphey doesn't claim to accept them: other languages, and formats ignored on purpose
-  (card and phone numbers, URLs without a scheme).
+  (`lemmeknow_ignored`: the formats LemmeKnow's filters ignored, such as card and phone
+  numbers and URLs without a scheme; pyWhat accepts the ones whose checksum or prefix
+  makes them more than a character set, such as international phone numbers and wallets
+  with a valid checksum).
 - `gutenberg.tsv`: 760 sentences and short phrases from five public-domain books, written by
   `generate.py --bench`. The held-out ones (Pride and Prejudice, A Tale of Two Cities, The
   Great Gatsby) are not in the quadgram table's books; the train ones are.
@@ -427,9 +442,8 @@ picoCTF's `l3arn_th3_r0p35` (leetspeak without a flag around it).
   out of results.
 - **Flags without a flag word** whose contents aren't words (`SECCON{7e1b9e3a}`) and any
   such flag under Caesar, ROT13 or Atbash need a crib.
-- **Formats**: IPv6, Bitcoin, JWT, dates of birth and social security numbers are among
-  the patterns LemmeKnow 0.8 drops because the regex crate can't compile them; and the
-  `lemmeknow_*` config keys have no effect.
+- **Formats**: a reversed IPv6 address is an IPv6 address, as a reversed IPv4 address is an
+  IPv4 address (`7.41.01.01`), so the Reverse decoder's output can end a search on one.
 - **Words**: gibberish-or-not's dictionary only answers for words of 4 to 9 letters, so
   long rare words (`cryptography`) count as unknown unless they score well, and names
   count as unknown.

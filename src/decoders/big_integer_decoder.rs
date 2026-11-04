@@ -297,7 +297,7 @@ mod tests {
 
     #[test]
     fn decodes_ctf_flag() {
-        // LemmeKnow identifies the result as a "Capture The Flag (CTF) Flag"
+        // pyWhat identifies the result as a "Capture The Flag (CTF) Flag"
         assert_identified(
             "flag = 50937517511040843800057610630687734629648772740622533002167079526478786571835272839786109",
             "flag{long_to_bytes_is_not_encryption}",
