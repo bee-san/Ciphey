@@ -30,9 +30,30 @@ export function checkerLabel(id: string | null, name: string | null = null): str
   return id;
 }
 
+/**
+ * Ciphey names some decoders in lower case (`caesar`, `atbash`) and writes Vigenère without
+ * its accent; the page shows them as the README writes them. Other names pass through.
+ */
+const NAMES: Readonly<Record<string, string>> = {
+  a1z26: "A1Z26",
+  atbash: "Atbash",
+  caesar: "Caesar",
+  railfence: "Rail fence",
+  rot18: "ROT18",
+  rot47: "ROT47",
+  simplesubstitution: "Simple substitution",
+  Vigenere: "Vigenère",
+  "Vigenere Autokey": "Vigenère autokey",
+};
+
+export function decoderName(name: string): string {
+  return NAMES[name] ?? name;
+}
+
 /** A step as one phrase: `Caesar (key 13)`. */
 export function stepLabel(step: Pick<Step, "decoder" | "key">): string {
-  return step.key ? `${step.decoder} (key ${step.key})` : step.decoder;
+  const name = decoderName(step.decoder);
+  return step.key ? `${name} (key ${step.key})` : name;
 }
 
 /** The path as one line, for copying: `Base64 → Hexadecimal → Caesar (key 13)`. */
@@ -42,8 +63,12 @@ export function pathText(path: readonly Step[]): string {
 
 /** The path for a screen reader: `Base64, then Hexadecimal, then Caesar with key 13`. */
 export function pathSpeech(path: readonly Step[]): string {
-  return path.map((s) => (s.key ? `${s.decoder} with key ${s.key}` : s.decoder)).join(", then ");
+  return path.map((s) => (s.key ? `${decoderName(s.decoder)} with key ${s.key}` : decoderName(s.decoder))).join(", then ");
 }
+
+/** What the crib field says when Ciphey can't read the crib as a regular expression. */
+export const CRIB_INVALID =
+  "This crib isn't a valid regular expression. To match a symbol such as { ( [ . * + ? as itself, put a backslash before it: flag\\{ matches flag{.";
 
 /** What accepted the plaintext, as a sentence: "pyWhat identified it as Email Address (rarity 0.50)." */
 export function verdictSentence(result: Pick<DecodeResult, "checker" | "checkerName" | "description" | "confidence">): string | null {
@@ -60,7 +85,7 @@ export function verdictSentence(result: Pick<DecodeResult, "checker" | "checkerN
 
 /** The options as the Options disclosure's summary: `5 s · Medium · crib · every plaintext`. */
 export function optionsSummary(o: DecodeOptions): string {
-  const parts = [`${o.timeout} s`, o.sensitivity[0]?.toUpperCase() + o.sensitivity.slice(1)];
+  const parts = [`${o.timeout} s`, `${capitalise(o.sensitivity)} sensitivity`];
   if (o.regex) parts.push("crib");
   if (o.topResults) parts.push("every plaintext");
   return parts.join(" · ");
@@ -89,4 +114,9 @@ export function checkTimeout(raw: string): { ok: true; value: number } | { ok: f
 export function checkCrib(raw: string): InputCheck {
   if (raw.length > 1000) return { ok: false, message: "The crib is limited to 1,000 characters." };
   return { ok: true };
+}
+
+/** "medium" → "Medium" */
+export function capitalise(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
 }

@@ -19,6 +19,7 @@ import { createRequire } from "node:module";
 import puppeteer from "puppeteer-core";
 import { EXAMPLES } from "../../src/decode/examples.ts";
 import { serve } from "../../scripts/serve.mjs";
+import { CSP } from "../../scripts/shell.ts";
 
 const require = createRequire(import.meta.url);
 const AXE = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
@@ -88,6 +89,13 @@ async function open(path, { width = 1280, height = 900, theme = "light", reduced
     const u = r.url();
     if (!u.startsWith("data:") && !u.startsWith("blob:") && new URL(u).origin !== origin) problems.foreign.add(u);
   });
+  // WebSockets aren't requests to puppeteer: watch for them in the page and in every worker
+  const watchSockets = async (session) => {
+    await session.send("Network.enable").catch(() => {});
+    session.on("Network.webSocketCreated", (e) => problems.foreign.add(`WebSocket ${e.url}`));
+  };
+  await watchSockets(await page.createCDPSession());
+  page.on("workercreated", (worker) => void watchSockets(worker.client));
   page.on("console", (m) => {
     if (m.type() === "error") problems.console.push(`${path}: ${m.text()}`);
   });
@@ -213,13 +221,43 @@ for (const example of EXAMPLES) {
   });
 }
 
+await check("decode: the path shows each layer's output", async () => {
+  const example = EXAMPLES.find((e) => e.id === "base64x3");
+  await decode.click(`#examples [data-example="${example.id}"]`);
+  await decodeResult(decode);
+  const layers = await texts(decode, "#result .path__text");
+  const b64 = (t) => Buffer.from(t).toString("base64");
+  const want = [example.input, b64(b64(example.plaintext)), b64(example.plaintext), example.plaintext];
+  // Each is cut to 160 characters (with an ellipsis), so compare the starts
+  assert(layers.length === 4, `${layers.length} layers`);
+  layers.forEach((l, i) => assert(want[i].startsWith(l.replace(/…$/, "")), `layer ${i}: ${l.slice(0, 40)}`));
+  return `${layers.length} layers`;
+});
+
+await check("decode: decoded HTML is shown as text, never run", async () => {
+  const html = '<img src=x onerror="window.__xss=1"><b>Hello</b> there, this decoded text is plain English and harmless';
+  await setValue(decode, "#input", Buffer.from(html).toString("base64"));
+  await decode.click("#decode");
+  const r = await decodeResult(decode);
+  const state = await decode.evaluate(() => ({
+    xss: window.__xss,
+    elements: document.querySelector("#result .plaintext")?.children.length,
+    images: document.querySelectorAll("#result img, #tree img").length,
+  }));
+  assert(r.plaintext === html, `got ${r.plaintext ?? r.notice}`);
+  assert(state.xss === undefined && state.elements === 0 && state.images === 0, JSON.stringify(state));
+  return "shown as text";
+});
+
 await check("decode: the tree grows while searching, then advice when nothing is found", async () => {
   await decode.click("#options summary");
   await setValue(decode, "#timeout", "3");
   await setValue(decode, "#regex", "^ZZZZ-no-such-plaintext$");
   await setValue(decode, "#input", "SGVsbG8gZnJvbSB0aGUgb3RoZXIgc2lkZSBvZiB0aGUgd29ybGQ=XqZ7");
   await decode.click("#decode");
+  // At least 1.5 s in, and the tree has grown (up to 2.5 s on a slow machine)
   await new Promise((r) => setTimeout(r, 1500));
+  await decode.waitForFunction(() => document.querySelectorAll("#tree .node").length > 10, { timeout: 1000 }).catch(() => {});
   const midway = await decode.evaluate(() => ({
     nodes: document.querySelectorAll("#tree .node").length,
     stats: document.getElementById("search-stats")?.textContent ?? "",
@@ -227,12 +265,54 @@ await check("decode: the tree grows while searching, then advice when nothing is
   }));
   assert(midway.searching, "the search ended before 1.5 s");
   assert(midway.nodes > 10, `only ${midway.nodes} tree nodes after 1.5 s`);
-  assert(/nodes explored/.test(midway.stats), `no counters: ${midway.stats}`);
+  assert(/texts tried/.test(midway.stats), `no counters: ${midway.stats}`);
   const r = await decodeResult(decode, 15_000);
   assert(/No plaintext found in 3 seconds|tried everything/.test(r.notice ?? ""), `got ${r.notice}`);
   const tips = await texts(decode, "#result .notice li");
   assert(tips.length >= 2, "no advice");
   return `${midway.nodes} nodes drawn at 1.5 s; "${r.notice}"`;
+});
+
+await check("decode: the tree draws at most 300 rows, plus the way to a plaintext", async () => {
+  const rows = await decode.$$eval("#tree .node:not(.node--more)", (els) => els.length);
+  assert(rows <= 300 + 25, `${rows} rows drawn`);
+  return `${rows} rows`;
+});
+
+/** Whether the engine status line shows "Loading" at any point in the next `ms`. */
+async function restartsWithin(page, ms) {
+  await page.evaluate(() => {
+    window.__loading = false;
+    window.__watch?.disconnect();
+    window.__watch = new MutationObserver(() => {
+      if (/Loading/.test(document.getElementById("engine-status").textContent)) window.__loading = true;
+    });
+    window.__watch.observe(document.getElementById("engine-status"), { childList: true, characterData: true, subtree: true });
+  });
+  await new Promise((r) => setTimeout(r, ms));
+  return page.evaluate(() => window.__loading);
+}
+
+await check("decode: a cancel reaches the worker (no restart), and a stuck step gets a new worker", async () => {
+  await setValue(decode, "#regex", "^ZZZZ-no-such-plaintext$");
+  await setValue(decode, "#timeout", "30");
+  await setValue(decode, "#input", "SGVsbG8gZnJvbSB0aGUgb3RoZXIgc2lkZSBvZiB0aGUgd29ybGQ=XqZ7");
+  await decode.click("#decode");
+  await new Promise((r) => setTimeout(r, 800));
+  const watching = restartsWithin(decode, 1200);
+  await decode.keyboard.press("Escape");
+  assert(!(await watching), "a cancel between steps restarted the worker (the cancel didn't reach it)");
+  // 65,536 characters: one step takes seconds, so the cancel can't get in
+  await setValue(decode, "#input", "aGVsbG8gdGhlcmUgZ2VuZXJhbA".repeat(2521).slice(0, 65536));
+  await decode.click("#decode");
+  await new Promise((r) => setTimeout(r, 1500));
+  const restarting = restartsWithin(decode, 1500);
+  await decode.keyboard.press("Escape");
+  assert(await restarting, "a cancel during a long step didn't replace the worker");
+  await engineReady(decode);
+  await setValue(decode, "#regex", "");
+  await setValue(decode, "#timeout", "5");
+  return "cancel between steps: same worker; during a long step: new worker";
 });
 
 await check("decode: Escape cancels a search, and the next search runs", async () => {
@@ -290,13 +370,20 @@ await check("decode: Find every plaintext lists more than one", async () => {
   return `${more + 1} plaintexts`;
 });
 
-await check("decode: a crib that isn't a valid regex is reported at the crib", async () => {
-  await setValue(decode, "#regex", "flag{(");
+await check("decode: a crib that isn't a valid regex is explained at the crib, which gets focus", async () => {
+  await setValue(decode, "#regex", "flag{");
   await decode.click("#decode");
   await decode.waitForFunction(() => !document.getElementById("regex-error").hidden, { timeout: 10_000 });
   const message = await text(decode, "#regex-error");
-  const invalid = await decode.$eval("#regex", (el) => el.getAttribute("aria-invalid"));
-  assert(invalid === "true", "the crib isn't marked invalid");
+  const state = await decode.evaluate(() => [
+    document.getElementById("regex").getAttribute("aria-invalid"),
+    document.activeElement?.id,
+    document.querySelector("#result .notice__title")?.textContent,
+  ]);
+  assert(state[0] === "true", "the crib isn't marked invalid");
+  assert(state[1] === "regex", `focus is on ${state[1]}`);
+  assert(state[2] === "Check the crib.", `result says ${state[2]}`);
+  assert(/backslash/.test(message), `message: ${message}`);
   await setValue(decode, "#regex", "");
   return message.slice(0, 60);
 });
@@ -321,6 +408,25 @@ await check("decode: Ctrl+Enter decodes, and the share dialog warns and links", 
   await decode.waitForFunction(() => !document.getElementById("share-dialog").open);
   return url.slice(url.indexOf("#"));
 });
+await check("decode: Identify the plaintext hands it over through sessionStorage, not the URL", async () => {
+  const example = EXAMPLES.find((e) => e.id === "ctf-flag");
+  await decode.click(`#examples [data-example="${example.id}"]`);
+  await decodeResult(decode);
+  const link = await decode.$('#result a[href="identify/"]');
+  await Promise.all([decode.waitForNavigation({ waitUntil: "load" }), link.click()]);
+  await engineReady(decode);
+  const state = await decode.evaluate(() => ({
+    url: location.href,
+    text: document.getElementById("text").value,
+    stored: sessionStorage.getItem("ciphey-handoff"),
+  }));
+  assert(state.text === example.plaintext, `Identify has ${state.text}`);
+  assert(!state.url.includes("flag") && !state.url.includes("#"), `the URL carries it: ${state.url}`);
+  assert(state.stored === null, "the hand-off stayed in sessionStorage");
+  await decode.goBack({ waitUntil: "load" });
+  await engineReady(decode);
+  return "handed over, then removed";
+});
 await decode.closeAll();
 
 await check("decode: a share link opens, runs its search, and leaves the address bar on edit", async () => {
@@ -340,8 +446,68 @@ await check("decode: a share link opens, runs its search, and leaves the address
   }
 });
 
-await check("decode: keyboard focus is visible on every stop, skip link first", async () => {
-  const page = await open("");
+await check("decode: the clock waits for Ciphey to load (a share link on a slow connection)", async () => {
+  const context = await browser.createBrowserContext();
+  const page = await context.newPage();
+  try {
+    const cdp = await page.createCDPSession();
+    await cdp.send("Network.enable");
+    await cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 60, downloadThroughput: (3e6 / 8) | 0, uploadThroughput: (1e6 / 8) | 0 });
+    const example = EXAMPLES.find((e) => e.id === "base64x3");
+    await page.goto(`${base}#input=${encodeURIComponent(example.input)}&timeout=3`, { waitUntil: "load" });
+    const seen = new Set();
+    let over = null;
+    for (let i = 0; i < 300; i++) {
+      const s = await page.evaluate(() => [document.getElementById("search-text")?.textContent ?? "", !document.getElementById("result").hidden]);
+      seen.add(s[0].replace(/[\d.]+ m?s of/, "N of"));
+      const m = /([\d.]+) (ms|s) of (\d+) s/.exec(s[0]);
+      if (m && (m[2] === "s" ? Number(m[1]) : Number(m[1]) / 1000) > Number(m[3])) over = s[0];
+      if (s[1]) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    assert(!over, `the clock passed the limit: ${over}`);
+    assert([...seen].some((x) => /Loading Ciphey, then searching/.test(x)), `never said it was loading: ${[...seen].join(" | ")}`);
+    const r = await page.evaluate(() => document.querySelector("#result .plaintext")?.textContent);
+    assert(r === example.plaintext, `got ${r}`);
+    return [...seen].join(" | ").slice(0, 120);
+  } finally {
+    await context.close();
+  }
+});
+
+await check("decode: a failed download says so, offers Try again, and recovers", async () => {
+  const context = await browser.createBrowserContext();
+  const page = await context.newPage();
+  try {
+    // The worker's requests go through the page's interception too
+    let block = true;
+    await page.setRequestInterception(true);
+    page.on("request", (r) => (block && r.url().endsWith(".wasm") ? r.abort("failed") : r.continue()));
+    await page.goto(base, { waitUntil: "load" });
+    await page.waitForFunction(() => /Couldn't download Ciphey/.test(document.getElementById("engine-status").textContent), { timeout: 20_000 });
+    await setValue(page, "#input", "aGVsbG8gdGhlcmUgZ2VuZXJhbA==");
+    await page.click("#decode");
+    await page.waitForFunction(() => /didn't load/.test(document.querySelector("#result .notice__title")?.textContent ?? ""), { timeout: 20_000 });
+    const status = await text(page, "#engine-status");
+    assert(/Try again/.test(status), `status: ${status}`);
+    block = false;
+    const [again] = await page.$$("xpath/.//div[@id='result']//button[contains(., 'Try again')]");
+    assert(again, "no Try again in the result");
+    await again.click();
+    const r = await decodeResult(page, 30_000);
+    assert(r.plaintext === "hello there general", `after Try again: ${r.plaintext ?? r.notice}`);
+    return status.replace(/\s+/g, " ").slice(0, 80);
+  } finally {
+    await context.close();
+  }
+});
+
+/**
+ * Tabs through `path` from the skip link, and checks that every stop looks different focused
+ * (a ring of 2 px or more, or another change) from how it looks unfocused.
+ */
+async function keyboardPass(path, tabs) {
+  const page = await open(path);
   try {
     await engineReady(page);
     await page.keyboard.press("Tab");
@@ -349,27 +515,47 @@ await check("decode: keyboard focus is visible on every stop, skip link first", 
     assert(first === "skip-link", `first stop is ${first}`);
     await page.keyboard.press("Enter");
     const stops = [];
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < tabs; i++) {
       await page.keyboard.press("Tab");
       stops.push(
         await page.evaluate(() => {
           const el = document.activeElement;
-          const s = getComputedStyle(el);
-          const visible = (s.outlineStyle !== "none" && parseFloat(s.outlineWidth) >= 2) || s.boxShadow !== "none";
+          const look = (s) => [s.outlineStyle, s.outlineWidth, s.outlineColor, s.boxShadow, s.borderColor].join("|");
+          const focused = getComputedStyle(el);
+          const ring = focused.outlineStyle !== "none" && parseFloat(focused.outlineWidth) >= 2;
           const label = el.id || el.dataset.example || el.textContent.trim().slice(0, 20) || el.tagName;
-          return { label, visible };
+          const on = look(focused);
+          // A segmented radio shows its ring on its label
+          const shown = el.matches(".segmented input") ? getComputedStyle(el.nextElementSibling) : null;
+          const labelRing = shown ? shown.outlineStyle !== "none" && parseFloat(shown.outlineWidth) >= 2 : false;
+          el.blur();
+          const off = look(getComputedStyle(el));
+          el.focus({ focusVisible: true });
+          return { label, visible: (ring && on !== off) || labelRing };
         }),
       );
     }
     const invisible = stops.filter((s) => !s.visible).map((s) => s.label);
     assert(invisible.length === 0, `no visible focus on ${invisible.join(", ")}`);
-    const order = stops.map((s) => s.label);
-    for (const id of ["input", "open-file", "base64x3", "decode"]) assert(order.includes(id), `${id} isn't reachable: ${order.join(" > ")}`);
-    assert(order.indexOf("input") < order.indexOf("base64x3") && order.indexOf("base64x3") < order.indexOf("decode"), `order ${order.join(" > ")}`);
-    return order.join(" > ");
+    return stops.map((s) => s.label);
   } finally {
     await page.closeAll();
   }
+}
+
+await check("decode: keyboard focus is visible on every stop, skip link first", async () => {
+  const order = await keyboardPass("", 14);
+  for (const id of ["input", "open-file", "base64x3", "decode"]) assert(order.includes(id), `${id} isn't reachable: ${order.join(" > ")}`);
+  assert(order.indexOf("input") < order.indexOf("base64x3") && order.indexOf("base64x3") < order.indexOf("decode"), `order ${order.join(" > ")}`);
+  return order.join(" > ");
+});
+
+await check("identify and language: keyboard focus is visible on every stop", async () => {
+  const a = await keyboardPass("identify/", 12);
+  const b = await keyboardPass("language/", 10);
+  for (const id of ["text", "open-file"]) assert(a.includes(id), `identify: ${id} isn't reachable: ${a.join(" > ")}`);
+  assert(b.includes("text") && b.includes("sens-medium"), `language: ${b.join(" > ")}`);
+  return `${a.length} + ${b.length} stops`;
 });
 
 await check("theme: the button switches theme and the choice is remembered", async () => {
@@ -441,6 +627,31 @@ for (const [input, names, marked] of IDENTIFY) {
   });
 }
 
+await check("identify: a format with many matches gets one card", async () => {
+  const r = await identifyText("10.0.0.1 10.0.0.2 10.0.0.3 10.0.0.4 10.0.0.5 and bee@skerritt.blog");
+  const cards = await identify.$$eval("#matches .match", (els) =>
+    els.map((el) => [el.querySelector(".match__name")?.textContent, el.querySelectorAll(".match__chips code").length]),
+  );
+  const ip = cards.find((c) => /Address Version 4/.test(c[0]));
+  assert(ip && /· 5$/.test(ip[0]) && ip[1] === 5, `cards: ${JSON.stringify(cards)}`);
+  assert(r.marks.filter((m) => /^10\.0\.0\.\d$/.test(m)).length === 5, `marks: ${r.marks.join(" | ")}`);
+  return cards.map((c) => c[0]).join("; ");
+});
+
+await check("identify: the default sort puts the most specific first", async () => {
+  const page = await open("identify/");
+  try {
+    await engineReady(page);
+    await setValue(page, "#text", "Email bee@skerritt.blog from 192.168.0.1");
+    await page.waitForSelector("#matches:not([hidden]) .match", { timeout: 20_000 });
+    const rarities = await page.$$eval("#matches .rarity", (els) => els.map((el) => Number(el.textContent.replace(/[^\d.]/g, ""))));
+    assert(rarities.length > 1 && rarities.every((r, i) => i === 0 || r <= rarities[i - 1]), `rarities ${rarities}`);
+    return rarities.join(" ≥ ");
+  } finally {
+    await page.closeAll();
+  }
+});
+
 await check("identify: rarity, exclude and sorting", async () => {
   await identifyText("Email bee@skerritt.blog from 192.168.0.1 about https://github.com/bee-san/pyWhat");
   await identify.click("#filters summary");
@@ -460,8 +671,47 @@ await check("identify: rarity, exclude and sorting", async () => {
   return `${left[0]} at 0.6 without URL; sorted ${sorted.length}`;
 });
 
+await check("identify: lookup links name their site, and credentials get none", async () => {
+  await identifyText("192.168.0.1 123456789012345|AbCdEfGhIjKlMnOpQrStUvWxYz0");
+  const links = await identify.$$eval("#matches .match", (els) =>
+    els.map((el) => [el.querySelector(".match__name")?.textContent, el.querySelector(".match__actions a")?.textContent ?? null]),
+  );
+  const ip = links.find((l) => /Address Version 4/.test(l[0]));
+  assert(ip && /^Look it up on shodan\.io/.test(ip[1]), `IP: ${JSON.stringify(ip)}`);
+  const token = links.find((l) => /Facebook/.test(l[0]));
+  assert(!token || token[1] === null, `token: ${JSON.stringify(token)}`);
+  return links.map((l) => `${l[0]}: ${l[1] ?? "no link"}`).join("; ");
+});
+
+await check("identify: hostile text stays text", async () => {
+  await identifyText('<img src=x onerror="window.__xss=1"> bee@skerritt.blog <script>window.__xss=2</script> [link=javascript:alert(1)]x[/link]');
+  const state = await identify.evaluate(() => ({
+    xss: window.__xss,
+    injected: document.querySelectorAll("#matches img, #matches script, #backdrop img, #backdrop script, #backdrop *:not(mark)").length,
+    jsLinks: [...document.querySelectorAll("a")].filter((a) => !/^https?:/.test(a.href)).length,
+  }));
+  assert(state.xss === undefined && state.injected === 0 && state.jsLinks === 0, JSON.stringify(state));
+  return "no markup, no script";
+});
+
+await check("identify: results for a text that was cleared never come back", async () => {
+  const big = "Email bee@skerritt.blog from 192.168.0.1 about https://github.com/bee-san/pyWhat\n".repeat(1100);
+  await setValue(identify, "#text", big);
+  await new Promise((r) => setTimeout(r, 300));
+  await setValue(identify, "#text", "");
+  await new Promise((r) => setTimeout(r, 4000));
+  const state = await identify.evaluate(() => ({
+    cards: document.querySelectorAll("#matches .match").length,
+    listHidden: document.getElementById("matches").hidden,
+    marks: document.querySelectorAll("#backdrop mark").length,
+  }));
+  assert(state.cards === 0 || state.listHidden, `stale results: ${JSON.stringify(state)}`);
+  assert(state.marks === 0, `${state.marks} stale highlights`);
+  return JSON.stringify(state);
+});
+
 await check("identify: an unknown tag is explained, not a crash", async () => {
-  await identify.click("#filters summary").catch(() => {});
+  await identifyText("bee@skerritt.blog");
   await identify.$eval("#filters", (d) => (d.open = true));
   await identify.type("#include-input", "NoSuchTagAtAll");
   await identify.keyboard.press("Enter");
@@ -471,6 +721,34 @@ await check("identify: an unknown tag is explained, not a crash", async () => {
   return message;
 });
 await identify.closeAll();
+
+await check("identify: an identify/#text= link opens its text, which leaves the address bar on edit", async () => {
+  const page = await open(`identify/#text=${encodeURIComponent("bee@skerritt.blog")}`);
+  try {
+    await engineReady(page);
+    await page.waitForSelector("#matches:not([hidden]) .match", { timeout: 20_000 });
+    await page.type("#text", " ");
+    const hash = await page.evaluate(() => location.hash);
+    assert(hash === "", `the hash stayed: ${hash}`);
+    return "text opened, hash gone";
+  } finally {
+    await page.closeAll();
+  }
+});
+
+await check("hostile text in the language panel stays text", async () => {
+  const page = await open("language/");
+  try {
+    await engineReady(page);
+    await setValue(page, "#text", '<img src=x onerror="window.__xss=1"><script>window.__xss=2</script> hello there');
+    await page.waitForFunction(() => document.getElementById("verdict-title").textContent !== "Type some text");
+    const xss = await page.evaluate(() => [typeof window.__xss, document.querySelectorAll("main img, main script").length]);
+    assert(xss[0] === "undefined" && xss[1] === 0, JSON.stringify(xss));
+    return "no markup, no script";
+  } finally {
+    await page.closeAll();
+  }
+});
 
 // --- Is it language? -----------------------------------------------------------------------
 
@@ -490,7 +768,55 @@ for (const [input, verdict] of [
     return `${verdict}, ${await text(language, "#verdict-detail")}, score ${await text(language, "#score-value")}`;
   });
 }
+await check("language: the verdict follows the sensitivity", async () => {
+  // Scores 0.835: language at High (0.5) and Medium (0.75), not at Low (0.9)
+  await setValue(language, "#text", "the quick brwn fx");
+  const at = async (level) => {
+    await language.click(`label[for="sens-${level}"]`);
+    await new Promise((r) => setTimeout(r, 200));
+    return [await text(language, "#verdict-title"), await text(language, "#verdict-detail")];
+  };
+  const high = await at("high");
+  const low = await at("low");
+  assert(high[0] === "Language" && low[0] === "Not language", `High: ${high}; Low: ${low}`);
+  assert(/High and Medium sensitivity, not at Low/.test(low[1]), `Low says ${low[1]}`);
+  await at("medium");
+  return `High: ${high[0]}; Low: ${low[1]}`;
+});
 await language.closeAll();
+
+// --- The pages' policy ----------------------------------------------------------------------
+
+for (const path of ["", "identify/", "language/"]) {
+  await check(`csp: ${path || "decode"} carries exactly the policy, as its first element after the charset`, async () => {
+    const html = await (await fetch(base + path)).text();
+    const head = html.slice(0, html.indexOf("</head>"));
+    const tags = [...head.matchAll(/<(meta|script|link|style|title|base)\b[^>]*>/gi)].map((m) => m[0]);
+    assert(/^<meta charset=/i.test(tags[0] ?? ""), `first tag ${tags[0]}`);
+    assert(tags[1] === `<meta http-equiv="Content-Security-Policy" content="${CSP}">`, `second tag ${tags[1]}`);
+    assert(!/<script(?![^>]*\bsrc=)[^>]*>/i.test(html), "an inline script");
+    assert(!/<style\b|\sstyle=|\son[a-z]+=/i.test(html), "an inline style or handler");
+    assert((html.match(/Content-Security-Policy/g) ?? []).length === 1, "more than one policy");
+    return "exact, first";
+  });
+}
+
+await check("decode: a 20 s search with no plaintext ends without a crash", async () => {
+  const page = await open("");
+  try {
+    await engineReady(page);
+    await page.click("#options summary");
+    await setValue(page, "#timeout", "20");
+    await setValue(page, "#regex", "^no-such-plaintext$");
+    await setValue(page, "#input", "kq8vZ2mXw!9tLr#");
+    await page.click("#decode");
+    const r = await decodeResult(page, 60_000);
+    assert(/No plaintext found in 20 seconds|tried everything|before your browser ran out of memory/.test(r.notice ?? ""), `got ${r.notice}`);
+    return r.notice;
+  } finally {
+    await page.closeAll();
+  }
+});
 
 // --- Accessibility --------------------------------------------------------------------------
 

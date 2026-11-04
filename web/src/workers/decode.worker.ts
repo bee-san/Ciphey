@@ -9,17 +9,31 @@ import wasmUrl from "../wasm/decode/ciphey_wasm_bg.wasm?url";
 import type { DecodeEvent, DecodeRequest, DecodeResult, DecoderInfo, TreeNode } from "../lib/protocol";
 
 declare const self: DedicatedWorkerGlobalScope;
+
+/** Why the module didn't load, in words for the page. */
+function loadFailure(error: unknown, name: string): string {
+  return error instanceof WebAssembly.CompileError
+    ? `This browser can't run ${name}. Try a recent Chrome, Firefox or Safari.`
+    : `Couldn't download ${name}. Check your connection, then press Try again.`;
+}
 const post = (event: DecodeEvent) => self.postMessage(event);
 
 /** How long one step searches before it reports back: about 25 updates a second. */
 const STEP_MS = 40;
 /**
  * The search stops before Ciphey's WebAssembly memory passes this. Its queue of branches
- * grows by about 1 KB per branch (for a 56-character input), and a long search with no
- * plaintext reached the 4 GiB a 32-bit module can have after 27 s (3.8 million branches),
- * which aborts the module. Phones have less to give than that.
+ * grows by about 1 KB per branch (for a 56-character input), about 150 MB a second, and a
+ * long search with no plaintext reached the 4 GiB a 32-bit module can have after 23 to 39 s,
+ * which aborts the module. So: a quarter of the device's memory where the browser says how
+ * much it has (Chromium, at most 8 GB), between 512 MiB and 2 GiB; else 2 GiB on desktops
+ * and 512 MiB on phones.
  */
-const MEMORY_LIMIT = 2 * 1024 ** 3;
+const MEMORY_LIMIT = (() => {
+  const gib = 1024 ** 3;
+  const device = (navigator as { deviceMemory?: number }).deviceMemory;
+  if (device) return Math.min(2 * gib, Math.max(gib / 2, (device * gib) / 4));
+  return /Mobi|Android|iPhone|iPad/.test(navigator.userAgent) ? gib / 2 : 2 * gib;
+})();
 /** Characters of each node's text the page gets (it shows up to 160). */
 const PREVIEW_CHARS = 160;
 
@@ -56,7 +70,9 @@ const ready = init({ module_or_path: wasmUrl })
     return true;
   })
   .catch((error: unknown) => {
-    post({ type: "error", id: null, message: `Couldn't load Ciphey: ${describe(error)}` });
+    // The detail (a URL, a status) is for the console; the page says what to do
+    console.error(error);
+    post({ type: "error", id: null, message: loadFailure(error, "Ciphey") });
     return false;
   });
 
@@ -137,6 +153,7 @@ async function run(request: Decode): Promise<void> {
           depth: p.depth,
           nodes,
           results: p.results.map((r) => withStepTexts(r, texts)),
+          memoryBytes: memoryBytes(),
         },
       });
       if (p.status !== "running" || full) break;

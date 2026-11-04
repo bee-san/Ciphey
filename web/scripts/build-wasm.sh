@@ -25,6 +25,11 @@ done
 bindgen=$(wasm-bindgen --version | awk '{print $2}')
 [ "$bindgen" = 0.2.130 ] || { echo "build-wasm.sh: wasm-bindgen $bindgen, need 0.2.130 (the crates pin it)" >&2; exit 1; }
 
+# The modules embed source paths in their panic messages: write them relative to the cargo
+# home and the repository, so a build is the same, byte for byte, on any machine
+cargo_home=${CARGO_HOME:-$HOME/.cargo}
+export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$cargo_home=/cargo --remap-path-prefix=$repo=/ciphey"
+
 size() { printf '%-9s %9d bytes, gzip -9: %d\n' "$1" "$(stat -c %s "$2")" "$(gzip -9 -c "$2" | wc -c)"; }
 
 mkdir -p "$out"

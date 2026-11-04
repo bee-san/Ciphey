@@ -8,7 +8,7 @@
 //   node scripts/serve.mjs [--port 4173] [--root dist] [--base /Ciphey/]
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
-import { extname, join, normalize, resolve } from "node:path";
+import { extname, isAbsolute, join, normalize, relative, resolve } from "node:path";
 import { pipeline } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { createGzip } from "node:zlib";
@@ -39,7 +39,9 @@ export function serve({ port = 4173, root = "dist", base = "/Ciphey/", host = "1
       return;
     }
     let file = normalize(join(dir, decodeURIComponent(url.pathname.slice(base.length))));
-    if (!file.startsWith(dir)) {
+    // Inside the root, not merely starting with its name (dist-private/ next to dist/)
+    const inside = relative(dir, file);
+    if (inside.startsWith("..") || isAbsolute(inside)) {
       res.writeHead(403).end();
       return;
     }

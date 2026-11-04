@@ -30,7 +30,8 @@ on:
 permissions:
   contents: read
 
-# A newer push to a pull request cancels its older run; runs on master queue up instead
+# A newer push to a pull request cancels its older run. On master a running build isn't
+# cancelled; GitHub keeps one pending run, the newest
 concurrency:
   group: pages-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -120,9 +121,13 @@ jobs:
         working-directory: web
         run: npm test
 
+      # Pages is set up before this workflow first runs on master (the deploy needs it). If
+      # reading the settings fails anyway, the build goes on with the default base path, and
+      # the deploy job says what's wrong.
       - name: Read the Pages settings
         id: pages
         if: github.event_name != 'pull_request'
+        continue-on-error: true
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       # "/Ciphey/" for https://bee-san.github.io/Ciphey/: Pages' base path when this run read
@@ -165,7 +170,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    # Deploys never cancel each other half-way
+    # A deploy is never cancelled half-way
     concurrency:
       group: pages-deploy
       cancel-in-progress: false

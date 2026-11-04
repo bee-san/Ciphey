@@ -3,7 +3,7 @@ import { count, duration, plural, preview } from "../lib/format";
 import type { DecodeEvent, DecodeOptions, DecodeRequest, DecodeResult, SearchStatus, SearchUpdate, Sensitivity } from "../lib/protocol";
 import { SENSITIVITIES } from "../lib/protocol";
 import { choiceField, decodeHash, intField, MAX_SHARE_CHARS, shareUrl } from "../lib/share";
-import { announce, byId, characterCount, copyButton, copyText, h, icon, readTextFile, wireFileInput } from "../shell/dom";
+import { announce, byId, characterCount, copyButton, copyText, h, icon, readTextFile, responsiveLabel, wireFileInput } from "../shell/dom";
 import { EngineClient } from "../shell/engine";
 import { handOff, pickUp } from "../shell/handoff";
 import { initPage } from "../shell/page";
@@ -13,6 +13,8 @@ import {
   checkCrib,
   checkInput,
   checkTimeout,
+  CRIB_INVALID,
+  decoderName,
   MAX_INPUT_CHARS,
   optionsSummary,
   pathSpeech,
@@ -81,8 +83,15 @@ interface Search {
   expanded: number;
   queued: number;
   depth: number;
+  memoryBytes: number;
   frame: number;
 }
+
+/**
+ * After a search that left the module holding more than this, the worker is replaced:
+ * WebAssembly memory is never given back, and a phone may close a tab that holds too much.
+ */
+const FRESH_WORKER_ABOVE = 512 * 1024 ** 2;
 let search: Search | null = null;
 let waiting: DecodeRequest | null = null;
 let nextId = 1;
@@ -108,6 +117,8 @@ engine.on((event) => {
       if (waiting) {
         const request = waiting;
         waiting = null;
+        // The time limit starts when Ciphey starts searching, not while it downloads
+        if (search && request.type === "decode" && request.id === search.id) search.started = performance.now();
         send(request);
       }
       return;
@@ -121,10 +132,12 @@ engine.on((event) => {
       }
       return;
     case "error":
-      if (event.id === null && !search) {
-        ready = false;
+      if (event.id === null && !ready) {
+        // Ciphey didn't load: a search waiting for it can't run
         loadError = event.message;
+        waiting = null;
         showEngineError();
+        if (search) finish("error", event.message);
       } else if (search && (event.id === search.id || event.id === null)) {
         finish("error", event.message);
       }
@@ -134,7 +147,7 @@ engine.on((event) => {
 engine.start();
 
 function showEngineReady(): void {
-  engineStatus.replaceChildren(`Ciphey ${info?.version === "dev" ? "" : `${info?.version} `}is ready · ${plural(info?.decoders.length ?? 0, "decoder")}`);
+  engineStatus.replaceChildren(`Ciphey ${info?.version} is ready · ${plural(info?.decoders.length ?? 0, "decoder")}`);
   byId("decoder-count").textContent = String(info?.decoders.length ?? "over 80");
   renderExamples();
 }
@@ -334,7 +347,18 @@ function start(): void {
   if (search) cancel(false);
 
   const request: DecodeRequest = { type: "decode", id: nextId++, input: input.value, options: opts };
-  search = { id: request.id, input: request.input, options: opts, started: performance.now(), results: [], expanded: 0, queued: 0, depth: 0, frame: 0 };
+  search = {
+    id: request.id,
+    input: request.input,
+    options: opts,
+    started: performance.now(),
+    results: [],
+    expanded: 0,
+    queued: 0,
+    depth: 0,
+    memoryBytes: 0,
+    frame: 0,
+  };
   tree.reset();
   treePanel.hidden = false;
   treePanel.open = true;
@@ -359,14 +383,21 @@ function start(): void {
 /** Moves the clock and the progress bar on while the search runs. */
 function tick(): void {
   if (!search) return;
-  const elapsed = performance.now() - search.started;
-  progress.value = Math.min(elapsed, progress.max);
-  const found = search.results.length ? ` · ${plural(search.results.length, "plaintext")} found` : "";
-  // A decoder that has started finishes even if the time limit passes meanwhile
-  const clock = elapsed < search.options.timeout * 1000 ? `${duration(elapsed)} of ${search.options.timeout} s` : "time's up, finishing the last step";
-  searchText.textContent = `${ready || !waiting ? "Searching" : "Loading Ciphey"}… ${clock}${found}`;
+  if (waiting) {
+    // No time is used until Ciphey has loaded and starts searching
+    searchText.textContent = "Loading Ciphey, then searching…";
+    progress.removeAttribute("value");
+  } else {
+    const elapsed = performance.now() - search.started;
+    progress.value = Math.min(elapsed, progress.max);
+    const found = search.results.length ? ` · ${plural(search.results.length, "plaintext")} found` : "";
+    // A decoder that has started finishes even if the time limit passes meanwhile
+    const clock =
+      elapsed < search.options.timeout * 1000 ? `${duration(elapsed)} of ${search.options.timeout} s` : "time's up, finishing the last step";
+    searchText.textContent = `Searching… ${clock}${found}`;
+  }
   searchStats.textContent = search.expanded
-    ? `${plural(search.expanded, "node")} explored · depth ${search.depth} · ${plural(search.queued, "branch", "branches")} waiting`
+    ? `${plural(search.expanded, "text")} tried · up to ${plural(search.depth, "layer")} deep · ${count(search.queued)} more to try`
     : "";
   treeSummary.textContent = tree.drawn ? `${count(tree.drawn)} drawn` : "";
   search.frame = requestAnimationFrame(tick);
@@ -377,6 +408,7 @@ function onUpdate(update: SearchUpdate): void {
   search.expanded = update.expanded;
   search.queued = update.queued;
   search.depth = update.depth ?? search.depth;
+  search.memoryBytes = update.memoryBytes ?? search.memoryBytes;
   if (update.nodes.length) tree.add(update.nodes);
   for (const r of update.results) {
     search.results.push(r);
@@ -405,13 +437,12 @@ function cancel(say = true): void {
       restartEngine();
     }, 300);
   }
-  finish("cancelled", null, elapsed);
-  if (say) announce(`Search cancelled after ${duration(elapsed)}`);
+  finish("cancelled", null, elapsed, say);
 }
 
 type Ending = SearchStatus | "cancelled" | "error";
 
-function finish(status: Ending, message: string | null, elapsedMs?: number): void {
+function finish(status: Ending, message: string | null, elapsedMs?: number, speak = true): void {
   const s = search;
   if (!s) return;
   cancelAnimationFrame(s.frame);
@@ -421,54 +452,87 @@ function finish(status: Ending, message: string | null, elapsedMs?: number): voi
   if (hadFocus) decodeButton.focus();
   const elapsed = elapsedMs ?? performance.now() - s.started;
 
-  // A crashed module can't search again, and one that filled its memory can't give it back:
+  // A crashed module can't search again, and one that grew its memory can't give it back:
   // start a fresh one for the next search
-  if ((status === "error" && /^Ciphey (crashed|ran out of memory)/.test(message ?? "")) || status === "memory_full") restartEngine();
+  if (
+    (status === "error" && /^Ciphey (crashed|ran out of memory)/.test(message ?? "")) ||
+    status === "memory_full" ||
+    (status !== "cancelled" && s.memoryBytes > FRESH_WORKER_ABOVE)
+  ) {
+    restartEngine();
+  }
 
   tree.finish();
   treePanel.hidden = tree.size === 0;
-  treeSummary.textContent = tree.size ? `${plural(s.expanded || tree.size, "node")} explored${tree.drawn < tree.size ? `, ${tree.drawn} drawn` : ""}` : "";
-  treeHint.textContent = tree.drawn < tree.size
-    ? `The first ${tree.drawn} nodes are drawn, and every node on the way to a plaintext.`
-    : "Each node is a text Ciphey ran every decoder on. The highlighted branch leads to the plaintext.";
+  treeSummary.textContent = tree.size ? `${plural(s.expanded || tree.size, "text")} tried${tree.drawn < tree.size ? `, ${count(tree.drawn)} drawn` : ""}` : "";
+  const found = s.results.length > 0 && status !== "error";
+  treeHint.textContent = [
+    "Each row is a text Ciphey ran every decoder on, under the text it came from.",
+    tree.drawn < tree.size ? `The first ${count(tree.drawn)} rows are drawn${found ? ", and every row on the way to a plaintext" : ""}.` : null,
+    found ? "The highlighted branch leads to the plaintext." : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   showOnly(resultBox);
-  outputMeta.textContent = `${duration(elapsed)}${s.expanded ? ` · ${plural(s.expanded, "node")} explored` : ""}`;
-  // Plaintexts found before a cancel or the time limit ("Find every plaintext") still count
-  if (s.results.length && status !== "error") {
+  outputMeta.textContent = `${duration(elapsed)}${s.expanded ? ` · ${plural(s.expanded, "text")} tried` : ""}`;
+  // Plaintexts found before a cancel, the time limit or an error ("Find every plaintext")
+  // still count
+  if (s.results.length) {
     renderResults(s);
-    if (status === "cancelled" || status === "timed_out" || status === "memory_full") {
-      const why =
-        status === "cancelled"
-          ? `Search cancelled after ${duration(elapsed)}`
-          : status === "memory_full"
-            ? `Ciphey stopped after ${duration(elapsed)} to stay within your browser's memory`
-            : `The time limit (${s.options.timeout} s) ended the search`;
-      resultBox.prepend(h("p", { class: "field__hint" }, `${why}; these were found before it.`));
-    }
+    const why =
+      status === "cancelled"
+        ? `Search cancelled after ${duration(elapsed)}`
+        : status === "memory_full"
+          ? `Ciphey stopped after ${duration(elapsed)} to stay within your browser's memory`
+          : status === "timed_out"
+            ? `The time limit (${s.options.timeout} s) ended the search`
+            : status === "error"
+              ? `The search stopped after ${duration(elapsed)}: ${message ?? "an error"}`
+              : null;
+    if (why) resultBox.prepend(h("p", { class: "field__hint" }, `${why}; these were found before it.`));
     const first = s.results[0] as DecodeResult;
     const how = first.path.length ? ` Path: ${pathSpeech(first.path)}.` : " The input is already plaintext.";
-    announce(`Found the plaintext in ${duration(first.elapsedMs)}: ${preview(first.plaintext, 140)}.${how}`);
+    if (speak) announce(`${why ? `${why}. ` : ""}Found the plaintext in ${duration(first.elapsedMs)}: ${preview(first.plaintext, 140)}.${how}`);
     return;
   }
-  if (status === "error" && message && /regex|crib/i.test(message)) {
+  if (status === "error" && message && /regex|crib/i.test(message) && !loadError) {
     options.open = true;
-    setFieldError(regex, regexError, message);
+    setFieldError(regex, regexError, CRIB_INVALID);
+    resultBox.replaceChildren(
+      h(
+        "div",
+        { class: "notice notice--error" },
+        h("p", { class: "notice__title" }, "Check the crib."),
+        h("p", {}, "It isn't a valid regular expression, so Ciphey didn't search. The fix is under Options."),
+      ),
+    );
+    regex.focus(); // also scrolls it into view on a phone
+    announce(CRIB_INVALID);
+    return;
   }
   resultBox.replaceChildren(nothing(status, message, s, elapsed));
-  announce(resultBox.querySelector(".notice__title")?.textContent ?? "The search ended");
+  // An error notice is an alert, which a screen reader says by itself
+  if (speak && status !== "error") announce(resultBox.querySelector(".notice__title")?.textContent ?? "The search ended");
 }
 
 function nothing(status: Ending, message: string | null, s: Search, elapsed: number): HTMLElement {
   switch (status) {
     case "cancelled":
-      return h("div", { class: "notice" }, h("p", { class: "notice__title" }, `Search cancelled after ${duration(elapsed)}.`));
+      return h(
+        "div",
+        { class: "notice" },
+        h("p", { class: "notice__title" }, `Search cancelled after ${duration(elapsed)}.`),
+        h("p", {}, "Press Decode to search again from the start."),
+      );
     case "error":
       return h(
         "div",
         { class: "notice notice--error", role: "alert" },
-        h("p", { class: "notice__title" }, "Ciphey couldn't search this input."),
+        h("p", { class: "notice__title" }, loadError ? "Ciphey didn't load, so it couldn't search." : "Ciphey couldn't search this input."),
         h("p", {}, message ?? "Something went wrong."),
+        // Downloads Ciphey again, then runs this search
+        loadError ? h("div", {}, h("button", { type: "button", class: "button button--small", onclick: () => start() }, "Try again")) : null,
       );
     case "memory_full":
       return h(
@@ -510,8 +574,26 @@ function renderResults(s: Search): void {
   const [first, ...rest] = s.results as [DecodeResult, ...DecodeResult[]];
   const blocks: HTMLElement[] = [renderResult(first, s, true)];
   if (rest.length) {
-    blocks.push(h("h3", { class: "result__more-title" }, `${plural(rest.length, "more plaintext", "more plaintexts")} found`));
-    blocks.push(h("ol", { class: "result__more" }, ...rest.map((r) => h("li", {}, renderResult(r, s, false)))));
+    // Usually decoder output that a checker happened to accept: folded, and not as certain
+    blocks.push(h("h3", { class: "result__more-title" }, `Ciphey's checkers also accepted ${rest.length === 1 ? "this" : `these ${rest.length}`}`));
+    blocks.push(
+      h(
+        "ol",
+        { class: "result__more" },
+        ...rest.map((r) =>
+          h(
+            "li",
+            {},
+            h(
+              "details",
+              { class: "result__fold" },
+              h("summary", {}, h("code", {}, preview(r.plaintext, 60)), h("span", { class: "field__meta" }, r.path.length ? pathText(r.path) : "the input")),
+              renderResult(r, s, false),
+            ),
+          ),
+        ),
+      ),
+    );
   }
   resultBox.replaceChildren(...blocks);
 }
@@ -523,7 +605,9 @@ function renderResult(r: DecodeResult, s: Search, main: boolean): HTMLElement {
   const head = h(
     "div",
     { class: "result__head" },
-    h("span", { class: "badge badge--success" }, icon("check"), already ? "Already plaintext" : "Plaintext found"),
+    main
+      ? h("span", { class: "badge badge--success" }, icon("check"), already ? "Already plaintext" : "Plaintext found")
+      : h("span", { class: "badge" }, "Also accepted"),
     h("span", { class: "field__meta" }, already ? `checked in ${duration(r.elapsedMs)}` : `in ${duration(r.elapsedMs)} · ${plural(r.path.length, "layer")}`),
   );
   // Focusable, so a long plaintext can be scrolled with the keyboard
@@ -531,10 +615,10 @@ function renderResult(r: DecodeResult, s: Search, main: boolean): HTMLElement {
   const actions = h(
     "div",
     { class: "actions result__actions" },
-    copyButton("Copy plaintext", () => r.plaintext),
-    already ? null : copyButton("Copy path", () => pathText(r.path)),
+    copyButton("Copy plaintext", () => r.plaintext, { spoken: "Plaintext copied", short: "Copy" }),
+    already ? null : copyButton("Copy path", () => pathText(r.path), { spoken: "Path copied" }),
     main ? shareButton(s) : null,
-    main ? identifyLink(r.plaintext, "Identify the plaintext", "button button--small") : null,
+    main ? identifyLink(r.plaintext, "Identify the plaintext", "button button--small", "Identify") : null,
   );
   const steps = h(
     "ol",
@@ -553,7 +637,7 @@ function renderResult(r: DecodeResult, s: Search, main: boolean): HTMLElement {
         h(
           "div",
           { class: "path__head" },
-          h("span", { class: "path__decoder" }, step.decoder),
+          h("span", { class: "path__decoder" }, decoderName(step.decoder)),
           step.key ? h("span", { class: "badge badge--accent" }, `key ${step.key}`) : null,
         ),
         h("code", { class: "path__text" }, preview(last ? r.plaintext : (step.text ?? ""), 160)),
@@ -574,8 +658,13 @@ function renderResult(r: DecodeResult, s: Search, main: boolean): HTMLElement {
 }
 
 /** A link to the Identify page that takes `text` along (sessionStorage, not the URL). */
-function identifyLink(text: string, label: string, cls = ""): HTMLAnchorElement {
-  return h("a", { href: "identify/", class: cls || null, onclick: () => handOff(text) }, cls ? icon("search") : null, label);
+function identifyLink(text: string, label: string, cls = "", short?: string): HTMLAnchorElement {
+  return h(
+    "a",
+    { href: "identify/", class: cls || null, "aria-label": short ? label : null, onclick: () => handOff(text) },
+    cls ? icon("search") : null,
+    responsiveLabel(label, short),
+  );
 }
 
 // --- Sharing ----------------------------------------------------------------------------------
@@ -594,9 +683,15 @@ function shareButton(s: Search): HTMLElement {
   const tooLong = Array.from(s.input).length > MAX_SHARE_CHARS;
   const button = h(
     "button",
-    { type: "button", class: "button button--small", disabled: tooLong, title: tooLong ? `Inputs over ${MAX_SHARE_CHARS.toLocaleString("en")} characters are too long for a link` : null },
+    {
+      type: "button",
+      class: "button button--small",
+      disabled: tooLong,
+      "aria-label": "Share link…",
+      title: tooLong ? `Inputs over ${MAX_SHARE_CHARS.toLocaleString("en")} characters are too long for a link` : null,
+    },
     icon("link"),
-    "Share link…",
+    responsiveLabel("Share link…", "Share…"),
   );
   button.addEventListener("click", () => {
     shareInput.value = shareUrl(location.href, shareFields(s));
@@ -635,6 +730,9 @@ function openShared(): void {
   updateOptionsSummary();
   start();
 }
+
+// ⌘ + Enter is the habit on a Mac (both work everywhere)
+if (/Mac|iPhone|iPad/.test(navigator.userAgent)) byId("shortcut-hint").textContent = "⌘ + Enter decodes.";
 
 updateOptionsSummary();
 const handedOver = pickUp();

@@ -1,8 +1,9 @@
 import "../styles/main.css";
 import { count, fraction, plural } from "../lib/format";
-import { parseMarkup } from "../lib/markup";
+import { parseMarkup, safeHref } from "../lib/markup";
+import { MAX_MATCHES } from "../lib/pieces";
 import type { IdentifyEvent, IdentifyMatch, IdentifyOptions, IdentifyRequest } from "../lib/protocol";
-import { sortMatches, type SortKey } from "../lib/pywhat";
+import { type Card, formatColours, groupMatches, sortMatches, type SortKey } from "../lib/pywhat";
 import { decodeHash } from "../lib/share";
 import { assignRanges, segment } from "../lib/spans";
 import { announce, byId, characterCount, copyButton, h, icon, readTextFile, wireFileInput } from "../shell/dom";
@@ -68,33 +69,45 @@ let matches: IdentifyMatch[] = [];
 let ranges: ReturnType<typeof assignRanges> = [];
 const marks = new Map<number, HTMLElement[]>();
 let pendingText = "";
+/** Each format's highlight colour (see formatColours). */
+let colours = new Map<string, number>();
+let lastSaid = "";
+let sayTimer = 0;
 
 engine.on((event) => {
   switch (event.type) {
     case "ready": {
       ready = true;
-      engineStatus.textContent = `pyWhat ${event.version} is ready · ${plural(event.tags.length, "tag")}`;
+      engineStatus.textContent = `pyWhat ${event.version} is ready`;
       byId("tag-list").replaceChildren(...event.tags.map((t) => h("option", { value: t })));
       refresh();
       return;
     }
     case "identified":
-      if (latest.settle(event.id)) show(pendingText, event.matches);
+      if (latest.settle(event.id)) show(pendingText, event.matches, event.capped);
       return;
     case "error":
       if (event.id === null) {
-        engineStatus.replaceChildren(
-          h("span", { class: "field__error" }, event.message),
-          " ",
-          h("button", { type: "button", class: "link-button", onclick: () => engine.restart() }, "Try again"),
-        );
-      } else if (latest.settle(event.id)) {
-        showError(event.message);
+        ready = false;
+        engineStatus.replaceChildren(h("span", { class: "field__error" }, event.message), " ", h("button", { type: "button", class: "link-button", onclick: () => restart() }, "Try again"));
+      } else {
+        const current = latest.settle(event.id);
+        // A crashed module can't identify again: a new worker, and nothing left in flight
+        if (event.crashed) restart();
+        if (current || event.crashed) showError(event.message);
       }
       return;
   }
 });
 engine.start();
+
+/** A fresh worker: after a crash, or Try again. Requests in flight are forgotten. */
+function restart(): void {
+  ready = false;
+  latest.reset();
+  engineStatus.replaceChildren(h("span", { class: "spinner", "aria-hidden": "true" }), "Loading pyWhat…");
+  engine.restart();
+}
 
 // --- Filters ------------------------------------------------------------------------------------
 
@@ -172,11 +185,30 @@ wireFileInput(byId("dropzone"), byId<HTMLInputElement>("file"), byId("open-file"
   }
   setText(read.text);
   announce(`Opened ${file.name}`);
-  text.focus();
+  text.focus({ preventScroll: true });
+  showMatchesPanel();
 });
 
+/** On a phone the matches are below the text: bring them into view. */
+function showMatchesPanel(): void {
+  if (window.matchMedia("(max-width: 959px)").matches) matchesPanel.scrollIntoView({ block: "start" });
+}
+
 byId("examples").replaceChildren(
-  ...EXAMPLES.map((e) => h("button", { type: "button", class: "chip", onclick: () => setText(e.text) }, e.label)),
+  ...EXAMPLES.map((e) =>
+    h(
+      "button",
+      {
+        type: "button",
+        class: "chip",
+        onclick: () => {
+          setText(e.text);
+          showMatchesPanel();
+        },
+      },
+      e.label,
+    ),
+  ),
 );
 
 function setText(value: string): void {
@@ -200,12 +232,17 @@ function refresh(): void {
   const options = readFilters();
   updateFiltersSummary(options);
   if (!options) {
+    // A reply still on its way is for other filters
+    latest.reset();
     setBusy(false);
     return;
   }
   const value = text.value;
-  if (value.length > MAX_TEXT_CHARS) {
-    const message = `That's ${count(value.length)} characters. pyWhat identifies up to ${count(MAX_TEXT_CHARS)} here.`;
+  // Counted by character, as the counter does (an emoji is one)
+  const chars = Array.from(value).length;
+  if (chars > MAX_TEXT_CHARS) {
+    latest.reset();
+    const message = `That's ${count(chars)} characters. pyWhat identifies up to ${count(MAX_TEXT_CHARS)} here.`;
     showTextError(message);
     // The matches shown were for another text: take them away
     matches = [];
@@ -220,6 +257,8 @@ function refresh(): void {
   }
   showTextError(null);
   if (value.trim() === "") {
+    // A reply still on its way is for the text that was cleared
+    latest.reset();
     show("", []);
     return;
   }
@@ -231,15 +270,28 @@ function refresh(): void {
 
 // --- Results --------------------------------------------------------------------------------------
 
-function show(forText: string, found: IdentifyMatch[]): void {
+let capped = false;
+
+function show(forText: string, found: IdentifyMatch[], wasCapped = false): void {
+  capped = wasCapped;
   setBusy(false);
   clearErrors();
   shownText = forText;
   matches = found;
   // Highlights are only right for the text they were found in
   ranges = forText === text.value ? assignRanges(forText, found, MAX_RANGES) : [];
+  colours = formatColours(found, HIGHLIGHTS);
   render();
-  if (forText.trim() !== "") announce(found.length ? `${plural(found.length, "match", "matches")} found` : "Nothing found");
+  // Said once typing pauses, and only when it changes, as the language panel does
+  window.clearTimeout(sayTimer);
+  if (forText.trim() === "") lastSaid = "";
+  else {
+    const said = found.length ? `${plural(found.length, "match", "matches")} found` : "Nothing found";
+    sayTimer = window.setTimeout(() => {
+      if (said !== lastSaid) announce(said);
+      lastSaid = said;
+    }, 900);
+  }
 }
 
 /**
@@ -266,6 +318,7 @@ function showError(message: string): void {
   } else {
     matchesError.replaceChildren(h("p", { class: "notice__title" }, "pyWhat couldn't identify this text."), h("p", {}, message));
     matchesError.hidden = false;
+    if (/Filters/.test(message)) byId<HTMLDetailsElement>("filters").open = true;
   }
 }
 
@@ -276,7 +329,9 @@ function clearErrors(): void {
   matchesError.replaceChildren();
 }
 
-const colour = (id: number) => `hl-${(id % HIGHLIGHTS) + 1}`;
+/** The highlight colour of a format: one per kind of thing. */
+const colourOf = (name: string) => `hl-${(colours.get(name) ?? 0) + 1}`;
+const byIdMatch = new Map<number, IdentifyMatch>();
 
 function render(): void {
   const empty = shownText.trim() === "";
@@ -286,11 +341,18 @@ function render(): void {
   matchCount.hidden = empty;
   matchCount.textContent = count(matches.length);
 
+  byIdMatch.clear();
+  for (const m of matches) byIdMatch.set(m.id, m);
   const [key, reverse] = sortKey(sort.value);
-  const sorted = sortMatches(matches, key, reverse);
-  const cards = sorted.slice(0, MAX_CARDS).map(card);
-  if (sorted.length > MAX_CARDS) {
-    cards.push(h("li", { class: "field__hint" }, `The first ${MAX_CARDS} of ${count(sorted.length)} matches are shown. Filter by rarity or tag to narrow them down.`));
+  const all = groupMatches(sortMatches(matches, key, reverse));
+  const cards = all.slice(0, MAX_CARDS).map(card);
+  if (all.length > MAX_CARDS) {
+    cards.push(h("li", { class: "field__hint" }, `The first ${MAX_CARDS} of ${count(all.length)} cards are shown. Filter by rarity or tag to narrow them down.`));
+  }
+  if (capped) {
+    cards.unshift(
+      h("li", { class: "notice" }, `pyWhat stopped at ${count(MAX_MATCHES)} matches: the text has more. Filter by rarity or tag, or identify a smaller part of the text, to see the rest.`),
+    );
   }
   matchesList.replaceChildren(...cards);
   drawHighlights();
@@ -309,48 +371,91 @@ function sortKey(value: string): [SortKey, boolean] {
   }
 }
 
-function card(m: IdentifyMatch): HTMLLIElement {
+/** The most matched texts a format's card lists; the rest are counted. */
+const MAX_CHIPS = 50;
+
+function card(c: Card): HTMLLIElement {
+  const members = c.kind === "single" ? [c.match] : c.matches;
+  const m = members[0] as IdentifyMatch;
+  const group = c.kind === "group";
   const nameId = `match-${m.id}`;
-  const description = m.description
+  // A group shows what its matches share; a description that differs per match (a processor
+  // names a MAC address's vendor, say) is left out
+  const description = members.every((x) => x.description === m.description) ? m.description : null;
+  const desc = description
     ? h(
         "p",
         { class: "match__desc" },
-        ...parseMarkup(m.description).map((p) =>
+        ...parseMarkup(description).map((p) =>
           p.kind === "link" ? h("a", { href: p.href, target: "_blank", rel: "noopener noreferrer" }, p.text) : p.text,
         ),
       )
     : null;
+  const rarity = Math.max(...members.map((x) => x.rarity));
+  // A lookup link sends the match to another site: never for credentials, and always named
+  const secret = m.tags.some((t) => /credential|token|key/i.test(t));
+  const lookup = (x: IdentifyMatch) => (secret || !x.link ? null : safeHref(x.link));
+  const chips = group
+    ? h(
+        "ul",
+        { class: "match__chips", "aria-label": "Matched text" },
+        ...members.slice(0, MAX_CHIPS).map((x) => {
+          const href = lookup(x);
+          return h(
+            "li",
+            {},
+            href
+              ? h("a", { href, target: "_blank", rel: "noopener noreferrer", title: `Look it up on ${hostOf(href)} (sends ${x.matched} there)` }, h("code", {}, x.matched))
+              : h("code", {}, x.matched),
+          );
+        }),
+        members.length > MAX_CHIPS ? h("li", { class: "field__meta" }, `and ${count(members.length - MAX_CHIPS)} more`) : null,
+      )
+    : h(
+        "p",
+        { class: "match__matched" },
+        h("code", {}, m.matched),
+        m.fragment ? h("span", { class: "badge", title: "This match is part of a longer word or match" }, "inside longer text") : null,
+      );
   const li = h(
     "li",
-    { class: `match ${colour(m.id)}`, "data-id": m.id },
+    { class: `match ${colourOf(m.name)}`, "data-ids": members.map((x) => x.id).join(" ") },
     h(
       "div",
       { class: "match__head" },
-      h("h3", { class: "match__name", id: nameId }, m.name),
+      h("h3", { class: "match__name", id: nameId }, m.name, group ? h("span", { class: "match__count" }, ` · ${count(members.length)}`) : null),
       h(
         "span",
         { class: "rarity", title: "Rarity: 1 for formats that little else looks like" },
-        h("span", { class: "rarity__bar", "aria-hidden": "true" }, rarityFill(m.rarity)),
-        `Rarity ${fraction(m.rarity)}`,
+        h("span", { class: "rarity__bar", "aria-hidden": "true" }, rarityFill(rarity)),
+        `Rarity ${fraction(rarity)}`,
       ),
     ),
-    h(
-      "p",
-      { class: "match__matched" },
-      h("code", {}, m.matched),
-      m.fragment ? h("span", { class: "badge", title: "This match is part of a longer word or match" }, "inside longer text") : null,
-    ),
-    description,
+    chips,
+    desc,
     m.tags.length ? h("ul", { class: "tags", "aria-label": "Tags" }, ...m.tags.map((t) => h("li", {}, t))) : null,
     m.exploit
-      ? h("details", { class: "match__exploit" }, h("summary", {}, "How to use or check it"), h("pre", {}, m.exploit))
+      ? h(
+          "details",
+          { class: "match__exploit" },
+          h("summary", {}, group ? "How to use or check it (for the first match)" : "How to use or check it"),
+          h("pre", {}, m.exploit),
+        )
       : null,
     h(
       "div",
       { class: "match__actions" },
-      copyButton("Copy", () => m.matched),
-      m.link
-        ? h("a", { href: m.link, target: "_blank", rel: "noopener noreferrer" }, "Look it up", icon("external"), h("span", { class: "visually-hidden" }, " (opens another site)"))
+      group
+        ? copyButton("Copy all", () => members.map((x) => x.matched).join("\n"), { spoken: `${count(members.length)} matches copied` })
+        : copyButton("Copy", () => m.matched, { spoken: `${m.name} copied` }),
+      !group && lookup(m)
+        ? h(
+            "a",
+            { href: lookup(m) as string, target: "_blank", rel: "noopener noreferrer" },
+            `Look it up on ${hostOf(lookup(m) as string)}`,
+            icon("external"),
+            h("span", { class: "visually-hidden" }, ` (opens that site, and sends it ${m.matched})`),
+          )
         : null,
       h(
         "button",
@@ -360,6 +465,8 @@ function card(m: IdentifyMatch): HTMLLIElement {
           onclick: () => {
             exclude.add(m.name);
             byId<HTMLDetailsElement>("filters").open = true;
+            // The card goes away: focus the field that now lists the hidden format
+            byId("exclude-input").focus();
           },
         },
         "Hide this format",
@@ -367,13 +474,19 @@ function card(m: IdentifyMatch): HTMLLIElement {
     ),
   );
   li.setAttribute("aria-labelledby", nameId);
-  const on = () => activate(m.id);
+  const ids = members.map((x) => x.id);
+  const on = () => activate(ids);
   const off = () => activate(null);
   li.addEventListener("mouseenter", on);
   li.addEventListener("mouseleave", off);
   li.addEventListener("focusin", on);
   li.addEventListener("focusout", off);
   return li;
+}
+
+/** "www.shodan.io" → "shodan.io" */
+function hostOf(href: string): string {
+  return new URL(href).hostname.replace(/^www\./, "");
 }
 
 function rarityFill(rarity: number): HTMLElement {
@@ -388,7 +501,9 @@ function rarityFill(rarity: number): HTMLElement {
 function syncBackdropText(): void {
   if (text.value !== shownText) {
     marks.clear();
-    backdrop.replaceChildren(text.value + "\n");
+    // Above the limit there are no highlights to line up: don't lay out a copy of the text
+    if (text.value.length > MAX_TEXT_CHARS) backdrop.replaceChildren();
+    else backdrop.replaceChildren(text.value + "\n");
   }
 }
 
@@ -405,7 +520,7 @@ function drawHighlights(): void {
       pieces.push(piece);
       continue;
     }
-    const mark = h("mark", { class: colour(s.ids[0] as number) }, piece);
+    const mark = h("mark", { class: colourOf(byIdMatch.get(s.ids[0] as number)?.name ?? "") }, piece);
     for (const id of s.ids) {
       const list = marks.get(id) ?? [];
       list.push(mark);
@@ -419,24 +534,33 @@ function drawHighlights(): void {
   backdrop.scrollTop = text.scrollTop;
 }
 
-function activate(id: number | null): void {
+/** Rings the marks of `ids` (a card's matches) and dims the others; `null` puts all back. */
+function activate(ids: readonly number[] | null): void {
   for (const li of matchesList.querySelectorAll(".match.is-active")) li.classList.remove("is-active");
   for (const m of backdrop.querySelectorAll("mark")) {
     m.classList.remove("is-active", "is-dim");
-    if (id !== null) m.classList.add("is-dim");
+    if (ids !== null) m.classList.add("is-dim");
   }
-  if (id === null) return;
-  matchesList.querySelector(`.match[data-id="${id}"]`)?.classList.add("is-active");
-  for (const m of marks.get(id) ?? []) {
-    m.classList.remove("is-dim");
-    m.classList.add("is-active");
+  if (ids === null || ids.length === 0) return;
+  matchesList.querySelector(`.match[data-ids~="${ids[0]}"]`)?.classList.add("is-active");
+  for (const id of ids) {
+    for (const m of marks.get(id) ?? []) {
+      m.classList.remove("is-dim");
+      m.classList.add("is-active");
+    }
   }
 }
 
 // --- A link with text -------------------------------------------------------------------------------
 
-const shared = pickUp() ?? decodeHash(location.hash).get("text");
-if (shared) setText(shared.slice(0, MAX_TEXT_CHARS));
+// Text from another tool (sessionStorage), or from a link to identify/#text=...: like Decode's
+// share links, the text leaves the address bar as soon as it's edited
+const fromLink = decodeHash(location.hash).get("text");
+const shared = pickUp() ?? fromLink;
+if (shared) setText(Array.from(shared).slice(0, MAX_TEXT_CHARS).join(""));
+if (fromLink) {
+  text.addEventListener("input", () => history.replaceState(null, "", location.pathname + location.search), { once: true });
+}
 byId("decode-link").addEventListener("click", () => handOff(text.value));
 updateFiltersSummary(readFilters());
 textCount.textContent = characterCount(text.value);

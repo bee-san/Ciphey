@@ -44,7 +44,12 @@ export function flattenMatches(json: string): IdentifyMatch[] | { error: string 
   try {
     parsed = JSON.parse(json);
   } catch (e) {
-    return { error: `pyWhat returned something that isn't JSON: ${String(e)}` };
+    // pyWhat's output for tens of thousands of matches can be cut short
+    void e;
+    return {
+      error:
+        "This text has more matches than pyWhat can list here. Narrow them down with Filters (raise the rarity's start, or hide tags), or identify a smaller part of the text.",
+    };
   }
   if (typeof parsed !== "object" || parsed === null) return { error: "pyWhat returned no result" };
   const root = parsed as { error?: unknown; Regexes?: unknown };
@@ -93,4 +98,46 @@ export function sortMatches(matches: readonly IdentifyMatch[], key: SortKey, rev
   };
   // Array.prototype.sort is stable, so ties stay in pyWhat's order either way
   return [...matches].sort((a, b) => (reverse ? -compare(a, b) : compare(a, b)) || a.id - b.id);
+}
+
+/** A card: one match, or every match of a format that has more than `GROUP_ABOVE`. */
+export type Card = { kind: "single"; match: IdentifyMatch } | { kind: "group"; name: string; matches: IdentifyMatch[] };
+
+/** A format with more matches than this gets one card for all of them. */
+export const GROUP_ABOVE = 3;
+
+/**
+ * The cards for `sorted` matches: a format with more than `GROUP_ABOVE` matches becomes one
+ * card, where its first match in `sorted` was, holding its matches in that order.
+ */
+export function groupMatches(sorted: readonly IdentifyMatch[], above = GROUP_ABOVE): Card[] {
+  const byName = new Map<string, IdentifyMatch[]>();
+  for (const m of sorted) {
+    const list = byName.get(m.name);
+    if (list) list.push(m);
+    else byName.set(m.name, [m]);
+  }
+  const cards: Card[] = [];
+  const placed = new Set<string>();
+  for (const m of sorted) {
+    const list = byName.get(m.name) as IdentifyMatch[];
+    if (list.length <= above) cards.push({ kind: "single", match: m });
+    else if (!placed.has(m.name)) {
+      placed.add(m.name);
+      cards.push({ kind: "group", name: m.name, matches: list });
+    }
+  }
+  return cards;
+}
+
+/**
+ * Each format's colour index, in the order pyWhat first reports it (match ids), so a colour
+ * means a kind of thing and stays put when the sort changes.
+ */
+export function formatColours(matches: readonly IdentifyMatch[], colours: number): Map<string, number> {
+  const order = new Map<string, number>();
+  for (const m of [...matches].sort((a, b) => a.id - b.id)) {
+    if (!order.has(m.name)) order.set(m.name, order.size % colours);
+  }
+  return order;
 }

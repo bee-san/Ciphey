@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseMarkup, plainText, safeHref } from "../../src/lib/markup";
+import { pieces } from "../../src/lib/pieces";
 import { choiceField, decodeHash, encodeHash, intField, shareUrl } from "../../src/lib/share";
 import { assignRanges, findAll, locate, segment } from "../../src/lib/spans";
 
@@ -164,5 +165,31 @@ describe("share links", () => {
     expect(intField(fields, "f", 1, 60)).toBeUndefined();
     expect(choiceField(fields, "s", ["low", "medium", "high"] as const)).toBe("high");
     expect(choiceField(fields, "bad", ["low", "medium", "high"] as const)).toBeUndefined();
+  });
+});
+
+describe("pieces", () => {
+  const lines = Array.from({ length: 50 }, (_, i) => `line ${i} 10.0.0.${i} bee@skerritt.blog`).join("\n");
+  it("keeps short texts whole, and joins back to the text", () => {
+    expect(pieces("short", 100, false)).toEqual(["short"]);
+    for (const whole of [false, true]) expect(pieces(lines, 200, whole).join("")).toBe(lines);
+  });
+  it("cuts after line ends, so no line is cut in anchored mode", () => {
+    const parts = pieces(lines, 200, true);
+    expect(parts.length).toBeGreaterThan(5);
+    for (const p of parts.slice(0, -1)) expect(p.endsWith("\n")).toBe(true);
+    for (const p of parts) expect(p.length).toBeLessThanOrEqual(200);
+  });
+  it("cuts a long line at a space when matches may sit inside text", () => {
+    const words = Array.from({ length: 300 }, (_, i) => `word${i}`).join(" ");
+    const parts = pieces(words, 100, false);
+    for (const p of parts.slice(0, -1)) expect(p.endsWith(" ")).toBe(true);
+    expect(parts.join("")).toBe(words);
+  });
+  it("never cuts a line in anchored mode, however long", () => {
+    const long = "x".repeat(500);
+    expect(pieces(long, 100, true)).toEqual([long]);
+    const mixed = `a\n${long}\nb`;
+    expect(pieces(mixed, 100, true)).toEqual(["a\n", `${long}\n`, "b"]);
   });
 });

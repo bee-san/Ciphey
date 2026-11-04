@@ -86,6 +86,8 @@ export interface SearchUpdate {
   nodes: TreeNode[];
   /** Plaintexts new since the last update. */
   results: DecodeResult[];
+  /** The bytes of WebAssembly memory the module holds (it never gives any back). */
+  memoryBytes?: number;
 }
 
 export interface DecoderInfo {
@@ -145,8 +147,16 @@ export type IdentifyRequest = { type: "identify"; id: number; text: string; opti
 
 export type IdentifyEvent =
   | { type: "ready"; version: string; tags: string[] }
-  | { type: "identified"; id: number; matches: IdentifyMatch[]; elapsedMs: number }
-  | { type: "error"; id: number | null; message: string };
+  | {
+      type: "identified";
+      id: number;
+      matches: IdentifyMatch[];
+      /** pyWhat stopped at MAX_MATCHES (lib/pieces.ts): the text has more. */
+      capped: boolean;
+      elapsedMs: number;
+    }
+  /** `crashed`: the module aborted, and the page must start a new worker. */
+  | { type: "error"; id: number | null; message: string; crashed?: boolean };
 
 // --- Is it language? (gibberish-or-not) ---------------------------------------------------
 
@@ -164,4 +174,4 @@ export type LanguageRequest = { type: "detect"; id: number; text: string; sensit
 export type LanguageEvent =
   | { type: "ready"; languages: string[] }
   | { type: "detected"; id: number; verdict: LanguageVerdict; elapsedMs: number }
-  | { type: "error"; id: number | null; message: string };
+  | { type: "error"; id: number | null; message: string; crashed?: boolean };

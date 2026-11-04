@@ -32,7 +32,7 @@
             <textarea id="input" name="input" rows="7" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="Paste encoded text, such as aGVsbG8gdGhlcmUgZ2VuZXJhbA==" aria-describedby="input-hint input-error"></textarea>
             <div class="dropzone__overlay" aria-hidden="true">Drop the file to decode it</div>
           </div>
-          <p class="field__hint" id="input-hint">Or <button type="button" class="link-button" id="open-file">open a file</button> (or drop one here), up to 65,536 characters. <span class="shortcut-hint">Ctrl + Enter decodes.</span></p>
+          <p class="field__hint" id="input-hint">Or <button type="button" class="link-button" id="open-file">open a file</button> (or drop one here), up to 65,536 characters. <span class="shortcut-hint" id="shortcut-hint">Ctrl + Enter decodes.</span></p>
           <p class="field__error" id="input-error" hidden></p>
           <input type="file" id="file" aria-label="A text file" hidden>
         </div>
@@ -43,7 +43,7 @@
         </fieldset>
 
         <details class="disclosure" id="options">
-          <summary>Options <span class="disclosure__summary" id="options-summary">5 s · Medium</span></summary>
+          <summary>Options <span class="disclosure__summary" id="options-summary">5 s · Medium sensitivity</span></summary>
           <div class="disclosure__body">
             <div class="field">
               <label for="timeout">Time limit</label>
@@ -51,7 +51,7 @@
                 <input type="number" id="timeout" min="1" max="60" step="1" value="5" inputmode="numeric" aria-describedby="timeout-hint timeout-error">
                 <span>seconds</span>
               </div>
-              <p class="field__hint" id="timeout-hint">How long Ciphey searches before it gives up, from 1 to 60.</p>
+              <p class="field__hint" id="timeout-hint">How long Ciphey searches before it gives up, from 1 to 60. A long search can stop sooner, once it has used the memory your browser can give it.</p>
               <p class="field__error" id="timeout-error" hidden></p>
             </div>
             <div class="field">
@@ -80,7 +80,7 @@
         </details>
 
         <div class="actions">
-          <button type="submit" class="button button--primary" id="decode">Decode</button>
+          <button type="submit" class="button button--primary" id="decode" aria-keyshortcuts="Control+Enter Meta+Enter">Decode</button>
           <button type="button" class="button button--ghost" id="clear">Clear</button>
           <span class="engine-status" id="engine-status"><span class="spinner" aria-hidden="true"></span>Loading Ciphey…</span>
         </div>
@@ -106,7 +106,7 @@
         <div class="search__status">
           <span class="spinner" id="search-spinner" aria-hidden="true"></span>
           <p id="search-text">Searching…</p>
-          <button type="button" class="button button--small" id="cancel" hidden>Cancel <kbd>Esc</kbd></button>
+          <button type="button" class="button button--small" id="cancel" aria-keyshortcuts="Escape" hidden>Cancel <kbd aria-hidden="true">Esc</kbd></button>
         </div>
         <p class="field__meta search__stats" id="search-stats"></p>
         <progress id="search-progress" max="1" value="0" aria-label="Time used of the time limit"></progress>

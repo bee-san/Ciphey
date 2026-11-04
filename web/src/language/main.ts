@@ -1,5 +1,7 @@
 import "../styles/main.css";
 import { duration, fraction } from "../lib/format";
+import versions from "../wasm/versions.json";
+import { capitalise } from "../decode/words";
 import { isLanguageAt, languageName, listNames, THRESHOLDS } from "../lib/language";
 import type { LanguageEvent, LanguageRequest, LanguageVerdict, Sensitivity } from "../lib/protocol";
 import { announce, byId, characterCount, h, icon } from "../shell/dom";
@@ -44,7 +46,7 @@ engine.on((event) => {
   switch (event.type) {
     case "ready": {
       ready = true;
-      engineStatus.textContent = "gibberish-or-not is ready";
+      engineStatus.textContent = `gibberish-or-not ${versions.gibberish} is ready`;
       const names = event.languages.map(languageName);
       languagesNote.textContent = names.length
         ? `This version knows ${listNames(names)}. Text in another language may be called gibberish, or taken for one it knows.`
@@ -57,27 +59,43 @@ engine.on((event) => {
       return;
     case "error":
       if (event.id === null) {
-        engineStatus.replaceChildren(
-          h("span", { class: "field__error" }, event.message),
-          " ",
-          h("button", { type: "button", class: "link-button", onclick: () => engine.restart() }, "Try again"),
-        );
-      } else if (latest.settle(event.id)) {
-        verdictDetail.textContent = event.message;
+        ready = false;
+        engineStatus.replaceChildren(h("span", { class: "field__error" }, event.message), " ", h("button", { type: "button", class: "link-button", onclick: () => restart() }, "Try again"));
+      } else {
+        const current = latest.settle(event.id);
+        if (event.crashed) restart();
+        if (current || event.crashed) verdictDetail.textContent = event.message;
       }
       return;
   }
 });
 engine.start();
 
+/** A fresh worker: after a crash, or Try again. Requests in flight are forgotten. */
+function restart(): void {
+  ready = false;
+  latest.reset();
+  engineStatus.replaceChildren(h("span", { class: "spinner", "aria-hidden": "true" }), "Loading gibberish-or-not…");
+  engine.restart();
+}
+
 function sensitivity(): Sensitivity {
   return (document.querySelector<HTMLInputElement>('input[name="sensitivity"]:checked')?.value as Sensitivity | undefined) ?? "medium";
 }
 
+const textHint = byId("text-hint");
+const HINT = textHint.textContent ?? "";
+
 function refresh(): void {
   textCount.textContent = characterCount(text.value);
-  const value = text.value.slice(0, MAX_TEXT_CHARS);
+  // By character, as the count does (an emoji is one)
+  const chars = Array.from(text.value);
+  const over = chars.length > MAX_TEXT_CHARS;
+  textHint.textContent = over ? `Only the first ${MAX_TEXT_CHARS.toLocaleString("en")} characters are checked.` : HINT;
+  const value = over ? chars.slice(0, MAX_TEXT_CHARS).join("") : text.value;
   if (value.trim() === "") {
+    // A reply still on its way is for the text that was cleared
+    latest.reset();
     showEmpty();
     return;
   }
@@ -123,10 +141,12 @@ function show(v: LanguageVerdict, ms: number): void {
   verdictBox.className = `verdict ${yes ? "verdict--yes" : "verdict--no"}`;
   verdictBox.querySelector(".verdict__mark")?.replaceChildren(icon(yes ? "ok" : "no"));
   verdictTitle.textContent = yes ? "Language" : "Not language";
+  // The more lenient sensitivities that would accept it, by name
+  const lenient = (["high", "medium"] as const).filter((x) => THRESHOLDS[x] < THRESHOLDS[s] && v.score >= THRESHOLDS[x]).map(capitalise);
   verdictDetail.textContent = yes
-    ? `${v.language ? languageName(v.language) : "A language it knows"}, at ${s} sensitivity`
-    : v.score >= THRESHOLDS.high
-      ? `Language at a more lenient sensitivity, not at ${s}`
+    ? `${v.language ? languageName(v.language) : "A language it knows"}, at ${capitalise(s)} sensitivity`
+    : lenient.length
+      ? `Language at ${listNames(lenient)} sensitivity, not at ${capitalise(s)}`
       : "Gibberish, or a language it doesn't know";
   verdictMeta.textContent = `checked in ${duration(ms)}`;
   scoreValue.textContent = fraction(v.score);

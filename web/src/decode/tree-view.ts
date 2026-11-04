@@ -9,6 +9,7 @@ import { count, plural, preview } from "../lib/format";
 import type { DecodeResult, TreeNode } from "../lib/protocol";
 import { SearchTree } from "../lib/tree";
 import { h, icon } from "../shell/dom";
+import { decoderName } from "./words";
 
 export const TREE_CAP = 300;
 export const GROUP_AT = 3;
@@ -153,10 +154,10 @@ export class TreeView {
     return h(
       "div",
       { class: "node__row" },
-      h("span", { class: "node__decoder" }, isRoot ? "Input" : (node.decoder ?? "?")),
+      h("span", { class: "node__decoder" }, isRoot ? "Input" : decoderName(node.decoder ?? "?")),
       node.key ? h("span", { class: "node__key" }, `key ${node.key}`) : null,
       h("code", { class: "node__text" }, printable(preview(node.text, 80)) || "(empty)"),
-      h("span", { class: "node__len" }, plural(node.length, "char")),
+      h("span", { class: "node__len" }, plural(node.length, "character")),
     );
   }
 
@@ -194,7 +195,7 @@ export class TreeView {
     // The GROUP_AT-th child from this decoder: fold them all into a group where the first was
     const first = this.items.get(same[0] as number) as HTMLLIElement;
     const label = h("span", { class: "node__count" });
-    const summary = h("summary", { class: "node__row node__row--group" }, h("span", { class: "node__decoder" }, decoder), label);
+    const summary = h("summary", { class: "node__row node__row--group" }, h("span", { class: "node__decoder" }, decoderName(decoder)), label);
     const groupList = h("ul");
     const details = h("details", {}, summary, groupList);
     const groupLi = h("li", { class: "node-group" }, details);

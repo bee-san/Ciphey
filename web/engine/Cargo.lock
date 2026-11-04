@@ -124,7 +124,7 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 [[package]]
 name = "gibberish-or-not"
 version = "6.0.0"
-source = "git+https://github.com/bee-san/gibberish-or-not?rev=30e03eaa1502281e3df9f4f34dbf5673ea3c8e49#30e03eaa1502281e3df9f4f34dbf5673ea3c8e49"
+source = "git+https://github.com/bee-san/gibberish-or-not?rev=b56b0c5ecc2b86e6074ae3f13bc4873a36feba08#b56b0c5ecc2b86e6074ae3f13bc4873a36feba08"
 dependencies = [
  "once_cell",
  "phf",
@@ -234,7 +234,7 @@ dependencies = [
 [[package]]
 name = "pywhat"
 version = "6.0.0-alpha.1"
-source = "git+https://github.com/bee-san/pyWhat?rev=bf25f119df7808a1366848f3fba23bc4ae3ff4a1#bf25f119df7808a1366848f3fba23bc4ae3ff4a1"
+source = "git+https://github.com/bee-san/pyWhat?rev=43a5f1a05ce505ec3ec01e50367256c66ef24ad4#43a5f1a05ce505ec3ec01e50367256c66ef24ad4"
 dependencies = [
  "fancy-regex",
  "regex",

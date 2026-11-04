@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { printable } from "../../src/decode/tree-view";
-import { checkCrib, checkerLabel, checkInput, checkTimeout, optionsSummary, pathSpeech, pathText, verdictSentence } from "../../src/decode/words";
+import { checkCrib, checkerLabel, checkInput, checkTimeout, decoderName, optionsSummary, pathSpeech, pathText, verdictSentence } from "../../src/decode/words";
 import { bytes, count, duration, plural, preview } from "../../src/lib/format";
 import { isLanguageAt, languageName, listNames, THRESHOLDS } from "../../src/lib/language";
 import type { IdentifyMatch, Step } from "../../src/lib/protocol";
-import { flattenMatches, identifyOptionsJson, sortMatches } from "../../src/lib/pywhat";
+import { flattenMatches, formatColours, groupMatches, identifyOptionsJson, sortMatches } from "../../src/lib/pywhat";
 import { SearchTree } from "../../src/lib/tree";
 import { LatestRequest } from "../../src/shell/engine";
 
@@ -47,7 +47,7 @@ describe("flattenMatches", () => {
   it("reports pyWhat's errors and empty results", () => {
     expect(flattenMatches('{"error": "options: bad"}')).toEqual({ error: "options: bad" });
     expect(flattenMatches('{"File Signatures": null, "Regexes": null}')).toEqual([]);
-    expect(flattenMatches("not json")).toHaveProperty("error");
+    expect((flattenMatches("not json") as { error: string }).error).toMatch(/Filters/);
   });
   it("builds a link from the URL and the match without spaces", () => {
     const one = JSON.stringify({ Regexes: { text: [{ Matched: "1 2 3", "Regex Pattern": { Name: "n", URL: "https://u.example/?q=" } }] } });
@@ -71,6 +71,34 @@ describe("sortMatches", () => {
   it("doesn't change its input", () => {
     sortMatches(list, "name");
     expect(list.map((x) => x.id)).toEqual([0, 1, 2, 3]);
+  });
+});
+
+describe("groupMatches", () => {
+  const m = (id: number, name: string, matched = `m${id}`): IdentifyMatch => ({
+    id, name, matched, rarity: 0.5, description: null, tags: [], link: null, exploit: null, fragment: false,
+  });
+  it("keeps formats with up to three matches as single cards, in order", () => {
+    const cards = groupMatches([m(0, "IP"), m(1, "Email"), m(2, "IP"), m(3, "IP")]);
+    expect(cards.map((c) => (c.kind === "single" ? c.match.id : c.name))).toEqual([0, 1, 2, 3]);
+  });
+  it("makes one card of a format with more than three, where its first match was", () => {
+    const sorted = [m(5, "URL"), m(0, "IP"), m(1, "IP"), m(9, "Email"), m(2, "IP"), m(3, "IP")];
+    const cards = groupMatches(sorted);
+    expect(cards.map((c) => c.kind)).toEqual(["single", "group", "single"]);
+    const group = cards[1] as { kind: "group"; name: string; matches: IdentifyMatch[] };
+    expect(group.name).toBe("IP");
+    expect(group.matches.map((x) => x.id)).toEqual([0, 1, 2, 3]);
+  });
+  it("gives each format one colour, by pyWhat's order, whatever the sort", () => {
+    const colours = formatColours([m(3, "Email"), m(0, "URL"), m(1, "IP"), m(2, "URL")], 6);
+    expect([...colours.entries()]).toEqual([
+      ["URL", 0],
+      ["IP", 1],
+      ["Email", 2],
+    ]);
+    const many = formatColours(Array.from({ length: 8 }, (_, i) => m(i, `F${i}`)), 6);
+    expect(many.get("F6")).toBe(0);
   });
 });
 
@@ -100,8 +128,11 @@ describe("Decode's words", () => {
     { decoder: "caesar", key: "13", text: "y", checker: "english", checkerName: "English Checker", description: "Words", confidence: null },
   ];
   it("writes paths for copying and for screen readers", () => {
-    expect(pathText(path)).toBe("Base64 → caesar (key 13)");
-    expect(pathSpeech(path)).toBe("Base64, then caesar with key 13");
+    expect(pathText(path)).toBe("Base64 → Caesar (key 13)");
+    expect(pathSpeech(path)).toBe("Base64, then Caesar with key 13");
+    expect(decoderName("Vigenere")).toBe("Vigenère");
+    expect(decoderName("railfence")).toBe("Rail fence");
+    expect(decoderName("Base64")).toBe("Base64");
   });
   it("names checkers by id, falling back to the name", () => {
     expect(checkerLabel("english")).toBe("the English checker");
@@ -127,8 +158,8 @@ describe("Decode's words", () => {
     expect(verdictSentence({ checker: null, checkerName: null, description: null, confidence: null })).toBeNull();
   });
   it("summarises the options", () => {
-    expect(optionsSummary({ timeout: 5, regex: "", topResults: false, sensitivity: "medium" })).toBe("5 s · Medium");
-    expect(optionsSummary({ timeout: 30, regex: "flag", topResults: true, sensitivity: "low" })).toBe("30 s · Low · crib · every plaintext");
+    expect(optionsSummary({ timeout: 5, regex: "", topResults: false, sensitivity: "medium" })).toBe("5 s · Medium sensitivity");
+    expect(optionsSummary({ timeout: 30, regex: "flag", topResults: true, sensitivity: "low" })).toBe("30 s · Low sensitivity · crib · every plaintext");
   });
   it("checks the input and the options", () => {
     expect(checkInput("   ").ok).toBe(false);

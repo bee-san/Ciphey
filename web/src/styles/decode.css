@@ -177,3 +177,29 @@ progress::-moz-progress-bar { background: var(--accent-border); border-radius: 9
 /* Untrusted text can't reorder what's around it */
 .plaintext, .path__text, .node__text, .match__matched code { unicode-bidi: isolate; }
 .plaintext { unicode-bidi: plaintext; }
+
+/* "Find every plaintext": the other results, folded */
+.result__fold > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  padding: 6px 0;
+  min-height: 32px;
+  border-radius: var(--radius-s);
+}
+.result__fold > summary::-webkit-details-marker { display: none; }
+.result__fold > summary::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: translateY(-2px) rotate(-45deg);
+  transition: transform 0.15s;
+}
+.result__fold[open] > summary::before { transform: translateY(-3px) rotate(45deg); }
+.result__fold > summary code { overflow-wrap: anywhere; }
+.result__fold > .result__other { margin-top: var(--space-3); }

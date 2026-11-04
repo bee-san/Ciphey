@@ -81,7 +81,8 @@
   .tools-nav a { padding: 8px 12px; min-height: 40px; display: flex; align-items: center; }
 }
 @media (max-width: 360px) {
-  .tools-nav a { padding: 8px 10px; }
+  .tools-nav ul { gap: 0; }
+  .tools-nav a { padding: 8px; font-size: 0.875rem; }
 }
 
 .page {
@@ -343,6 +344,8 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
   border: 1px solid var(--border);
   background: var(--surface-sunken);
 }
+/* A paragraph notice is one paragraph: grid would split its text and inline code into rows */
+p.notice { display: block; }
 .notice--error { background: var(--danger-soft); border-color: var(--danger); }
 .notice--warning { background: var(--accent-soft); border-color: var(--accent-border); }
 .notice__title { font-weight: 650; }
@@ -409,3 +412,10 @@ dialog .actions { margin-top: var(--space-5); justify-content: flex-end; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; border-top-color: var(--border-strong); border-right-color: var(--accent-text); } }
+
+/* Labels that narrow screens show shorter (the element keeps the long one as its name) */
+.label-short { display: none; }
+@media (max-width: 479px) {
+  .label-long { display: none; }
+  .label-short { display: inline; }
+}

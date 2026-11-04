@@ -10,12 +10,14 @@ browser. It has three pages, one per tool:
 | Is it language? | `/Ciphey/language/` | [gibberish-or-not](https://github.com/bee-san/gibberish-or-not)'s `wasm` feature |
 
 Everything runs in the browser. There's no server, no analytics, no cookies, and no request
-to any other site: fonts are the system's, icons are inline SVG, and the Content Security
-Policy only allows the site's own files.
+to any other site: fonts are the system's, icons are inline SVG, and the pages' Content
+Security Policy only allows the site's own files. The one way out is a link you open: some
+of pyWhat's formats come with a lookup link (Shodan for an IP address, a block explorer for
+a wallet), which sends that match to the site it names.
 
 ## Working on it
 
-You need Node.js 22.12 or later, and for the WebAssembly modules a Rust toolchain with the
+You need Node.js 22.18 or later (the end-to-end test imports a TypeScript file, which needs Node's type stripping), and for the WebAssembly modules a Rust toolchain with the
 `wasm32-unknown-unknown` target, `wasm-bindgen-cli` 0.2.130 (the version the crates pin) and
 binaryen's `wasm-opt`:
 
@@ -77,21 +79,29 @@ tests/unit/, tests/e2e/                                  the tests
   and the page draws them once per frame. Cancel tells the worker to stop between two steps;
   if a step doesn't end within 300 ms (a slow decoder on a big input), the page terminates
   the worker and starts a new one. A search with no plaintext keeps queueing branches, about
-  1 KB each for a short input, and at 4 GiB a 32-bit module aborts (after 27 s, 3.8 million
-  branches, in one measurement). So the worker stops a search once the module's memory
-  passes 2 GiB, says why, and the page starts a fresh worker for the next search. Identify
-  and Is it language? run as you type: one request is with the worker at a time, and only
-  the newest text waits behind it (`LatestRequest` in `src/shell/engine.ts`). Identify takes
-  up to 100,000 characters: pyWhat's output carries each format's whole entry, about 11 KB
-  of JSON per match, so that much text dense with identifiers already makes 72 MB of it.
+  1 KB each for a short input and some 150 MB a second, and at 4 GiB a 32-bit module aborts
+  (after 23 to 39 s, in the audit's runs). So the worker stops a search before the module's
+  memory passes a budget (a quarter of the device's memory where the browser says, between
+  512 MiB and 2 GiB; else 2 GiB on desktops and 512 MiB on phones) and says why, and the
+  page replaces the worker after any search that left it holding more than 512 MiB, since
+  WebAssembly memory is never given back. Identify and Is it language? run as you type: one
+  request is with the worker at a time, and only the newest text waits behind it
+  (`LatestRequest` in `src/shell/engine.ts`). pyWhat's output repeats each format's whole
+  entry for every match (about 11 KB of JSON per match, 41 KB per URL), so Identify sends a
+  long text to pyWhat in pieces of about 10,000 characters, cut at line ends, and stops at
+  5,000 matches; it takes up to 100,000 characters.
 - **One module per tool**, loaded only by its page's worker. Measured with `wasm-opt -Oz`:
 
   | Module | Raw | gzip -9 |
   | --- | ---: | ---: |
-  | Decode (Ciphey) | 5,531,448 B | 2,249,691 B |
-  | Identify (pyWhat) | 1,375,796 B | 482,045 B |
-  | Is it language? (gibberish-or-not) | 1,246,561 B | 1,025,582 B |
-  | One module for all three | 6,840,303 B | 3,244,570 B |
+  | Decode (Ciphey) | 5,524,730 B | 2,249,482 B |
+  | Identify (pyWhat) | 1,371,295 B | 482,092 B |
+  | Is it language? (gibberish-or-not) | 1,246,330 B | 1,025,539 B |
+  | One module for all three (an earlier scratch build) | 6,840,303 B | 3,244,570 B |
+
+  `scripts/build-wasm.sh` writes the source paths the modules embed (in panic messages)
+  relative to the cargo home and the repository, so a build is the same on every machine with
+  the same toolchain.
 
   With one module, Identify would load 3.2 MB instead of 0.5 MB, and every page would wait
   for the biggest one. (Ciphey links gibberish-or-not and pyWhat itself, so once it uses
@@ -109,8 +119,9 @@ tests/unit/, tests/e2e/                                  the tests
   like it.
 - **Share links** keep the input in the URL's fragment (`#input=...`), which browsers don't
   send to the server. The page only makes one when asked, shows a warning about secrets
-  first, and removes the fragment from the address bar as soon as the input changes. Moving
-  text between the tools (Identify the plaintext, Decode it with Ciphey) goes through
+  first, and removes the fragment from the address bar as soon as the input changes.
+  Identify reads `identify/#text=...` links the same way (it makes none itself). Moving text
+  between the tools (Identify the plaintext, Decode it with Ciphey) goes through
   `sessionStorage`, never the URL.
 
 ## Security and privacy
@@ -119,16 +130,31 @@ tests/unit/, tests/e2e/                                  the tests
   headers):
   `default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'`.
   There are no inline scripts or styles (`public/theme.js`, which applies the saved theme
-  before the first paint, is a file for this reason), and nothing can be sent anywhere but
-  the site itself, which only serves static files.
+  before the first paint, is a file for this reason), and the pages can't send anything
+  anywhere but the site itself, which only serves static files. A `<meta>` policy doesn't
+  reach into the workers, which do the WebAssembly work: their own code is what keeps them on
+  the site (they fetch only their `.wasm` file), and the end-to-end test checks it.
 - Everything the engines return is data: the pages insert it with `textContent`, never as
   HTML. pyWhat's descriptions are Rich markup (`[link=...]`), parsed in `src/lib/markup.ts`,
   where only `http(s)` links become links. The links in pyWhat's results open in a new tab
   with `rel="noopener noreferrer"`, and every page sets `referrer: no-referrer`.
 - The only storage is `localStorage["ciphey-theme"]` (the theme button's choice) and the
   hand-off between tools in `sessionStorage`.
-- The end-to-end test fails if any request leaves the site's origin, if the policy blocks
-  anything, or if the console shows an error.
+- Identify's lookup links say which site they open and that the match goes there, and
+  formats tagged as credentials, tokens or keys get none.
+- The site shares its origin, `https://bee-san.github.io`, with bee-san's other Pages sites:
+  they can read this site's storage (the theme, a hand-off not yet picked up). A meta policy
+  can't set `frame-ancestors` and Pages sends no framing headers, so any site can frame these
+  pages; there's no account or action to take over. A custom domain would give the site an
+  origin of its own.
+- The data inside the modules: pyWhat's file signatures come from Wikipedia (CC BY-SA 4.0),
+  credited in every page's footer; pyWhat's
+  [data sources](https://github.com/bee-san/pyWhat/blob/main/docs/data-sources.md) and
+  gibberish-or-not's NOTICE have the rest.
+- The end-to-end test fails if any request (WebSockets included, from the pages or the
+  workers) leaves the site's origin, if a built page's policy isn't exactly this one and its
+  first element, if the policy blocks anything, if hostile input becomes markup, or if the
+  console shows an error.
 
 ## Accessibility
 

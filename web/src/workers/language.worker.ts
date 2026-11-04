@@ -5,6 +5,13 @@ import wasmUrl from "../wasm/language/language_bg.wasm?url";
 import type { LanguageEvent, LanguageRequest } from "../lib/protocol";
 
 declare const self: DedicatedWorkerGlobalScope;
+
+/** Why the module didn't load, in words for the page. */
+function loadFailure(error: unknown, name: string): string {
+  return error instanceof WebAssembly.CompileError
+    ? `This browser can't run ${name}. Try a recent Chrome, Firefox or Safari.`
+    : `Couldn't download ${name}. Check your connection, then press Try again.`;
+}
 const post = (event: LanguageEvent) => self.postMessage(event);
 
 const ready = init({ module_or_path: wasmUrl })
@@ -13,7 +20,9 @@ const ready = init({ module_or_path: wasmUrl })
     return true;
   })
   .catch((error: unknown) => {
-    post({ type: "error", id: null, message: `Couldn't load gibberish-or-not: ${String(error)}` });
+    // The detail (a URL, a status) is for the console; the page says what to do
+    console.error(error);
+    post({ type: "error", id: null, message: loadFailure(error, "gibberish-or-not") });
     return false;
   });
 
@@ -27,6 +36,8 @@ self.onmessage = async (event: MessageEvent<LanguageRequest>) => {
     d.free();
     post({ type: "detected", id, verdict, elapsedMs: performance.now() - started });
   } catch (error) {
-    post({ type: "error", id, message: `gibberish-or-not failed on this text: ${String(error)}` });
+    // A panic aborts the module: the page starts a new worker
+    const crashed = error instanceof WebAssembly.RuntimeError;
+    post({ type: "error", id, message: crashed ? "gibberish-or-not crashed on this text." : `gibberish-or-not failed on this text: ${String(error)}`, crashed });
   }
 };

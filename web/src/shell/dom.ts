@@ -85,17 +85,31 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
-/** A button that copies what `get()` returns and says so on itself for a moment. */
-export function copyButton(label: string, get: () => string, extraClass = ""): HTMLButtonElement {
-  const text = h("span", {}, label);
-  const button = h("button", { type: "button", class: `button button--small ${extraClass}`.trim() }, icon("copy"), text);
+/**
+ * A label that narrow screens show shorter: `short` below 480 px, `long` otherwise. The
+ * element it goes in should carry `long` as its accessible name.
+ */
+export function responsiveLabel(long: string, short?: string): HTMLElement {
+  if (!short || short === long) return h("span", {}, long);
+  return h("span", {}, h("span", { class: "label-long" }, long), h("span", { class: "label-short", "aria-hidden": "true" }, short));
+}
+
+/**
+ * A button that copies what `get()` returns and says so on itself for a moment. `spoken` is
+ * what a screen reader hears after a copy ("Plaintext copied"); `short` a label for narrow
+ * screens.
+ */
+export function copyButton(label: string, get: () => string, options: { spoken?: string; short?: string } = {}): HTMLButtonElement {
+  const text = responsiveLabel(label, options.short);
+  const button = h("button", { type: "button", class: "button button--small", "aria-label": options.short ? label : null }, icon("copy"), text);
   let timer = 0;
   button.addEventListener("click", async () => {
     const ok = await copyText(get());
-    text.textContent = ok ? "Copied" : "Couldn't copy";
-    announce(ok ? `${label}: copied to the clipboard` : "Couldn't copy to the clipboard");
+    const saved = [...text.childNodes];
+    text.replaceChildren(ok ? "Copied" : "Couldn't copy");
+    announce(ok ? (options.spoken ?? `${label}: copied`) : "Couldn't copy to the clipboard");
     window.clearTimeout(timer);
-    timer = window.setTimeout(() => (text.textContent = label), 2000);
+    timer = window.setTimeout(() => text.replaceChildren(...saved), 2000);
   });
   return button;
 }
@@ -105,7 +119,8 @@ export function copyButton(label: string, get: () => string, extraClass = ""): H
  * A file over 4 bytes per allowed character can't fit, so it isn't read at all.
  */
 export async function readTextFile(file: File, maxChars: number): Promise<{ text: string } | { error: string }> {
-  const tooLong = (n: string) => `${file.name} has ${n} characters. Files up to ${maxChars.toLocaleString("en")} characters can be read here.`;
+  const tooLong = (n: string) =>
+    `${file.name} has ${n} characters: files up to ${maxChars.toLocaleString("en")} characters can be read here. Open a smaller file, or paste part of it.`;
   if (file.size > maxChars * 4) return { error: tooLong(`over ${maxChars.toLocaleString("en")}`) };
   const text = new TextDecoder("utf-8", { fatal: false }).decode(await file.arrayBuffer());
   if (text.includes("\u0000") || (text.match(/\uFFFD/g)?.length ?? 0) > text.length / 20) {
