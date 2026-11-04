@@ -67,10 +67,15 @@ sentence doesn't count. Regexes with a rarity below 0.1, which match by chance (
 `key:value` pairs), are not used, and neither are those pyWhat tags **Charset Only**: they
 only check which characters a text has and how long it is (more than 1 in 1,000 random
 strings of a common alphabet and the right length match them, after their checksum), so
-decoder junk matches them: card numbers, Bitly and Visual Studio keys (any SHA-1), ASINs,
-Twilio SIDs, Turkish IDs, the AWS secret key. pyWhat checks the checksums of the formats
-that have one (Luhn for card numbers, Base58Check and CashAddr for wallets), so random
-Base58 isn't a Bitcoin or Litecoin address any more. On top of that, the checker ignores:
+decoder junk matches them: Bitly and Visual Studio keys (any SHA-1), ASINs, Twilio SIDs,
+Turkish IDs, the AWS secret key, most card numbers. pyWhat checks the checksums of the
+formats that have one (Luhn for card numbers, Base58Check and CashAddr for wallets), so
+random Base58 isn't a Bitcoin or Litecoin address any more. On top of that, the checker
+ignores:
+
+- every card number (pyWhat's tag `Credit Card`), as before pyWhat: the card formats that
+  aren't Charset Only (Maestro, Laser, Switch, Solo, ...) check a prefix, a length and the
+  Luhn digit, which 1 in 2,000 to 1 in 20,000 random strings of 14 to 19 digits pass;
 
 - by name: JSON Web Tokens (the JWT decoder decodes them: the payload is the plaintext),
   the Facebook Access Token (`EA` and 190+ letters and digits, which a Vigenère decryption
@@ -78,9 +83,15 @@ Base58 isn't a Bitcoin or Litecoin address any more. On top of that, the checker
   letter and a digit), the Google ReCaptcha key (`6L` and 38 letters and digits: wrong
   decoders on a SHA-1 hash make those) and the AWS Organization ID (`o-` and 10 to 32
   letters and digits);
-- IPv6 addresses outside the ranges IANA has assigned (global unicast `2000::/3`, unique
-  local, link-local, multicast, NAT64, and `::1`-style addresses): pyWhat takes any hex
-  groups with colons, such as the decoder junk `DB:F::E9` or a reversed address;
+- IPv6 addresses that don't parse as addresses or are outside the ranges IANA has
+  assigned (global unicast `2000::/3`, unique local, link-local, multicast, NAT64, the
+  loopback `::1`, and IPv4 addresses written as IPv6 such as `::ffff:192.0.2.1`): pyWhat
+  takes any hex groups with colons, and a port after them without brackets, so decoder
+  junk such as `DB:F::E9` and `::9861:13287` (to pyWhat, `::9861` and port 13287), and a
+  reversed address, were IPv6 addresses to it;
+- UK postcodes that don't start with one of the 124 postcode areas (`UK_POSTCODE_AREAS`):
+  a Caesar shift of a postcode is still shaped like one (`TX1B 1BB` is ROT1 of `SW1A
+  1AA`). About a third of the shifts that pyWhat takes land on an area and stay postcodes;
 - URLs without `://` or a leading `www.`: pyWhat's URL regex takes bare domains
   (`example.com`). It is also by far pyWhat's slowest regex (18 KB, run by fancy-regex),
   so the checker only runs it on text that has one;
@@ -94,14 +105,17 @@ Base58 isn't a Bitcoin or Litecoin address any more. On top of that, the checker
 
 pyWhat's email regex is ASCII-only, so the checker also identifies a **domain name or
 email address with a non-ASCII letter** (`hello.müller.example.com`, `müller@example.com`),
-what the Punycode decoder makes of `xn--` labels, if it ends in one of `EMAIL_TLDS`. pyWhat
-only takes a phone number with its `+` and country code (`+1 202 555 0156`); the DTMF
-decoder takes the keys of a number dialled on a keypad (`18005551234`) for a phone number
-when pyWhat does with a `+` in front, with the human checker's agreement.
+what the Punycode decoder makes of `xn--` labels, if it ends in one of `EMAIL_TLDS`; the
+`pywhat_*` settings of the URL and email regexes apply to them. pyWhat takes phone numbers
+written with a `+` and their country code (`+1 202 555 0156`) and North American numbers
+written with separators (`202-555-0178`, `(202) 555-0178`), not bare runs of digits. The DTMF
+decoder takes the keys of a number dialled on a keypad for a phone number, with the human
+checker's agreement, when pyWhat does with a `+` in front (`18005551234`), or when they are
+10 to 13 digits that start with a trunk prefix 0 (`07700900123`).
 
 Ciphey uses pywhat without its default features (no file identification, no MAC address
-vendors), so it ships only the data it needs to identify text: `cargo tree -e features -i
-pywhat` shows the features, and NOTICE the data files and their licences.
+vendors): `cargo tree -e features -i pywhat` shows the features. NOTICE lists pyWhat's data
+files that are in Ciphey's binaries, and their licences.
 
 When pyWhat finds nothing, the checker looks for a **CTF flag** in any format,
 `^[A-Za-z][A-Za-z0-9_]{1,19}\{[^{}\n]{1,200}\}$` (matched by hand: the regex crate compiles

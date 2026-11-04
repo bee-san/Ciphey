@@ -89,8 +89,8 @@ pub enum CheckerKind {
     /// [pyWhat](https://github.com/bee-san/pyWhat): over a hundred formats, such as IP and
     /// email addresses, URLs, API keys and crypto wallet addresses, and CTF flags in any
     /// format (`picoCTF{...}`). The whole text has to be the match. Regexes that only check
-    /// which characters a text has and how long it is (pyWhat's "Charset Only" ones, such as
-    /// card numbers) are ignored. Before 0.13.0 this was LemmeKnow, and its id `lemmeknow`
+    /// which characters a text has and how long it is (pyWhat's "Charset Only" ones), and
+    /// card numbers, are ignored. Before 0.13.0 this was LemmeKnow, and its id `lemmeknow`
     /// is still accepted.
     #[serde(rename = "pywhat", alias = "lemmeknow")]
     PyWhat,

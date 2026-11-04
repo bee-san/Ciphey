@@ -60,6 +60,7 @@ impl Identifiers {
     }
 
     /// Compiles every regex now, see [`warm_up`].
+    #[cfg_attr(target_family = "wasm", allow(dead_code))]
     fn warm_up(&self) {
         self.others.warm_up();
         if let Some(url) = &self.url {
@@ -67,6 +68,14 @@ impl Identifiers {
         }
     }
 }
+
+/// pyWhat's tag of payment card numbers. The checker leaves them out, as it did before
+/// pyWhat: the card formats that aren't Charset Only (Maestro, Laser, Switch, Solo, ...)
+/// only check a prefix, a length and the Luhn digit, and 1 in 2,000 to 1 in 20,000 random
+/// digit strings of 14 to 19 digits pass (measured by audit-ciphey-upstream-pywhat). A
+/// decoder's digits, or an input that is a big number to decode, would be reported as a
+/// card number.
+const CARD_NUMBERS: &str = "Credit Card";
 
 /// [`Identifiers`] for the `pywhat_*` settings of `config`.
 pub fn identifiers_for(config: &Config) -> Identifiers {
@@ -79,7 +88,7 @@ pub fn identifiers_for(config: &Config) -> Identifiers {
     let mut all = Identifier::default()
         .min_rarity(min)
         .max_rarity(max)
-        .exclude_tags(&[CHARSET_ONLY]);
+        .exclude_tags(&[CHARSET_ONLY, CARD_NUMBERS]);
     if !config.pywhat_tags.is_empty() {
         all = all.include_tags(&config.pywhat_tags);
     }
@@ -431,7 +440,11 @@ pub(crate) fn identify(identifiers: &Identifiers, text: &str) -> Option<String> 
     first_accepted_match(identifiers, text)
         .map(|found| found.regex.name.clone())
         .or_else(|| (is_ctf_flag(text) && identifiers.uses(CTF_FLAG)).then(|| CTF_FLAG.to_string()))
-        .or_else(|| identify_idn(text).filter(|name| identifiers.uses(name)))
+        .or_else(|| {
+            // An internationalised domain is reported under a name of its own, but it is a
+            // URL without a scheme to pyWhat: it follows the settings of the URL regex
+            identify_idn(text).filter(|name| identifiers.uses(if name == IDN { URL } else { name }))
+        })
 }
 
 /// The first match of `identifiers` that is the whole of `text` and that
@@ -466,7 +479,9 @@ pub(crate) fn has_control_characters(text: &str) -> bool {
 /// * a CTF flag has one pair of braces: pyWhat's `(?i)^(thm\{.*\})$` takes junk with more
 ///   braces inside, like `THM{UyLgUqMJU}LjUkM^U}` from a chain of wrong decoders;
 /// * an email address needs a known top-level domain (see [`EMAIL_TLDS`]);
-/// * an IPv6 address must be in a range that is assigned (see [`is_assigned_ipv6`]).
+/// * an IPv6 address must be written as one and in a range that is assigned (see
+///   [`is_assigned_ipv6`]);
+/// * a UK postcode must start with a postcode area (see [`UK_POSTCODE_AREAS`]).
 fn is_accepted_match(found: &Match, text: &str) -> bool {
     let name = found.regex.name.as_str();
     if EXCLUDED_NAMES.contains(&name) {
@@ -481,6 +496,7 @@ fn is_accepted_match(found: &Match, text: &str) -> bool {
     match name {
         EMAIL => has_known_tld(text),
         IPV6 => is_assigned_ipv6(text),
+        UK_POSTCODE => is_uk_postcode_area(text),
         _ => true,
     }
 }
@@ -488,35 +504,87 @@ fn is_accepted_match(found: &Match, text: &str) -> bool {
 /// pyWhat's name for IPv6 addresses.
 const IPV6: &str = "Internet Protocol (IP) Address Version 6";
 
-/// Whether the IPv6 address `text` (which pyWhat's regex matched) is in a range IANA has
-/// assigned: global unicast (`2000::/3`, the first group `2000` to `3fff`), unique local
-/// (`fc00::/7`), link-local (`fe80::/10`), multicast (`ff00::/8`), NAT64 (`64:ff9b::`), or
-/// an address starting with `::` (`::1`, `::ffff:192.0.2.1`). pyWhat takes any groups of
-/// hex digits with colons, so decoder junk such as `DB:F::E9` and `1:6189::7823`, and a
-/// reversed address (`4337:0730:e2a8:...`), were IPv6 addresses to it. A port or a zone
-/// after the address doesn't change its first group.
+/// Whether the IPv6 address `text` (which pyWhat's regex matched) is written as an address
+/// and is in a range IANA has assigned. pyWhat takes any groups of hex digits with colons,
+/// and a port after them without brackets, so decoder junk such as `DB:F::E9`,
+/// `1:6189::7823` and `::9861:13287` (to pyWhat, `::9861` and the port 13287), and a
+/// reversed address (`4337:0730:e2a8:...`), were IPv6 addresses to it. Accepted:
+///
+/// * the address must parse as one, on its own, in brackets with or without a port
+///   (`[2001:db8::1]:8080`), or link-local with a zone (`fe80::1%eth0`);
+/// * global unicast (`2000::/3`, the first group `2000` to `3fff`), unique local
+///   (`fc00::/7`), link-local (`fe80::/10`), multicast (`ff00::/8`), NAT64 (`64:ff9b::/96`),
+///   the loopback address `::1`, and IPv4 addresses written as IPv6 (`::ffff:192.0.2.1`,
+///   `::192.0.2.1`). Other addresses that start with `::` are junk far more often than
+///   addresses (`::2`, `::9399:888`).
 fn is_assigned_ipv6(text: &str) -> bool {
-    let address = text.trim().trim_start_matches('[');
-    if address.starts_with("::") {
-        return true;
-    }
-    let Some(first) = address.split(':').next() else {
+    let text = text.trim();
+    let address = match text.strip_prefix('[') {
+        Some(rest) => {
+            let Some((address, after)) = rest.split_once(']') else {
+                return false;
+            };
+            let port_ok = after.is_empty()
+                || after
+                    .strip_prefix(':')
+                    .is_some_and(|port| port.parse::<u16>().is_ok());
+            if !port_ok {
+                return false;
+            }
+            address
+        }
+        None => text,
+    };
+    let (address, zone) = match address.split_once('%') {
+        Some((address, zone)) => (address, Some(zone)),
+        None => (address, None),
+    };
+    // Address parsing only: `core::net` has no networking
+    let Ok(parsed) = address.parse::<core::net::Ipv6Addr>() else {
         return false;
     };
-    if first.eq_ignore_ascii_case("64") {
-        return address
-            .get(3..)
-            .is_some_and(|rest| rest.to_ascii_lowercase().starts_with("ff9b:"));
+    let segments = parsed.segments();
+    let first = segments[0];
+    let link_local = (0xfe80..=0xfebf).contains(&first);
+    if zone.is_some() {
+        return link_local;
     }
-    match u16::from_str_radix(first, 16) {
-        Ok(group) => {
-            (0x2000..=0x3fff).contains(&group)
-                || (0xfc00..=0xfdff).contains(&group)
-                || (0xfe80..=0xfebf).contains(&group)
-                || group >= 0xff00
-        }
-        Err(_) => false,
-    }
+    let ipv4_inside = address.contains('.');
+    (0x2000..=0x3fff).contains(&first)
+        || (0xfc00..=0xfdff).contains(&first)
+        || link_local
+        || first >= 0xff00
+        || segments[..6] == [0x64, 0xff9b, 0, 0, 0, 0]
+        || parsed == core::net::Ipv6Addr::LOCALHOST
+        // ::a.b.c.d and ::ffff:a.b.c.d, and ::ffff:0:a.b.c.d
+        || (ipv4_inside && segments[..5] == [0; 5] && matches!(segments[5], 0 | 0xffff))
+        || (ipv4_inside && segments[..6] == [0, 0, 0, 0, 0xffff, 0])
+}
+
+/// pyWhat's name for UK postcodes.
+const UK_POSTCODE: &str = "United Kingdom (UK) Postcode";
+
+/// The postcode areas of the UK and the Crown dependencies: the letters a postcode starts
+/// with (`SW` of `SW1A 1AA`, `M` of `M1 1AE`). pyWhat's regex takes any letters there, and
+/// a Caesar shift of a postcode is still shaped like one (`TX1B 1BB` is ROT1 of `SW1A
+/// 1AA`), so a shifted postcode came back as the plaintext.
+const UK_POSTCODE_AREAS: [&str; 124] = [
+    "AB", "AL", "B", "BA", "BB", "BD", "BH", "BL", "BN", "BR", "BS", "BT", "CA", "CB", "CF", "CH",
+    "CM", "CO", "CR", "CT", "CV", "CW", "DA", "DD", "DE", "DG", "DH", "DL", "DN", "DT", "DY", "E",
+    "EC", "EH", "EN", "EX", "FK", "FY", "G", "GL", "GU", "GY", "HA", "HD", "HG", "HP", "HR", "HS",
+    "HU", "HX", "IG", "IM", "IP", "IV", "JE", "KA", "KT", "KW", "KY", "L", "LA", "LD", "LE", "LL",
+    "LN", "LS", "LU", "M", "ME", "MK", "ML", "N", "NE", "NG", "NN", "NP", "NR", "NW", "OL", "OX",
+    "PA", "PE", "PH", "PL", "PO", "PR", "RG", "RH", "RM", "S", "SA", "SE", "SG", "SK", "SL", "SM",
+    "SN", "SO", "SP", "SR", "SS", "ST", "SW", "SY", "TA", "TD", "TF", "TN", "TQ", "TR", "TS", "TW",
+    "UB", "W", "WA", "WC", "WD", "WF", "WN", "WR", "WS", "WV", "YO", "ZE",
+];
+
+/// Whether the UK postcode `text` (which pyWhat's regex matched) starts with one of
+/// [`UK_POSTCODE_AREAS`], or is `GIR 0AA`.
+fn is_uk_postcode_area(text: &str) -> bool {
+    let text = text.trim();
+    let area: String = text.chars().take_while(char::is_ascii_alphabetic).collect();
+    text == "GIR 0AA" || UK_POSTCODE_AREAS.binary_search(&area.as_str()).is_ok()
 }
 
 /// pyWhat's name for email addresses.
@@ -554,23 +622,37 @@ fn has_known_tld(text: &str) -> bool {
 /// pyWhat's name for its phone number regex.
 const PHONE_NUMBER: &str = "Phone Number";
 
-/// Whether `keys`, digits pressed on a telephone keypad, are a phone number to pyWhat once
-/// a `+` is put in front: 10 to 15 digits, not starting with 0. pyWhat's phone number
-/// regex wants a `+` and a country code, which a keypad can't dial; without it, every run
-/// of digits in decoder junk would be a phone number. The DTMF decoder uses this for the
-/// number dialled.
+/// Whether `keys`, digits pressed on a telephone keypad, are a phone number. The DTMF
+/// decoder uses this for the number dialled.
+///
+/// pyWhat's phone number regex wants a `+` and a country code, which a keypad can't dial;
+/// without it, every run of digits in decoder junk would be a phone number. So:
+///
+/// * keys that start with `00`, the international prefix, are a number if pyWhat takes them
+///   with a `+` instead (`0044...`);
+/// * keys that start with one `0`, the trunk prefix of most countries' national numbers
+///   (`07700900123` in the UK), are a number if they have 10 to 13 digits, as LemmeKnow's
+///   pattern took them before pyWhat;
+/// * other keys are a number if pyWhat takes them with a `+` in front: 10 to 15 digits, not
+///   starting with 0.
 pub(crate) fn is_phone_number(keys: &str) -> bool {
     static PHONE: Lazy<Identifier> = Lazy::new(|| {
         Identifier::default()
             .min_rarity(0.0)
             .include_tags(&[PHONE_NUMBER])
     });
-    !keys.is_empty()
-        && keys.bytes().all(|b| b.is_ascii_digit())
-        && PHONE
-            .identify_whole(&format!("+{keys}"))
-            .iter()
-            .any(|found| found.regex.name == PHONE_NUMBER)
+    if keys.is_empty() || !keys.bytes().all(|b| b.is_ascii_digit()) {
+        return false;
+    }
+    let international = match keys.strip_prefix("00") {
+        Some(rest) => rest,
+        None if keys.starts_with('0') => return (10..=13).contains(&keys.len()),
+        None => keys,
+    };
+    PHONE
+        .identify_whole(&format!("+{international}"))
+        .iter()
+        .any(|found| found.regex.name == PHONE_NUMBER)
 }
 
 /// Shown for an internationalised domain name such as `bücher.example.com`.
@@ -742,17 +824,97 @@ mod tests {
         ] {
             assert_eq!(identify(address).as_deref(), Some(IPV6), "{address}");
         }
+        // Brackets with a port, a zone, the edges of the ranges
+        for address in [
+            "[2001:db8::1]:8080",
+            "[::1]:443",
+            "FE80::1%eth0",
+            "2001:DB8::1",
+            "3fff:ffff::1",
+            "ff00::1",
+            "febf::1",
+            "::ffff:0:192.0.2.1",
+            "::192.0.2.1",
+        ] {
+            assert!(is_assigned_ipv6(address), "{address}");
+        }
         // Junk from searches, and a reversed address
         for junk in [
             "DB:F::E9",
             "1:6189::7823",
             "4337:0730:e2a8:0000:0000:3a58:8bd0:1002",
             "64:abcd::1",
+            // `::9861` and a port to pyWhat; ended a search of `095072819796`
+            "::9861:13287",
+            "::2",
+            "::9399:888",
+            "::675:b94",
         ] {
             assert_eq!(identify(junk), None, "{junk}");
         }
+        for junk in [
+            "",
+            "[2001:db8::1]:99999",
+            "[2001:db8::1]x",
+            "[2001:db8::1",
+            "4000::1",
+            "1fff::1",
+            "fec0::1",
+            "2001:db8::1%eth0",
+            "::ffff:c000:201",
+        ] {
+            assert!(!is_assigned_ipv6(junk), "{junk}");
+        }
         assert!(is_assigned_ipv6("[2001:db8::1]"));
-        assert!(!is_assigned_ipv6(""));
+    }
+
+    #[test]
+    fn uk_postcodes_must_start_with_an_area() {
+        for postcode in [
+            "SW1A 1AA", "EC1A 1BB", "W1A 0AX", "M1 1AE", "B33 8TH", "GIR 0AA",
+        ] {
+            assert_eq!(
+                identify(postcode).as_deref(),
+                Some(UK_POSTCODE),
+                "{postcode}"
+            );
+        }
+        // Caesar shifts of `SW1A 1AA`, `EC1A 1BB` and `CR2 6XH`: still shaped like postcodes.
+        // About a third of the shifts that pyWhat takes land on an area (`WA1E 1EE`), and
+        // stay postcodes.
+        for shifted in ["TX1B 1BB", "ZD1H 1HH", "AY1W 1XX", "ET2 6ZJ"] {
+            assert!(
+                Identifier::default()
+                    .identify_whole(shifted)
+                    .iter()
+                    .any(|m| m.regex.name == UK_POSTCODE),
+                "pyWhat should match {shifted}"
+            );
+            assert_eq!(identify(shifted), None, "{shifted}");
+        }
+        assert!(UK_POSTCODE_AREAS.windows(2).all(|pair| pair[0] < pair[1]));
+    }
+
+    #[test]
+    fn card_numbers_are_not_plaintext() {
+        // Luhn-valid numbers of the card formats that aren't Charset Only
+        for card in [
+            "6304000000000000",
+            "6759649826438453",
+            "6370950000000005",
+            "30000000000004",
+        ] {
+            let found = Identifier::default()
+                .min_rarity(MIN_RARITY)
+                .identify_whole(card);
+            assert!(
+                found
+                    .iter()
+                    .any(|m| m.tags.iter().any(|t| t == CARD_NUMBERS)),
+                "pyWhat should take {card} for a card number: {found:?}"
+            );
+            assert_eq!(identify(card), None, "{card}");
+        }
     }
 
     #[test]
@@ -763,6 +925,17 @@ mod tests {
             .identify_whole(junk)
             .iter()
             .any(|m| m.regex.name == "Google ReCaptcha API Key"));
+        assert_eq!(identify(junk), None);
+    }
+
+    #[test]
+    fn excluded_names_are_not_plaintext() {
+        // pyWhat's regex takes it: `o-` and 10 to 32 lower-case letters and digits
+        let junk = "o-abcdefghij12";
+        assert!(Identifier::default()
+            .identify_whole(junk)
+            .iter()
+            .any(|m| m.regex.name == "Amazon Web Services Organization Identifier"));
         assert_eq!(identify(junk), None);
     }
 
@@ -783,6 +956,9 @@ mod tests {
             .min_rarity(MIN_RARITY)
             .exclude_tags(&[pywhat::CHARSET_ONLY]);
         let split = identifiers_for(&Config::default());
+        let names = |found: Vec<Match>| -> Vec<String> {
+            found.into_iter().map(|m| m.regex.name.clone()).collect()
+        };
         let webhook = discord_webhook();
         for text in [
             "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -794,9 +970,6 @@ mod tests {
             "192.168.0.1",
             "bee@skerritt.blog",
         ] {
-            let names = |found: Vec<Match>| -> Vec<String> {
-                found.into_iter().map(|m| m.regex.name.clone()).collect()
-            };
             assert_eq!(
                 names(split.identify_whole(text)),
                 names(one.identify_whole(text)),
@@ -811,7 +984,27 @@ mod tests {
             .any(|m| m.regex.name == URL));
         assert!(split.identify_whole("example.com").is_empty());
         assert!(has_scheme_or_www("  https://x.org") && has_scheme_or_www("Www.x.org"));
+        assert!(has_scheme_or_www(" www.x.org"));
         assert!(!has_scheme_or_www("example.com") && !has_scheme_or_www("ww"));
+        // Matches of regexes after the URL regex in pyWhat's order come after it, as from one
+        // identifier: "Key:Value Pair" (rarity 0) also matches a URL
+        let with_key_value = Identifiers {
+            others: Identifier::default()
+                .min_rarity(0.0)
+                .include_tags(&["Key:Value Pair"]),
+            url: Some(Identifier::default().min_rarity(0.0).include_tags(&[URL])),
+        };
+        let one = Identifier::default()
+            .min_rarity(0.0)
+            .include_tags(&["Key:Value Pair", URL]);
+        assert_eq!(
+            names(with_key_value.identify_whole("http://example.com")),
+            [URL, "Key:Value Pair"]
+        );
+        assert_eq!(
+            names(one.identify_whole("http://example.com")),
+            [URL, "Key:Value Pair"]
+        );
         // Settings that leave the URL regex out leave it out of both
         let no_urls = identifiers_for(&Config {
             pywhat_exclude_tags: vec!["URL".to_string()],
@@ -833,8 +1026,18 @@ mod tests {
         for text in ["192.168.0.1", "flag{x}", "bee@skerritt.blog"] {
             assert!(super::identify(&old_defaults, text).is_some(), "{text}");
         }
-        // ...and Charset Only regexes stay out whatever the rarity
+        // ...and Charset Only and rarity-0 regexes stay out whatever the rarity
         assert_eq!(super::identify(&old_defaults, "4111111111111111"), None);
+        for rarity_0 in ["key: value", "///filled.count.soap"] {
+            assert!(
+                !Identifier::default()
+                    .min_rarity(0.0)
+                    .identify_whole(rarity_0)
+                    .is_empty(),
+                "pyWhat should match {rarity_0} at rarity 0"
+            );
+            assert_eq!(super::identify(&old_defaults, rarity_0), None, "{rarity_0}");
+        }
 
         config.pywhat_min_rarity = 0.8;
         let rare = identifiers_for(&config);
@@ -856,6 +1059,24 @@ mod tests {
         });
         assert!(super::identify(&only_ip, "192.168.0.1").is_some());
         assert_eq!(super::identify(&only_ip, "bee@skerritt.blog"), None);
+        // The checker's own internationalised domains and addresses follow the settings of
+        // the URL and email regexes
+        assert_eq!(super::identify(&only_ip, "bücher.example.com"), None);
+        assert_eq!(super::identify(&only_ip, "müller@example.com"), None);
+        let defaults = identifiers_for(&Config::default());
+        assert_eq!(
+            super::identify(&defaults, "bücher.example.com").as_deref(),
+            Some(IDN)
+        );
+        let no_email = identifiers_for(&Config {
+            pywhat_exclude_tags: vec!["Email".to_string()],
+            ..Config::default()
+        });
+        assert_eq!(super::identify(&no_email, "müller@example.com"), None);
+        assert_eq!(
+            super::identify(&no_email, "bücher.example.com").as_deref(),
+            Some(IDN)
+        );
     }
 
     #[test]
@@ -1112,16 +1333,28 @@ mod tests {
 
     #[test]
     fn phone_numbers_are_recognised_but_not_identified() {
-        // Keys dialled on a keypad: a number once a + is put in front
-        assert!(is_phone_number("18005551234"));
-        assert!(is_phone_number("442079460958"));
+        // Keys dialled on a keypad: a number once a + is put in front, a national number with
+        // its trunk prefix, or a number with the international prefix 00
+        for number in [
+            "18005551234",
+            "442079460958",
+            "07700900123",
+            "0123456789",
+            "00442079460958",
+        ] {
+            assert!(is_phone_number(number), "{number}");
+        }
         for not_a_number in [
             "hello",
             "",
             "123456789",
-            "0123456789",
+            "012345678",
+            "01234567890123",
             "+18005551234",
             "1800 555",
+            "1-800-555-1234",
+            "1800555123*",
+            "00",
         ] {
             assert!(!is_phone_number(not_a_number), "{not_a_number:?}");
         }

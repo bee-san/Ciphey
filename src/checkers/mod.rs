@@ -89,12 +89,12 @@ impl Identification {
 static PYWHAT_CHECKER: Lazy<Checker<PyWhat>> = Lazy::new(Checker::<PyWhat>::new);
 /// See [`PYWHAT_CHECKER`].
 static JSON_CHECKER: Lazy<Checker<JsonChecker>> = Lazy::new(Checker::<JsonChecker>::new);
-/// See [`LEMMEKNOW_CHECKER`].
+/// See [`PYWHAT_CHECKER`].
 static PASSWORD_CHECKER: Lazy<Checker<PasswordChecker>> =
     Lazy::new(Checker::<PasswordChecker>::new);
-/// See [`LEMMEKNOW_CHECKER`].
+/// See [`PYWHAT_CHECKER`].
 static ENGLISH_CHECKER: Lazy<Checker<EnglishChecker>> = Lazy::new(Checker::<EnglishChecker>::new);
-/// See [`LEMMEKNOW_CHECKER`].
+/// See [`PYWHAT_CHECKER`].
 static CODE_CHECKER: Lazy<Checker<CodeChecker>> = Lazy::new(Checker::<CodeChecker>::new);
 
 /// Runs the plaintext checkers of Athena and WaitAthena (after the wordlist) in order and

@@ -541,7 +541,9 @@ mod tests {
         assert_eq!(both.pywhat_min_rarity, 0.3);
 
         // Other ways of reading a config (serde) take the old names too
-        let config: Config = toml::from_str("lemmeknow_max_rarity = 0.0\n").unwrap();
+        let config: Config =
+            toml::from_str("lemmeknow_min_rarity = 0.5\nlemmeknow_max_rarity = 0.0\n").unwrap();
+        assert_eq!(config.pywhat_min_rarity, 0.5);
         assert_eq!(config.pywhat_max_rarity, 0.0);
 
         let defaults = Config::default();

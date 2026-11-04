@@ -55,6 +55,14 @@ fn phone_number_is_cracked() {
 }
 
 #[test]
+fn national_number_with_a_trunk_prefix_is_cracked() {
+    // 07700900123, a UK mobile number as dialled in the UK: it starts with 0
+    let result = crack("941-1336 852-1209 852-1209 941-1336 941-1336 852-1477 941-1336 941-1336 697-1209 697-1336 697-1477");
+    assert_eq!(result.text[0], "07700900123");
+    assert_eq!(path(&result), ["DTMF"]);
+}
+
+#[test]
 fn dtmf_inside_base64_is_cracked() {
     // Python 3: base64.b64encode(b"852-1336 770-1477 852-1209 770-1336 697-1477 941-1336 852-1477")
     let result = crack(

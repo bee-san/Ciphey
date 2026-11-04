@@ -124,7 +124,7 @@ More are on the way: [#1030](https://github.com/bee-san/Ciphey/issues/1030) trac
 
 <sub>▶ <a href="https://cdn.jsdelivr.net/gh/bee-san/Ciphey@d41d19946234477346fede14dadf8c351cc469e6/media/tui-video/out/lemmeknow.mp4">Watch the clip</a> (21 s)</sub>
 
-Every candidate plaintext also goes through [pyWhat](https://github.com/bee-san/pyWhat), in its Rust version, which recognises more than 120 formats. So Ciphey doesn't just decode the string, it tells you what it is: a password in a `mount` or `sshpass` command, a TOTP secret, a GitHub token or Stripe key, an IP or MAC address, an email address or URL, a crypto wallet, an AWS ARN, JSON or a CTF flag in any format (`flag{…}`, `picoCTF{…}`, `DUCTF{…}`). Formats that pyWhat marks "Charset Only", because they only say which characters a string has and how long it is (card numbers, for example), are ignored: decoder junk matches them all the time.
+Every candidate plaintext also goes through [pyWhat](https://github.com/bee-san/pyWhat), in its Rust version, which recognises more than 120 formats. So Ciphey doesn't just decode the string, it tells you what it is: a password in a `mount` or `sshpass` command, a TOTP secret, a GitHub token or Stripe key, an IP or MAC address, an email address or URL, a crypto wallet, an AWS ARN, JSON or a CTF flag in any format (`flag{…}`, `picoCTF{…}`, `DUCTF{…}`). Card numbers, and the formats that pyWhat marks "Charset Only" because they only say which characters a string has and how long it is, are ignored: decoder junk matches them all the time.
 
 ```console
 $ ciphey -t '3139322e3136382e302e31'
