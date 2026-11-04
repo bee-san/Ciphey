@@ -1,0 +1,15 @@
+Ciphey
+Copyright (c) bee-san and Ciphey's contributors. MIT License (LICENSE).
+
+Ciphey's binaries include data from its dependencies. That data and its sources:
+
+gibberish-or-not (https://github.com/bee-san/gibberish-or-not, MIT License)
+---------------------------------------------------------------------------
+Its English language pack (languages/en/model.bin) holds letter n-gram counts and a word
+list derived from these sources; no text of the sources is included:
+- Project Gutenberg books (https://www.gutenberg.org): public domain in the USA.
+- Tatoeba English sentences (https://tatoeba.org), export of 2026-10-31: CC BY 2.0 FR,
+  https://creativecommons.org/licenses/by/2.0/fr/, by the Tatoeba contributors
+  (https://tatoeba.org/en/users/all).
+- Moby Word Lists by Grady Ward (Project Gutenberg ebook 3201): public domain.
+gibberish-or-not's NOTICE has the details.

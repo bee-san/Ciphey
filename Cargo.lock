@@ -1509,7 +1509,7 @@ dependencies = [
 [[package]]
 name = "gibberish-or-not"
 version = "6.0.0"
-source = "git+https://github.com/bee-san/gibberish-or-not?branch=gib-lead#30e03eaa1502281e3df9f4f34dbf5673ea3c8e49"
+source = "git+https://github.com/bee-san/gibberish-or-not?branch=gib-lead#b56b0c5ecc2b86e6074ae3f13bc4873a36feba08"
 dependencies = [
  "once_cell",
  "phf",
