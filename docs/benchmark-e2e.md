@@ -34,8 +34,9 @@ binary), `python-ciphey` (the Python of a venv with Python Ciphey), `cyberchef` 
 `cyberchef-intensive` (a directory with `node_modules/cyberchef`). Every run writes
 `results.tsv` (one line per case and tool: status, verdict, seconds, decoder path, answer),
 `summary.md` and `meta.json` (versions, sha256 of the binary and the corpus, timeout,
-threads, `uptime` before and after) to `target/e2e/<time>/`, or `--out`. It reads and writes
-only inside the repository and the temp directory.
+threads, `uptime` before and after) to `target/e2e/<UTC time>/`. `--corpus` picks a corpus
+from `benches/data/e2e/` and `--summarize` reads runs from `target/e2e/` and the baselines
+in `benches/data/e2e/`; the runner takes no other paths.
 
 ## Method
 
@@ -136,10 +137,10 @@ languages (gibberish-or-not 6). The summary counts them on their own for Ciphey.
 **How the ciphertexts were made.** Never with Ciphey's decoders, always with something
 independent: Python's standard library (Base64/32/16/85, Ascii85, binascii, quopri,
 email.header, idna, utf-7, cp037, gzip, zlib, bz2, lzma, hashlib, hmac), PyPI references
-(base45, base58, base65536, base91, base92, pybase62, pycipher, pycryptodome's MD4, lz4,
-zstandard, lzstring, cipheydists's galactic table), CyberChef's encoders (Citrix CTX1,
+(base45, base58, base65536, base91, base92, pybase62, pycipher, lz4, zstandard, lzstring,
+cipheydists's galactic table), CyberChef's encoders (Citrix CTX1,
 ROT8000, A1Z26, Bacon), the npm `jsfuck` reference encoder, or a few lines written from the
-published definition and cited in the code (Z85 from ZeroMQ RFC 32, Bech32 from BIP-173,
+published definition and cited in the code (MD4 for NTLM from RFC 1320, Z85 from ZeroMQ RFC 32, Bech32 from BIP-173,
 Bubble Babble, Monero's Base58, ITA2, the standard genetic code, AAEncode ported from
 Hasegawa's encoder, Delastelle's four-square, ...). `corpus.py` checks known answers of the
 hand-written ones when it starts (`selftest`), and `corpus.py --verify` decodes the corpus

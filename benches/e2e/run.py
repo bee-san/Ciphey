@@ -6,7 +6,7 @@
     python3 benches/e2e/run.py python-ciphey:.venv-pyciphey/bin/python   # Python Ciphey 5.x
     python3 benches/e2e/run.py cyberchef:.tools/cyberchef                # CyberChef Magic (depth 3)
     python3 benches/e2e/run.py cyberchef-intensive:.tools/cyberchef      # ... with intensive mode
-    python3 benches/e2e/run.py --summarize a/results.tsv b/results.tsv   # one table from saved runs
+    python3 benches/e2e/run.py --summarize target/e2e/*/results.tsv     # one table from saved runs
 
 A tool is `[name=][adapter:]path`; the adapter defaults to `ciphey` (any ciphey binary). With
 two tools the cases run interleaved, A then B on even cases and B then A on odd ones, so host
@@ -17,8 +17,8 @@ no terminal and no prompts: `ciphey -d -c TIMEOUT --text=INPUT`, RAYON_NUM_THREA
 A run is killed after TIMEOUT + 1 s of wall-clock time. Accuracy is deterministic up to cases
 that finish close to the timeout; `--repeat 2` (or the same binary as A and B) shows them.
 
-Outputs go to --out (default target/e2e/<time>): results.tsv, summary.md and meta.json. The
-summary is printed too, with the host load (`uptime`) before and after. Standard library only.
+Outputs go to target/e2e/<UTC time>/: results.tsv, summary.md and meta.json. The summary is
+printed too, with the host load (`uptime`) before and after. Standard library only.
 """
 
 import argparse
@@ -39,7 +39,6 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
-DEFAULT_CORPUS = os.path.join(ROOT, "benches", "data", "e2e", "corpus-v1.tsv")
 CONFIG_TOML = os.path.join(ROOT, "benches", "data", "config.toml")
 CATEGORIES = ["encoding", "classical", "hash", "chain", "flag", "short", "long", "language", "plaintext", "no_answer"]
 ADAPTERS = ["ciphey", "python-ciphey", "cyberchef", "cyberchef-intensive"]
@@ -49,17 +48,6 @@ ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 # ---------------------------------------------------------------------------------------
 # Corpus
-
-
-def inside(path, *bases):
-    """`path` made absolute, if it is in the repository or the temp directory (or in `bases`):
-    the benchmark reads and writes nowhere else. Exits otherwise."""
-    full = os.path.realpath(path)
-    for base in bases or (ROOT, tempfile.gettempdir()):
-        base = os.path.realpath(base)
-        if os.path.commonpath([base, full]) == base:
-            return full
-    raise SystemExit(f"{path}: the benchmark only reads and writes in {ROOT} and {tempfile.gettempdir()}")
 
 
 def unesc(s):
@@ -84,8 +72,14 @@ class Case:
         self.input, self.expected = unesc(inp), unesc(exp)
 
 
+def corpora():
+    """The corpora in benches/data/e2e, by file name."""
+    data = os.path.join(ROOT, "benches", "data", "e2e")
+    return {name: os.path.join(data, name) for name in sorted(os.listdir(data)) if re.fullmatch(r"corpus-v\d+\.tsv", name)}
+
+
 def load_corpus(path):
-    with open(inside(path), encoding="utf-8") as fh:  # NOSONAR: a local benchmark CLI; inside() keeps its paths in the repo and the temp dir
+    with open(path, encoding="utf-8") as fh:
         raw = fh.read()
     lines = [ln for ln in raw.split("\n") if ln and not ln.startswith("#")]
     header = lines[0].split("\t")
@@ -515,10 +509,24 @@ def esc(s):
     return (s or "").replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n").replace("\r", "\\r")
 
 
+def saved_results():
+    """The results files that --summarize reads: every results.tsv under target/e2e and the
+    baselines in benches/data/e2e, by absolute path and by path from the repository root."""
+    found = {}
+    for top in (os.path.join(ROOT, "target", "e2e"), os.path.join(ROOT, "benches", "data", "e2e")):
+        for dirpath, _, files in os.walk(top):
+            for name in files:
+                if name == "results.tsv" or name.startswith("baseline-"):
+                    full = os.path.join(dirpath, name)
+                    found[full] = full
+                    found[os.path.relpath(full, ROOT)] = full
+    return found
+
+
 def read_results(paths):
     rows = []
     for p in paths:
-        with open(inside(p), encoding="utf-8") as fh:  # NOSONAR: a local benchmark CLI; inside() keeps its paths in the repo and the temp dir
+        with open(p, encoding="utf-8") as fh:
             header = fh.readline().rstrip("\n").split("\t")
             for line in fh:
                 r = dict(zip(header, line.rstrip("\n").split("\t")))
@@ -533,7 +541,7 @@ def read_results(paths):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("tools", nargs="*", help="[name=][adapter:]path, adapter one of " + ", ".join(ADAPTERS))
-    ap.add_argument("--corpus", default=DEFAULT_CORPUS)
+    ap.add_argument("--corpus", default="corpus-v1.tsv", choices=sorted(corpora()), help="a corpus in benches/data/e2e")
     ap.add_argument("--subset", choices=["quick", "smoke"], help="only the cases of this subset")
     ap.add_argument("--category", action="append", help="only these categories (repeatable)")
     ap.add_argument("--ids", help="only cases whose id matches this regex")
@@ -543,16 +551,25 @@ def main():
     ap.add_argument("--repeat", type=int, default=1, help="run every case this many times")
     ap.add_argument("--node", default=os.environ.get("NODE", "node"), help="the node binary for CyberChef (default $NODE or node)")
     ap.add_argument("--all-cases", action="store_true", help="also run cases not tagged as comparable on the tool")
-    ap.add_argument("--out", help="output directory, default target/e2e/<UTC time>")
-    ap.add_argument("--summarize", nargs="+", metavar="RESULTS_TSV", help="summarize saved results.tsv files instead")
+    ap.add_argument("--summarize", nargs="+", metavar="RESULTS_TSV",
+                    help="summarize saved runs instead: results.tsv files under target/e2e, or benches/data/e2e/baseline-*.tsv")
     ap.add_argument("--check", action="store_true",
                     help="exit 1 if a case that isn't an expected failure isn't correct (one tool), or if a case "
                          "A got right isn't right for B (A/B)")
     args = ap.parse_args()
 
-    cases, corpus_sha = load_corpus(args.corpus)
+    corpus_path = corpora()[args.corpus]
+    cases, corpus_sha = load_corpus(corpus_path)
     if args.summarize:
-        rows = read_results(args.summarize)
+        known_files = saved_results()
+        here = os.getcwd()
+        files = []
+        for p in args.summarize:
+            key = p if os.path.isabs(p) else os.path.relpath(os.path.join(here, p), ROOT)
+            if key not in known_files:
+                ap.error(f"{p}: --summarize reads results.tsv files under target/e2e and benches/data/e2e/baseline-*.tsv")
+            files.append(known_files[key])
+        rows = read_results(files)
         known = {c.id for c in cases}
         unknown = sorted({r["id"] for r in rows} - known)
         if unknown:
@@ -577,10 +594,14 @@ def main():
         tools[0].name, tools[1].name = tools[0].name + "-A", tools[1].name + "-B"
     names = [t.name for t in tools]
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    out_dir = inside(args.out or os.path.join(ROOT, "target", "e2e", stamp + "-" + "-vs-".join(names)))
-    os.makedirs(out_dir, exist_ok=True)  # NOSONAR: a local benchmark CLI; inside() keeps its paths in the repo and the temp dir
+    out_dir = os.path.join(ROOT, "target", "e2e", stamp)
+    n = 1
+    while os.path.exists(out_dir):
+        n += 1
+        out_dir = os.path.join(ROOT, "target", "e2e", f"{stamp}-{n}")
+    os.makedirs(out_dir)
     meta = {
-        "started_utc": stamp, "corpus": os.path.relpath(args.corpus, ROOT), "corpus_sha256": corpus_sha,
+        "started_utc": stamp, "corpus": os.path.relpath(corpus_path, ROOT), "corpus_sha256": corpus_sha,
         "cases_selected": len(sel), "timeout_s": args.timeout, "kill_after_s": args.timeout + GRACE,
         "rayon_threads": args.threads, "repeat": args.repeat, "subset": args.subset, "category": args.category, "ids": args.ids,
         "host": f"{platform.node()}, {platform.machine()}, {os.cpu_count()} logical CPUs, {platform.system()} {platform.release()}",
@@ -589,7 +610,7 @@ def main():
     print(f"uptime before: {meta['uptime_start']}", flush=True)
     print(f"{len(sel)} cases, timeout {args.timeout} s, RAYON_NUM_THREADS={args.threads}, tools: {', '.join(names)}", flush=True)
     rows = []
-    results = open(os.path.join(out_dir, "results.tsv"), "w", encoding="utf-8")  # NOSONAR: a local benchmark CLI; inside() keeps its paths in the repo and the temp dir
+    results = open(os.path.join(out_dir, "results.tsv"), "w", encoding="utf-8")
     results.write("\t".join(RESULT_COLUMNS) + "\n")
     try:
         k = 0
@@ -628,9 +649,9 @@ def main():
     if len(tools) == 2:
         report.append(ab_report(rows, cases, *names))
     text = "\n".join(report)
-    with open(os.path.join(out_dir, "summary.md"), "w", encoding="utf-8") as fh:  # NOSONAR: a local benchmark CLI; inside() keeps its paths in the repo and the temp dir
+    with open(os.path.join(out_dir, "summary.md"), "w", encoding="utf-8") as fh:
         fh.write(text + "\n")
-    with open(os.path.join(out_dir, "meta.json"), "w", encoding="utf-8") as fh:  # NOSONAR: a local benchmark CLI; inside() keeps its paths in the repo and the temp dir
+    with open(os.path.join(out_dir, "meta.json"), "w", encoding="utf-8") as fh:
         json.dump(meta, fh, indent=1)
         fh.write("\n")
     print()

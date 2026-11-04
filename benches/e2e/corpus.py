@@ -1169,12 +1169,44 @@ def nihilist(square_key, key):
     return text(enc)
 
 
+def md4(data):
+    """MD4 (RFC 1320), for NTLM test data: Python's hashlib has it only with OpenSSL's legacy
+    provider. Checked against the RFC's test suite in selftest()."""
+    def f(x, y, z):
+        return (x & y) | (~x & z)
+
+    def g(x, y, z):
+        return (x & y) | (x & z) | (y & z)
+
+    def h(x, y, z):
+        return x ^ y ^ z
+
+    def rotl32(v, n):
+        v &= 0xFFFFFFFF
+        return ((v << n) | (v >> (32 - n))) & 0xFFFFFFFF
+
+    msg = data + b"\x80" + b"\0" * ((55 - len(data)) % 64) + (8 * len(data) % 2**64).to_bytes(8, "little")
+    state = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476]
+    for off in range(0, len(msg), 64):
+        x = [int.from_bytes(msg[off + 4 * i : off + 4 * i + 4], "little") for i in range(16)]
+        a, b, c, d = state
+        for i in range(16):  # round 1
+            k, s = i, (3, 7, 11, 19)[i % 4]
+            a, b, c, d = d, rotl32(a + f(b, c, d) + x[k], s), b, c
+        for i in range(16):  # round 2
+            k, s = (i % 4) * 4 + i // 4, (3, 5, 9, 13)[i % 4]
+            a, b, c, d = d, rotl32(a + g(b, c, d) + x[k] + 0x5A827999, s), b, c
+        for i in range(16):  # round 3
+            k, s = (0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15)[i], (3, 9, 11, 15)[i % 4]
+            a, b, c, d = d, rotl32(a + h(b, c, d) + x[k] + 0x6ED9EBA1, s), b, c
+        state = [(v + w) & 0xFFFFFFFF for v, w in zip(state, (a, b, c, d))]
+    return b"".join(v.to_bytes(4, "little") for v in state)
+
+
 def hash_hex(name):
     def enc(data, rng):
-        if name == "ntlm":  # MD4 of the UTF-16LE password (PyCryptodome)
-            from Crypto.Hash import MD4
-
-            return MD4.new(u(data).encode("utf-16-le")).hexdigest().encode()  # NOSONAR: test data, not security
+        if name == "ntlm":  # MD4 of the UTF-16LE password
+            return md4(u(data).encode("utf-16-le")).hex().encode()
         return hashlib.new(name, data, usedforsecurity=False).hexdigest().encode()
 
     enc.__name__ = "hash_" + name
@@ -1865,6 +1897,8 @@ def selftest():
     assert z85(bytes.fromhex("864FD26FB559F75B"), None) == b"HelloWorld"  # ZeroMQ RFC 32
     assert bubblebabble(b"", None) == b"xexax" and bubblebabble(b"1234567890", None) == b"xesef-disof-gytuf-katof-movif-baxux"
     assert bubblebabble(b"Pineapple", None) == b"xigak-nyryk-humil-bosek-sonax"
+    assert md4(b"").hex() == "31d6cfe0d16ae931b73c59d7e0c089c0" and md4(b"abc").hex() == "a448017aaf21d8525fc10ae87aa6729d"  # RFC 1320
+    assert md4(b"12345678901234567890123456789012345678901234567890123456789012345678901234567890").hex() == "e33b4ddc9c38f2199c3e7b164fcc0536"
     assert hash_hex("ntlm")(b"password", None) == b"8846f7eaee8fb117ad06bdd830b7586c"
     assert cisco7_fixed(b"cisco", 2) == "02050D480809"
     assert qwerty_as_dvorak(b"hello world", None) == b"d.nnr ,rpne"
@@ -1888,13 +1922,9 @@ def main():
     ap.add_argument("--cyberchef", required=True, help="directory with node_modules/cyberchef and jsfuck (setup.sh)")
     ap.add_argument("--check", action="store_true", help="regenerate and compare with the committed corpus")
     ap.add_argument("--verify", action="store_true", help="decode every case again with independent decoders")
-    ap.add_argument("--out", default=OUT)
     args = ap.parse_args()
     sys.path.insert(0, HERE)
     from cyberchef import CyberChef
-    from run import inside
-
-    args.out = inside(args.out)
 
     CHEF = CyberChef(args.cyberchef)
     try:
@@ -1906,19 +1936,19 @@ def main():
 
             sys.exit(verify(cases, CHEF))
         if args.check:
-            with open(args.out, encoding="utf-8") as fh:  # NOSONAR: a local CLI; inside() keeps the path in the repo or the temp dir
+            with open(OUT, encoding="utf-8") as fh:
                 old = fh.read()
             if old != rendered:
-                print(f"{args.out} differs from what corpus.py generates", file=sys.stderr)
+                print(f"{OUT} differs from what corpus.py generates", file=sys.stderr)
                 sys.exit(1)
-            print(f"{args.out}: {len(cases)} cases, identical")
+            print(f"{OUT}: {len(cases)} cases, identical")
             return
-        with open(args.out, "w", encoding="utf-8") as fh:  # NOSONAR: a local CLI; inside() keeps the path in the repo or the temp dir
+        with open(OUT, "w", encoding="utf-8") as fh:
             fh.write(rendered)
         by_cat = {}
         for c in cases:
             by_cat[c.category] = by_cat.get(c.category, 0) + 1
-        print(f"wrote {args.out}: {len(cases)} cases {by_cat}")
+        print(f"wrote {OUT}: {len(cases)} cases {by_cat}")
     finally:
         CHEF.close()
 

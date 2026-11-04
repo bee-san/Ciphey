@@ -60,6 +60,6 @@ if [[ $what == all || $what == gen ]]; then
   "$UV" venv -p 3.12 "$TOOLS/gen"
   "$UV" pip install -p "$TOOLS/gen/bin/python" base45==0.4.4 base58==2.1.1 base65536==0.1.1 base91==1.0.1 \
     base92==2.0.0 cipheydists==0.3.35 lz4==4.4.5 lzstring==1.0.4 pybase62==1.0.0 pycipher==0.5.2 \
-    pycryptodome==4.3.0 zstandard==0.25.0
+    zstandard==0.25.0
 fi
 echo "tools in $TOOLS"
