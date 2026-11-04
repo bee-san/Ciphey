@@ -1,7 +1,7 @@
 use crate::checkers::checker_result::CheckResult;
 use crate::checkers::lemmeknow_checker::{has_control_characters, is_ctf_flag_shaped};
 use crate::decoders::nato_phonetic_decoder::decode_nato;
-use crate::storage::ngrams::{is_short_word, quadgram_score};
+use crate::storage::ngrams::{is_short_word, quadgram_score, quadgram_score_and_letters};
 use gibberish_or_not::{is_word, Detector, Lang, Sensitivity};
 use lemmeknow::Identifier;
 use once_cell::sync::Lazy;
@@ -31,7 +31,9 @@ use crate::checkers::checker_type::{Check, Checker};
 /// 4. **Other text without whitespace** (digits or symbols mixed in, like
 ///    `ThI2THAtThE2THe0`), **one or two words**: only a single dictionary word passes, of
 ///    five or more letters at Low.
-/// 5. **Everything else**: rejected if no word is English, or if fewer than
+/// 5. **Everything else**: rejected if its letters' quadgram score is below
+///    `quadgram_veto`, far from any natural language (wrong Caesar shifts such as
+///    `Max mkxtlnkx bl unkbxw ngwxk`), if no word is English, or if fewer than
 ///    `min_known_ratio` of the words are and it isn't in another language (reversed text,
 ///    wrong railfence keys, partly decrypted Vigenère); otherwise gibberish-or-not decides.
 ///
@@ -54,6 +56,24 @@ const SPACELESS_MIN_WORD_COVERAGE: f64 = 0.85;
 /// this into words: nothing that low is English, and splitting costs a dictionary lookup
 /// per letter and word length.
 const SPACELESS_SPLIT_MIN_SCORE: f64 = -5.6;
+
+/// Text with spaces and at least [`QUADGRAM_VETO_MIN_LETTERS`] letters that scores below
+/// this is rejected before its words are looked up: wrong Caesar shifts such as `Max
+/// mkxtlnkx bl unkbxw ngwxk` and reversed text. English, even ALL CAPS, names and code,
+/// scores above -5.3 in the #1031 corpora, and French, German and Spanish above -6.5.
+/// With gibberish-or-not 6 the veto changes no verdict on the benchmark's data set (the
+/// rules after it reject the same texts); it is kept because it is cheaper than they are,
+/// and almost everything a search checks is junk. High, the most lenient sensitivity,
+/// only vetoes text further away.
+fn quadgram_veto(sensitivity: Sensitivity) -> f64 {
+    match sensitivity {
+        Sensitivity::Low | Sensitivity::Medium => -6.5,
+        Sensitivity::High => -7.5,
+    }
+}
+
+/// Fewer letters give too few quadgrams for the veto to be reliable.
+const QUADGRAM_VETO_MIN_LETTERS: usize = 12;
 
 /// The languages Ciphey accepts text in besides English: the gibberish-or-not language
 /// packs it compiles in, one Cargo feature each (`Cargo.toml`). Which ones is decided by
@@ -80,6 +100,8 @@ static OTHER_LANGUAGE_DETECTOR: Lazy<Detector> = Lazy::new(|| {
 
 /// The language `detector` finds `text` to be at `sensitivity`, if any.
 fn language(detector: &Detector, text: &str, sensitivity: Sensitivity) -> Option<Lang> {
+    // A detector without languages accepts nothing, but would still analyse the text
+    detector.enabled().next()?;
     let found = detector.detect(text);
     if found.score >= sensitivity.min_score() {
         found.language
@@ -190,6 +212,16 @@ fn identify_with(
     // (`Hello,world!How`), and numbers count against them: `9=inn@on` and
     // `SO[\OTSTONTNOTTR` are junk
     let candidates: &[&str] = if spaceless { &words } else { &alpha_words };
+    // Cheapest first: a quadgram score far from any language rejects text with spaces
+    // before its words are looked up
+    if !spaceless {
+        let (score, letters) = quadgram_score_and_letters(trimmed);
+        if letters >= QUADGRAM_VETO_MIN_LETTERS
+            && score.is_some_and(|score| score < quadgram_veto(sensitivity))
+        {
+            return None;
+        }
+    }
     let known = known_words(candidates, min_known_ratio(sensitivity));
     if candidates.len() >= 2
         && known == Known::Mostly

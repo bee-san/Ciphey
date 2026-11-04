@@ -131,8 +131,8 @@ junk, and junk that happens to be language (a common word, two short words) is s
 there, so the checker has rules of its own on top. Each was measured against
 gibberish-or-not 6 deciding alone (see [What the English rules
 do](#what-the-english-rules-do)); the rules that gibberish-or-not now does better are gone
-(normalising the text before asking it, a quadgram score for text without spaces, and a
-quadgram veto for text with them).
+(normalising the text before asking it, and a quadgram score and word split for text
+without spaces).
 
 The text is normalised for the word rules only (gibberish-or-not reads the text as written,
 and the result keeps the original): lower case, ASCII punctuation becomes a space except
@@ -159,25 +159,29 @@ IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR`. Then:
 2. **Space-less letters** (no whitespace, only ASCII, 8+ letters, 90%+ letters), what
    classical ciphers leave plaintext as: gibberish-or-not decides (`MEETMEATNOON`,
    `HELLOWORLD`, not the railfence shuffle `HWORLDELLO`).
-3. **Mostly words**: two or more words, one of three letters or more, more than 80% of
+3. **Text with spaces** whose quadgram score is below -6.5 (-7.5 at High) over 12+ letters
+   is far from any language: rejected (wrong Caesar shifts, reversed text). With
+   gibberish-or-not 6 this changes no verdict on the data set, since the later rules reject
+   the same texts, but it rejects them before any word is looked up.
+4. **Mostly words**: two or more words, one of three letters or more, more than 80% of
    them English words, accepted. Numbers don't count either way (`number 1 1 operation`).
    Without spaces the words must be separated by writing's punctuation or `_`
    (`Hello,world!How`, `beware_the_ides_of_march`, not `9=inn@on`), and numbers count
    against.
-4. A **single word** must be a dictionary word of 4 to 9 letters, of 5+ letters at Low: one
+5. A **single word** must be a dictionary word of 4 to 9 letters, of 5+ letters at Low: one
    in 150 strings of four letters is a dictionary word, and the ciphers that check at Low
    ask about their most English-looking key, so they found `SHAG` and `MEAN` in junk. It
    doesn't label a number with more digits than its letters (`flag = 5093751751…`, Big
    integer's input).
-5. **Two words** that aren't both words are rejected (`terces pot`, `peg knioge`).
-6. **No English word at all** is rejected, and so are **fewer than half English words**
+6. **Two words** that aren't both words are rejected (`terces pot`, `peg knioge`).
+7. **No English word at all** is rejected, and so are **fewer than half English words**
    (35% at High) unless two different common words of French, German, Spanish, Italian,
    Portuguese or Dutch are in the text (`is_other_language`): reversed text, wrong
    railfence keys and partly decrypted Vigenère are below half; English sentences hardly
    ever are.
-7. Everything else goes to gibberish-or-not at the checker's sensitivity.
+8. Everything else goes to gibberish-or-not at the checker's sensitivity.
 
-Text that rules 4 to 6 reject is still accepted if gibberish-or-not finds it is one of the
+Text that rules 5 to 7 reject is still accepted if gibberish-or-not finds it is one of the
 [other languages](#languages) Ciphey compiles in, and is then reported as `Words (French)`
 and so on, in the result, the human checker's prompt and `--top-results`.
 
@@ -199,7 +203,7 @@ heldout; Caesar is `crack()` on the held-out plaintexts.
 |---|---|---|---|---|---|---|
 | none: every rule (MIGRATION.md's change 2 only) | 0.969 / 0.972 | 30 + 33 | 0.967 / 0.971 | 44 + 46 | 92.4% / 0.4% | baseline |
 | normalising the text gibberish-or-not reads | 0.971 / 0.975 | 25 + 24 | 0.971 / 0.975 | 34 + 35 | 92.4% / 0.4% | removed |
-| quadgram veto for text with spaces | 0.969 / 0.972 | 30 + 33 | 0.966 / 0.971 | 45 + 46 | 92.4% / 0.4% | removed |
+| quadgram veto for text with spaces | 0.969 / 0.972 | 30 + 33 | 0.966 / 0.971 | 45 + 46 | 92.4% / 0.4% | kept: with the rules below, no verdict changes, and it is the cheapest reject |
 | quadgram score and word split for space-less text | 0.967 / 0.973 | 31 + 30 | 0.963 / 0.972 | 48 + 48 | 92.2% / 0.2% | removed |
 | long words (10+) by quadgram score or split, instead of gibberish-or-not's list | 0.969 / 0.972 | 30 + 32 | 0.967 / 0.972 | 43 + 43 | 92.4% / 0.4% | kept with the list (same numbers; the list misses rare words such as `decompresses`) |
 | decoder-output vetoes (case, symbols, brackets) | 0.967 / 0.971 | 36 + 35 | 0.963 / 0.970 | 53 + 49 | 92.4% / 0.4% | kept |
@@ -301,12 +305,12 @@ gibberish-or-not 6.0 ships English only. A pack is added when it is measured her
 language's recall (the informational `non_english` category, and new categories of that
 language) against the false positives it adds on the junk categories and end to end. The
 English checker asks the other languages' packs only about text its English rules reject
-(rules 4 to 6 above) and about text it leaves to gibberish-or-not, and reports their
+(rules 5 to 7 above) and about text it leaves to gibberish-or-not, and reports their
 language (`Words (Spanish)`).
 
 French, German, Spanish and other Latin-script sentences are partly accepted already:
 gibberish-or-not's English pack accepts many of them, labelled English, when the
-other-language exemption (rule 6) lets them through.
+other-language exemption (rule 7) lets them through.
 
 ## The quadgram model
 
