@@ -95,9 +95,9 @@ pub fn search_for_plaintext(input: String) -> Result<Option<DecoderResult>, Ciph
 /// until the search space is exhausted, and returns the first result, if any.
 #[cfg(target_family = "wasm")]
 pub fn search_for_plaintext(input: String) -> Result<Option<DecoderResult>, CipheyError> {
-    let timeout = get_config().timeout;
-    let deadline = Deadline::after(std::time::Duration::from_secs(u64::from(timeout)));
-    search_until(input, deadline, timeout)
+    let config = get_config();
+    let deadline = Deadline::after(std::time::Duration::from_secs(u64::from(config.timeout)));
+    search_until(input, deadline, config.timeout, config.top_results)
 }
 
 /// Runs the search on this thread until it finds a result, the search space is exhausted or
@@ -105,14 +105,14 @@ pub fn search_for_plaintext(input: String) -> Result<Option<DecoderResult>, Ciph
 /// This replaces the search thread and the timer thread of native targets, and returns what
 /// they do: the first result, `Ok(None)` once the search space is exhausted (and in
 /// `top_results` mode when nothing was found), or a [`CipheyError::Timeout`] for `timeout`
-/// seconds.
+/// seconds. `top_results_mode` is the config's `top_results`.
 #[cfg_attr(not(target_family = "wasm"), allow(dead_code))]
 pub(crate) fn search_until(
     input: String,
     deadline: Deadline,
     timeout: u32,
+    top_results_mode: bool,
 ) -> Result<Option<DecoderResult>, CipheyError> {
-    let top_results_mode = get_config().top_results;
     let mut first_result = None;
     let mut exhausted = false;
     astar::astar(
@@ -457,7 +457,7 @@ mod tests {
     #[test]
     fn search_until_returns_the_plaintext() {
         let deadline = Deadline::after(std::time::Duration::from_secs(60));
-        let result = search_until("SGVsbG8gV29ybGQ=".to_string(), deadline, 60);
+        let result = search_until("SGVsbG8gV29ybGQ=".to_string(), deadline, 60, false);
         let result = result
             .unwrap()
             .expect("Base64 of Hello World should be decoded");
@@ -469,7 +469,7 @@ mod tests {
     fn search_until_an_exhausted_search_is_ok_none() {
         let deadline = Deadline::after(std::time::Duration::from_secs(60));
         assert!(matches!(
-            search_until(String::new(), deadline, 60),
+            search_until(String::new(), deadline, 60, false),
             Ok(None)
         ));
     }
@@ -480,7 +480,7 @@ mod tests {
         // memory runs out
         let started = std::time::Instant::now();
         let deadline = Deadline::after(std::time::Duration::from_millis(500));
-        let result = search_until("AAAA".to_string(), deadline, 7);
+        let result = search_until("AAAA".to_string(), deadline, 7, false);
         assert!(matches!(result, Err(CipheyError::Timeout { secs: 7 })));
         assert!(
             started.elapsed() < std::time::Duration::from_secs(60),
@@ -489,7 +489,16 @@ mod tests {
 
         // A deadline that has already passed: nothing is searched
         let deadline = Deadline::after(std::time::Duration::ZERO);
-        let result = search_until("SGVsbG8gV29ybGQ=".to_string(), deadline, 7);
+        let result = search_until("SGVsbG8gV29ybGQ=".to_string(), deadline, 7, false);
         assert!(matches!(result, Err(CipheyError::Timeout { secs: 7 })));
+    }
+
+    #[test]
+    fn search_until_in_top_results_mode_ends_without_an_error() {
+        // As natively: in top_results mode the search runs until the timeout, and finding
+        // nothing by then isn't an error
+        let deadline = Deadline::after(std::time::Duration::from_millis(300));
+        let result = search_until("AAAA".to_string(), deadline, 7, true);
+        assert!(matches!(result, Ok(None)), "{result:?}");
     }
 }

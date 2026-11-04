@@ -19,11 +19,12 @@
 //! assert_eq!(detection.description, "Internet Protocol (IP) Address Version 4");
 //! ```
 //!
-//! The library also builds for WebAssembly (`cargo build --lib --target
-//! wasm32-unknown-unknown`, no flags or features). There the search runs on the caller's
-//! thread and stops at the timeout by itself, there is no cache, the human checker never
-//! asks, and the CLI, the config file and wordlist files aren't available. See
-//! `docs/wasm.md` in the repository.
+//! The library is written to build for WebAssembly with its default features and no flags
+//! (`cargo build --lib --target wasm32-unknown-unknown`), once its gibberish-or-not and
+//! LemmeKnow dependencies are replaced by versions that build there. On WebAssembly the
+//! search runs on the caller's thread and stops at the timeout by itself, there is no
+//! cache, the human checker never asks, and the CLI, the config file and wordlist files
+//! aren't available. See `docs/wasm.md` in the repository.
 // Warns in case we forget to include documentation
 #![warn(
     missing_docs,

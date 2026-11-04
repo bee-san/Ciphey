@@ -12,8 +12,9 @@ pub(crate) use rayon::prelude::*;
 #[cfg(target_family = "wasm")]
 pub(crate) use sequential::*;
 
-/// The sequential stand-ins for rayon's traits.
-#[cfg(target_family = "wasm")]
+/// The sequential stand-ins for rayon's traits. Natively they are only built for the tests
+/// below, which check that they give what rayon gives.
+#[cfg(any(target_family = "wasm", test))]
 mod sequential {
     /// `par_iter()` on a slice (and so on a `Vec`): its `iter()`.
     pub(crate) trait IntoParallelRefIterator<'data> {
@@ -78,4 +79,87 @@ mod sequential {
     }
 
     impl<I: Iterator> ParallelIterator for I {}
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+mod tests {
+    /// What the sequential stand-ins give for the calls the library makes.
+    mod sequential {
+        use crate::parallel::sequential::{
+            IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
+        };
+
+        pub(super) fn flat_map_iter(items: &[u32]) -> Vec<u32> {
+            items.par_iter().flat_map_iter(|&n| [n, n * 10]).collect()
+        }
+
+        pub(super) fn find_map_first(items: &[u32]) -> Option<(usize, u32)> {
+            items
+                .par_iter()
+                .enumerate()
+                .find_map_first(|(i, &n)| (n % 3 == 0).then_some((i, n)))
+        }
+
+        /// The items `try_for_each_with` was called with before an item over `limit`
+        /// stopped it, and whether it ran to the end.
+        // `&Vec`, not a slice: `Decoders::run` calls `into_par_iter` on a `&Vec`
+        #[allow(clippy::ptr_arg)]
+        pub(super) fn try_for_each_with(items: &Vec<u32>, limit: u32) -> (Vec<u32>, bool) {
+            let (sender, receiver) = std::sync::mpsc::channel();
+            let finished = items
+                .into_par_iter()
+                .try_for_each_with(sender, |s, &n| {
+                    s.send(n).unwrap();
+                    (n <= limit).then_some(())
+                })
+                .is_some();
+            (receiver.try_iter().collect(), finished)
+        }
+    }
+
+    /// The same calls with rayon.
+    mod rayon {
+        use rayon::prelude::*;
+
+        pub(super) fn flat_map_iter(items: &[u32]) -> Vec<u32> {
+            items.par_iter().flat_map_iter(|&n| [n, n * 10]).collect()
+        }
+
+        pub(super) fn find_map_first(items: &[u32]) -> Option<(usize, u32)> {
+            items
+                .par_iter()
+                .enumerate()
+                .find_map_first(|(i, &n)| (n % 3 == 0).then_some((i, n)))
+        }
+    }
+
+    #[test]
+    fn sequential_iterators_give_what_rayon_gives() {
+        let items: Vec<u32> = (1..=200).collect();
+        assert_eq!(
+            sequential::flat_map_iter(&items),
+            rayon::flat_map_iter(&items)
+        );
+        assert_eq!(sequential::flat_map_iter(&items)[..4], [1, 10, 2, 20]);
+        // The first match in order, not just any match
+        assert_eq!(sequential::find_map_first(&items), Some((2, 3)));
+        assert_eq!(
+            sequential::find_map_first(&items),
+            rayon::find_map_first(&items)
+        );
+        assert_eq!(sequential::find_map_first(&[1, 2, 4]), None);
+    }
+
+    #[test]
+    fn sequential_try_for_each_with_stops_at_the_first_none() {
+        let items = vec![1, 2, 30, 4];
+        assert_eq!(
+            sequential::try_for_each_with(&items, 10),
+            (vec![1, 2, 30], false)
+        );
+        assert_eq!(
+            sequential::try_for_each_with(&items, 100),
+            (vec![1, 2, 30, 4], true)
+        );
+    }
 }

@@ -590,6 +590,26 @@ mod tests {
     }
 
     #[test]
+    fn expand_node_starts_no_decoder_after_the_deadline() {
+        // On WebAssembly this is what keeps a step from running past the timeout
+        let node = AStarNode {
+            state: DecoderResult {
+                text: vec!["SGVsbG8gV29ybGQ=".to_string()],
+                path: vec![],
+            },
+            depth: 0,
+            cost: 0.0,
+            total_cost: 0.0,
+            is_result: false,
+        };
+        let stop = Arc::new(AtomicBool::new(false));
+        let children = expand_node(&node, &DashSet::new(), &stop, Deadline::NEVER);
+        assert!(children.iter().any(|child| child.is_result), "{children:?}");
+        let passed = Deadline::after(std::time::Duration::ZERO);
+        assert!(expand_node(&node, &DashSet::new(), &stop, passed).is_empty());
+    }
+
+    #[test]
     fn test_parallel_astar() {
         let (sender, receiver) = bounded::<Option<DecoderResult>>(1);
         let stop = Arc::new(AtomicBool::new(false));

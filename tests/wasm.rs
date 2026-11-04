@@ -9,6 +9,13 @@
 //! itself, time comes from JavaScript's clock, there is no cache, and the human checker
 //! never asks (docs/wasm.md). The answers have to be the same as on native targets.
 //!
+//! Two tests run the benchmark fixtures, which were recorded natively: every decoder on
+//! its inputs (`benches/data/decoders.toml`) and the whole search corpus
+//! (`benches/data/search.toml`). Anything that reads std's clock or waits on a thread,
+//! even inside std or a dependency, panics on wasm32-unknown-unknown, and these find it.
+//! Natively they are ignored: `cargo bench -- --test` checks the same fixtures there, in
+//! optimised builds.
+//!
 //! The config is global to the process and the first search's config is kept for the rest
 //! of it (see `perform_cracking`), so every search here uses [`config`].
 
@@ -17,14 +24,18 @@
 #[cfg(all(target_family = "wasm", target_os = "unknown"))]
 use wasm_bindgen_test::wasm_bindgen_test as test;
 
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 
+use ciphey::checkers::athena::Athena;
 use ciphey::checkers::checker_type::{Check, Checker};
 use ciphey::checkers::english::EnglishChecker;
+use ciphey::checkers::CheckerTypes;
 use ciphey::config::Config;
+use ciphey::decoders::DECODER_MAP;
 use ciphey::detection::{detect_plaintext, CheckerKind, DetectOptions};
 use ciphey::{decode_with, decoders, list_decoders, perform_cracking, DecodeOptions};
 use ciphey::{CipheyError, DecoderResult};
+use serde::Deserialize;
 
 /// Seconds a search may take. Each search here takes under a second unoptimised, natively
 /// and on WebAssembly under Node.js, so this leaves room for slow CI runners. The timeout
@@ -235,4 +246,148 @@ fn invisible_characters_are_built_in() {
     // Read from the source directory at run time before, so empty on WebAssembly
     assert!(ciphey::storage::INVISIBLE_CHARS.contains(&'\u{200B}'));
     assert!(ciphey::storage::INVISIBLE_CHARS.len() >= 50);
+}
+
+#[test]
+fn substitution_is_cracked_through_its_search_cache() {
+    // The cracker's cache used to wait with Condvar::wait_timeout_while, which reads std's
+    // clock: every text it searched panicked on wasm32-unknown-unknown. It has no bench
+    // fixture, so it is checked here.
+    let cracked = decoders::monoalphabetic_substitution(
+        "Qaxeiw ar pf pvcdopcaq giqkwxcadf cddn. Wdv masi ac ifqkwxcig cizc pfg ac ckair cd \
+         tdkl dvc tepc tpr gdfi cd ac, ceif redtr wdv cei xnpafcizc. Ac lfdtr opfw ifqdgafmr \
+         pfg qnprraqpn qaxeikr, pfg ac liixr nipkfafm fit dfir.",
+    );
+    let plaintext = cracked.plaintext().expect("the key should be found");
+    assert!(
+        plaintext
+            .text
+            .starts_with("Ciphey is an automatic decryption tool."),
+        "{}",
+        plaintext.text
+    );
+    assert_eq!(plaintext.key.as_deref(), Some("P?QGI?MEA?LNOFDX?KRCVSTZW?"));
+}
+
+/// `benches/data/decoders.toml`: inputs for every decoder.
+#[derive(Deserialize)]
+struct DecoderFixtures {
+    /// Gibberish that no decoder accepts
+    miss: String,
+    /// One entry per decoder and input size
+    case: Vec<DecoderCase>,
+}
+
+/// One decoder input, and what the decoder made of it natively.
+#[derive(Deserialize)]
+struct DecoderCase {
+    /// Key into `DECODER_MAP`
+    decoder: String,
+    /// "medium" or "long"
+    size: String,
+    /// Whether the Athena checker accepted one of the outputs
+    success: bool,
+    /// Encoded text
+    input: String,
+    /// One of the outputs
+    expected: String,
+}
+
+#[test]
+#[cfg_attr(
+    not(target_family = "wasm"),
+    ignore = "natively `cargo bench --bench decoders -- --test` checks these fixtures"
+)]
+fn every_decoder_gives_its_native_results() {
+    let fixtures: DecoderFixtures =
+        toml::from_str(include_str!("../benches/data/decoders.toml")).unwrap();
+    let checker = CheckerTypes::CheckAthena(Checker::<Athena>::new());
+    let mut names = BTreeSet::new();
+    for case in &fixtures.case {
+        let decoder = DECODER_MAP
+            .get(case.decoder.as_str())
+            .unwrap_or_else(|| panic!("no decoder named {:?}", case.decoder))
+            .get::<()>();
+        let result = decoder.crack(&case.input, &checker);
+        let outputs = result.unencrypted_text.unwrap_or_default();
+        assert_eq!(
+            result.success, case.success,
+            "{} {}: outputs {outputs:?}",
+            case.decoder, case.size
+        );
+        assert!(
+            outputs.contains(&case.expected),
+            "{} {}: expected {:?} among {outputs:?}",
+            case.decoder,
+            case.size,
+            case.expected
+        );
+        names.insert(case.decoder.as_str());
+    }
+    for name in names {
+        let miss = DECODER_MAP[name]
+            .get::<()>()
+            .crack(&fixtures.miss, &checker);
+        assert!(!miss.success, "{name} accepted the miss input");
+    }
+}
+
+/// `benches/data/search.toml`: the search benchmark's corpus.
+#[derive(Deserialize)]
+struct SearchFixtures {
+    /// The inputs
+    case: Vec<SearchCase>,
+}
+
+/// One search, and its plaintext.
+#[derive(Deserialize)]
+struct SearchCase {
+    /// "plaintext", "single", "multi" or "no_solution"
+    kind: String,
+    /// Benchmark id
+    name: String,
+    /// What the search is given
+    input: String,
+    /// The plaintext it finds natively
+    expected: String,
+}
+
+#[test]
+#[cfg_attr(
+    not(target_family = "wasm"),
+    ignore = "natively `cargo bench --bench search -- --test` checks these fixtures"
+)]
+fn search_corpus_gives_the_native_plaintexts() {
+    // Inputs with no plaintext are left out: most run until the timeout, and how they end
+    // depends on search order (on native targets, on thread timing)
+    let fixtures: SearchFixtures =
+        toml::from_str(include_str!("../benches/data/search.toml")).unwrap();
+    let mut wrong = Vec::new();
+    let mut searched = 0;
+    for case in fixtures
+        .case
+        .iter()
+        .filter(|case| case.kind != "no_solution")
+    {
+        // As the benchmark does: every search explores as in a fresh process
+        ciphey::reset_decoder_stats();
+        searched += 1;
+        match search(&case.input) {
+            Ok(Some(found)) if found.text[0] == case.expected => {}
+            Ok(Some(found)) => wrong.push(format!(
+                "{}/{}: {:?} via {:?}",
+                case.kind,
+                case.name,
+                found.text[0],
+                path(&found)
+            )),
+            other => wrong.push(format!("{}/{}: {other:?}", case.kind, case.name)),
+        }
+    }
+    assert!(searched > 100, "only {searched} searches");
+    assert!(
+        wrong.is_empty(),
+        "{} of {searched}: {wrong:#?}",
+        wrong.len()
+    );
 }

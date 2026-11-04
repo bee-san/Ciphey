@@ -1,6 +1,7 @@
 # Ciphey on WebAssembly
 
-Ciphey's library builds for WebAssembly with its default features and no flags:
+Ciphey's library is written to build for WebAssembly with its default features and no
+flags:
 
 ```sh
 rustup target add wasm32-unknown-unknown
@@ -44,8 +45,12 @@ library needs it:
 | The `ciphey` binary | the CLI | prints that the CLI doesn't run on WebAssembly |
 | `ciphey-mcp` (`--features mcp`) | the MCP server | not available |
 
-The answers are the same: `tests/wasm.rs` runs the same checks natively and on
-WebAssembly.
+The answers are the same: on WebAssembly, `tests/wasm.rs` runs every decoder on its
+benchmark inputs and every search of the benchmark corpus that has a plaintext, and gets
+what native builds get. Searches of input that has no plaintext are the exception: where a
+native search ends (which false positive, if any, it settles on) can depend on thread
+timing. The WebAssembly search is sequential: it tries candidates in the same order as a
+native search on one thread (`RAYON_NUM_THREADS=1`).
 
 ## How it is gated, and why
 
@@ -80,8 +85,9 @@ Features stay for optional extras: `mcp` (native only) and the browser API to co
 WebAssembly OS (`wasm32-unknown-unknown`, `wasm32-wasip1`, ...) get the same build: WASI
 preview 1 has no threads either, and SQLite's bundled C would need a WASI C toolchain.
 
-Everything in `[dependencies]` builds for WebAssembly; the native-only ones are in the
-table above. Four dependencies no code used (`ansi_term`, `cipher_identifier`,
+Everything in `[dependencies]` is meant to build for WebAssembly, and everything does
+except gibberish-or-not 5 and lemmeknow 0.8 (see Status); the native-only dependencies are
+in the table above. Four dependencies no code used (`ansi_term`, `cipher_identifier`,
 `human-panic` and `include_dir`) were removed instead of gated. `human-panic` was also what
 turned on `uuid`'s `v4` feature, which the cache uses, so `uuid` asks for it itself now.
 
@@ -93,23 +99,38 @@ Decoders and checkers run on every target, so in them:
   (`ruzstd` and `lz4_flex` are pure-Rust choices for zstd and LZ4);
 - don't use `std::thread`, `std::fs`, `std::net`, `std::process` or `std::env`;
 - measure time limits with `crate::clock::Instant`, not `std::time::Instant`;
+- don't call what reads std's clock inside: `Condvar::wait_timeout` and
+  `wait_timeout_while`, `mpsc::Receiver::recv_timeout`, `thread::sleep`, and dependencies
+  that call `std::time::Instant::now()` (brainfuck-exe does unless
+  `with_bench_execution(false)`). On wasm32-unknown-unknown they panic with "time not
+  implemented on this platform";
 - run work in parallel with the iterators of `crate::parallel` (rayon's prelude on native
   targets, sequential on WebAssembly), not `rayon` directly;
 - embed data with `include_str!`/`include_bytes!` instead of reading files at run time.
 
-Check a new dependency, or a change, with:
+Check a new dependency in a scratch crate (`cargo new`, add it, then `cargo build --target
+wasm32-unknown-unknown`). Once gibberish-or-not and lemmeknow are replaced, check every
+change with
 
 ```sh
 cargo build --lib --target wasm32-unknown-unknown
+cargo test --target wasm32-unknown-unknown --test wasm
 ```
+
+The build alone doesn't find a clock read: it compiles, and panics when it runs.
 
 ## Tests
 
 `tests/wasm.rs` holds the core checks, written to run on every target: whole searches
 (Base64, three layers, Caesar, input that is already plaintext, nothing to decode, an
-invalid regex, the timeout), single decoders (including the Vigenère and Playfair
-crackers, whose data and time limits used to need files and `std::time`), plaintext
-detection and the built-in data. Natively it runs with the rest of `cargo test`. On
+invalid regex, the timeout), single decoders (including the Vigenère, Playfair and
+substitution crackers, whose data, time limits and cache used to need files, `std::time`
+and threads), plaintext detection and the built-in data. Two more run the benchmark
+fixtures, which were recorded natively: every decoder on its inputs
+(`benches/data/decoders.toml`) and every search of the corpus that has a plaintext
+(`benches/data/search.toml`). Natively the file runs with the rest of `cargo test`, without
+those two, which `cargo bench -- --test` checks there in optimised builds (or run them with
+`cargo test --test wasm -- --include-ignored`). On
 WebAssembly it runs under Node.js with `wasm-bindgen-test-runner`, which has to be the
 same version as the `wasm-bindgen-test` crate in `Cargo.toml` (0.3.80, which is
 wasm-bindgen 0.2.130):

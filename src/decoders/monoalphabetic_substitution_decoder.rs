@@ -37,6 +37,7 @@ use log::{debug, trace};
 use once_cell::sync::Lazy;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
+#[cfg(not(target_family = "wasm"))]
 use std::time::Duration;
 
 /// Number of possible quadgrams, 26⁴.
@@ -132,6 +133,7 @@ const MIN_COVERAGE_WITH_BREAKS: f64 = 0.3;
 const CACHE_LIMIT: usize = 1024;
 
 /// How long a thread waits for another thread searching the same pattern before giving up.
+#[cfg(not(target_family = "wasm"))]
 const CACHE_WAIT: Duration = Duration::from_secs(10);
 
 /// Marks a letter that doesn't occur in a key or label table.
@@ -1484,16 +1486,26 @@ impl SearchCache {
 
     /// The result for `pattern`. If another thread is searching it, waits for that
     /// search instead of repeating it.
+    ///
+    /// WebAssembly has one thread, so no other search can be running there, and waiting
+    /// would read std's clock (`Condvar::wait_timeout_while` starts with
+    /// `Instant::now()`, which panics on wasm32-unknown-unknown).
     fn lookup(&self, pattern: u64) -> Lookup<'_> {
-        let (mut entries, wait) = self
-            .finished
-            .wait_timeout_while(self.entries(), CACHE_WAIT, |entries| {
-                matches!(entries.get(&pattern), Some(None))
-            })
-            .unwrap_or_else(PoisonError::into_inner);
+        #[cfg(not(target_family = "wasm"))]
+        let (mut entries, timed_out) = {
+            let (entries, wait) = self
+                .finished
+                .wait_timeout_while(self.entries(), CACHE_WAIT, |entries| {
+                    matches!(entries.get(&pattern), Some(None))
+                })
+                .unwrap_or_else(PoisonError::into_inner);
+            (entries, wait.timed_out())
+        };
+        #[cfg(target_family = "wasm")]
+        let (mut entries, timed_out) = (self.entries(), false);
         match entries.get(&pattern) {
             Some(Some(cached)) => Lookup::Hit(*cached),
-            Some(None) if wait.timed_out() => Lookup::Busy,
+            Some(None) if timed_out => Lookup::Busy,
             _ => {
                 entries.insert(pattern, None);
                 Lookup::Miss(Searching {
