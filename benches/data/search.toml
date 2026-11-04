@@ -273,6 +273,14 @@ input = "=?utf-8?Q?Meet_me_at_the_old_lighthouse_after_midnight_and_bring_the_ma
 expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
 
 [[case]]
+# passlib 1.7.4's cisco_type7.using(salt=7).hash(plaintext), decoders.toml's medium input
+kind = "single"
+name = "cisco_type7"
+layers = ["Cisco Type 7"]
+input = "072224495A49140057131F4C10222E64273F31621F0E110B155E564D40514E021E025C4A175E5B515A025C0E1318560A174606490208086158460C59081602474C10222E6423362C621209124300164D574157064D"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
 kind = "single"
 name = "citrix_ctx1"
 layers = ["Citrix Ctx1"]
