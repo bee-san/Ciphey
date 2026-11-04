@@ -670,7 +670,7 @@ fn latin1_misread_bytes(bytes: &[u8]) -> String {
     bytes.iter().map(|&b| char::from(b)).collect()
 }
 
-/// Samples of the LemmeKnow formats that look like credentials (API keys, tokens,
+/// Samples of the pyWhat formats that look like credentials (API keys, tokens,
 /// webhooks), made from random characters at start-up. Committed strings in these formats,
 /// even pyWhat's published examples, are blocked by GitHub's secret scanning, so they
 /// can't be in the data files. Shape-only patterns that Ciphey ignores on purpose (Twilio
