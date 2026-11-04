@@ -42,6 +42,43 @@ for id in $(target/release/deps/search-<hash> --bench --list | sed -n 's/: bench
 done
 ```
 
+## End-to-end benchmark: the check for decoder PRs
+
+[`e2e/run.py`](e2e/run.py) runs whole `ciphey` binaries on a frozen corpus and reports
+accuracy and time. Corpus v1 ([`data/e2e/corpus-v1.tsv`](data/e2e/corpus-v1.tsv), 376 cases)
+has every encoding and cipher Ciphey decodes and 39 it doesn't yet, hashes, chains of
+2 to 5 layers, CTF flags, short and long texts, other languages, plaintext input and inputs
+with no answer. The method, the corpus and the baselines of master, 0.12.0, Python Ciphey
+and CyberChef Magic are in [docs/benchmark-e2e.md](../docs/benchmark-e2e.md). The runner
+needs only Python 3.9+ (Linux or macOS).
+
+A PR that adds or changes a decoder or a checker runs the **quick subset** (76 cases, about
+a minute) with master's binary as A and its own as B:
+
+```sh
+git worktree add ../ciphey-master origin/master
+(cd ../ciphey-master && cargo build --release)    # master's binary, once
+cargo build --release
+python3 benches/e2e/run.py --subset quick --check ../ciphey-master/target/release/ciphey target/release/ciphey
+```
+
+Each case runs on both binaries back to back, A first on even cases and B first on odd
+ones, each time with a fresh `HOME` (no cache), `-d` and a 5 second timeout. The report ends
+with:
+
+* **Verdicts that changed**: every case one binary got right and the other didn't, with the
+  answers and the decoder paths. A decoder PR should have no line that goes from `correct`
+  to `wrong` or `nothing`; `--check` exits 1 if there is one.
+* **Time B/A**: the geometric mean of the per-case time ratios, with a 95% confidence
+  interval (Student's t on the log ratios). Master against itself gave 0.991 (0.956 to 1.027)
+  in 54 s on the busy shared host; an interval above 1.05 is a slowdown to explain.
+
+Paste those lines and the `uptime` lines into the PR. To show what the new decoder gains, run
+its own cases of the full corpus too (they are tagged with its issue as expected failures),
+for example `--ids base45`, and drop `--subset quick` for the whole corpus (about 6 minutes
+per binary) when the change touches the search or the checkers. CI runs `run.py --selftest`
+and then `--subset smoke` (10 cases) on the debug binary.
+
 ## Inputs
 
 All inputs are checked in under [`data/`](data) so runs are comparable:

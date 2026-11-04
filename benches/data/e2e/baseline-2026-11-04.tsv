@@ -1,0 +1,1282 @@
+tool	adapter	id	category	repeat	status	verdict	seconds	path	output	alternatives_correct
+master	ciphey	enc.base64.1	encoding	1	answer	correct	0.038	Base64		
+v0.12.0	ciphey	enc.base64.1	encoding	1	answer	correct	0.070	Base64		
+v0.12.0	ciphey	enc.base64.2	encoding	1	answer	correct	0.080	Base64		
+master	ciphey	enc.base64.2	encoding	1	answer	correct	0.041	Base64		
+master	ciphey	enc.base64_url.1	encoding	1	answer	correct	0.041	Base64		
+v0.12.0	ciphey	enc.base64_url.1	encoding	1	answer	correct	0.071	Base64		
+v0.12.0	ciphey	enc.base64_itoa64.1	encoding	1	answer	wrong	0.570	Vigenere → railfence → Vigenere → railfence → Vigenere → Reverse → railfence → rot47		
+master	ciphey	enc.base64_itoa64.1	encoding	1	answer	correct	0.044	Base64 Alt		
+master	ciphey	enc.base32.1	encoding	1	answer	correct	0.043	Base32		
+v0.12.0	ciphey	enc.base32.1	encoding	1	answer	correct	0.070	Base32		
+v0.12.0	ciphey	enc.base32.2	encoding	1	answer	correct	0.070	Base32		
+master	ciphey	enc.base32.2	encoding	1	answer	correct	0.041	Base32		
+master	ciphey	enc.base32hex.1	encoding	1	answer	correct	0.041	Base32 Variants		
+v0.12.0	ciphey	enc.base32hex.1	encoding	1	answer	wrong	0.142	Vigenere → railfence → railfence → railfence → railfence → Binary		
+v0.12.0	ciphey	enc.base32_crockford.1	encoding	1	answer	wrong	0.353	Vigenere → Vigenere → railfence → Reverse → railfence → railfence → railfence → railfence → railfen…		
+master	ciphey	enc.base32_crockford.1	encoding	1	answer	correct	0.040	Base32 Variants		
+master	ciphey	enc.zbase32.1	encoding	1	answer	correct	0.041	Base32 Variants		
+v0.12.0	ciphey	enc.zbase32.1	encoding	1	none	nothing	5.103			
+v0.12.0	ciphey	enc.hex.1	encoding	1	answer	correct	0.079	Hexadecimal		
+master	ciphey	enc.hex.1	encoding	1	answer	correct	0.050	Hexadecimal		
+master	ciphey	enc.hex_spaced.1	encoding	1	answer	correct	0.045	Hexadecimal		
+v0.12.0	ciphey	enc.hex_spaced.1	encoding	1	answer	correct	0.078	Hexadecimal		
+v0.12.0	ciphey	enc.base36.1	encoding	1	none	nothing	5.170			
+master	ciphey	enc.base36.1	encoding	1	answer	correct	0.082	Base36		
+master	ciphey	enc.bigint.1	encoding	1	answer	correct	0.098	Big integer to bytes		
+v0.12.0	ciphey	enc.bigint.1	encoding	1	none	nothing	5.128			
+v0.12.0	ciphey	enc.bigint_named.1	encoding	1	answer	wrong	2.108	rot47 → railfence → rot47 → railfence → Reverse → rot47		
+master	ciphey	enc.bigint_named.1	encoding	1	answer	correct	0.047	Big integer to bytes		
+master	ciphey	enc.base58_bitcoin.1	encoding	1	answer	correct	0.042	Base58 Bitcoin		
+v0.12.0	ciphey	enc.base58_bitcoin.1	encoding	1	answer	correct	0.071	Base58 Bitcoin		
+v0.12.0	ciphey	enc.base58_ripple.1	encoding	1	answer	correct	0.078	Base58 Ripple		
+master	ciphey	enc.base58_ripple.1	encoding	1	answer	correct	0.042	Base58 Ripple		
+master	ciphey	enc.base58_flickr.1	encoding	1	answer	correct	0.043	Base58 Flickr		
+v0.12.0	ciphey	enc.base58_flickr.1	encoding	1	answer	correct	0.073	Base58 Flickr		
+v0.12.0	ciphey	enc.base58_monero.1	encoding	1	answer	wrong	1.845	Vigenere → railfence → Vigenere → railfence → Vigenere → railfence → Reverse → railfence → railfenc…		
+master	ciphey	enc.base58_monero.1	encoding	1	timeout	nothing	5.566			
+master	ciphey	enc.base62.1	encoding	1	answer	wrong	0.281	rot47 → Hexadecimal → Repeating-key XOR		
+v0.12.0	ciphey	enc.base62.1	encoding	1	answer	wrong	0.475	Vigenere → railfence → Vigenere → railfence → railfence → Reverse → rot47		
+v0.12.0	ciphey	enc.base65536.1	encoding	1	answer	correct	0.086	Base65536		
+master	ciphey	enc.base65536.1	encoding	1	answer	correct	0.051	Base65536		
+master	ciphey	enc.base85.1	encoding	1	answer	correct	0.049	Base85		
+v0.12.0	ciphey	enc.base85.1	encoding	1	answer	wrong	4.008	Vigenere → railfence → Vigenere → railfence → railfence → railfence → Reverse → Vigenere → railfenc…		
+v0.12.0	ciphey	enc.ascii85.1	encoding	1	answer	wrong	0.152	Vigenere → Reverse → railfence → railfence → railfence → railfence → rot47		
+master	ciphey	enc.ascii85.1	encoding	1	answer	correct	0.042	Ascii85		
+master	ciphey	enc.ascii85_adobe.1	encoding	1	answer	correct	0.042	Ascii85		
+v0.12.0	ciphey	enc.ascii85_adobe.1	encoding	1	answer	wrong	0.596	Vigenere → Reverse → railfence → Vigenere → Reverse → Vigenere → railfence → Vigenere → Reverse		
+v0.12.0	ciphey	enc.z85.1	encoding	1	answer	correct	0.072	Z85		
+master	ciphey	enc.z85.1	encoding	1	answer	correct	0.045	Z85		
+master	ciphey	enc.base91.1	encoding	1	answer	correct	0.040	Base91		
+v0.12.0	ciphey	enc.base91.1	encoding	1	answer	correct	0.075	Base91		
+v0.12.0	ciphey	enc.base92.1	encoding	1	answer	wrong	0.817	Vigenere → Reverse → railfence → railfence → railfence → Vigenere → railfence → Vigenere → railfenc…		
+master	ciphey	enc.base92.1	encoding	1	answer	correct	0.043	Base92		
+master	ciphey	enc.base100.1	encoding	1	answer	correct	0.041	Base100		
+v0.12.0	ciphey	enc.base100.1	encoding	1	answer	wrong	1.973	rot47 → Vigenere → Reverse → Vigenere → railfence → railfence → railfence → railfence → railfence →…		
+v0.12.0	ciphey	enc.uuencode.1	encoding	1	answer	wrong	0.083	Default decoder		
+master	ciphey	enc.uuencode.1	encoding	1	answer	correct	0.052	Uuencode		
+master	ciphey	enc.binary.1	encoding	1	answer	correct	0.066	Binary		
+v0.12.0	ciphey	enc.binary.1	encoding	1	answer	correct	0.140	Binary		
+v0.12.0	ciphey	enc.binary.2	encoding	1	answer	correct	0.125	Binary		
+master	ciphey	enc.binary.2	encoding	1	answer	correct	0.057	Binary		
+master	ciphey	enc.decimal.1	encoding	1	answer	correct	0.062	Decimal		
+v0.12.0	ciphey	enc.decimal.1	encoding	1	none	nothing	5.109			
+v0.12.0	ciphey	enc.octal.1	encoding	1	none	nothing	5.118			
+master	ciphey	enc.octal.1	encoding	1	answer	correct	0.089	Octal		
+master	ciphey	enc.url.1	encoding	1	answer	correct	0.061	URL		
+v0.12.0	ciphey	enc.url.1	encoding	1	answer	correct	0.077	URL		
+v0.12.0	ciphey	enc.url_all.1	encoding	1	answer	correct	0.091	Hexadecimal		
+master	ciphey	enc.url_all.1	encoding	1	answer	correct	0.058	Hexadecimal		
+master	ciphey	enc.html_dec.1	encoding	1	answer	correct	0.073	HTML Entities		
+v0.12.0	ciphey	enc.html_dec.1	encoding	1	none	nothing	5.111			
+v0.12.0	ciphey	enc.html_hex.1	encoding	1	answer	correct	0.099	Hexadecimal		
+master	ciphey	enc.html_hex.1	encoding	1	answer	correct	0.055	Hexadecimal		
+master	ciphey	enc.unicode_escape.1	encoding	1	answer	correct	0.053	Unicode Escapes		
+v0.12.0	ciphey	enc.unicode_escape.1	encoding	1	none	nothing	5.119			
+v0.12.0	ciphey	enc.unicode_escape.2	encoding	1	none	nothing	5.104			
+master	ciphey	enc.unicode_escape.2	encoding	1	answer	correct	0.046	Unicode Escapes		
+master	ciphey	enc.unicode_plus.1	encoding	1	answer	correct	0.045	Unicode Escapes		
+v0.12.0	ciphey	enc.unicode_plus.1	encoding	1	none	nothing	5.105			
+v0.12.0	ciphey	enc.backslash_octal.1	encoding	1	none	nothing	5.096			
+master	ciphey	enc.backslash_octal.1	encoding	1	answer	correct	0.050	Octal		
+master	ciphey	enc.backslash_hex.1	encoding	1	answer	correct	0.047	Hexadecimal		
+v0.12.0	ciphey	enc.backslash_hex.1	encoding	1	answer	correct	0.103	Hexadecimal		
+v0.12.0	ciphey	enc.quoted_printable.1	encoding	1	answer	wrong	0.064	Default decoder		
+master	ciphey	enc.quoted_printable.1	encoding	1	answer	correct	0.064	Quoted-Printable		
+master	ciphey	enc.mime_b.1	encoding	1	answer	correct	0.052	MIME Encoded-Word		
+v0.12.0	ciphey	enc.mime_b.1	encoding	1	answer	wrong	0.182	Vigenere → railfence → railfence → Vigenere		
+v0.12.0	ciphey	enc.mime_q.1	encoding	1	answer	wrong	1.133	Vigenere → railfence → railfence → Vigenere → Reverse → Vigenere → railfence → Vigenere → Reverse →…		
+master	ciphey	enc.mime_q.1	encoding	1	answer	correct	0.045	MIME Encoded-Word		
+master	ciphey	enc.punycode.1	encoding	1	answer	correct	0.049	Punycode		
+v0.12.0	ciphey	enc.punycode.1	encoding	1	answer	wrong	0.071	Default decoder		
+v0.12.0	ciphey	enc.punycode.2	encoding	1	answer	wrong	0.071	railfence		
+master	ciphey	enc.punycode.2	encoding	1	answer	correct	0.054	Punycode		
+master	ciphey	enc.utf16le+base64.1	encoding	1	answer	correct	0.059	Base64 → UTF-16		
+v0.12.0	ciphey	enc.utf16le+base64.1	encoding	1	answer	wrong	3.370	railfence → railfence → railfence → railfence → railfence → railfence → Vigenere → railfence → Reve…		
+v0.12.0	ciphey	enc.utf16be_bom+hex.1	encoding	1	none	nothing	5.094			
+master	ciphey	enc.utf16be_bom+hex.1	encoding	1	answer	correct	0.059	Hexadecimal → UTF-16		
+master	ciphey	enc.hexdump_xxd.1	encoding	1	answer	correct	0.051	Hexdump		
+v0.12.0	ciphey	enc.hexdump_xxd.1	encoding	1	answer	wrong	0.065	Default decoder		
+v0.12.0	ciphey	enc.hexdump_c.1	encoding	1	answer	wrong	0.062	Default decoder		
+master	ciphey	enc.hexdump_c.1	encoding	1	answer	correct	0.061	Hexdump		
+master	ciphey	enc.morse.1	encoding	1	answer	correct	0.051	Morse Code		
+v0.12.0	ciphey	enc.morse.1	encoding	1	answer	correct	0.073	Morse Code		
+v0.12.0	ciphey	enc.morse_lines.1	encoding	1	answer	correct	0.074	Morse Code		
+master	ciphey	enc.morse_lines.1	encoding	1	answer	correct	0.043	Morse Code		
+master	ciphey	enc.morse_symbols.1	encoding	1	answer	correct	0.042	simplesubstitution		
+v0.12.0	ciphey	enc.morse_symbols.1	encoding	1	answer	wrong	0.090	simplesubstitution		
+v0.12.0	ciphey	enc.binary_xy.1	encoding	1	answer	wrong	0.259	simplesubstitution		
+master	ciphey	enc.binary_xy.1	encoding	1	answer	wrong	0.065	Reverse → simplesubstitution		
+master	ciphey	enc.braille.1	encoding	1	answer	correct	0.048	Braille		
+v0.12.0	ciphey	enc.braille.1	encoding	1	answer	correct	0.079	Braille		
+v0.12.0	ciphey	enc.a1z26.1	encoding	1	answer	wrong	0.097	a1z26 → Vigenere		
+master	ciphey	enc.a1z26.1	encoding	1	answer	correct	0.047	a1z26		
+master	ciphey	enc.a1z26_spaces.1	encoding	1	answer	correct	0.044	a1z26		
+v0.12.0	ciphey	enc.a1z26_spaces.1	encoding	1	answer	correct	0.074	a1z26		
+v0.12.0	ciphey	enc.bacon26.1	encoding	1	answer	wrong	0.081	simplesubstitution		
+master	ciphey	enc.bacon26.1	encoding	1	answer	correct	0.049	Baconian		
+master	ciphey	enc.bacon24.1	encoding	1	answer	correct	0.046	Baconian		
+v0.12.0	ciphey	enc.bacon24.1	encoding	1	answer	wrong	0.082	simplesubstitution		
+v0.12.0	ciphey	enc.polybius.1	encoding	1	none	nothing	5.096			
+master	ciphey	enc.polybius.1	encoding	1	answer	correct	0.041	Polybius Square		
+master	ciphey	enc.tap_dots.1	encoding	1	answer	correct	0.046	Tap Code		
+v0.12.0	ciphey	enc.tap_dots.1	encoding	1	answer	wrong	0.094	simplesubstitution		
+v0.12.0	ciphey	enc.tap_digits.1	encoding	1	answer	wrong	0.197	railfence → railfence → railfence → railfence → railfence → railfence → railfence → rot47		
+master	ciphey	enc.tap_digits.1	encoding	1	answer	correct	0.050	Tap Code		
+master	ciphey	enc.t9.1	encoding	1	answer	wrong	0.053	T9		
+v0.12.0	ciphey	enc.t9.1	encoding	1	answer	wrong	0.090	Reverse → railfence → railfence → railfence → rot47		
+v0.12.0	ciphey	enc.multitap.1	encoding	1	answer	wrong	1.761	Reverse → railfence → railfence → railfence → railfence → Reverse → Reverse → railfence → railfence…		
+master	ciphey	enc.multitap.1	encoding	1	answer	correct	0.040	Multi-tap		
+master	ciphey	enc.dtmf.1	encoding	1	answer	correct	0.047	DTMF		
+v0.12.0	ciphey	enc.dtmf.1	encoding	1	answer	wrong	0.203	railfence → railfence → Reverse → railfence → Binary		
+v0.12.0	ciphey	enc.nato.1	encoding	1	answer	wrong	0.061	Default decoder		
+master	ciphey	enc.nato.1	encoding	1	answer	correct	0.046	NATO Phonetic Alphabet		
+master	ciphey	enc.galactic.1	encoding	1	answer	correct	0.042	Standard Galactic Alphabet		
+v0.12.0	ciphey	enc.galactic.1	encoding	1	answer	wrong	0.115	Reverse → rot47 → atbash → Base91 → atbash → caesar → rot47 → rot47 → atbash → rot47 → atbash → rot…		
+v0.12.0	ciphey	enc.leetspeak.1	encoding	1	none	nothing	5.133			
+master	ciphey	enc.leetspeak.1	encoding	1	answer	correct	0.046	Leetspeak		
+master	ciphey	enc.fancy_bold.1	encoding	1	answer	correct	0.049	Unicode Fancy Text		
+v0.12.0	ciphey	enc.fancy_bold.1	encoding	1	none	nothing	0.086			
+v0.12.0	ciphey	enc.fullwidth.1	encoding	1	none	nothing	5.311			
+master	ciphey	enc.fullwidth.1	encoding	1	answer	correct	0.048	Unicode Fancy Text		
+master	ciphey	enc.zero_width.1	encoding	1	answer	wrong	0.042	Default decoder		
+v0.12.0	ciphey	enc.zero_width.1	encoding	1	answer	wrong	0.058	Default decoder		
+v0.12.0	ciphey	enc.zero_width_sep.1	encoding	1	answer	wrong	0.094	Base91 → Base91 → simplesubstitution		
+master	ciphey	enc.zero_width_sep.1	encoding	1	answer	correct	0.071	Zero-width		
+master	ciphey	enc.qwerty_dvorak.1	encoding	1	answer	correct	0.061	Keyboard layout		
+v0.12.0	ciphey	enc.qwerty_dvorak.1	encoding	1	answer	wrong	0.088	Vigenere → railfence		
+v0.12.0	ciphey	enc.keyboard_shift.1	encoding	1	answer	wrong	0.644	Vigenere → Reverse → railfence → railfence → Reverse → railfence → Vigenere → railfence → railfence…		
+master	ciphey	enc.keyboard_shift.1	encoding	1	answer	correct	0.049	Keyboard shift		
+master	ciphey	enc.null_acrostic.1	encoding	1	answer	wrong	0.043	Default decoder		
+v0.12.0	ciphey	enc.null_acrostic.1	encoding	1	answer	wrong	0.060	Default decoder		
+v0.12.0	ciphey	enc.pollux.1	encoding	1	answer	wrong	0.070	Binary		
+master	ciphey	enc.pollux.1	encoding	1	answer	correct	0.041	Pollux		
+master	ciphey	enc.yunying.1	encoding	1	answer	correct	0.042	01248 (Yunying)		
+v0.12.0	ciphey	enc.yunying.1	encoding	1	answer	wrong	2.666	Reverse → railfence → railfence → Reverse → railfence → railfence → railfence → railfence → railfen…		
+v0.12.0	ciphey	enc.dna_codon.1	encoding	1	answer	wrong	0.061	Default decoder		
+master	ciphey	enc.dna_codon.1	encoding	1	answer	correct	0.056	DNA Codon		
+master	ciphey	enc.baudot.1	encoding	1	answer	correct	0.053	Baudot		
+v0.12.0	ciphey	enc.baudot.1	encoding	1	answer	wrong	0.088	simplesubstitution		
+v0.12.0	ciphey	enc.core_values.1	encoding	1	answer	wrong	0.145	Base65536 → Binary → Vigenere → Reverse → Base91 → simplesubstitution		
+master	ciphey	enc.core_values.1	encoding	1	answer	correct	0.044	Core Socialist Values		
+master	ciphey	enc.brainfuck.1	encoding	1	answer	correct	0.043	Brainfuck		
+v0.12.0	ciphey	enc.brainfuck.1	encoding	1	answer	correct	0.083	Brainfuck		
+v0.12.0	ciphey	enc.ook.1	encoding	1	answer	wrong	0.103	atbash → caesar		
+master	ciphey	enc.ook.1	encoding	1	answer	correct	0.046	Ook!		
+master	ciphey	enc.aaencode.1	encoding	1	answer	correct	0.041	AAEncode		
+v0.12.0	ciphey	enc.aaencode.1	encoding	1	answer	wrong	0.102	Hexadecimal → simplesubstitution		
+v0.12.0	ciphey	enc.jsfuck.1	encoding	1	answer	wrong	2.291	railfence → rot47 → railfence → railfence → railfence → Reverse → railfence → railfence → railfence…		
+master	ciphey	enc.jsfuck.1	encoding	1	answer	correct	0.039	JSFuck		
+master	ciphey	enc.citrix_ctx1.1	encoding	1	answer	correct	0.052	Citrix Ctx1		
+v0.12.0	ciphey	enc.citrix_ctx1.1	encoding	1	answer	correct	0.074	Citrix Ctx1		
+v0.12.0	ciphey	enc.jwt.1	encoding	1	answer	wrong	1.435	Vigenere → Vigenere → railfence → Vigenere → railfence → rot47		
+master	ciphey	enc.jwt.1	encoding	1	answer	correct	0.062	JWT		
+master	ciphey	enc.gzip+base64.1	encoding	1	answer	correct	0.044	Gzip		
+v0.12.0	ciphey	enc.gzip+base64.1	encoding	1	answer	wrong	4.182	Vigenere → Vigenere → railfence → Reverse → railfence → Vigenere → railfence → railfence → railfenc…		
+v0.12.0	ciphey	enc.gzip+hex.1	encoding	1	none	nothing	5.088			
+master	ciphey	enc.gzip+hex.1	encoding	1	answer	correct	0.049	Gzip		
+master	ciphey	enc.zlib+base64.1	encoding	1	answer	correct	0.044	Zlib		
+v0.12.0	ciphey	enc.zlib+base64.1	encoding	1	none	nothing	5.108			
+v0.12.0	ciphey	enc.deflate+base64.1	encoding	1	none	nothing	5.100			
+master	ciphey	enc.deflate+base64.1	encoding	1	answer	correct	0.042	Raw DEFLATE		
+master	ciphey	enc.bzip2+base64.1	encoding	1	answer	correct	0.049	Bzip2		
+v0.12.0	ciphey	enc.bzip2+base64.1	encoding	1	answer	wrong	1.907	Vigenere → railfence → Vigenere → Vigenere → railfence → railfence → railfence → railfence → Revers…		
+v0.12.0	ciphey	enc.xz+base64.1	encoding	1	none	nothing	5.098			
+master	ciphey	enc.xz+base64.1	encoding	1	answer	correct	0.056	XZ		
+master	ciphey	enc.base45.1	encoding	1	timeout	nothing	5.521			
+v0.12.0	ciphey	enc.base45.1	encoding	1	answer	wrong	0.406	Vigenere → railfence → railfence → Reverse → Vigenere → railfence		
+v0.12.0	ciphey	enc.bech32.1	encoding	1	answer	wrong	3.673	Vigenere → railfence → Reverse → railfence → railfence → railfence → Reverse → railfence → railfenc…		
+master	ciphey	enc.bech32.1	encoding	1	timeout	nothing	5.538			
+master	ciphey	enc.modhex.1	encoding	1	answer	wrong	0.112	Monoalphabetic Substitution → Vigenere		
+v0.12.0	ciphey	enc.modhex.1	encoding	1	none	nothing	5.102			
+v0.12.0	ciphey	enc.xxencode.1	encoding	1	none	nothing	5.106			
+master	ciphey	enc.xxencode.1	encoding	1	answer	wrong	0.051	Default decoder		
+master	ciphey	enc.bubblebabble.1	encoding	1	answer	wrong	0.139	ASCII shift → Monoalphabetic Substitution → rot47		
+v0.12.0	ciphey	enc.bubblebabble.1	encoding	1	none	nothing	5.096			
+v0.12.0	ciphey	enc.utf7.1	encoding	1	answer	wrong	0.063	Default decoder		
+master	ciphey	enc.utf7.1	encoding	1	answer	wrong	0.044	Default decoder		
+master	ciphey	enc.ebcdic+hex.1	encoding	1	answer	wrong	4.902	rot47 → Keyboard layout → Monoalphabetic Substitution → Vigenere		
+v0.12.0	ciphey	enc.ebcdic+hex.1	encoding	1	answer	wrong	1.338	Vigenere → railfence → Reverse → railfence → Vigenere → railfence → railfence → railfence → railfen…		
+v0.12.0	ciphey	enc.cisco7.1	encoding	1	answer	wrong	0.146	rot47 → railfence → rot47 → railfence → railfence → rot47		
+master	ciphey	enc.cisco7.1	encoding	1	answer	wrong	0.288	rot47 → Keyboard layout → Affine		
+master	ciphey	enc.ternary.1	encoding	1	answer	wrong	0.238	simplesubstitution → Monoalphabetic Substitution → rot47		
+v0.12.0	ciphey	enc.ternary.1	encoding	1	answer	wrong	0.167	simplesubstitution		
+v0.12.0	ciphey	enc.chuck_norris.1	encoding	1	answer	wrong	0.095	simplesubstitution		
+master	ciphey	enc.chuck_norris.1	encoding	1	answer	wrong	0.163	rot47 → ASCII shift		
+master	ciphey	enc.manchester.1	encoding	1	answer	wrong	0.097	rot47 → Affine		
+v0.12.0	ciphey	enc.manchester.1	encoding	1	answer	wrong	0.107	simplesubstitution		
+v0.12.0	ciphey	enc.dna_2bit.1	encoding	1	answer	wrong	0.173	simplesubstitution		
+master	ciphey	enc.dna_2bit.1	encoding	1	answer	wrong	1.576	rot47 → Keyboard shift → caesar		
+master	ciphey	enc.upside_down.1	encoding	1	timeout	nothing	5.463			
+v0.12.0	ciphey	enc.upside_down.1	encoding	1	answer	wrong	0.195	rot47 → rot47 → railfence → Vigenere → Reverse → railfence → railfence → railfence → railfence → ra…		
+v0.12.0	ciphey	enc.zalgo.1	encoding	1	none	nothing	5.220			
+master	ciphey	enc.zalgo.1	encoding	1	answer	wrong	5.121	Reverse → railfence → Hexadecimal → ASCII shift → Affine		
+master	ciphey	enc.runic.1	encoding	1	timeout	nothing	5.512			
+v0.12.0	ciphey	enc.runic.1	encoding	1	none	nothing	0.076			
+v0.12.0	ciphey	enc.kenny.1	encoding	1	none	nothing	5.117			
+master	ciphey	enc.kenny.1	encoding	1	answer	wrong	0.065	Keyboard shift → Null cipher		
+master	ciphey	enc.pig_latin.1	encoding	1	answer	wrong	2.190	caesar → railfence → Vigenere Autokey		
+v0.12.0	ciphey	enc.pig_latin.1	encoding	1	answer	wrong	0.081	Reverse → railfence → Vigenere → Reverse		
+v0.12.0	ciphey	enc.reverse_words.1	encoding	1	answer	wrong	0.078	Reverse		
+master	ciphey	enc.reverse_words.1	encoding	1	answer	wrong	0.092	Reverse		
+master	ciphey	enc.pikalang.1	encoding	1	answer	wrong	0.171	rot47 → Keyboard layout		
+v0.12.0	ciphey	enc.pikalang.1	encoding	1	answer	wrong	0.301	railfence → railfence → railfence → railfence → railfence → railfence → railfence → railfence → Bra…		
+v0.12.0	ciphey	enc.blub.1	encoding	1	answer	wrong	0.085	Reverse		
+master	ciphey	enc.blub.1	encoding	1	answer	wrong	0.206	Hexadecimal → ASCII shift → caesar → Base91 → Repeating-key XOR		
+master	ciphey	enc.whitespace_lang.1	encoding	1	answer	wrong	0.053	Reverse → simplesubstitution → Affine		
+v0.12.0	ciphey	enc.whitespace_lang.1	encoding	1	answer	wrong	0.077	simplesubstitution		
+v0.12.0	ciphey	enc.rot8000.1	encoding	1	answer	wrong	0.071	rot47		
+master	ciphey	enc.rot8000.1	encoding	1	timeout	nothing	5.419			
+master	ciphey	enc.rotl3+hex.1	encoding	1	answer	wrong	4.596	Reverse → rot47 → Hexadecimal → Repeating-key XOR		
+v0.12.0	ciphey	enc.rotl3+hex.1	encoding	1	none	nothing	5.112			
+v0.12.0	ciphey	enc.bitnot+hex.1	encoding	1	none	nothing	5.113			
+master	ciphey	enc.bitnot+hex.1	encoding	1	answer	correct	0.043	Single-byte XOR		
+master	ciphey	enc.zstd+base64.1	encoding	1	timeout	nothing	5.519			
+v0.12.0	ciphey	enc.zstd+base64.1	encoding	1	answer	wrong	2.132	Vigenere → railfence → railfence → railfence → railfence → railfence → railfence → Reverse → railfe…		
+v0.12.0	ciphey	enc.lz4+base64.1	encoding	1	answer	wrong	0.537	Vigenere → railfence → railfence → railfence → railfence → railfence → railfence → rot47		
+master	ciphey	enc.lz4+base64.1	encoding	1	timeout	nothing	5.463			
+master	ciphey	enc.lzstring.1	encoding	1	timeout	nothing	5.586			
+v0.12.0	ciphey	enc.lzstring.1	encoding	1	answer	wrong	2.803	Vigenere → railfence → railfence → railfence → railfence → railfence → Reverse → railfence → railfe…		
+v0.12.0	ciphey	cls.caesar3.1	classical	1	answer	wrong	0.078	rot47		
+master	ciphey	cls.caesar3.1	classical	1	answer	correct	0.053	Vigenere		
+master	ciphey	cls.caesar7.1	classical	1	answer	correct	0.057	Vigenere		
+v0.12.0	ciphey	cls.caesar7.1	classical	1	answer	wrong	0.075	rot47		
+v0.12.0	ciphey	cls.caesar19.1	classical	1	answer	wrong	0.066	Default decoder		
+master	ciphey	cls.caesar19.1	classical	1	answer	correct	0.061	Vigenere		
+master	ciphey	cls.caesar23.1	classical	1	answer	correct	0.053	Vigenere		
+v0.12.0	ciphey	cls.caesar23.1	classical	1	answer	wrong	0.082	rot47		
+v0.12.0	ciphey	cls.rot13.1	classical	1	answer	correct	0.086	caesar		
+master	ciphey	cls.rot13.1	classical	1	answer	correct	0.053	Vigenere		
+master	ciphey	cls.rot13.2	classical	1	answer	correct	0.052	Vigenere		
+v0.12.0	ciphey	cls.rot13.2	classical	1	answer	correct	0.086	caesar		
+v0.12.0	ciphey	cls.rot47.1	classical	1	answer	wrong	0.074	rot47		
+master	ciphey	cls.rot47.1	classical	1	answer	correct	0.046	rot47		
+master	ciphey	cls.rot47.2	classical	1	answer	correct	0.045	rot47		
+v0.12.0	ciphey	cls.rot47.2	classical	1	answer	wrong	0.079	rot47		
+v0.12.0	ciphey	cls.rot18.1	classical	1	answer	wrong	0.075	caesar		
+master	ciphey	cls.rot18.1	classical	1	answer	correct	0.041	rot18		
+master	ciphey	cls.atbash.1	classical	1	answer	correct	0.051	atbash		
+v0.12.0	ciphey	cls.atbash.1	classical	1	answer	correct	0.082	atbash		
+v0.12.0	ciphey	cls.atbash.2	classical	1	answer	correct	0.078	atbash		
+master	ciphey	cls.atbash.2	classical	1	answer	correct	0.048	atbash		
+master	ciphey	cls.reverse.1	classical	1	answer	correct	0.056	Reverse		
+v0.12.0	ciphey	cls.reverse.1	classical	1	answer	correct	0.080	Reverse		
+v0.12.0	ciphey	cls.reverse.2	classical	1	answer	correct	0.081	Reverse		
+master	ciphey	cls.reverse.2	classical	1	answer	correct	0.054	Reverse		
+master	ciphey	cls.affine_5_8.1	classical	1	answer	correct	0.042	Affine		
+v0.12.0	ciphey	cls.affine_5_8.1	classical	1	answer	wrong	0.150	Vigenere → railfence → railfence → railfence → railfence → Vigenere → railfence → railfence → rot47		
+v0.12.0	ciphey	cls.affine_7_3.1	classical	1	answer	wrong	0.071	Reverse		
+master	ciphey	cls.affine_7_3.1	classical	1	answer	correct	0.052	Affine		
+master	ciphey	cls.affine_11_20.1	classical	1	answer	correct	0.053	Affine		
+v0.12.0	ciphey	cls.affine_11_20.1	classical	1	answer	wrong	0.139	Vigenere		
+v0.12.0	ciphey	cls.vigenere_key.1	classical	1	answer	wrong	0.098	atbash		
+master	ciphey	cls.vigenere_key.1	classical	1	answer	correct	0.050	Vigenere		
+master	ciphey	cls.vigenere_lemon.1	classical	1	answer	correct	0.051	Vigenere		
+v0.12.0	ciphey	cls.vigenere_lemon.1	classical	1	answer	correct	0.139	Vigenere		
+v0.12.0	ciphey	cls.vigenere_cipher.1	classical	1	answer	wrong	0.139	Vigenere		
+master	ciphey	cls.vigenere_cipher.1	classical	1	answer	correct	0.058	Vigenere		
+master	ciphey	cls.vigenere_password.1	classical	1	answer	correct	0.055	Vigenere		
+v0.12.0	ciphey	cls.vigenere_password.1	classical	1	answer	wrong	0.095	atbash		
+v0.12.0	ciphey	cls.beaufort_fort.1	classical	1	answer	wrong	0.161	Vigenere		
+master	ciphey	cls.beaufort_fort.1	classical	1	answer	correct	0.081	Beaufort		
+master	ciphey	cls.beaufort_secret.1	classical	1	answer	correct	0.067	Beaufort		
+v0.12.0	ciphey	cls.beaufort_secret.1	classical	1	answer	wrong	0.107	Reverse		
+v0.12.0	ciphey	cls.beaufort_bravo.1	classical	1	answer	wrong	0.760	Vigenere → railfence → Vigenere → railfence → railfence → railfence → railfence → railfence → Rever…		
+master	ciphey	cls.beaufort_bravo.1	classical	1	answer	correct	0.056	Beaufort		
+master	ciphey	cls.autokey_queen.1	classical	1	answer	correct	0.060	Vigenere Autokey		
+v0.12.0	ciphey	cls.autokey_queen.1	classical	1	answer	wrong	0.109	Reverse		
+v0.12.0	ciphey	cls.autokey_kilt.1	classical	1	answer	wrong	0.148	Vigenere		
+master	ciphey	cls.autokey_kilt.1	classical	1	answer	correct	0.063	Vigenere Autokey		
+master	ciphey	cls.railfence2.1	classical	1	answer	correct	0.053	Route Transposition		
+v0.12.0	ciphey	cls.railfence2.1	classical	1	answer	correct	0.079	railfence		
+v0.12.0	ciphey	cls.railfence3.1	classical	1	answer	correct	0.076	railfence		
+master	ciphey	cls.railfence3.1	classical	1	answer	correct	0.052	railfence		
+master	ciphey	cls.railfence5.1	classical	1	answer	correct	0.061	railfence		
+v0.12.0	ciphey	cls.railfence5.1	classical	1	answer	wrong	0.088	Reverse		
+v0.12.0	ciphey	cls.railfence7.1	classical	1	answer	correct	0.155	railfence		
+master	ciphey	cls.railfence7.1	classical	1	answer	correct	0.056	railfence		
+master	ciphey	cls.route4.1	classical	1	answer	correct	0.065	Route Transposition		
+v0.12.0	ciphey	cls.route4.1	classical	1	answer	correct	0.092	railfence → railfence		
+v0.12.0	ciphey	cls.route6.1	classical	1	answer	wrong	0.395	railfence → Vigenere → Reverse → railfence → Braille		
+master	ciphey	cls.route6.1	classical	1	answer	correct	0.052	Route Transposition		
+master	ciphey	cls.substitution1.1	classical	1	answer	correct	0.078	Monoalphabetic Substitution		
+v0.12.0	ciphey	cls.substitution1.1	classical	1	answer	wrong	0.058	Default decoder		
+v0.12.0	ciphey	cls.substitution2.1	classical	1	answer	wrong	0.066	Default decoder		
+master	ciphey	cls.substitution2.1	classical	1	answer	wrong	0.107	Keyboard layout → Monoalphabetic Substitution		
+master	ciphey	cls.substitution3.1	classical	1	answer	correct	0.078	Monoalphabetic Substitution		
+v0.12.0	ciphey	cls.substitution3.1	classical	1	answer	wrong	0.170	Reverse		
+v0.12.0	ciphey	cls.playfair_playfair.1	classical	1	answer	wrong	1.140	Vigenere → Reverse → railfence → railfence → railfence → railfence → railfence		
+master	ciphey	cls.playfair_playfair.1	classical	1	answer	correct	0.204	Playfair		
+master	ciphey	cls.playfair_monarchy.1	classical	1	timeout	nothing	5.298			
+v0.12.0	ciphey	cls.playfair_monarchy.1	classical	1	answer	wrong	0.233	Vigenere → railfence		
+v0.12.0	ciphey	cls.playfair_keyword.1	classical	1	answer	wrong	3.243	Vigenere → railfence → railfence → railfence		
+master	ciphey	cls.playfair_keyword.1	classical	1	answer	correct	0.681	Playfair		
+master	ciphey	cls.hill2.1	classical	1	answer	wrong	0.251	Reverse → Keyboard shift → Affine → Route Transposition		
+v0.12.0	ciphey	cls.hill2.1	classical	1	answer	wrong	0.097	rot47 → atbash → railfence → railfence → Vigenere → Reverse		
+v0.12.0	ciphey	cls.hill2.2	classical	1	answer	wrong	0.154	railfence		
+master	ciphey	cls.hill2.2	classical	1	answer	correct	0.064	Hill		
+master	ciphey	cls.xor_2a+hex.1	classical	1	answer	correct	0.047	Single-byte XOR		
+v0.12.0	ciphey	cls.xor_2a+hex.1	classical	1	answer	wrong	1.641	Vigenere → railfence → railfence → railfence → railfence → Vigenere → railfence → railfence → railf…		
+v0.12.0	ciphey	cls.xor_5c+base64.1	classical	1	answer	wrong	1.337	Vigenere → railfence → Reverse → Vigenere → railfence → railfence → railfence → railfence → railfen…		
+master	ciphey	cls.xor_5c+base64.1	classical	1	answer	correct	0.049	Single-byte XOR		
+master	ciphey	cls.xor_13+hex.1	classical	1	answer	correct	0.063	Single-byte XOR		
+v0.12.0	ciphey	cls.xor_13+hex.1	classical	1	none	nothing	5.115			
+v0.12.0	ciphey	cls.xorkey_key+hex.1	classical	1	none	nothing	5.144			
+master	ciphey	cls.xorkey_key+hex.1	classical	1	answer	correct	0.054	Repeating-key XOR		
+master	ciphey	cls.xorkey_ice+base64.1	classical	1	answer	correct	0.085	Repeating-key XOR		
+v0.12.0	ciphey	cls.xorkey_ice+base64.1	classical	1	none	nothing	5.111			
+v0.12.0	ciphey	cls.xorkey_s3cr3t+hex.1	classical	1	none	nothing	5.314			
+master	ciphey	cls.xorkey_s3cr3t+hex.1	classical	1	answer	correct	0.049	Repeating-key XOR		
+master	ciphey	cls.ascii_shift3.1	classical	1	answer	correct	0.062	ASCII shift		
+v0.12.0	ciphey	cls.ascii_shift3.1	classical	1	answer	wrong	0.082	rot47		
+v0.12.0	ciphey	cls.ascii_shift130.1	classical	1	none	nothing	0.080			
+master	ciphey	cls.ascii_shift130.1	classical	1	answer	correct	0.051	ASCII shift		
+master	ciphey	cls.trithemius.1	classical	1	answer	wrong	2.910	caesar → railfence → Null cipher		
+v0.12.0	ciphey	cls.trithemius.1	classical	1	answer	wrong	0.299	Vigenere → railfence → Vigenere → railfence → railfence → railfence → railfence → railfence → railf…		
+v0.12.0	ciphey	cls.skip7.1	classical	1	answer	wrong	0.344	Reverse → Vigenere → railfence → Reverse		
+master	ciphey	cls.skip7.1	classical	1	answer	wrong	0.114	railfence → Null cipher		
+master	ciphey	cls.redefence.1	classical	1	answer	wrong	0.328	Reverse → railfence → Null cipher		
+v0.12.0	ciphey	cls.redefence.1	classical	1	answer	wrong	0.176	Reverse → railfence → Vigenere → railfence → Vigenere		
+v0.12.0	ciphey	cls.porta.1	classical	1	answer	wrong	0.258	Vigenere → Reverse → railfence		
+master	ciphey	cls.porta.1	classical	1	timeout	nothing	5.240			
+master	ciphey	cls.foursquare.1	classical	1	timeout	nothing	5.254			
+v0.12.0	ciphey	cls.foursquare.1	classical	1	answer	wrong	0.235	Vigenere → railfence		
+v0.12.0	ciphey	cls.bifid.1	classical	1	answer	wrong	0.278	Vigenere → Reverse → railfence		
+master	ciphey	cls.bifid.1	classical	1	timeout	nothing	5.205			
+master	ciphey	cls.nihilist.1	classical	1	answer	wrong	0.563	rot47 → Hexadecimal → ASCII shift → Affine		
+v0.12.0	ciphey	cls.nihilist.1	classical	1	none	nothing	5.122			
+v0.12.0	ciphey	cls.adfgx.1	classical	1	answer	wrong	1.030	rot47 → railfence → Vigenere → railfence → railfence → Vigenere → Reverse → railfence → Vigenere → …		
+master	ciphey	cls.adfgx.1	classical	1	answer	wrong	0.131	Keyboard shift → Keyboard layout → railfence		
+master	ciphey	cls.adfgvx.1	classical	1	answer	wrong	0.557	Keyboard shift → Hexadecimal → ASCII shift → Affine		
+v0.12.0	ciphey	cls.adfgvx.1	classical	1	none	nothing	5.110			
+v0.12.0	ciphey	cls.columnar.1	classical	1	answer	wrong	0.144	railfence		
+master	ciphey	cls.columnar.1	classical	1	timeout	nothing	5.251			
+master	ciphey	cls.double_transposition.1	classical	1	timeout	nothing	5.266			
+v0.12.0	ciphey	cls.double_transposition.1	classical	1	answer	wrong	0.204	Reverse → railfence		
+v0.12.0	ciphey	cls.fractionated_morse.1	classical	1	answer	wrong	0.073	Vigenere → rot47		
+master	ciphey	cls.fractionated_morse.1	classical	1	answer	wrong	2.513	Keyboard shift → Keyboard layout → railfence → Affine		
+master	ciphey	hash.md5.1	hash	1	timeout	nothing	5.613			
+v0.12.0	ciphey	hash.md5.1	hash	1	answer	wrong	0.574	Reverse → railfence → rot47 → railfence → rot47 → atbash → rot47		
+v0.12.0	ciphey	hash.md5.2	hash	1	none	nothing	5.106			
+master	ciphey	hash.md5.2	hash	1	timeout	nothing	5.598			
+master	ciphey	hash.md5.3	hash	1	timeout	nothing	5.582			
+v0.12.0	ciphey	hash.md5.3	hash	1	answer	wrong	0.634	Vigenere → railfence → railfence → railfence → railfence → Vigenere → rot47		
+v0.12.0	ciphey	hash.md5.4	hash	1	answer	wrong	0.664	Reverse → railfence → railfence → Vigenere → railfence → railfence → railfence → Reverse → railfenc…		
+master	ciphey	hash.md5.4	hash	1	timeout	nothing	5.582			
+master	ciphey	hash.sha1.1	hash	1	timeout	nothing	5.579			
+v0.12.0	ciphey	hash.sha1.1	hash	1	answer	wrong	0.064	Default decoder		
+v0.12.0	ciphey	hash.sha1.2	hash	1	answer	wrong	0.072	Default decoder		
+master	ciphey	hash.sha1.2	hash	1	timeout	nothing	5.507			
+master	ciphey	hash.sha1.3	hash	1	answer	wrong	5.553	Hexadecimal → caesar → Base91 → atbash → rot47		
+v0.12.0	ciphey	hash.sha1.3	hash	1	answer	wrong	0.067	Default decoder		
+v0.12.0	ciphey	hash.sha1.4	hash	1	answer	wrong	0.065	Default decoder		
+master	ciphey	hash.sha1.4	hash	1	timeout	nothing	5.617			
+master	ciphey	hash.sha256.1	hash	1	timeout	nothing	5.346			
+v0.12.0	ciphey	hash.sha256.1	hash	1	answer	wrong	2.353	Vigenere → Vigenere → railfence → railfence → railfence → railfence → railfence → Reverse → railfen…		
+v0.12.0	ciphey	hash.sha256.2	hash	1	answer	wrong	1.599	Vigenere → Reverse → railfence → railfence → Vigenere → railfence → Reverse → railfence → rot47		
+master	ciphey	hash.sha256.2	hash	1	timeout	nothing	5.300			
+master	ciphey	hash.sha256.3	hash	1	timeout	nothing	5.355			
+v0.12.0	ciphey	hash.sha256.3	hash	1	answer	wrong	0.509	Vigenere → railfence → Reverse → railfence → Vigenere → railfence → rot47		
+v0.12.0	ciphey	hash.sha256.4	hash	1	answer	wrong	0.182	Vigenere → railfence → railfence → railfence → railfence → rot47		
+master	ciphey	hash.sha256.4	hash	1	timeout	nothing	5.364			
+master	ciphey	hash.ntlm.1	hash	1	timeout	nothing	5.518			
+v0.12.0	ciphey	hash.ntlm.1	hash	1	none	nothing	5.117			
+v0.12.0	ciphey	hash.ntlm.2	hash	1	answer	wrong	0.540	Vigenere → Reverse → railfence → Vigenere → railfence → railfence → rot47		
+master	ciphey	hash.ntlm.2	hash	1	timeout	nothing	5.601			
+master	ciphey	hash.ntlm.3	hash	1	timeout	nothing	5.752			
+v0.12.0	ciphey	hash.ntlm.3	hash	1	answer	wrong	0.124	Vigenere → caesar → rot47		
+v0.12.0	ciphey	hash.ntlm.4	hash	1	answer	wrong	2.222	railfence → Reverse → caesar → railfence → railfence → railfence → Vigenere → Reverse → railfence →…		
+master	ciphey	hash.ntlm.4	hash	1	timeout	nothing	5.619			
+master	ciphey	flag.01	flag	1	answer	correct	0.045	Base64		
+v0.12.0	ciphey	flag.01	flag	1	answer	correct	0.073	Base64		
+v0.12.0	ciphey	flag.02	flag	1	answer	wrong	0.227	Hexadecimal → Reverse → Vigenere → railfence → Reverse → railfence → railfence → rot47		
+master	ciphey	flag.02	flag	1	answer	correct	0.046	Hexadecimal		
+master	ciphey	flag.03	flag	1	answer	correct	0.043	caesar		
+v0.12.0	ciphey	flag.03	flag	1	answer	correct	0.072	Vigenere		
+v0.12.0	ciphey	flag.04	flag	1	answer	correct	0.071	caesar		
+master	ciphey	flag.04	flag	1	answer	correct	0.046	caesar		
+master	ciphey	flag.05	flag	1	answer	correct	0.048	atbash		
+v0.12.0	ciphey	flag.05	flag	1	answer	wrong	0.163	atbash → railfence → Vigenere → railfence → railfence → railfence → railfence → Reverse		
+v0.12.0	ciphey	flag.06	flag	1	answer	correct	0.074	Base32		
+master	ciphey	flag.06	flag	1	answer	correct	0.040	Base32		
+master	ciphey	flag.07	flag	1	answer	correct	0.040	Hexadecimal		
+v0.12.0	ciphey	flag.07	flag	1	answer	wrong	1.364	URL → rot47 → railfence → railfence → railfence → Vigenere → railfence → Vigenere → railfence → Bra…		
+v0.12.0	ciphey	flag.08	flag	1	answer	wrong	0.344	Vigenere → railfence → rot47 → railfence → Vigenere → railfence → railfence → railfence → railfence…		
+master	ciphey	flag.08	flag	1	answer	correct	0.056	Reverse		
+master	ciphey	flag.09	flag	1	answer	correct	0.051	Binary		
+v0.12.0	ciphey	flag.09	flag	1	answer	wrong	0.557	railfence → rot47 → railfence → railfence → railfence → railfence → simplesubstitution		
+v0.12.0	ciphey	flag.10	flag	1	answer	wrong	1.373	Vigenere → railfence → railfence → railfence → railfence → railfence → railfence → railfence → Reve…		
+master	ciphey	flag.10	flag	1	answer	correct	0.044	Base58 Bitcoin		
+master	ciphey	flag.11	flag	1	answer	correct	0.053	railfence		
+v0.12.0	ciphey	flag.11	flag	1	answer	correct	0.073	railfence		
+v0.12.0	ciphey	flag.12	flag	1	answer	wrong	2.830	Vigenere → railfence → railfence → atbash → Vigenere → railfence → Reverse → railfence → railfence …		
+master	ciphey	flag.12	flag	1	answer	correct	0.039	Single-byte XOR		
+master	ciphey	flag.13	flag	1	answer	correct	0.040	rot47		
+v0.12.0	ciphey	flag.13	flag	1	answer	correct	0.075	rot47		
+v0.12.0	ciphey	flag.14	flag	1	answer	wrong	0.669	Vigenere → Vigenere → railfence → railfence → Reverse → railfence → Vigenere → Reverse → railfence …		
+master	ciphey	flag.14	flag	1	answer	correct	0.044	Base85		
+master	ciphey	flag.15	flag	1	answer	correct	0.046	Decimal		
+v0.12.0	ciphey	flag.15	flag	1	none	nothing	5.088			
+v0.12.0	ciphey	flag.16	flag	1	answer	wrong	0.948	Vigenere → railfence → railfence → railfence → rot47 → Vigenere → railfence → railfence → railfence…		
+master	ciphey	flag.16	flag	1	answer	correct	0.052	Hexadecimal → Base64		
+master	ciphey	flag.17	flag	1	answer	correct	0.079	Base64 → caesar		
+v0.12.0	ciphey	flag.17	flag	1	answer	wrong	0.643	Vigenere → Reverse → railfence → railfence → railfence → Vigenere → Reverse → railfence → railfence…		
+v0.12.0	ciphey	flag.18	flag	1	answer	correct	0.148	Base64 → Reverse		
+master	ciphey	flag.18	flag	1	answer	correct	0.048	Base64 → Reverse		
+master	ciphey	flag.19	flag	1	answer	correct	0.044	Base32 → Hexadecimal		
+v0.12.0	ciphey	flag.19	flag	1	answer	wrong	1.217	Vigenere → Reverse → railfence → railfence → Vigenere → railfence → Reverse → railfence → railfence…		
+v0.12.0	ciphey	flag.20	flag	1	answer	wrong	0.635	Vigenere → rot47 → railfence → rot47 → railfence → railfence → railfence → railfence → railfence → …		
+master	ciphey	flag.20	flag	1	answer	correct	0.047	caesar		
+master	ciphey	flag.21	flag	1	answer	correct	0.055	Base64 → Base64		
+v0.12.0	ciphey	flag.21	flag	1	answer	wrong	0.130	Vigenere → railfence → Reverse → railfence → rot47		
+v0.12.0	ciphey	flag.22	flag	1	answer	wrong	0.157	Vigenere → Vigenere → railfence → Reverse		
+master	ciphey	flag.22	flag	1	answer	wrong	0.284	caesar → Keyboard shift → caesar		
+master	ciphey	flag.23	flag	1	answer	correct	0.057	Octal		
+v0.12.0	ciphey	flag.23	flag	1	none	nothing	5.116			
+v0.12.0	ciphey	flag.24	flag	1	answer	wrong	0.210	Vigenere → railfence → railfence → Reverse → railfence → railfence → railfence → railfence → railfe…		
+master	ciphey	flag.24	flag	1	answer	correct	0.061	Base64 → Base32		
+master	ciphey	flag.25	flag	1	answer	correct	0.044	HTML Entities		
+v0.12.0	ciphey	flag.25	flag	1	answer	wrong	0.076	rot47		
+v0.12.0	ciphey	flag.26	flag	1	answer	wrong	0.102	Vigenere → Reverse → railfence → railfence → railfence → Vigenere → railfence → Reverse		
+master	ciphey	flag.26	flag	1	answer	correct	0.038	Base91		
+master	ciphey	flag.27	flag	1	answer	correct	0.044	Ascii85		
+v0.12.0	ciphey	flag.27	flag	1	answer	wrong	1.525	Vigenere → railfence → railfence → railfence → railfence → railfence → railfence → railfence → rail…		
+v0.12.0	ciphey	flag.28	flag	1	answer	wrong	0.140	Vigenere → Reverse → railfence → railfence → railfence → Vigenere → Reverse		
+master	ciphey	flag.28	flag	1	answer	correct	0.048	Base64 Alt		
+master	ciphey	flag.29	flag	1	answer	correct	0.041	Hexadecimal → atbash		
+v0.12.0	ciphey	flag.29	flag	1	answer	wrong	0.061	Default decoder		
+v0.12.0	ciphey	flag.30	flag	1	answer	wrong	5.115	Vigenere → railfence → railfence → railfence → railfence → Reverse → Vigenere → railfence → railfen…		
+master	ciphey	flag.30	flag	1	timeout	nothing	5.594			
+master	ciphey	short.01	short	1	answer	wrong	0.191	rot47 → atbash → Leetspeak		
+v0.12.0	ciphey	short.01	short	1	answer	correct	0.069	Base64		
+v0.12.0	ciphey	short.02	short	1	answer	correct	0.070	Hexadecimal		
+master	ciphey	short.02	short	1	answer	correct	0.040	Hexadecimal		
+master	ciphey	short.03	short	1	answer	correct	0.040	caesar		
+v0.12.0	ciphey	short.03	short	1	answer	correct	0.068	caesar		
+v0.12.0	ciphey	short.04	short	1	answer	wrong	0.071	rot47		
+master	ciphey	short.04	short	1	none	nothing	0.041			
+master	ciphey	short.05	short	1	answer	correct	0.045	Binary		
+v0.12.0	ciphey	short.05	short	1	answer	correct	0.126	Binary		
+v0.12.0	ciphey	short.06	short	1	answer	correct	0.085	Base32		
+master	ciphey	short.06	short	1	answer	wrong	0.590	Base32 → caesar → Keyboard layout → atbash		
+master	ciphey	short.07	short	1	answer	correct	0.048	Reverse		
+v0.12.0	ciphey	short.07	short	1	answer	wrong	0.062	Default decoder		
+v0.12.0	ciphey	short.08	short	1	answer	correct	0.074	atbash		
+master	ciphey	short.08	short	1	answer	correct	0.050	atbash		
+master	ciphey	short.09	short	1	answer	wrong	0.080	rot47 → Keyboard shift → Affine		
+v0.12.0	ciphey	short.09	short	1	answer	correct	0.076	URL		
+v0.12.0	ciphey	short.10	short	1	answer	correct	0.079	Base58 Bitcoin		
+master	ciphey	short.10	short	1	answer	correct	0.048	Base58 Bitcoin		
+master	ciphey	short.11	short	1	answer	wrong	0.064	rot47 → T9		
+v0.12.0	ciphey	short.11	short	1	answer	wrong	0.083	railfence → railfence → Binary		
+v0.12.0	ciphey	short.12	short	1	answer	wrong	0.071	rot47		
+master	ciphey	short.12	short	1	answer	correct	0.045	rot47		
+master	ciphey	short.13	short	1	answer	correct	0.045	Base85		
+v0.12.0	ciphey	short.13	short	1	answer	wrong	0.079	atbash → rot47		
+v0.12.0	ciphey	short.14	short	1	answer	correct	0.075	Morse Code		
+master	ciphey	short.14	short	1	answer	correct	0.042	Morse Code		
+master	ciphey	short.15	short	1	answer	wrong	0.051	rot47 → T9		
+v0.12.0	ciphey	short.15	short	1	answer	wrong	0.073	simplesubstitution		
+v0.12.0	ciphey	long.01	long	1	timeout	nothing	6.026			
+master	ciphey	long.01	long	1	answer	correct	0.058	Base64		
+master	ciphey	long.02	long	1	answer	correct	0.042	Hexadecimal		
+v0.12.0	ciphey	long.02	long	1	answer	correct	1.564	Hexadecimal		
+v0.12.0	ciphey	long.03	long	1	answer	wrong	0.057	Default decoder		
+master	ciphey	long.03	long	1	answer	correct	0.053	Vigenere		
+master	ciphey	long.04	long	1	answer	correct	0.052	Vigenere		
+v0.12.0	ciphey	long.04	long	1	answer	correct	0.575	Vigenere		
+v0.12.0	ciphey	long.05	long	1	answer	correct	0.662	Vigenere		
+master	ciphey	long.05	long	1	answer	correct	0.049	Vigenere		
+master	ciphey	long.06	long	1	answer	correct	0.060	railfence		
+v0.12.0	ciphey	long.06	long	1	answer	wrong	0.059	Default decoder		
+v0.12.0	ciphey	long.07	long	1	answer	wrong	0.063	Default decoder		
+master	ciphey	long.07	long	1	answer	correct	0.051	atbash		
+master	ciphey	long.08	long	1	answer	correct	0.045	Base32		
+v0.12.0	ciphey	long.08	long	1	answer	correct	0.821	Base32		
+v0.12.0	ciphey	long.09	long	1	answer	wrong	0.062	Default decoder		
+master	ciphey	long.09	long	1	answer	correct	0.080	Monoalphabetic Substitution		
+master	ciphey	long.10	long	1	answer	correct	0.044	Binary		
+v0.12.0	ciphey	long.10	long	1	timeout	nothing	6.030			
+v0.12.0	ciphey	long.11	long	1	none	nothing	5.626			
+master	ciphey	long.11	long	1	timeout	nothing	5.549			
+master	ciphey	long.12	long	1	answer	correct	0.063	Reverse		
+v0.12.0	ciphey	long.12	long	1	answer	wrong	0.059	Default decoder		
+v0.12.0	ciphey	chain2.01	chain	1	answer	wrong	2.232	Vigenere → railfence → railfence → Reverse → railfence → railfence → railfence → railfence → Revers…		
+master	ciphey	chain2.01	chain	1	answer	correct	0.049	Base85 → Base58 Bitcoin		
+master	ciphey	chain2.02	chain	1	answer	correct	0.056	Base32 → Vigenere		
+v0.12.0	ciphey	chain2.02	chain	1	answer	wrong	4.019	Vigenere → Reverse → railfence → railfence → railfence → Vigenere → Reverse → railfence → railfence…		
+v0.12.0	ciphey	chain2.03	chain	1	none	nothing	5.091			
+master	ciphey	chain2.03	chain	1	answer	correct	0.077	Base32 → Decimal		
+master	ciphey	chain2.04	chain	1	answer	correct	0.067	Hexadecimal → Vigenere		
+v0.12.0	ciphey	chain2.04	chain	1	answer	wrong	0.722	Vigenere → railfence → railfence → railfence → railfence → Vigenere → railfence → railfence → railf…		
+v0.12.0	ciphey	chain2.05	chain	1	none	nothing	5.093			
+master	ciphey	chain2.05	chain	1	answer	correct	0.055	Octal → Base64		
+master	ciphey	chain2.06	chain	1	answer	wrong	0.059	Reverse → simplesubstitution		
+v0.12.0	ciphey	chain2.06	chain	1	answer	wrong	0.324	simplesubstitution		
+v0.12.0	ciphey	chain2.07	chain	1	none	nothing	5.109			
+master	ciphey	chain2.07	chain	1	answer	correct	0.049	Base58 Bitcoin → Base58 Bitcoin		
+master	ciphey	chain2.08	chain	1	answer	correct	0.048	Base85 → rot47		
+v0.12.0	ciphey	chain2.08	chain	1	answer	wrong	0.149	Vigenere → Vigenere → railfence → railfence → railfence → railfence → railfence → Reverse		
+v0.12.0	ciphey	chain2.09	chain	1	answer	wrong	1.681	Vigenere → railfence → Reverse → Vigenere → railfence → railfence → railfence → railfence → railfen…		
+master	ciphey	chain2.09	chain	1	answer	correct	0.043	Base58 Bitcoin → Base32		
+master	ciphey	chain2.10	chain	1	answer	correct	0.075	Base64 → Vigenere		
+v0.12.0	ciphey	chain2.10	chain	1	answer	wrong	0.206	Vigenere → railfence → railfence → railfence → railfence → railfence → railfence → railfence → Brai…		
+v0.12.0	ciphey	chain3.01	chain	1	answer	wrong	0.393	Vigenere → Vigenere → Vigenere → Reverse → rot47		
+master	ciphey	chain3.01	chain	1	answer	correct	0.090	Base85 → Base85 → Hexadecimal		
+master	ciphey	chain3.02	chain	1	answer	correct	0.911	Base32 → Binary → atbash		
+v0.12.0	ciphey	chain3.02	chain	1	answer	wrong	2.116	Base32 → simplesubstitution		
+v0.12.0	ciphey	chain3.03	chain	1	answer	wrong	0.156	Reverse → rot47 → Binary		
+master	ciphey	chain3.03	chain	1	answer	correct	0.061	Decimal → Base85 → Base32		
+master	ciphey	chain3.04	chain	1	answer	correct	0.070	Decimal → Hexadecimal → rot47		
+v0.12.0	ciphey	chain3.04	chain	1	none	nothing	5.081			
+v0.12.0	ciphey	chain3.05	chain	1	answer	correct	2.069	Hexadecimal → Base64 → Binary		
+master	ciphey	chain3.05	chain	1	timeout	nothing	5.313			
+master	ciphey	chain3.06	chain	1	answer	correct	0.101	Octal → Base32 → rot47		
+v0.12.0	ciphey	chain3.06	chain	1	none	nothing	5.104			
+v0.12.0	ciphey	chain3.07	chain	1	none	nothing	5.091			
+master	ciphey	chain3.07	chain	1	answer	correct	0.065	Hexadecimal → Base85 → Base64		
+master	ciphey	chain3.08	chain	1	answer	correct	0.104	Octal → Base58 Bitcoin → Reverse		
+v0.12.0	ciphey	chain3.08	chain	1	none	nothing	5.085			
+v0.12.0	ciphey	chain3.09	chain	1	none	nothing	5.077			
+master	ciphey	chain3.09	chain	1	answer	correct	0.090	URL → Hexadecimal → Base64		
+master	ciphey	chain3.10	chain	1	answer	correct	0.161	Hexadecimal → Base64 → Vigenere		
+v0.12.0	ciphey	chain3.10	chain	1	none	nothing	5.109			
+v0.12.0	ciphey	chain4.01	chain	1	timeout	nothing	6.034			
+master	ciphey	chain4.01	chain	1	answer	wrong	0.079	Reverse → simplesubstitution		
+master	ciphey	chain4.02	chain	1	answer	correct	0.281	Decimal → Hexadecimal → Base85 → rot47		
+v0.12.0	ciphey	chain4.02	chain	1	none	nothing	5.111			
+v0.12.0	ciphey	chain4.03	chain	1	answer	wrong	1.433	URL → Vigenere → Vigenere → railfence → railfence → railfence		
+master	ciphey	chain4.03	chain	1	answer	wrong	2.430	URL → Base32 → Base58 Bitcoin → rot47 → T9		
+master	ciphey	chain4.04	chain	1	answer	correct	0.340	Base32 → Base85 → Base32 → rot47		
+v0.12.0	ciphey	chain4.04	chain	1	answer	wrong	0.149	Vigenere → railfence		
+v0.12.0	ciphey	chain4.05	chain	1	timeout	nothing	6.032			
+master	ciphey	chain4.05	chain	1	none	nothing	1.644			
+master	ciphey	chain4.06	chain	1	answer	correct	0.313	Base64 → Base85 → Hexadecimal → Vigenere		
+v0.12.0	ciphey	chain4.06	chain	1	answer	wrong	2.877	Vigenere → Reverse → railfence → Vigenere → Vigenere → Vigenere → railfence → Reverse → Binary		
+v0.12.0	ciphey	chain4.07	chain	1	none	nothing	5.084			
+master	ciphey	chain4.07	chain	1	answer	correct	0.226	Base64 → Decimal → Base32 → Base32		
+master	ciphey	chain4.08	chain	1	answer	wrong	1.206	Hexadecimal → caesar → Keyboard shift → Vigenere		
+v0.12.0	ciphey	chain4.08	chain	1	none	nothing	5.126			
+v0.12.0	ciphey	chain4.09	chain	1	answer	wrong	0.887	Binary → Reverse → railfence → railfence → railfence → rot47 → railfence → railfence → railfence → …		
+master	ciphey	chain4.09	chain	1	answer	correct	0.075	Octal → Base32 → Hexadecimal → Base64		
+master	ciphey	chain4.10	chain	1	answer	wrong	0.093	Hexadecimal → rot47 → Keyboard layout		
+v0.12.0	ciphey	chain4.10	chain	1	none	nothing	5.089			
+v0.12.0	ciphey	chain5.01	chain	1	answer	wrong	0.808	Binary → Reverse → railfence → railfence → railfence → railfence → railfence → Reverse → railfence …		
+master	ciphey	chain5.01	chain	1	timeout	nothing	5.473			
+master	ciphey	chain5.02	chain	1	answer	correct	0.769	Decimal → URL → Base58 Bitcoin → Base64 → Reverse		
+v0.12.0	ciphey	chain5.02	chain	1	answer	wrong	0.849	Hexadecimal → Vigenere → Vigenere → Vigenere → Reverse → caesar		
+v0.12.0	ciphey	chain5.03	chain	1	timeout	nothing	6.034			
+master	ciphey	chain5.03	chain	1	timeout	nothing	5.762			
+master	ciphey	chain5.04	chain	1	timeout	nothing	5.965			
+v0.12.0	ciphey	chain5.04	chain	1	timeout	nothing	6.030			
+v0.12.0	ciphey	chain5.05	chain	1	timeout	nothing	6.030			
+master	ciphey	chain5.05	chain	1	timeout	nothing	5.976			
+master	ciphey	chain5.06	chain	1	answer	wrong	0.124	Binary → Repeating-key XOR		
+v0.12.0	ciphey	chain5.06	chain	1	none	nothing	5.097			
+v0.12.0	ciphey	chain5.07	chain	1	timeout	nothing	6.041			
+master	ciphey	chain5.07	chain	1	timeout	nothing	5.494			
+master	ciphey	chain5.08	chain	1	none	nothing	0.048			
+v0.12.0	ciphey	chain5.08	chain	1	none	nothing	0.774			
+v0.12.0	ciphey	chain5.09	chain	1	timeout	nothing	6.050			
+master	ciphey	chain5.09	chain	1	answer	wrong	0.771	rot47 → ASCII shift		
+master	ciphey	chain5.10	chain	1	answer	correct	0.488	Base85 → Hexadecimal → Base32 → Octal → Vigenere		
+v0.12.0	ciphey	chain5.10	chain	1	answer	wrong	0.240	Binary → simplesubstitution		
+v0.12.0	ciphey	lang.de.base64	language	1	answer	wrong	0.280	Base64 → railfence → railfence → railfence → Vigenere		
+master	ciphey	lang.de.base64	language	1	answer	wrong	1.168	Base64 → Reverse → railfence → Null cipher		
+master	ciphey	lang.de.hex	language	1	answer	correct	0.049	Hexadecimal		
+v0.12.0	ciphey	lang.de.hex	language	1	answer	wrong	0.084	Hexadecimal		
+v0.12.0	ciphey	lang.de.plain	language	1	answer	wrong	0.112	Vigenere → railfence → railfence → railfence → Reverse		
+master	ciphey	lang.de.plain	language	1	answer	wrong	0.256	Reverse → railfence → Null cipher		
+master	ciphey	lang.fr.base64	language	1	answer	correct	0.040	Base64		
+v0.12.0	ciphey	lang.fr.base64	language	1	answer	correct	0.071	Base64		
+v0.12.0	ciphey	lang.fr.hex	language	1	answer	wrong	0.073	Hexadecimal		
+master	ciphey	lang.fr.hex	language	1	answer	correct	0.047	Hexadecimal		
+master	ciphey	lang.fr.plain	language	1	answer	correct	0.043	Default decoder		
+v0.12.0	ciphey	lang.fr.plain	language	1	answer	correct	0.063	Default decoder		
+v0.12.0	ciphey	lang.es.base64	language	1	answer	correct	0.074	Base64		
+master	ciphey	lang.es.base64	language	1	answer	correct	0.038	Base64		
+master	ciphey	lang.es.hex	language	1	answer	correct	0.047	Hexadecimal		
+v0.12.0	ciphey	lang.es.hex	language	1	answer	correct	0.075	Hexadecimal		
+v0.12.0	ciphey	lang.es.plain	language	1	answer	correct	0.065	Default decoder		
+master	ciphey	lang.es.plain	language	1	answer	correct	0.040	Default decoder		
+master	ciphey	lang.it.base64	language	1	answer	wrong	0.083	Base64 → Reverse → Route Transposition		
+v0.12.0	ciphey	lang.it.base64	language	1	answer	correct	0.071	Base64		
+v0.12.0	ciphey	lang.it.hex	language	1	answer	correct	0.074	Hexadecimal		
+master	ciphey	lang.it.hex	language	1	answer	correct	0.043	Hexadecimal		
+master	ciphey	lang.it.plain	language	1	answer	wrong	0.052	Reverse → Route Transposition		
+v0.12.0	ciphey	lang.it.plain	language	1	answer	correct	0.059	Default decoder		
+v0.12.0	ciphey	lang.pt.base64	language	1	answer	wrong	0.338	Vigenere → railfence → railfence → railfence → Vigenere → Vigenere → railfence → Reverse		
+master	ciphey	lang.pt.base64	language	1	answer	wrong	0.216	Base64 → railfence → Null cipher		
+master	ciphey	lang.pt.hex	language	1	answer	wrong	1.593	Reverse → rot47 → Monoalphabetic Substitution → Vigenere		
+v0.12.0	ciphey	lang.pt.hex	language	1	answer	wrong	0.275	Vigenere → railfence → railfence → railfence → railfence → railfence → railfence → rot47		
+v0.12.0	ciphey	lang.pt.plain	language	1	answer	wrong	0.113	Vigenere → railfence → railfence → Reverse		
+master	ciphey	lang.pt.plain	language	1	answer	wrong	0.077	railfence → Null cipher		
+master	ciphey	lang.nl.base64	language	1	answer	wrong	0.054	Base64 → railfence		
+v0.12.0	ciphey	lang.nl.base64	language	1	answer	correct	0.075	Base64		
+v0.12.0	ciphey	lang.nl.hex	language	1	answer	correct	0.076	Hexadecimal		
+master	ciphey	lang.nl.hex	language	1	answer	wrong	1.965	Hexadecimal → Reverse → Affine → Reverse → Null cipher		
+master	ciphey	lang.nl.plain	language	1	answer	wrong	0.054	railfence		
+v0.12.0	ciphey	lang.nl.plain	language	1	answer	correct	0.062	Default decoder		
+v0.12.0	ciphey	lang.pl.base64	language	1	answer	wrong	0.074	rot47		
+master	ciphey	lang.pl.base64	language	1	answer	wrong	1.188	Base64 → Reverse → railfence → Null cipher		
+master	ciphey	lang.pl.hex	language	1	timeout	nothing	5.382			
+v0.12.0	ciphey	lang.pl.hex	language	1	answer	wrong	0.076	Hexadecimal		
+v0.12.0	ciphey	lang.pl.plain	language	1	answer	wrong	0.104	Vigenere → Reverse → railfence → railfence → railfence		
+master	ciphey	lang.pl.plain	language	1	answer	wrong	0.206	Reverse → railfence → Null cipher		
+master	ciphey	lang.tr.base64	language	1	answer	wrong	1.193	Base64 → Reverse → railfence → Null cipher		
+v0.12.0	ciphey	lang.tr.base64	language	1	answer	wrong	0.083	Vigenere → rot47		
+v0.12.0	ciphey	lang.tr.hex	language	1	none	nothing	5.114			
+master	ciphey	lang.tr.hex	language	1	timeout	nothing	5.439			
+master	ciphey	lang.tr.plain	language	1	answer	wrong	0.167	Reverse → railfence → Null cipher		
+v0.12.0	ciphey	lang.tr.plain	language	1	answer	wrong	0.150	rot47 → Vigenere → railfence → railfence → railfence → Vigenere		
+v0.12.0	ciphey	lang.ru.base64	language	1	answer	wrong	3.705	Vigenere → Vigenere → Reverse → railfence → railfence → Reverse → railfence → railfence → rot47		
+master	ciphey	lang.ru.base64	language	1	timeout	nothing	5.550			
+master	ciphey	lang.ru.hex	language	1	answer	wrong	1.853	rot47 → Hexadecimal → ASCII shift → Hill		
+v0.12.0	ciphey	lang.ru.hex	language	1	none	nothing	5.103			
+v0.12.0	ciphey	lang.ru.plain	language	1	answer	wrong	0.156	rot47 → rot47 → caesar → rot47 → railfence → caesar → rot47 → Vigenere → railfence → caesar → atbas…		
+master	ciphey	lang.ru.plain	language	1	answer	wrong	1.385	railfence → rot47 → Repeating-key XOR		
+master	ciphey	lang.zh.base64	language	1	timeout	nothing	5.585			
+v0.12.0	ciphey	lang.zh.base64	language	1	answer	wrong	0.182	Vigenere → Reverse → railfence → railfence → railfence → railfence → railfence → railfence → railfe…		
+v0.12.0	ciphey	lang.zh.hex	language	1	answer	wrong	0.221	railfence → railfence → Vigenere → railfence → Reverse → railfence → railfence → railfence → rot47		
+master	ciphey	lang.zh.hex	language	1	answer	wrong	0.617	rot47 → Hexadecimal → Repeating-key XOR		
+master	ciphey	lang.zh.plain	language	1	timeout	nothing	5.535			
+v0.12.0	ciphey	lang.zh.plain	language	1	none	nothing	0.076			
+v0.12.0	ciphey	lang.ja.base64	language	1	answer	wrong	0.662	Vigenere → railfence → railfence → Reverse → railfence → railfence → Reverse → railfence → rot47		
+master	ciphey	lang.ja.base64	language	1	timeout	nothing	5.612			
+master	ciphey	lang.ja.hex	language	1	timeout	nothing	5.357			
+v0.12.0	ciphey	lang.ja.hex	language	1	answer	wrong	0.808	railfence → railfence → Reverse → railfence → railfence → Binary → rot47		
+v0.12.0	ciphey	lang.ja.plain	language	1	none	nothing	0.083			
+master	ciphey	lang.ja.plain	language	1	timeout	nothing	5.566			
+master	ciphey	lang.ko.base64	language	1	timeout	nothing	5.551			
+v0.12.0	ciphey	lang.ko.base64	language	1	answer	wrong	2.154	Vigenere → railfence → Vigenere → railfence → Vigenere → Reverse → Vigenere → rot47		
+v0.12.0	ciphey	lang.ko.hex	language	1	answer	wrong	1.160	railfence → railfence → Reverse → railfence → railfence → Vigenere → railfence → Reverse → Vigenere…		
+master	ciphey	lang.ko.hex	language	1	timeout	nothing	5.428			
+master	ciphey	lang.ko.plain	language	1	timeout	nothing	5.625			
+v0.12.0	ciphey	lang.ko.plain	language	1	answer	wrong	0.091	Reverse → rot47 → Base91 → simplesubstitution		
+v0.12.0	ciphey	plain.T01	plaintext	1	answer	correct	0.064	Default decoder		
+master	ciphey	plain.T01	plaintext	1	answer	correct	0.041	Default decoder		
+master	ciphey	plain.T02	plaintext	1	answer	correct	0.046	Default decoder		
+v0.12.0	ciphey	plain.T02	plaintext	1	answer	correct	0.060	Default decoder		
+v0.12.0	ciphey	plain.T03	plaintext	1	answer	correct	0.064	Default decoder		
+master	ciphey	plain.T03	plaintext	1	answer	correct	0.044	Default decoder		
+master	ciphey	plain.T04	plaintext	1	answer	correct	0.042	Default decoder		
+v0.12.0	ciphey	plain.T04	plaintext	1	answer	correct	0.064	Default decoder		
+v0.12.0	ciphey	plain.T05	plaintext	1	answer	correct	0.062	Default decoder		
+master	ciphey	plain.T05	plaintext	1	answer	correct	0.043	Default decoder		
+master	ciphey	plain.T06	plaintext	1	answer	correct	0.044	Default decoder		
+v0.12.0	ciphey	plain.T06	plaintext	1	answer	correct	0.067	Default decoder		
+v0.12.0	ciphey	plain.T07	plaintext	1	answer	wrong	0.107	Vigenere → Reverse → railfence → railfence → Braille		
+master	ciphey	plain.T07	plaintext	1	answer	correct	0.039	Default decoder		
+master	ciphey	plain.T08	plaintext	1	answer	correct	0.039	Default decoder		
+v0.12.0	ciphey	plain.T08	plaintext	1	answer	correct	0.060	Default decoder		
+v0.12.0	ciphey	plain.T09	plaintext	1	answer	correct	0.059	Default decoder		
+master	ciphey	plain.T09	plaintext	1	answer	correct	0.049	Default decoder		
+master	ciphey	plain.T10	plaintext	1	answer	correct	0.047	Default decoder		
+v0.12.0	ciphey	plain.T10	plaintext	1	answer	correct	0.067	Default decoder		
+v0.12.0	ciphey	none.random_alnum.1	no_answer	1	answer	wrong	0.142	Vigenere → Reverse → railfence → railfence → railfence → railfence → railfence → railfence → Reverse		
+master	ciphey	none.random_alnum.1	no_answer	1	timeout	correct	5.546			
+master	ciphey	none.random_alnum.2	no_answer	1	timeout	correct	5.540			
+v0.12.0	ciphey	none.random_alnum.2	no_answer	1	answer	wrong	0.334	Vigenere → rot47 → Vigenere → Reverse → railfence → Vigenere → railfence → railfence → railfence → …		
+v0.12.0	ciphey	none.random_alnum.3	no_answer	1	answer	wrong	0.088	Vigenere → rot47		
+master	ciphey	none.random_alnum.3	no_answer	1	timeout	correct	5.504			
+master	ciphey	none.random_alnum.4	no_answer	1	answer	wrong	1.714	rot47 → Hexadecimal → Reverse → Repeating-key XOR		
+v0.12.0	ciphey	none.random_alnum.4	no_answer	1	answer	wrong	0.258	Vigenere → railfence → railfence → railfence → railfence → Vigenere → Vigenere → railfence → railfe…		
+v0.12.0	ciphey	none.random_lower.1	no_answer	1	answer	wrong	0.069	caesar → railfence → Vigenere		
+master	ciphey	none.random_lower.1	no_answer	1	answer	wrong	0.067	Reverse → Keyboard layout → Vigenere		
+master	ciphey	none.random_lower.2	no_answer	1	answer	wrong	0.303	Keyboard shift → railfence → Beaufort		
+v0.12.0	ciphey	none.random_lower.2	no_answer	1	answer	wrong	0.180	Vigenere → railfence → Vigenere → railfence → railfence → railfence → railfence → Braille		
+v0.12.0	ciphey	none.random_lower.3	no_answer	1	answer	wrong	0.523	Vigenere → Reverse → Vigenere → railfence → railfence → Vigenere → railfence → Vigenere		
+master	ciphey	none.random_lower.3	no_answer	1	timeout	correct	5.410			
+master	ciphey	none.random_upper.1	no_answer	1	answer	wrong	0.084	Affine → Hill		
+v0.12.0	ciphey	none.random_upper.1	no_answer	1	answer	wrong	0.089	railfence → railfence → railfence → Vigenere → Reverse		
+v0.12.0	ciphey	none.random_upper.2	no_answer	1	answer	wrong	0.105	Vigenere → Reverse → Vigenere		
+master	ciphey	none.random_upper.2	no_answer	1	answer	wrong	3.492	atbash → Keyboard shift → railfence → Vigenere Autokey		
+master	ciphey	none.random_hex.1	no_answer	1	answer	wrong	1.692	atbash → rot47 → Keyboard shift → rot47		
+v0.12.0	ciphey	none.random_hex.1	no_answer	1	answer	wrong	0.107	railfence → Vigenere → caesar → rot47		
+v0.12.0	ciphey	none.random_hex.2	no_answer	1	answer	wrong	0.518	Vigenere → atbash → rot47 → railfence → rot47		
+master	ciphey	none.random_hex.2	no_answer	1	answer	wrong	1.971	rot47 → Base91 → Base91 → rot47		
+master	ciphey	none.random_hex.3	no_answer	1	timeout	correct	5.516			
+v0.12.0	ciphey	none.random_hex.3	no_answer	1	answer	wrong	0.065	Default decoder		
+v0.12.0	ciphey	none.random_hex.4	no_answer	1	answer	wrong	1.419	Vigenere → Reverse → railfence → railfence → Reverse → railfence → railfence → railfence → Binary		
+master	ciphey	none.random_hex.4	no_answer	1	timeout	correct	5.432			
+master	ciphey	none.random_base64.1	no_answer	1	timeout	correct	5.617			
+v0.12.0	ciphey	none.random_base64.1	no_answer	1	answer	wrong	0.135	Vigenere → Reverse → railfence → railfence → railfence → Vigenere → railfence → railfence → railfen…		
+v0.12.0	ciphey	none.random_base64.2	no_answer	1	answer	wrong	0.315	Vigenere → Reverse → railfence → railfence → Vigenere → railfence → Reverse → railfence → rot47		
+master	ciphey	none.random_base64.2	no_answer	1	timeout	correct	5.548			
+master	ciphey	none.random_base64.3	no_answer	1	timeout	correct	5.537			
+v0.12.0	ciphey	none.random_base64.3	no_answer	1	answer	wrong	0.380	Vigenere → railfence → railfence → railfence → Vigenere → railfence → rot47		
+v0.12.0	ciphey	none.random_base64.4	no_answer	1	answer	wrong	3.178	Vigenere → Vigenere → Reverse → railfence → railfence → railfence → Vigenere → rot47		
+master	ciphey	none.random_base64.4	no_answer	1	timeout	correct	5.424			
+master	ciphey	none.random_digits.1	no_answer	1	answer	wrong	0.080	rot47 → Keyboard layout → Affine		
+v0.12.0	ciphey	none.random_digits.1	no_answer	1	answer	wrong	0.062	Default decoder		
+v0.12.0	ciphey	none.random_digits.2	no_answer	1	answer	wrong	0.110	railfence → railfence → railfence		
+master	ciphey	none.random_digits.2	no_answer	1	answer	wrong	0.079	rot47 → Hill		
+master	ciphey	none.random_digits.3	no_answer	1	answer	wrong	1.189	railfence → rot47 → T9		
+v0.12.0	ciphey	none.random_digits.3	no_answer	1	answer	wrong	0.070	Default decoder		
+v0.12.0	ciphey	none.keyboard_mash.1	no_answer	1	answer	wrong	0.093	caesar → rot47 → railfence → Reverse → Vigenere		
+master	ciphey	none.keyboard_mash.1	no_answer	1	answer	wrong	0.107	rot47 → Affine		
+master	ciphey	none.keyboard_mash.2	no_answer	1	answer	wrong	0.082	caesar → Vigenere Autokey		
+v0.12.0	ciphey	none.keyboard_mash.2	no_answer	1	answer	wrong	0.143	Vigenere → railfence → Reverse → railfence → railfence → railfence → railfence → railfence → Braille		
+v0.12.0	ciphey	none.keyboard_mash.3	no_answer	1	answer	wrong	0.105	Vigenere → railfence → railfence → railfence → Braille		
+master	ciphey	none.keyboard_mash.3	no_answer	1	answer	wrong	0.436	Keyboard shift → Reverse → caesar → Vigenere Autokey		
+master	ciphey	none.keyboard_mash.4	no_answer	1	answer	wrong	0.154	atbash → Keyboard shift → atbash → Vigenere Autokey		
+v0.12.0	ciphey	none.keyboard_mash.4	no_answer	1	answer	wrong	0.168	Vigenere → Reverse → railfence → railfence → Vigenere → railfence → railfence → railfence → Braille		
+v0.12.0	ciphey	none.bigram_english.1	no_answer	1	answer	wrong	0.066	Default decoder		
+master	ciphey	none.bigram_english.1	no_answer	1	answer	wrong	0.117	rot47 → Baconian		
+master	ciphey	none.bigram_english.2	no_answer	1	answer	wrong	0.083	railfence → Null cipher		
+v0.12.0	ciphey	none.bigram_english.2	no_answer	1	answer	wrong	0.072	Default decoder		
+v0.12.0	ciphey	none.bigram_english.3	no_answer	1	answer	wrong	0.485	Reverse → railfence → railfence → railfence → railfence → railfence → railfence → Vigenere		
+master	ciphey	none.bigram_english.3	no_answer	1	answer	wrong	0.215	Affine → Keyboard shift → Null cipher		
+master	ciphey	none.bigram_english.4	no_answer	1	answer	wrong	0.334	Reverse → railfence → Null cipher		
+v0.12.0	ciphey	none.bigram_english.4	no_answer	1	none	correct	5.119			
+v0.12.0	ciphey	none.bigram_english.5	no_answer	1	answer	wrong	0.068	Default decoder		
+master	ciphey	none.bigram_english.5	no_answer	1	answer	wrong	0.165	railfence → Null cipher		
+master	ciphey	none.bigram_english.6	no_answer	1	answer	wrong	0.260	rot47 → ASCII shift		
+v0.12.0	ciphey	none.bigram_english.6	no_answer	1	answer	wrong	0.067	Default decoder		
+v0.12.0	ciphey	none.shuffled_words.1	no_answer	1	answer	wrong	0.062	Default decoder		
+master	ciphey	none.shuffled_words.1	no_answer	1	answer	wrong	0.612	Affine → railfence → Null cipher		
+master	ciphey	none.shuffled_words.2	no_answer	1	answer	wrong	0.084	railfence → Null cipher		
+v0.12.0	ciphey	none.shuffled_words.2	no_answer	1	answer	wrong	0.291	Vigenere → railfence → railfence → railfence → Reverse → railfence → railfence → Vigenere		
+v0.12.0	ciphey	none.shuffled_words.3	no_answer	1	answer	wrong	0.194	Vigenere → railfence → railfence → Vigenere → Reverse		
+master	ciphey	none.shuffled_words.3	no_answer	1	answer	wrong	0.104	railfence → Null cipher		
+master	ciphey	none.random_cjk.1	no_answer	1	timeout	correct	5.582			
+v0.12.0	ciphey	none.random_cjk.1	no_answer	1	answer	wrong	1.374	Base65536 → Vigenere → railfence → railfence → railfence → railfence → railfence → Reverse → atbash…		
+v0.12.0	ciphey	none.random_cjk.2	no_answer	1	none	correct	5.310			
+master	ciphey	none.random_cjk.2	no_answer	1	timeout	correct	5.625			
+master	ciphey	none.random_emoji.1	no_answer	1	answer	wrong	1.021	railfence → rot47 → Repeating-key XOR		
+v0.12.0	ciphey	none.random_emoji.1	no_answer	1	answer	wrong	0.100	Reverse → rot47 → rot47 → railfence → Reverse → railfence → railfence → railfence → railfence → Bas…		
+v0.12.0	ciphey	none.random_bits.1	no_answer	1	answer	wrong	0.096	simplesubstitution		
+master	ciphey	none.random_bits.1	no_answer	1	answer	wrong	0.187	rot47 → Keyboard layout → Affine		
+master	ciphey	none.random_morse.1	no_answer	1	answer	wrong	0.056	railfence → simplesubstitution		
+v0.12.0	ciphey	none.random_morse.1	no_answer	1	answer	wrong	0.148	rot47 → railfence → simplesubstitution		
+v0.12.0	ciphey	none.random_symbols.1	no_answer	1	answer	wrong	0.741	railfence → railfence → railfence → railfence → railfence → Reverse → railfence → railfence → railf…		
+master	ciphey	none.random_symbols.1	no_answer	1	answer	wrong	0.625	Base91 → railfence → Base91 → rot47		
+python-ciphey	python-ciphey	enc.base64.1	encoding	1	answer	correct	1.257	base64 → utf8		
+python-ciphey	python-ciphey	enc.base64.2	encoding	1	answer	correct	1.052	base64 → utf8		
+python-ciphey	python-ciphey	enc.base32.1	encoding	1	answer	correct	1.087	base32 → utf8		
+python-ciphey	python-ciphey	enc.base32.2	encoding	1	answer	correct	1.241	base32 → utf8		
+python-ciphey	python-ciphey	enc.hex.1	encoding	1	answer	correct	1.239	hexadecimal		
+python-ciphey	python-ciphey	enc.hex_spaced.1	encoding	1	answer	correct	1.106	hexadecimal		
+python-ciphey	python-ciphey	enc.base58_bitcoin.1	encoding	1	answer	correct	1.297	base58_bitcoin		
+python-ciphey	python-ciphey	enc.base58_ripple.1	encoding	1	answer	correct	1.324	base58_ripple		
+python-ciphey	python-ciphey	enc.base62.1	encoding	1	answer	correct	1.332	base62		
+python-ciphey	python-ciphey	enc.base85.1	encoding	1	answer	correct	1.454	base85 → utf8		
+python-ciphey	python-ciphey	enc.ascii85.1	encoding	1	answer	correct	1.796	ascii85 → utf8		
+python-ciphey	python-ciphey	enc.base91.1	encoding	1	answer	correct	1.410	base91		
+python-ciphey	python-ciphey	enc.uuencode.1	encoding	1	timeout	nothing	6.048			
+python-ciphey	python-ciphey	enc.binary.1	encoding	1	answer	correct	1.117	binary → utf8		
+python-ciphey	python-ciphey	enc.binary.2	encoding	1	answer	correct	1.016	binary → utf8		
+python-ciphey	python-ciphey	enc.decimal.1	encoding	1	answer	correct	1.101	decimal		
+python-ciphey	python-ciphey	enc.octal.1	encoding	1	answer	correct	1.343	octal → utf8		
+python-ciphey	python-ciphey	enc.url.1	encoding	1	answer	correct	1.185	atbash → url → atbash		
+python-ciphey	python-ciphey	enc.url_all.1	encoding	1	answer	correct	1.544	url		
+python-ciphey	python-ciphey	enc.morse.1	encoding	1	answer	correct	1.000	morse_code		
+python-ciphey	python-ciphey	enc.morse_lines.1	encoding	1	answer	correct	0.987	morse_code		
+python-ciphey	python-ciphey	enc.binary_xy.1	encoding	1	answer	correct	1.368	xandy		
+python-ciphey	python-ciphey	enc.braille.1	encoding	1	answer	correct	1.026	braille		
+python-ciphey	python-ciphey	enc.tap_digits.1	encoding	1	timeout	nothing	6.041			
+python-ciphey	python-ciphey	enc.multitap.1	encoding	1	answer	wrong	1.088	leetspeak → atbash		
+python-ciphey	python-ciphey	enc.galactic.1	encoding	1	answer	correct	1.042	reverse → galactic → atbash → reverse → atbash		
+python-ciphey	python-ciphey	enc.leetspeak.1	encoding	1	answer	correct	1.343	atbash → reverse → atbash → leetspeak → atbash → reverse → atbash		
+python-ciphey	python-ciphey	enc.baudot.1	encoding	1	answer	correct	1.085	baudot		
+python-ciphey	python-ciphey	enc.brainfuck.1	encoding	1	answer	correct	1.012	brainfuck		
+python-ciphey	python-ciphey	enc.gzip+base64.1	encoding	1	answer	correct	0.974	base64 → gzip		
+python-ciphey	python-ciphey	enc.gzip+hex.1	encoding	1	timeout	nothing	6.046			
+python-ciphey	python-ciphey	cls.caesar3.1	classical	1	answer	correct	1.479	affine		
+python-ciphey	python-ciphey	cls.caesar7.1	classical	1	answer	correct	1.417	affine		
+python-ciphey	python-ciphey	cls.caesar19.1	classical	1	answer	correct	1.800	affine		
+python-ciphey	python-ciphey	cls.caesar23.1	classical	1	answer	correct	2.282	affine		
+python-ciphey	python-ciphey	cls.rot13.1	classical	1	answer	correct	2.190	affine		
+python-ciphey	python-ciphey	cls.rot13.2	classical	1	answer	correct	2.528	affine		
+python-ciphey	python-ciphey	cls.rot47.1	classical	1	timeout	nothing	6.050			
+python-ciphey	python-ciphey	cls.rot47.2	classical	1	timeout	nothing	6.037			
+python-ciphey	python-ciphey	cls.atbash.1	classical	1	answer	correct	1.027	atbash		
+python-ciphey	python-ciphey	cls.atbash.2	classical	1	answer	correct	0.978	atbash		
+python-ciphey	python-ciphey	cls.reverse.1	classical	1	answer	correct	1.021	atbash → reverse → atbash		
+python-ciphey	python-ciphey	cls.reverse.2	classical	1	answer	correct	1.173	atbash → reverse → atbash		
+python-ciphey	python-ciphey	cls.affine_5_8.1	classical	1	answer	correct	5.151	affine		
+python-ciphey	python-ciphey	cls.affine_7_3.1	classical	1	answer	correct	3.695	affine		
+python-ciphey	python-ciphey	cls.affine_11_20.1	classical	1	answer	correct	1.581	affine		
+python-ciphey	python-ciphey	cls.vigenere_key.1	classical	1	answer	correct	1.769	vigenere		
+python-ciphey	python-ciphey	cls.vigenere_lemon.1	classical	1	answer	correct	1.733	vigenere		
+python-ciphey	python-ciphey	cls.vigenere_cipher.1	classical	1	answer	correct	1.817	vigenere		
+python-ciphey	python-ciphey	cls.vigenere_password.1	classical	1	timeout	nothing	6.039			
+python-ciphey	python-ciphey	cls.xor_2a+hex.1	classical	1	timeout	nothing	6.040			
+python-ciphey	python-ciphey	cls.xor_5c+base64.1	classical	1	timeout	nothing	6.042			
+python-ciphey	python-ciphey	cls.xor_13+hex.1	classical	1	timeout	nothing	6.036			
+python-ciphey	python-ciphey	cls.xorkey_key+hex.1	classical	1	timeout	nothing	6.036			
+python-ciphey	python-ciphey	cls.xorkey_ice+base64.1	classical	1	answer	correct	5.716	base64 → xorcrypt → utf8		
+python-ciphey	python-ciphey	cls.xorkey_s3cr3t+hex.1	classical	1	timeout	nothing	6.044			
+python-ciphey	python-ciphey	cls.ascii_shift3.1	classical	1	answer	correct	1.197	ascii_shift		
+python-ciphey	python-ciphey	flag.01	flag	1	answer	correct	0.946	base64 → utf8		
+python-ciphey	python-ciphey	flag.02	flag	1	answer	correct	1.121	hexadecimal		
+python-ciphey	python-ciphey	flag.03	flag	1	answer	correct	1.602	caesar		
+python-ciphey	python-ciphey	flag.04	flag	1	answer	correct	1.730	caesar		
+python-ciphey	python-ciphey	flag.05	flag	1	answer	correct	0.834	atbash		
+python-ciphey	python-ciphey	flag.06	flag	1	answer	correct	0.983	base32 → utf8		
+python-ciphey	python-ciphey	flag.07	flag	1	answer	wrong	1.956	url → atbash → reverse → atbash → leetspeak → atbash → reverse → atbash		
+python-ciphey	python-ciphey	flag.08	flag	1	answer	wrong	1.061	atbash → leetspeak → atbash → reverse		
+python-ciphey	python-ciphey	flag.09	flag	1	answer	wrong	0.995	binary → utf8 → atbash → leetspeak → atbash		
+python-ciphey	python-ciphey	flag.10	flag	1	answer	correct	1.210	base58_bitcoin		
+python-ciphey	python-ciphey	flag.12	flag	1	timeout	nothing	6.039			
+python-ciphey	python-ciphey	flag.13	flag	1	timeout	nothing	6.038			
+python-ciphey	python-ciphey	flag.14	flag	1	answer	correct	1.208	base85 → utf8		
+python-ciphey	python-ciphey	flag.15	flag	1	answer	correct	0.946	decimal		
+python-ciphey	python-ciphey	flag.16	flag	1	answer	correct	1.066	hexadecimal → base64 → utf8		
+python-ciphey	python-ciphey	flag.17	flag	1	timeout	nothing	6.039			
+python-ciphey	python-ciphey	flag.18	flag	1	answer	wrong	0.970	base64 → utf8 → atbash → leetspeak → atbash → reverse		
+python-ciphey	python-ciphey	flag.19	flag	1	answer	wrong	1.338	base32 → utf8 → hexadecimal → atbash → reverse → atbash → leetspeak → atbash → reverse → atbash		
+python-ciphey	python-ciphey	flag.20	flag	1	answer	correct	1.943	caesar		
+python-ciphey	python-ciphey	flag.21	flag	1	answer	wrong	0.928	base64 → utf8 → base64 → utf8 → atbash → leetspeak → atbash		
+python-ciphey	python-ciphey	flag.22	flag	1	timeout	nothing	6.041			
+python-ciphey	python-ciphey	flag.23	flag	1	answer	correct	1.615	octal → utf8		
+python-ciphey	python-ciphey	flag.24	flag	1	answer	correct	1.056	base64 → utf8 → base32 → utf8		
+python-ciphey	python-ciphey	flag.26	flag	1	answer	correct	1.209	base91		
+python-ciphey	python-ciphey	flag.27	flag	1	answer	correct	1.174	ascii85 → utf8		
+python-ciphey	python-ciphey	flag.28	flag	1	timeout	nothing	6.016			
+python-ciphey	python-ciphey	flag.29	flag	1	answer	correct	1.142	hexadecimal → atbash		
+python-ciphey	python-ciphey	flag.30	flag	1	answer	correct	1.109	base62		
+python-ciphey	python-ciphey	short.01	short	1	answer	wrong	1.832	affine → atbash → leetspeak → atbash		
+python-ciphey	python-ciphey	short.02	short	1	answer	correct	1.125	hexadecimal		
+python-ciphey	python-ciphey	short.03	short	1	answer	wrong	1.843	affine → atbash → reverse → base91		
+python-ciphey	python-ciphey	short.04	short	1	none	nothing	0.305			
+python-ciphey	python-ciphey	short.05	short	1	answer	correct	1.154	binary → utf8		
+python-ciphey	python-ciphey	short.06	short	1	answer	wrong	1.005	atbash → leetspeak → base32 → utf8 → leetspeak → atbash		
+python-ciphey	python-ciphey	short.07	short	1	answer	wrong	0.934			
+python-ciphey	python-ciphey	short.08	short	1	answer	correct	1.018	atbash		
+python-ciphey	python-ciphey	short.09	short	1	answer	wrong	1.589	ascii_shift → base58_ripple → atbash → base91 → atbash → leetspeak → atbash → reverse → atbash		
+python-ciphey	python-ciphey	short.10	short	1	answer	correct	1.360	base58_bitcoin		
+python-ciphey	python-ciphey	short.11	short	1	answer	correct	1.031	decimal		
+python-ciphey	python-ciphey	short.12	short	1	answer	wrong	5.020	affine → atbash → leetspeak → atbash → reverse		
+python-ciphey	python-ciphey	short.13	short	1	answer	correct	1.157	base85 → utf8		
+python-ciphey	python-ciphey	short.14	short	1	answer	correct	1.105	morse_code		
+python-ciphey	python-ciphey	short.15	short	1	answer	wrong	0.984	leetspeak → atbash → reverse		
+python-ciphey	python-ciphey	long.01	long	1	answer	correct	1.092	base64 → utf8		
+python-ciphey	python-ciphey	long.02	long	1	answer	wrong	1.061			
+python-ciphey	python-ciphey	long.03	long	1	answer	correct	2.889	vigenere		
+python-ciphey	python-ciphey	long.04	long	1	answer	correct	2.706	vigenere		
+python-ciphey	python-ciphey	long.05	long	1	timeout	nothing	6.038			
+python-ciphey	python-ciphey	long.07	long	1	answer	correct	1.317	atbash		
+python-ciphey	python-ciphey	long.08	long	1	answer	correct	1.824	base32 → utf8		
+python-ciphey	python-ciphey	long.10	long	1	answer	correct	1.255	binary → utf8		
+python-ciphey	python-ciphey	long.11	long	1	answer	wrong	0.994			
+python-ciphey	python-ciphey	long.12	long	1	answer	correct	1.009	atbash → reverse → atbash		
+python-ciphey	python-ciphey	chain2.01	chain	1	answer	correct	1.300	base85 → utf8 → base58_bitcoin		
+python-ciphey	python-ciphey	chain2.02	chain	1	timeout	nothing	6.045			
+python-ciphey	python-ciphey	chain2.03	chain	1	answer	correct	2.095	base32 → utf8 → decimal		
+python-ciphey	python-ciphey	chain2.04	chain	1	timeout	nothing	6.044			
+python-ciphey	python-ciphey	chain2.05	chain	1	answer	correct	1.639	octal → utf8 → base64 → utf8		
+python-ciphey	python-ciphey	chain2.06	chain	1	timeout	nothing	6.045			
+python-ciphey	python-ciphey	chain2.07	chain	1	answer	correct	1.285	base58_bitcoin → base58_bitcoin		
+python-ciphey	python-ciphey	chain2.08	chain	1	answer	wrong	1.387	atbash → reverse → atbash → url → atbash → reverse → atbash → base85 → utf8 → atbash → leetspeak → …		
+python-ciphey	python-ciphey	chain2.09	chain	1	answer	correct	1.311	base58_bitcoin → base32 → utf8		
+python-ciphey	python-ciphey	chain2.10	chain	1	timeout	nothing	6.045			
+python-ciphey	python-ciphey	chain3.01	chain	1	answer	correct	2.923	base85 → utf8 → base85 → utf8 → url		
+python-ciphey	python-ciphey	chain3.02	chain	1	answer	correct	1.177	base32 → utf8 → binary → utf8 → atbash		
+python-ciphey	python-ciphey	chain3.03	chain	1	answer	correct	1.295	decimal → base85 → utf8 → base32 → utf8		
+python-ciphey	python-ciphey	chain3.04	chain	1	timeout	nothing	6.045			
+python-ciphey	python-ciphey	chain3.05	chain	1	answer	correct	3.474	url → base64 → utf8 → binary → utf8		
+python-ciphey	python-ciphey	chain3.06	chain	1	timeout	nothing	6.041			
+python-ciphey	python-ciphey	chain3.07	chain	1	answer	correct	2.148	url → base85 → utf8 → base64 → utf8		
+python-ciphey	python-ciphey	chain3.08	chain	1	answer	correct	1.987	octal → utf8 → base58_bitcoin → atbash → reverse → atbash		
+python-ciphey	python-ciphey	chain3.09	chain	1	answer	correct	1.103	url → hexadecimal → base64 → utf8		
+python-ciphey	python-ciphey	chain3.10	chain	1	timeout	nothing	6.051			
+python-ciphey	python-ciphey	chain4.01	chain	1	answer	correct	1.272	binary → utf8 → decimal → hexadecimal → base32 → utf8		
+python-ciphey	python-ciphey	chain4.02	chain	1	timeout	nothing	6.047			
+python-ciphey	python-ciphey	chain4.03	chain	1	answer	correct	2.583	url → base32 → utf8 → base58_bitcoin → decimal		
+python-ciphey	python-ciphey	chain4.04	chain	1	timeout	nothing	6.053			
+python-ciphey	python-ciphey	chain4.05	chain	1	timeout	nothing	6.064			
+python-ciphey	python-ciphey	chain4.06	chain	1	timeout	nothing	6.047			
+python-ciphey	python-ciphey	chain4.07	chain	1	answer	correct	1.111	base64 → utf8 → decimal → base32 → utf8 → base32 → utf8		
+python-ciphey	python-ciphey	chain4.08	chain	1	answer	correct	1.080	decimal → base16 → utf8 → decimal → atbash → reverse → atbash		
+python-ciphey	python-ciphey	chain4.09	chain	1	answer	correct	2.078	octal → utf8 → base32 → utf8 → hexadecimal → base64 → utf8		
+python-ciphey	python-ciphey	chain4.10	chain	1	timeout	nothing	6.050			
+python-ciphey	python-ciphey	chain5.01	chain	1	answer	correct	2.125	octal → utf8 → base64 → utf8 → hexadecimal → base32 → utf8 → base58_bitcoin		
+python-ciphey	python-ciphey	chain5.02	chain	1	answer	correct	1.651	decimal → url → base58_bitcoin → base64 → utf8 → atbash → reverse → atbash		
+python-ciphey	python-ciphey	chain5.03	chain	1	timeout	nothing	6.054			
+python-ciphey	python-ciphey	chain5.04	chain	1	timeout	nothing	6.064			
+python-ciphey	python-ciphey	chain5.05	chain	1	answer	wrong	3.639	base58_bitcoin → base64 → utf8 → decimal → octal → utf8 → atbash → reverse		
+python-ciphey	python-ciphey	chain5.06	chain	1	answer	correct	2.199	octal → utf8 → base32 → utf8 → base85 → utf8 → base85 → utf8 → atbash → reverse → atbash		
+python-ciphey	python-ciphey	chain5.07	chain	1	answer	wrong	0.873			
+python-ciphey	python-ciphey	chain5.08	chain	1	answer	correct	1.928	base85 → utf8 → binary → utf8 → base32 → utf8 → base64 → utf8 → atbash		
+python-ciphey	python-ciphey	chain5.09	chain	1	answer	wrong	2.127	leetspeak → atbash → reverse → atbash		
+python-ciphey	python-ciphey	chain5.10	chain	1	timeout	nothing	6.046			
+python-ciphey	python-ciphey	plain.T01	plaintext	1	answer	correct	0.898			
+python-ciphey	python-ciphey	plain.T02	plaintext	1	answer	correct	0.887			
+python-ciphey	python-ciphey	plain.T03	plaintext	1	answer	correct	0.876			
+python-ciphey	python-ciphey	plain.T04	plaintext	1	answer	correct	0.873			
+python-ciphey	python-ciphey	plain.T05	plaintext	1	answer	correct	0.933			
+python-ciphey	python-ciphey	plain.T06	plaintext	1	answer	correct	0.863			
+python-ciphey	python-ciphey	plain.T07	plaintext	1	timeout	nothing	6.044			
+python-ciphey	python-ciphey	plain.T08	plaintext	1	answer	correct	0.915			
+python-ciphey	python-ciphey	plain.T09	plaintext	1	answer	correct	0.917			
+python-ciphey	python-ciphey	plain.T10	plaintext	1	answer	correct	0.949			
+python-ciphey	python-ciphey	none.random_alnum.1	no_answer	1	timeout	correct	6.041			
+python-ciphey	python-ciphey	none.random_alnum.2	no_answer	1	timeout	correct	6.043			
+python-ciphey	python-ciphey	none.random_alnum.3	no_answer	1	timeout	correct	6.039			
+python-ciphey	python-ciphey	none.random_alnum.4	no_answer	1	timeout	correct	6.042			
+python-ciphey	python-ciphey	none.random_lower.1	no_answer	1	timeout	correct	6.036			
+python-ciphey	python-ciphey	none.random_lower.2	no_answer	1	timeout	correct	6.039			
+python-ciphey	python-ciphey	none.random_lower.3	no_answer	1	timeout	correct	6.041			
+python-ciphey	python-ciphey	none.random_upper.1	no_answer	1	timeout	correct	6.039			
+python-ciphey	python-ciphey	none.random_upper.2	no_answer	1	timeout	correct	6.038			
+python-ciphey	python-ciphey	none.random_hex.1	no_answer	1	timeout	correct	6.038			
+python-ciphey	python-ciphey	none.random_hex.2	no_answer	1	timeout	correct	6.043			
+python-ciphey	python-ciphey	none.random_hex.3	no_answer	1	timeout	correct	6.048			
+python-ciphey	python-ciphey	none.random_hex.4	no_answer	1	timeout	correct	6.040			
+python-ciphey	python-ciphey	none.random_base64.1	no_answer	1	timeout	correct	6.044			
+python-ciphey	python-ciphey	none.random_base64.2	no_answer	1	timeout	correct	6.043			
+python-ciphey	python-ciphey	none.random_base64.3	no_answer	1	timeout	correct	6.039			
+python-ciphey	python-ciphey	none.random_base64.4	no_answer	1	timeout	correct	6.045			
+python-ciphey	python-ciphey	none.random_digits.1	no_answer	1	timeout	correct	6.047			
+python-ciphey	python-ciphey	none.random_digits.2	no_answer	1	timeout	correct	6.047			
+python-ciphey	python-ciphey	none.random_digits.3	no_answer	1	answer	wrong	1.019	reverse		
+python-ciphey	python-ciphey	none.keyboard_mash.1	no_answer	1	timeout	correct	6.041			
+python-ciphey	python-ciphey	none.keyboard_mash.2	no_answer	1	timeout	correct	6.037			
+python-ciphey	python-ciphey	none.keyboard_mash.3	no_answer	1	timeout	correct	6.045			
+python-ciphey	python-ciphey	none.keyboard_mash.4	no_answer	1	timeout	correct	6.042			
+python-ciphey	python-ciphey	none.bigram_english.1	no_answer	1	answer	wrong	0.809			
+python-ciphey	python-ciphey	none.bigram_english.2	no_answer	1	timeout	correct	6.041			
+python-ciphey	python-ciphey	none.bigram_english.3	no_answer	1	timeout	correct	6.045			
+python-ciphey	python-ciphey	none.bigram_english.4	no_answer	1	timeout	correct	6.048			
+python-ciphey	python-ciphey	none.bigram_english.5	no_answer	1	timeout	correct	6.038			
+python-ciphey	python-ciphey	none.bigram_english.6	no_answer	1	timeout	correct	6.039			
+python-ciphey	python-ciphey	none.shuffled_words.1	no_answer	1	timeout	correct	6.038			
+python-ciphey	python-ciphey	none.shuffled_words.2	no_answer	1	timeout	correct	6.040			
+python-ciphey	python-ciphey	none.shuffled_words.3	no_answer	1	timeout	correct	6.039			
+python-ciphey	python-ciphey	none.random_cjk.1	no_answer	1	none	correct	0.895			
+python-ciphey	python-ciphey	none.random_cjk.2	no_answer	1	none	correct	0.973			
+python-ciphey	python-ciphey	none.random_emoji.1	no_answer	1	none	correct	0.979			
+python-ciphey	python-ciphey	none.random_bits.1	no_answer	1	timeout	correct	6.042			
+python-ciphey	python-ciphey	none.random_morse.1	no_answer	1	timeout	correct	6.039			
+python-ciphey	python-ciphey	none.random_symbols.1	no_answer	1	none	correct	1.149			
+cyberchef	cyberchef	enc.base64.1	encoding	1	answer	correct	0.065	From Base64		True
+cyberchef	cyberchef	enc.base64.2	encoding	1	answer	correct	0.009	From Base64		True
+cyberchef	cyberchef	enc.base64_url.1	encoding	1	answer	correct	0.003	From Base64		True
+cyberchef	cyberchef	enc.base64_itoa64.1	encoding	1	answer	correct	0.006	From Base64		True
+cyberchef	cyberchef	enc.base32.1	encoding	1	answer	correct	0.009	From Base32		True
+cyberchef	cyberchef	enc.base32.2	encoding	1	answer	correct	0.009	From Base32		True
+cyberchef	cyberchef	enc.base32hex.1	encoding	1	answer	correct	0.011	From Base32		True
+cyberchef	cyberchef	enc.hex.1	encoding	1	answer	correct	0.011	From Hex		True
+cyberchef	cyberchef	enc.hex_spaced.1	encoding	1	answer	correct	0.003	From Hex		True
+cyberchef	cyberchef	enc.base58_bitcoin.1	encoding	1	answer	correct	0.007	From Base58		True
+cyberchef	cyberchef	enc.base58_ripple.1	encoding	1	answer	correct	0.011	From Base58		True
+cyberchef	cyberchef	enc.base85.1	encoding	1	answer	correct	0.002	From Base85		True
+cyberchef	cyberchef	enc.ascii85.1	encoding	1	answer	correct	0.002	From Base85		True
+cyberchef	cyberchef	enc.ascii85_adobe.1	encoding	1	answer	correct	0.001	From Base85		True
+cyberchef	cyberchef	enc.z85.1	encoding	1	answer	correct	0.001	From Base85		True
+cyberchef	cyberchef	enc.binary.1	encoding	1	answer	correct	0.004	From Binary		True
+cyberchef	cyberchef	enc.binary.2	encoding	1	answer	correct	0.004	From Binary		True
+cyberchef	cyberchef	enc.decimal.1	encoding	1	answer	correct	0.002	From Decimal		True
+cyberchef	cyberchef	enc.url.1	encoding	1	answer	correct	0.002	URL Decode		True
+cyberchef	cyberchef	enc.url_all.1	encoding	1	answer	correct	0.003	URL Decode		True
+cyberchef	cyberchef	enc.html_dec.1	encoding	1	answer	correct	0.003	From HTML Entity		True
+cyberchef	cyberchef	enc.html_hex.1	encoding	1	answer	correct	0.002	From HTML Entity		True
+cyberchef	cyberchef	enc.unicode_escape.1	encoding	1	none	nothing	0.002			False
+cyberchef	cyberchef	enc.unicode_escape.2	encoding	1	answer	correct	0.002	Unescape Unicode Characters		True
+cyberchef	cyberchef	enc.unicode_plus.1	encoding	1	none	nothing	0.002			False
+cyberchef	cyberchef	enc.backslash_hex.1	encoding	1	answer	correct	0.001	From Hex		True
+cyberchef	cyberchef	enc.quoted_printable.1	encoding	1	answer	correct	0.001	From Quoted Printable		True
+cyberchef	cyberchef	enc.hexdump_xxd.1	encoding	1	answer	correct	0.001	From Hexdump		True
+cyberchef	cyberchef	enc.hexdump_c.1	encoding	1	answer	correct	0.001	From Hexdump		True
+cyberchef	cyberchef	enc.morse_lines.1	encoding	1	answer	correct	0.002	From Morse Code		True
+cyberchef	cyberchef	enc.a1z26_spaces.1	encoding	1	answer	correct	0.005	A1Z26 Cipher Decode		True
+cyberchef	cyberchef	enc.bacon26.1	encoding	1	answer	correct	0.007	Bacon Cipher Decode		True
+cyberchef	cyberchef	enc.bacon24.1	encoding	1	answer	wrong	0.004	Bacon Cipher Decode		True
+cyberchef	cyberchef	enc.jwt.1	encoding	1	answer	correct	0.002	JWT Decode		True
+cyberchef	cyberchef	enc.gzip+base64.1	encoding	1	answer	correct	0.008	From Base64 → Gunzip		True
+cyberchef	cyberchef	enc.gzip+hex.1	encoding	1	answer	correct	0.005	From Hex → Gunzip		True
+cyberchef	cyberchef	enc.zlib+base64.1	encoding	1	answer	correct	0.006	From Base64 → Zlib Inflate		True
+cyberchef	cyberchef	enc.bzip2+base64.1	encoding	1	answer	correct	0.041	From Base64 → Bzip2 Decompress		True
+cyberchef	cyberchef	enc.bech32.1	encoding	1	answer	correct	0.015	From Bech32 → From Hex		True
+cyberchef	cyberchef	enc.modhex.1	encoding	1	answer	correct	0.010	From Modhex		True
+cyberchef	cyberchef	flag.01	flag	1	answer	correct	0.006	From Base64		True
+cyberchef	cyberchef	flag.02	flag	1	answer	correct	0.004	From Hex		True
+cyberchef	cyberchef	flag.06	flag	1	answer	correct	0.004	From Base32		True
+cyberchef	cyberchef	flag.07	flag	1	answer	correct	0.003	URL Decode		True
+cyberchef	cyberchef	flag.09	flag	1	answer	correct	0.002	From Binary		True
+cyberchef	cyberchef	flag.10	flag	1	answer	correct	0.011	From Base58		True
+cyberchef	cyberchef	flag.14	flag	1	answer	correct	0.002	From Base85		True
+cyberchef	cyberchef	flag.15	flag	1	answer	correct	0.002	From Decimal		True
+cyberchef	cyberchef	flag.16	flag	1	answer	wrong	0.021	From Hex		True
+cyberchef	cyberchef	flag.19	flag	1	answer	wrong	0.012	From Base32		True
+cyberchef	cyberchef	flag.21	flag	1	answer	wrong	0.037	From Base64		False
+cyberchef	cyberchef	flag.23	flag	1	answer	correct	0.003	From Octal		True
+cyberchef	cyberchef	flag.24	flag	1	answer	wrong	0.020	From Base64		True
+cyberchef	cyberchef	flag.25	flag	1	answer	correct	0.003	From HTML Entity		True
+cyberchef	cyberchef	flag.27	flag	1	answer	correct	0.002	From Base85		True
+cyberchef	cyberchef	short.01	short	1	answer	correct	0.001	From Base64		True
+cyberchef	cyberchef	short.02	short	1	answer	correct	0.008	From Hex		True
+cyberchef	cyberchef	short.05	short	1	answer	correct	0.002	From Binary		True
+cyberchef	cyberchef	short.11	short	1	answer	correct	0.002	From Decimal		True
+cyberchef	cyberchef	short.14	short	1	answer	correct	0.002	From Morse Code		True
+cyberchef	cyberchef	short.15	short	1	answer	wrong	0.001	From Decimal		True
+cyberchef	cyberchef	long.01	long	1	answer	correct	0.030	From Base64		True
+cyberchef	cyberchef	long.02	long	1	answer	correct	0.025	From Hex		True
+cyberchef	cyberchef	long.08	long	1	timeout	nothing	6.245			False
+cyberchef	cyberchef	long.10	long	1	answer	correct	0.103	From Binary		True
+cyberchef	cyberchef	long.11	long	1	answer	correct	0.077	From Hex → From Base64		True
+cyberchef	cyberchef	chain2.01	chain	1	answer	correct	0.013	From Base85 → From Base58		True
+cyberchef	cyberchef	chain2.03	chain	1	answer	correct	0.010	From Base32 → From Decimal		True
+cyberchef	cyberchef	chain2.07	chain	1	answer	correct	0.017	From Base58 → From Base58		True
+cyberchef	cyberchef	chain2.09	chain	1	answer	correct	0.010	From Base58 → From Base32		True
+cyberchef	cyberchef	chain3.01	chain	1	answer	correct	0.008	From Base85 → From Base85 → URL Decode		True
+cyberchef	cyberchef	chain3.03	chain	1	answer	correct	0.008	From Decimal → From Base85 → From Base32		True
+cyberchef	cyberchef	chain3.05	chain	1	answer	correct	0.028	URL Decode → From Base64 → From Binary		True
+cyberchef	cyberchef	chain3.07	chain	1	answer	correct	0.012	URL Decode → From Base85 → From Base64		True
+cyberchef	cyberchef	chain3.09	chain	1	answer	correct	0.019	URL Decode → From Hex → From Base64		True
+cyberchef	cyberchef	lang.de.base64	language	1	answer	correct	0.006	From Base64		True
+cyberchef	cyberchef	lang.de.hex	language	1	answer	correct	0.004	From Hex		True
+cyberchef	cyberchef	lang.de.plain	language	1	none	correct	0.001			True
+cyberchef	cyberchef	lang.fr.base64	language	1	answer	correct	0.006	From Base64		True
+cyberchef	cyberchef	lang.fr.hex	language	1	answer	correct	0.009	From Hex		True
+cyberchef	cyberchef	lang.fr.plain	language	1	none	correct	0.001			True
+cyberchef	cyberchef	lang.es.base64	language	1	answer	correct	0.008	From Base64		True
+cyberchef	cyberchef	lang.es.hex	language	1	answer	correct	0.009	From Hex		True
+cyberchef	cyberchef	lang.es.plain	language	1	none	correct	0.001			True
+cyberchef	cyberchef	lang.it.base64	language	1	answer	correct	0.005	From Base64		True
+cyberchef	cyberchef	lang.it.hex	language	1	answer	correct	0.009	From Hex		True
+cyberchef	cyberchef	lang.it.plain	language	1	none	correct	0.001			True
+cyberchef	cyberchef	lang.pt.base64	language	1	answer	correct	0.006	From Base64		True
+cyberchef	cyberchef	lang.pt.hex	language	1	answer	correct	0.004	From Hex		True
+cyberchef	cyberchef	lang.pt.plain	language	1	none	correct	0.002			True
+cyberchef	cyberchef	lang.nl.base64	language	1	answer	correct	0.006	From Base64		True
+cyberchef	cyberchef	lang.nl.hex	language	1	answer	correct	0.004	From Hex		True
+cyberchef	cyberchef	lang.nl.plain	language	1	none	correct	0.001			True
+cyberchef	cyberchef	lang.pl.base64	language	1	answer	correct	0.009	From Base64		True
+cyberchef	cyberchef	lang.pl.hex	language	1	answer	correct	0.008	From Hex		True
+cyberchef	cyberchef	lang.pl.plain	language	1	none	correct	0.001			True
+cyberchef	cyberchef	lang.tr.base64	language	1	answer	correct	0.005	From Base64		True
+cyberchef	cyberchef	lang.tr.hex	language	1	answer	correct	0.004	From Hex		True
+cyberchef	cyberchef	lang.tr.plain	language	1	none	correct	0.001			True
+cyberchef	cyberchef	lang.ru.base64	language	1	answer	correct	0.006	From Base64		True
+cyberchef	cyberchef	lang.ru.hex	language	1	answer	correct	0.004	From Hex		True
+cyberchef	cyberchef	lang.ru.plain	language	1	none	correct	0.001			True
+cyberchef	cyberchef	lang.zh.base64	language	1	answer	correct	0.008	From Base64		True
+cyberchef	cyberchef	lang.zh.hex	language	1	answer	correct	0.009	From Hex		True
+cyberchef	cyberchef	lang.zh.plain	language	1	none	correct	0.001			True
+cyberchef	cyberchef	lang.ja.base64	language	1	answer	correct	0.008	From Base64		True
+cyberchef	cyberchef	lang.ja.hex	language	1	answer	correct	0.009	From Hex		True
+cyberchef	cyberchef	lang.ja.plain	language	1	none	correct	0.001			True
+cyberchef	cyberchef	lang.ko.base64	language	1	answer	correct	0.007	From Base64		True
+cyberchef	cyberchef	lang.ko.hex	language	1	answer	correct	0.004	From Hex		True
+cyberchef	cyberchef	lang.ko.plain	language	1	none	correct	0.001			True
+cyberchef	cyberchef	plain.T01	plaintext	1	none	correct	0.001			True
+cyberchef	cyberchef	plain.T02	plaintext	1	none	correct	0.001			True
+cyberchef	cyberchef	plain.T03	plaintext	1	none	correct	0.001			True
+cyberchef	cyberchef	plain.T04	plaintext	1	none	correct	0.001			True
+cyberchef	cyberchef	plain.T05	plaintext	1	answer	wrong	0.003	Defang IP Addresses		True
+cyberchef	cyberchef	plain.T06	plaintext	1	none	correct	0.001			True
+cyberchef	cyberchef	plain.T07	plaintext	1	none	correct	0.001			True
+cyberchef	cyberchef	plain.T08	plaintext	1	none	correct	0.001			True
+cyberchef	cyberchef	plain.T09	plaintext	1	none	correct	0.001			True
+cyberchef	cyberchef	plain.T10	plaintext	1	none	correct	0.001			True
+cyberchef	cyberchef	none.random_alnum.1	no_answer	1	none	correct	0.002			
+cyberchef	cyberchef	none.random_alnum.2	no_answer	1	none	correct	0.008			
+cyberchef	cyberchef	none.random_alnum.3	no_answer	1	none	correct	0.007			
+cyberchef	cyberchef	none.random_alnum.4	no_answer	1	none	correct	0.007			
+cyberchef	cyberchef	none.random_lower.1	no_answer	1	none	correct	0.002			
+cyberchef	cyberchef	none.random_lower.2	no_answer	1	none	correct	0.009			
+cyberchef	cyberchef	none.random_lower.3	no_answer	1	none	correct	0.008			
+cyberchef	cyberchef	none.random_upper.1	no_answer	1	none	correct	0.008			
+cyberchef	cyberchef	none.random_upper.2	no_answer	1	none	correct	0.008			
+cyberchef	cyberchef	none.random_hex.1	no_answer	1	none	correct	0.008			
+cyberchef	cyberchef	none.random_hex.2	no_answer	1	none	correct	0.009			
+cyberchef	cyberchef	none.random_hex.3	no_answer	1	answer	wrong	0.009	From Base85		
+cyberchef	cyberchef	none.random_hex.4	no_answer	1	answer	wrong	0.009	From Hex		
+cyberchef	cyberchef	none.random_base64.1	no_answer	1	none	correct	0.002			
+cyberchef	cyberchef	none.random_base64.2	no_answer	1	none	correct	0.009			
+cyberchef	cyberchef	none.random_base64.3	no_answer	1	none	correct	0.007			
+cyberchef	cyberchef	none.random_base64.4	no_answer	1	none	correct	0.004			
+cyberchef	cyberchef	none.random_digits.1	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.random_digits.2	no_answer	1	none	correct	0.008			
+cyberchef	cyberchef	none.random_digits.3	no_answer	1	answer	wrong	0.010	From Base85		
+cyberchef	cyberchef	none.keyboard_mash.1	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.keyboard_mash.2	no_answer	1	none	correct	0.007			
+cyberchef	cyberchef	none.keyboard_mash.3	no_answer	1	none	correct	0.007			
+cyberchef	cyberchef	none.keyboard_mash.4	no_answer	1	none	correct	0.007			
+cyberchef	cyberchef	none.bigram_english.1	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.bigram_english.2	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.bigram_english.3	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.bigram_english.4	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.bigram_english.5	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.bigram_english.6	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.shuffled_words.1	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.shuffled_words.2	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.shuffled_words.3	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.random_cjk.1	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.random_cjk.2	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.random_emoji.1	no_answer	1	none	correct	0.001			
+cyberchef	cyberchef	none.random_bits.1	no_answer	1	none	correct	0.004			
+cyberchef	cyberchef	none.random_morse.1	no_answer	1	answer	wrong	0.005	From Morse Code		
+cyberchef	cyberchef	none.random_symbols.1	no_answer	1	none	correct	0.001			
+cyberchef-intensive	cyberchef-intensive	enc.base64.1	encoding	1	answer	correct	2.484	From Base64		True
+cyberchef-intensive	cyberchef-intensive	enc.base64.2	encoding	1	answer	correct	2.323	From Base64		True
+cyberchef-intensive	cyberchef-intensive	enc.base64_url.1	encoding	1	answer	wrong	0.699	Decode text		True
+cyberchef-intensive	cyberchef-intensive	enc.base64_itoa64.1	encoding	1	answer	correct	2.116	From Base64		True
+cyberchef-intensive	cyberchef-intensive	enc.base32.1	encoding	1	answer	correct	2.978	From Base32		True
+cyberchef-intensive	cyberchef-intensive	enc.base32.2	encoding	1	answer	correct	3.048	From Base32		True
+cyberchef-intensive	cyberchef-intensive	enc.base32hex.1	encoding	1	answer	correct	3.897	From Base32		True
+cyberchef-intensive	cyberchef-intensive	enc.hex.1	encoding	1	answer	correct	3.866	From Hex		True
+cyberchef-intensive	cyberchef-intensive	enc.hex_spaced.1	encoding	1	answer	correct	0.551	From Hex		True
+cyberchef-intensive	cyberchef-intensive	enc.base58_bitcoin.1	encoding	1	answer	correct	1.589	From Base58		True
+cyberchef-intensive	cyberchef-intensive	enc.base58_ripple.1	encoding	1	answer	correct	3.656	From Base58		True
+cyberchef-intensive	cyberchef-intensive	enc.base85.1	encoding	1	answer	correct	0.281	From Base85		True
+cyberchef-intensive	cyberchef-intensive	enc.ascii85.1	encoding	1	answer	correct	0.457	From Base85		True
+cyberchef-intensive	cyberchef-intensive	enc.ascii85_adobe.1	encoding	1	answer	correct	0.273	From Base85		True
+cyberchef-intensive	cyberchef-intensive	enc.z85.1	encoding	1	answer	correct	0.269	From Base85		True
+cyberchef-intensive	cyberchef-intensive	enc.binary.1	encoding	1	answer	correct	0.938	From Binary		True
+cyberchef-intensive	cyberchef-intensive	enc.binary.2	encoding	1	answer	correct	0.935	From Binary		True
+cyberchef-intensive	cyberchef-intensive	enc.decimal.1	encoding	1	answer	correct	0.583	From Decimal		True
+cyberchef-intensive	cyberchef-intensive	enc.url.1	encoding	1	answer	correct	0.678	URL Decode		True
+cyberchef-intensive	cyberchef-intensive	enc.url_all.1	encoding	1	answer	correct	1.090	URL Decode		True
+cyberchef-intensive	cyberchef-intensive	enc.html_dec.1	encoding	1	answer	correct	0.995	From HTML Entity		True
+cyberchef-intensive	cyberchef-intensive	enc.html_hex.1	encoding	1	answer	correct	0.479	From HTML Entity		True
+cyberchef-intensive	cyberchef-intensive	enc.unicode_escape.1	encoding	1	answer	correct	0.519	Unescape Unicode Characters → Encode text		True
+cyberchef-intensive	cyberchef-intensive	enc.unicode_escape.2	encoding	1	answer	correct	0.471	Unescape Unicode Characters		True
+cyberchef-intensive	cyberchef-intensive	enc.unicode_plus.1	encoding	1	answer	wrong	0.575	Unescape Unicode Characters → Encode text		False
+cyberchef-intensive	cyberchef-intensive	enc.backslash_hex.1	encoding	1	answer	correct	0.276	From Hex		True
+cyberchef-intensive	cyberchef-intensive	enc.quoted_printable.1	encoding	1	answer	correct	0.344	From Quoted Printable		True
+cyberchef-intensive	cyberchef-intensive	enc.utf16le+base64.1	encoding	1	answer	correct	3.300	From Base64 → Decode text		True
+cyberchef-intensive	cyberchef-intensive	enc.utf16be_bom+hex.1	encoding	1	answer	correct	3.959	From Hex → Decode text		True
+cyberchef-intensive	cyberchef-intensive	enc.hexdump_xxd.1	encoding	1	answer	correct	0.262	From Hexdump		True
+cyberchef-intensive	cyberchef-intensive	enc.hexdump_c.1	encoding	1	answer	correct	0.279	From Hexdump		True
+cyberchef-intensive	cyberchef-intensive	enc.morse_lines.1	encoding	1	answer	wrong	0.638	From Morse Code → Decode text		False
+cyberchef-intensive	cyberchef-intensive	enc.a1z26_spaces.1	encoding	1	answer	correct	2.077	A1Z26 Cipher Decode		True
+cyberchef-intensive	cyberchef-intensive	enc.bacon26.1	encoding	1	answer	correct	3.594	Bacon Cipher Decode → XOR		True
+cyberchef-intensive	cyberchef-intensive	enc.bacon24.1	encoding	1	answer	wrong	1.556	From Hexdump → XOR		False
+cyberchef-intensive	cyberchef-intensive	enc.jwt.1	encoding	1	answer	wrong	0.480	Decode text		False
+cyberchef-intensive	cyberchef-intensive	enc.gzip+base64.1	encoding	1	timeout	nothing	6.193			False
+cyberchef-intensive	cyberchef-intensive	enc.gzip+hex.1	encoding	1	timeout	nothing	6.244			False
+cyberchef-intensive	cyberchef-intensive	enc.zlib+base64.1	encoding	1	answer	wrong	2.392	From Base64 → Decode text → Zlib Inflate		True
+cyberchef-intensive	cyberchef-intensive	enc.bzip2+base64.1	encoding	1	answer	correct	3.574	From Base64 → Bzip2 Decompress		True
+cyberchef-intensive	cyberchef-intensive	enc.bech32.1	encoding	1	answer	wrong	5.794	Decode text		False
+cyberchef-intensive	cyberchef-intensive	enc.modhex.1	encoding	1	answer	correct	4.316	From Modhex		True
+cyberchef-intensive	cyberchef-intensive	enc.utf7.1	encoding	1	answer	wrong	0.132	Decode text		False
+cyberchef-intensive	cyberchef-intensive	enc.ebcdic+hex.1	encoding	1	answer	correct	2.055	From Hex → Decode text		True
+cyberchef-intensive	cyberchef-intensive	enc.rotl3+hex.1	encoding	1	answer	correct	1.875	From Hex → Rotate right		True
+cyberchef-intensive	cyberchef-intensive	enc.bitnot+hex.1	encoding	1	answer	correct	4.133	From Hex → XOR		True
+cyberchef-intensive	cyberchef-intensive	cls.xor_2a+hex.1	classical	1	answer	correct	1.730	From Hex → XOR		True
+cyberchef-intensive	cyberchef-intensive	cls.xor_5c+base64.1	classical	1	answer	correct	1.894	From Base64 → XOR		True
+cyberchef-intensive	cyberchef-intensive	cls.xor_13+hex.1	classical	1	answer	correct	3.989	From Hex → XOR		True
+cyberchef-intensive	cyberchef-intensive	flag.01	flag	1	answer	wrong	2.638	From Base64 → Decode text		False
+cyberchef-intensive	cyberchef-intensive	flag.02	flag	1	answer	wrong	1.804	From Hex → Decode text		False
+cyberchef-intensive	cyberchef-intensive	flag.06	flag	1	answer	wrong	1.988	From Base32 → Decode text		False
+cyberchef-intensive	cyberchef-intensive	flag.07	flag	1	answer	wrong	1.278	URL Decode → Decode text		False
+cyberchef-intensive	cyberchef-intensive	flag.09	flag	1	answer	wrong	1.221	From Hexdump → XOR		False
+cyberchef-intensive	cyberchef-intensive	flag.10	flag	1	answer	wrong	3.828	Decode text		False
+cyberchef-intensive	cyberchef-intensive	flag.12	flag	1	answer	wrong	4.054	Decode text		False
+cyberchef-intensive	cyberchef-intensive	flag.14	flag	1	answer	wrong	0.480	Decode text		False
+cyberchef-intensive	cyberchef-intensive	flag.15	flag	1	answer	wrong	0.731	From Decimal → Decode text		False
+cyberchef-intensive	cyberchef-intensive	flag.16	flag	1	timeout	nothing	6.192			False
+cyberchef-intensive	cyberchef-intensive	flag.19	flag	1	answer	wrong	5.958	Decode text		False
+cyberchef-intensive	cyberchef-intensive	flag.21	flag	1	timeout	nothing	6.142			False
+cyberchef-intensive	cyberchef-intensive	flag.23	flag	1	answer	wrong	1.230	From Octal → Decode text		False
+cyberchef-intensive	cyberchef-intensive	flag.24	flag	1	timeout	nothing	6.136			False
+cyberchef-intensive	cyberchef-intensive	flag.25	flag	1	answer	wrong	1.271	From HTML Entity → Decode text		False
+cyberchef-intensive	cyberchef-intensive	flag.27	flag	1	answer	wrong	0.686	Decode text		False
+cyberchef-intensive	cyberchef-intensive	short.01	short	1	answer	wrong	0.252	From Base64 → XOR		False
+cyberchef-intensive	cyberchef-intensive	short.02	short	1	answer	correct	3.601	From Hex		True
+cyberchef-intensive	cyberchef-intensive	short.05	short	1	answer	correct	0.783	From Binary		True
+cyberchef-intensive	cyberchef-intensive	short.11	short	1	answer	wrong	0.540	From Decimal → XOR		True
+cyberchef-intensive	cyberchef-intensive	short.14	short	1	answer	wrong	0.865	From Morse Code → XOR		True
+cyberchef-intensive	cyberchef-intensive	short.15	short	1	answer	wrong	0.627	From Decimal → XOR → From Modhex		False
+cyberchef-intensive	cyberchef-intensive	long.01	long	1	answer	correct	2.442	From Base64		True
+cyberchef-intensive	cyberchef-intensive	long.02	long	1	answer	correct	3.845	From Hex		True
+cyberchef-intensive	cyberchef-intensive	long.08	long	1	timeout	nothing	6.193			False
+cyberchef-intensive	cyberchef-intensive	long.10	long	1	answer	correct	1.140	From Binary		True
+cyberchef-intensive	cyberchef-intensive	long.11	long	1	timeout	nothing	6.137			False
+cyberchef-intensive	cyberchef-intensive	chain2.01	chain	1	answer	correct	4.100	From Base85 → From Base58		True
+cyberchef-intensive	cyberchef-intensive	chain2.03	chain	1	answer	correct	2.524	From Base32 → From Decimal		True
+cyberchef-intensive	cyberchef-intensive	chain2.07	chain	1	answer	correct	5.597	From Base58 → From Base58		True
+cyberchef-intensive	cyberchef-intensive	chain2.09	chain	1	answer	correct	3.409	From Base58 → From Base32		True
+cyberchef-intensive	cyberchef-intensive	chain3.01	chain	1	answer	correct	0.933	From Base85 → From Base85 → URL Decode		True
+cyberchef-intensive	cyberchef-intensive	chain3.03	chain	1	answer	correct	0.868	From Decimal → From Base85 → From Base32		True
+cyberchef-intensive	cyberchef-intensive	chain3.05	chain	1	answer	wrong	3.630	URL Decode → From Base64 → XOR		False
+cyberchef-intensive	cyberchef-intensive	chain3.07	chain	1	answer	correct	1.610	URL Decode → From Base85 → From Base64		True
+cyberchef-intensive	cyberchef-intensive	chain3.09	chain	1	answer	correct	5.229	URL Decode → From Hex → From Base64		True
+cyberchef-intensive	cyberchef-intensive	lang.de.base64	language	1	answer	correct	2.504	From Base64		True
+cyberchef-intensive	cyberchef-intensive	lang.de.hex	language	1	answer	correct	1.880	From Hex		True
+cyberchef-intensive	cyberchef-intensive	lang.de.plain	language	1	none	correct	0.141			True
+cyberchef-intensive	cyberchef-intensive	lang.fr.base64	language	1	answer	correct	2.495	From Base64		True
+cyberchef-intensive	cyberchef-intensive	lang.fr.hex	language	1	answer	correct	4.017	From Hex		True
+cyberchef-intensive	cyberchef-intensive	lang.fr.plain	language	1	answer	correct	0.187	Encode text		True
+cyberchef-intensive	cyberchef-intensive	lang.es.base64	language	1	answer	correct	3.418	From Base64		True
+cyberchef-intensive	cyberchef-intensive	lang.es.hex	language	1	answer	correct	3.768	From Hex		True
+cyberchef-intensive	cyberchef-intensive	lang.es.plain	language	1	answer	wrong	0.222	Decode text		True
+cyberchef-intensive	cyberchef-intensive	lang.it.base64	language	1	answer	correct	2.334	From Base64		True
+cyberchef-intensive	cyberchef-intensive	lang.it.hex	language	1	answer	correct	3.807	From Hex		True
+cyberchef-intensive	cyberchef-intensive	lang.it.plain	language	1	none	correct	0.138			True
+cyberchef-intensive	cyberchef-intensive	lang.pt.base64	language	1	answer	correct	2.402	From Base64		True
+cyberchef-intensive	cyberchef-intensive	lang.pt.hex	language	1	answer	correct	1.665	From Hex		True
+cyberchef-intensive	cyberchef-intensive	lang.pt.plain	language	1	answer	correct	0.195	Encode text		True
+cyberchef-intensive	cyberchef-intensive	lang.nl.base64	language	1	answer	correct	2.257	From Base64		True
+cyberchef-intensive	cyberchef-intensive	lang.nl.hex	language	1	answer	correct	1.632	From Hex		True
+cyberchef-intensive	cyberchef-intensive	lang.nl.plain	language	1	none	correct	0.135			True
+cyberchef-intensive	cyberchef-intensive	lang.pl.base64	language	1	answer	correct	3.328	From Base64		True
+cyberchef-intensive	cyberchef-intensive	lang.pl.hex	language	1	answer	correct	3.931	From Hex		True
+cyberchef-intensive	cyberchef-intensive	lang.pl.plain	language	1	none	correct	0.204			True
+cyberchef-intensive	cyberchef-intensive	lang.tr.base64	language	1	answer	correct	2.495	From Base64		True
+cyberchef-intensive	cyberchef-intensive	lang.tr.hex	language	1	answer	correct	1.743	From Hex		True
+cyberchef-intensive	cyberchef-intensive	lang.tr.plain	language	1	none	correct	0.228			True
+cyberchef-intensive	cyberchef-intensive	lang.ru.base64	language	1	answer	correct	2.356	From Base64		True
+cyberchef-intensive	cyberchef-intensive	lang.ru.hex	language	1	answer	correct	1.847	From Hex		True
+cyberchef-intensive	cyberchef-intensive	lang.ru.plain	language	1	none	correct	0.206			True
+cyberchef-intensive	cyberchef-intensive	lang.zh.base64	language	1	timeout	nothing	6.236			False
+cyberchef-intensive	cyberchef-intensive	lang.zh.hex	language	1	answer	correct	4.376	From Hex		True
+cyberchef-intensive	cyberchef-intensive	lang.zh.plain	language	1	none	correct	0.231			True
+cyberchef-intensive	cyberchef-intensive	lang.ja.base64	language	1	answer	correct	2.584	From Base64		True
+cyberchef-intensive	cyberchef-intensive	lang.ja.hex	language	1	answer	correct	4.392	From Hex		True
+cyberchef-intensive	cyberchef-intensive	lang.ja.plain	language	1	none	correct	0.229			True
+cyberchef-intensive	cyberchef-intensive	lang.ko.base64	language	1	answer	correct	3.658	From Base64		True
+cyberchef-intensive	cyberchef-intensive	lang.ko.hex	language	1	answer	correct	1.869	From Hex		True
+cyberchef-intensive	cyberchef-intensive	lang.ko.plain	language	1	none	correct	0.202			True
+cyberchef-intensive	cyberchef-intensive	plain.T01	plaintext	1	none	correct	0.139			True
+cyberchef-intensive	cyberchef-intensive	plain.T02	plaintext	1	none	correct	0.138			True
+cyberchef-intensive	cyberchef-intensive	plain.T03	plaintext	1	answer	wrong	0.328	Decode text		False
+cyberchef-intensive	cyberchef-intensive	plain.T04	plaintext	1	answer	wrong	0.331	Decode text		False
+cyberchef-intensive	cyberchef-intensive	plain.T05	plaintext	1	answer	wrong	0.697	XOR		False
+cyberchef-intensive	cyberchef-intensive	plain.T06	plaintext	1	answer	wrong	0.137	Decode text		True
+cyberchef-intensive	cyberchef-intensive	plain.T07	plaintext	1	answer	wrong	0.138	Decode text		False
+cyberchef-intensive	cyberchef-intensive	plain.T08	plaintext	1	answer	wrong	0.347	Decode text		False
+cyberchef-intensive	cyberchef-intensive	plain.T09	plaintext	1	none	correct	0.142			True
+cyberchef-intensive	cyberchef-intensive	plain.T10	plaintext	1	answer	wrong	0.135	Decode text		False
+cyberchef-intensive	cyberchef-intensive	none.random_alnum.1	no_answer	1	answer	wrong	0.321	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_alnum.2	no_answer	1	answer	wrong	3.818	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_alnum.3	no_answer	1	answer	wrong	3.470	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_alnum.4	no_answer	1	answer	wrong	3.498	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_lower.1	no_answer	1	answer	wrong	0.757	From Base85 → Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_lower.2	no_answer	1	answer	wrong	3.678	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_lower.3	no_answer	1	answer	wrong	3.557	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_upper.1	no_answer	1	answer	wrong	3.828	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_upper.2	no_answer	1	answer	wrong	3.815	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_hex.1	no_answer	1	answer	wrong	3.939	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_hex.2	no_answer	1	answer	wrong	3.630	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_hex.3	no_answer	1	answer	wrong	3.718	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_hex.4	no_answer	1	answer	wrong	3.717	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_base64.1	no_answer	1	answer	wrong	0.669	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_base64.2	no_answer	1	answer	wrong	3.604	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_base64.3	no_answer	1	answer	wrong	3.222	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_base64.4	no_answer	1	answer	wrong	1.819	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_digits.1	no_answer	1	answer	wrong	0.287	XOR		
+cyberchef-intensive	cyberchef-intensive	none.random_digits.2	no_answer	1	answer	wrong	3.855	XOR		
+cyberchef-intensive	cyberchef-intensive	none.random_digits.3	no_answer	1	answer	wrong	4.157	XOR		
+cyberchef-intensive	cyberchef-intensive	none.keyboard_mash.1	no_answer	1	answer	wrong	0.300	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.keyboard_mash.2	no_answer	1	answer	wrong	3.347	From Base85 → Decode text		
+cyberchef-intensive	cyberchef-intensive	none.keyboard_mash.3	no_answer	1	answer	wrong	3.520	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.keyboard_mash.4	no_answer	1	answer	wrong	3.376	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.bigram_english.1	no_answer	1	none	correct	0.135			
+cyberchef-intensive	cyberchef-intensive	none.bigram_english.2	no_answer	1	none	correct	0.134			
+cyberchef-intensive	cyberchef-intensive	none.bigram_english.3	no_answer	1	none	correct	0.138			
+cyberchef-intensive	cyberchef-intensive	none.bigram_english.4	no_answer	1	answer	wrong	0.136	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.bigram_english.5	no_answer	1	answer	wrong	0.141	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.bigram_english.6	no_answer	1	answer	wrong	0.140	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.shuffled_words.1	no_answer	1	none	correct	0.132			
+cyberchef-intensive	cyberchef-intensive	none.shuffled_words.2	no_answer	1	none	correct	0.132			
+cyberchef-intensive	cyberchef-intensive	none.shuffled_words.3	no_answer	1	none	correct	0.133			
+cyberchef-intensive	cyberchef-intensive	none.random_cjk.1	no_answer	1	answer	wrong	0.187	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_cjk.2	no_answer	1	answer	wrong	0.184	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_emoji.1	no_answer	1	answer	wrong	0.197	Decode text		
+cyberchef-intensive	cyberchef-intensive	none.random_bits.1	no_answer	1	answer	wrong	2.022	XOR		
+cyberchef-intensive	cyberchef-intensive	none.random_morse.1	no_answer	1	answer	wrong	2.376	From Morse Code → XOR		
+cyberchef-intensive	cyberchef-intensive	none.random_symbols.1	no_answer	1	answer	wrong	0.319	Decode text		

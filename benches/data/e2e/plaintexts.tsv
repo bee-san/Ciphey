@@ -1,0 +1,163 @@
+# Plaintexts of the end-to-end corpus (benches/e2e/corpus.py). pool<TAB>id<TAB>source<TAB>text
+# source "own": written for this benchmark (2026-11-04), MIT like the rest of the repo.
+# source "gutenberg:<n>": a paragraph of Project Gutenberg ebook <n>, public domain in the USA,
+# whitespace collapsed. The books are held out from gibberish-or-not's training (its en_test
+# list) and are not among the books of Ciphey's quadgram table; sha256 of the files used are in
+# docs/benchmark-e2e.md.
+sent	S01	own	The quick brown fox jumps over the lazy dog.
+sent	S02	own	Meet me at the old lighthouse after midnight.
+sent	S03	own	Please remember to water the plants on Friday.
+sent	S04	own	Our train leaves from platform nine at half past seven.
+sent	S05	own	The password for the staging server changes every month.
+sent	S06	own	I left the spare key under the blue flower pot.
+sent	S07	own	Can you send me the report before the meeting tomorrow?
+sent	S08	own	The museum is closed on Mondays, but the garden stays open.
+sent	S09	own	Every morning she runs five kilometres along the river.
+sent	S10	own	Bring warm clothes, because the cabin has no heating.
+sent	S11	own	The treasure is buried three paces north of the oak tree.
+sent	S12	own	We need two more volunteers for the charity bake sale.
+sent	S13	own	Turn left at the bakery and the library is on your right.
+sent	S14	own	The concert was cancelled because of the heavy storm.
+sent	S15	own	Do not open this envelope until your birthday.
+sent	S16	own	He fixed the bug by checking the length before copying the buffer.
+sent	S17	own	Our new office has a great view of the harbour.
+sent	S18	own	The recipe calls for two eggs, a cup of flour and some milk.
+sent	S19	own	I think the answer is hidden somewhere in the second chapter.
+sent	S20	own	The cat knocked a glass of water off the kitchen table.
+sent	S21	own	Remember to back up your files before installing the update.
+sent	S22	own	The weather forecast says it will snow on Sunday afternoon.
+sent	S23	own	Grandma still writes letters by hand to all her friends.
+sent	S24	own	The quarterly results were better than anyone expected.
+sent	S25	own	Keep this message secret and destroy it after reading.
+sent	S26	own	The bridge will be closed for repairs until the end of June.
+sent	S27	own	My favourite book is about a sailor who crosses the ocean alone.
+sent	S28	own	Lunch will be served in the main hall at one o'clock.
+sent	S29	own	The detective noticed that the clock had stopped at ten past four.
+sent	S30	own	Please do not feed the ducks in the park.
+sent	S31	own	The rocket launch was delayed by a faulty sensor.
+sent	S32	own	We found an old map in the attic of the farmhouse.
+sent	S33	own	If you can read this, you have cracked the first layer.
+sent	S34	own	The library fine for late books is ten cents a day.
+sent	S35	own	Switch off the lights when you leave the laboratory.
+sent	S36	own	The orchestra rehearses every Tuesday evening in the church.
+sent	S37	own	A strong password should be long and hard to guess.
+sent	S38	own	The children built a snowman with a carrot for a nose.
+sent	S39	own	Our flight was rerouted through Lisbon because of the strike.
+sent	S40	own	The secret ingredient in the soup is a pinch of nutmeg.
+sent	S41	own	Hello, World! This is a test of the decoder.
+sent	S42	own	Send the package to the address on the back of this card.
+sent	S43	own	The farmer sold apples, pears and plums at the market.
+sent	S44	own	The server crashed at noon, so the team rolled back the release.
+sent	S45	own	We will meet again when the moon is full.
+sent	S46	own	The painting was stolen from the gallery last winter.
+sent	S47	own	Your appointment with the dentist is on Thursday at three.
+sent	S48	own	The hikers reached the summit just before sunset.
+sent	S49	own	Nobody noticed that the guard had fallen asleep.
+sent	S50	own	Thank you for helping me move into the new flat.
+letters	L01	own	ATTACK AT DAWN
+letters	L02	own	MEET ME AT THE SECRET GARDEN
+letters	L03	own	THE EAGLE HAS LANDED
+letters	L04	own	SEND MORE TROOPS TO THE NORTH GATE
+letters	L05	own	HELLO FROM THE OTHER SIDE
+letters	L06	own	THE ANSWER IS FORTY TWO
+letters	L07	own	WE RIDE AT MIDNIGHT
+letters	L08	own	KEEP CALM AND CARRY ON
+letters	L09	own	THE GOLD IS IN THE WELL
+letters	L10	own	RETREAT TO THE CASTLE
+letters	L11	own	THE PACKAGE ARRIVES ON MONDAY
+letters	L12	own	NEVER TRUST A SMILING CAT
+letters	L13	own	FIND THE KEY UNDER THE MAT
+letters	L14	own	THE BIRDS SING AT SUNRISE
+letters	L15	own	WINTER IS COMING SOON
+letters	L16	own	LOOK BEHIND THE PAINTING
+letters	L17	own	THE TRAIN LEAVES AT NOON
+letters	L18	own	SILENCE IS GOLDEN
+letters	L19	own	HAPPY BIRTHDAY MY FRIEND
+letters	L20	own	THE CODE WORD IS PELICAN
+para	P01	own	The expedition set out from the coastal village at first light. For three days the travellers followed the river inland, crossing marshes and thick forests, until they reached the foot of the mountains. There they made camp and waited for the guide, who had promised to show them the hidden pass that led to the valley beyond.
+para	P02	own	Every message sent from the embassy was copied twice, once for the archive and once for the minister. The clerks worked in silence, and nobody was allowed to leave the building until the last telegram of the evening had been checked, sealed and placed in the safe behind the portrait of the king.
+para	P03	own	When the storm finally passed, the fishermen walked down to the harbour to count the damage. Two boats had sunk at their moorings, the old pier had lost most of its planks, and the nets that had been left out to dry were scattered across the rocks like seaweed. Still, nobody had been hurt, and that evening the whole village gathered in the inn to celebrate.
+para	P04	own	The professor asked her students to write down everything they could remember about the lecture. Most of them wrote a few lines about the history of the printing press, but one student filled three pages with notes on the paper, the ink and the machines, and even drew a careful diagram of how the type was set by hand.
+para	P05	own	Our garden is at its best in the early summer. The roses climb over the wall by the gate, the beans grow taller than the fence, and in the evening the scent of the honeysuckle drifts across the lawn. My grandfather planted most of it forty years ago, and he still walks round it every morning with a cup of tea.
+para	P06	own	The castle stands on a hill above the river, and from its towers you can see the whole valley. In the middle ages it guarded the only bridge for many miles, and the lords who lived there grew rich on the tolls they charged the merchants. Today it is a museum, and the great hall is used for weddings and concerts.
+long	G01	gutenberg:1250	We do not wish to look upon the Uncharted Forest. We do not wish to think of it. But ever do our eyes return to that black patch upon the sky. Men never enter the Uncharted Forest, for there is no power to explore it and no path to lead among its ancient trees which stand as guards of fearful secrets. It is whispered that once or twice in a hundred years, one among the men of the City escape alone and run to the Uncharted Forest, without call or reason. These men do not return. They perish from hunger and from the claws of the wild beasts which roam the Forest. But our Councils say that this is only a legend. We have heard that there are many Uncharted Forests over the land, among the Cities. And it is whispered that they have grown over the ruins of many cities of the Unmentionable Times. The trees have swallowed the ruins, and the bones under the ruins, and all the things which perished. And as we look upon the Uncharted Forest far in the night, we think of the secrets of the Unmentionable Times. And we wonder how it came to pass that these secrets were lost to the world. We have heard the legends of the great fighting, in which many men fought on one side and only a few on the other. These few were the Evil Ones and they were conquered. Then great fires raged over the land. And in these fires the Evil Ones and all the things made by the Evil Ones were burned. And the fire which is called the Dawn of the Great Rebirth, was the Script Fire where all the scripts of the Evil Ones were burned, and with them all the words of the Evil Ones. Great mountains of flame stood in the squares of the Cities for three months. Then came the Great Rebirth.
+long	G02	gutenberg:26184	(a) The ordinary citizen very probably has no immediate personal motive for committing simple sabotage. Instead, he must be made to anticipate indirect personal gain, such as might come with enemy evacuation or destruction of the ruling government group. Gains should be stated as specifically as possible for the area addressed: simple sabotage will hasten the day when Commissioner X and his deputies Y and Z will be thrown out, when particularly obnoxious decrees and restrictions will be abolished, when food will arrive, and so on. Abstract verbalizations about personal liberty, freedom of the press, and so on, will not be convincing in most parts of the world. In many areas they will not even be comprehensible.
+long	G03	gutenberg:161	A gentleman carrying a gun, with two pointers playing round him, was passing up the hill and within a few yards of Marianne, when her accident happened. He put down his gun and ran to her assistance. She had raised herself from the ground, but her foot had been twisted in her fall, and she was scarcely able to stand. The gentleman offered his services; and perceiving that her modesty declined what her situation rendered necessary, took her up in his arms without farther delay, and carried her down the hill. Then passing through the garden, the gate of which had been left open by Margaret, he bore her directly into the house, whither Margaret was just arrived, and quitted not his hold till he had seated her in a chair in the parlour.
+long	G04	gutenberg:67098	One day when the sun had come back over the Forest, bringing with it the scent of may, and all the streams of the Forest were tinkling happily to find themselves their own pretty shape again, and the little pools lay dreaming of the life they had seen and the big things they had done, and in the warmth and quiet of the Forest the cuckoo was trying over his voice carefully and listening to see if he liked it, and wood-pigeons were complaining gently to themselves in their lazy comfortable way that it was the other fellow's fault, but it didn't matter very much; on such a day as this Christopher Robin whistled in a special way he had, and Owl came flying out of the Hundred Acre Wood to see what was wanted.
+long	G05	gutenberg:1250	No men known to us could have built this place, nor the men known to our brothers who lived before us, and yet it was built by men. It was a great tunnel. Its walls were hard and smooth to the touch; it felt like stone, but it was not stone. On the ground there were long thin tracks of iron, but it was not iron; it felt smooth and cold as glass. We knelt, and we crawled forward, our hand groping along the iron line to see where it would lead. But there was an unbroken night ahead. Only the iron tracks glowed through it, straight and white, calling us to follow. But we could not follow, for we were losing the puddle of light behind us. So we turned and we crawled back, our hand on the iron line. And our heart beat in our fingertips, without reason. And then we knew.
+short	W01	own	hello
+short	W02	own	yes
+short	W03	own	admin
+short	W04	own	secret
+short	W05	own	open sesame
+short	W06	own	pizza time
+short	W07	own	go
+short	W08	own	thanks!
+short	W09	own	Run.
+short	W10	own	dog
+short	W11	own	top secret
+short	W12	own	hi mom
+short	W13	own	sunrise
+short	W14	own	OK
+short	W15	own	attack
+nonascii	N01	own	Café au lait costs €3.50 — très bon!
+nonascii	N02	own	Zoë and Björn met at the Straße café in München.
+nonascii	N03	own	The naïve résumé was “perfect”, said José.
+nonascii	N04	own	The café on the corner serves crêpes and crème brûlée.
+nonascii	N05	own	My naïve coworker ordered a jalapeño omelette at the café.
+nonascii	N06	own	Ångström units measure tiny distances, ±0.1 Å.
+domain	D01	own	bücher.example.com
+domain	D02	own	münchen.de
+domain	D03	own	café-noël.fr
+dna	A01	own	SEND HELP TWICE THE CASTLE GATE IS WEAK
+dna	A02	own	THE GREEN CAT SAW A FISH IN THE TANK
+lang	de1	own	Wir treffen uns morgen um acht Uhr am Bahnhof.
+lang	de2	own	Das Wetter ist heute schön, deshalb gehen wir in den Park.
+lang	fr1	own	Le petit chat dort sur le canapé depuis ce matin.
+lang	fr2	own	Nous allons au marché pour acheter des fruits et du pain.
+lang	es1	own	Mañana vamos a la playa con nuestros amigos.
+lang	es2	own	La biblioteca cierra a las ocho de la noche.
+lang	it1	own	Questa sera andiamo a cena da mia nonna.
+lang	it2	own	Il treno per Roma parte alle nove e mezza.
+lang	pt1	own	O comboio para Lisboa sai às nove horas.
+lang	pt2	own	Amanhã vou visitar os meus avós no campo.
+lang	nl1	own	Morgen gaan we met de fiets naar het strand.
+lang	nl2	own	De winkel op de hoek verkoopt heerlijk brood.
+lang	pl1	own	Jutro rano jedziemy pociągiem do Krakowa.
+lang	pl2	own	Mój brat lubi czytać książki o historii.
+lang	tr1	own	Yarın sabah erkenden işe gitmem gerekiyor.
+lang	tr2	own	Bu akşam arkadaşlarımla sinemaya gideceğim.
+lang	ru1	own	Завтра утром мы поедем на поезде в Москву.
+lang	ru2	own	Моя сестра любит читать книги по вечерам.
+lang	zh1	own	我们明天早上八点在火车站见面。
+lang	zh2	own	今天天气很好，我们去公园散步吧。
+lang	ja1	own	明日の朝、駅で友達に会います。
+lang	ja2	own	この本はとても面白いので、毎晩少しずつ読んでいます。
+lang	ko1	own	내일 아침에 기차역에서 친구를 만날 거예요.
+lang	ko2	own	오늘은 날씨가 좋아서 공원에 산책하러 갑니다.
+plain	T01	own	The meeting has been moved to Thursday afternoon.
+plain	T02	own	I will be home late tonight, so please start dinner without me.
+plain	T03	own	https://www.example.com/docs/getting-started?lang=en
+plain	T04	own	alice.smith@example.org
+plain	T05	own	192.168.10.42
+plain	T06	own	{"user": "bob", "admin": false, "groups": ["staff", "dev"]}
+plain	T07	own	ls -la /var/log && tail -n 20 /var/log/syslog
+plain	T08	own	flag{plaintext_is_already_here}
+plain	T09	own	Thank you very much for your help yesterday.
+plain	T10	own	def greet(name): return "Hello, " + name
+password	H01	own	password
+password	H02	own	sunshine
+password	H03	own	letmein
+password	H04	own	dragon
+flagword	F01	own	b4s3_64_1s_fun
+flagword	F02	own	y0u_f0und_m3
+flagword	F03	own	l4y3rs_up0n_l4y3rs
+flagword	F04	own	n0t_s0_s3cr3t
+flagword	F05	own	r0t_th3_w0rld
+flagword	F06	own	h1dd3n_1n_pl41n_s1ght
+flagword	F07	own	d3c0d3_4ll_th3_th1ngs
+flagword	F08	own	welcome_to_the_ctf
+flagword	F09	own	crypto_is_not_magic
+flagword	F10	own	easy_peasy_lemon_squeezy
+flagword	F11	own	never_roll_your_own_crypto
+flagword	F12	own	the_onion_has_many_layers
