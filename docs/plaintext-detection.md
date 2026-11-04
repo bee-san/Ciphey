@@ -388,54 +388,57 @@ code on fixed inputs; compare versions with alternating runs (see `benches/READM
 
 ## Current numbers
 
-From `cargo bench --bench plaintext -- --e2e=3` on a shared 16-thread Linux host. Accuracy
-is deterministic; times depend on the machine.
+From `cargo bench --bench plaintext -- --e2e=3` on a shared 64-core Linux host (load 50 to
+70), with pywhat 6. Accuracy is deterministic; times depend on the machine.
 
 **Checkers** (2,609 positives and 20,785 negatives; train 1,140 / 9,957, heldout 1,469 / 10,828):
 
 | checker | train: precision / recall / F1 | heldout: precision / recall / F1 | false positives (train + heldout) |
 |---|---|---|---|
-| Athena@Low | 92.7% / 96.6% / 0.946 | 93.6% / 95.7% / 0.946 | 87 + 96 |
-| Athena@Medium | 91.2% / 97.3% / 0.941 | 91.1% / 96.8% / 0.939 | 107 + 139 |
-| Athena@High | 83.8% / 97.4% / 0.901 | 84.4% / 96.9% / 0.902 | 214 + 263 |
+| Athena@Low | 92.7% / 97.2% / 0.949 | 93.7% / 95.7% / 0.947 | 87 + 95 |
+| Athena@Medium | 91.3% / 97.9% / 0.945 | 91.2% / 96.8% / 0.939 | 107 + 138 |
+| Athena@High | 83.9% / 98.0% / 0.904 | 84.5% / 96.9% / 0.903 | 214 + 262 |
 | English@Medium | 90.5% / 83.5% / 0.869 | 90.8% / 89.4% / 0.901 | 100 + 133 |
-| LemmeKnow | 99.2% / 11.3% / 0.203 | 94.2% / 6.6% / 0.123 | 1 + 6 |
+| pyWhat | 99.3% / 11.9% / 0.213 | 95.1% / 6.6% / 0.123 | 1 + 5 |
 | JSON | 100% / 1.9% | 100% / 0.5% | 0 |
 | Password | 85.7% / 3.2% | 100% / 1.7% | 6 + 0 |
 | Code | 100% / 2.2% | 100% / 1.3% | 0 |
 
 The format checkers' recall is low by design: they only accept their own formats. Athena's
-F1 per family at Medium: english 0.942, flag 0.993, json 1.000, code 0.958, net 0.942,
-lemmeknow 0.910, password 0.884. Most remaining false positives are partly decrypted
+F1 per family at Medium: english 0.942, flag 0.993, json 1.000, code 0.958, net 0.972,
+lemmeknow (pyWhat's formats) 0.931, password 0.884. Most remaining false positives are partly decrypted
 Vigenère (a quarter of them are accepted at Medium; the Vigenère decoder itself filters them), and a
 few reversed texts (0.5%) and wrong railfence keys (0.3%). Other languages are accepted
 17% of the time at Medium.
 
-**Time per check** over all samples (median / p99 / mean): Athena@Medium 4.0 µs / 18 µs /
-4.5 µs, the English checker 0.8 µs / 13 µs / 1.5 µs, LemmeKnow 2.2 µs / 5.7 µs / 2.2 µs,
-JSON 18 ns, the password list 22 ns, code 270 ns. In instructions per check: Athena@Medium
-42,600, English@Medium 14,800, LemmeKnow 25,800, code 3,200.
+**Time per check** over all samples (median / p99 / mean, three runs): Athena@Medium
+3.5–3.6 µs / 21–22 µs / 4.2–4.5 µs, the English checker 0.85 µs / 14 µs / 1.7 µs, pyWhat
+0.81–0.84 µs / 5.8–5.9 µs / 1.17–1.19 µs (LemmeKnow 0.8 was 2.4–2.5 µs / 6.8–7.2 µs /
+2.5–2.6 µs), JSON 24 ns, the password list 28 ns, code 305 ns.
 
 **Decoders** (`crack()` with Athena), held-out split, right / wrong plaintext / nothing:
 Caesar 91% / 0.4% / 8%, ROT47 93% / 0.2% / 7%, Atbash 94% / 0% / 6%, railfence 85% / 1.3%
 / 13%, Vigenère 29% / 0% / 71% (its key search, not detection, is the limit).
 
-**End to end** (3 s timeout):
+**End to end** (3 s timeout, five runs: the range):
 
-| set | cases | correct | wrong (false positive) | nothing found |
-|---|---|---|---|---|
-| regression | 18 | 18 | 0 | 0 |
-| search.toml | 39 | 39 | 0 | 0 |
-| issue1031 | 26 | 24 | 1 | 1 |
-| flags | 72 | 68 | 0 | 4 |
-| ctf | 17 | 16 | 0 | 1 |
-| plaintext_input | 10 | 10 | 0 | 0 |
-| no_answer | 40 | 35 | 5 | 0 |
-| all | 222 | 210 | 6 | 6 |
+| set | cases | correct | wrong (false positive) | input returned unchanged | nothing found |
+|---|---|---|---|---|---|
+| regression | 18 | 18 | 0 | 0 | 0 |
+| search.toml | 113 | 113 | 0 | 0 | 0 |
+| issue1031 | 26 | 25 | 1 | 0 | 0 |
+| flags | 72 | 68 | 2–3 | 0 | 1–2 |
+| ctf | 17 | 16 | 1 | 0 | 0 |
+| plaintext_input | 10 | 10 | 0 | 0 | 0 |
+| no_answer | 40 | 19–22 | 17–20 | 1 | 0 |
+| all | 296 | 269–272 | 22–25 | 1 | 1–2 |
 
-The six wrong: the #1031 Vigenère near miss and five no-answer inputs (see below). The six
-missed: `SEKAI{...}` under ROT13, Caesar, Atbash and railfence (need a crib), German, and
-picoCTF's `l3arn_th3_r0p35` (leetspeak without a flag around it).
+The wrong answers: wrong decoders' output on the inputs with no plaintext (which ones
+depends on how far a search gets in 3 s), the #1031 Vigenère near miss, three `SEKAI{...}`
+flags under shift ciphers (they need a crib), and picoCTF's `l3arn_th3_r0p35` (leetspeak
+without a flag around it). The no-answer input `+1 555 0100 2234` is a phone number to
+pyWhat, so the search returns it unchanged. The missed: German base64, and `SEKAI{...}`
+under Caesar.
 
 ## Known weaknesses
 
