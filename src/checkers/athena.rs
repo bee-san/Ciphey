@@ -309,7 +309,7 @@ mod tests {
         // Rejections are only remembered once the config is set
         set_global_config(Config::default());
         // Not English at Low sensitivity, English at High (see the English checker's tests)
-        let text = "let me jnow whdn you gdt home";
+        let text = "can you pibk up some mhlk on the wzy back";
         let low = Checker::<Athena>::new().with_sensitivity(Sensitivity::Low);
         let high = Checker::<Athena>::new().with_sensitivity(Sensitivity::High);
         for _ in 0..2 {

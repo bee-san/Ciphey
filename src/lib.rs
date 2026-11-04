@@ -20,8 +20,8 @@
 //! ```
 //!
 //! The library is written to build for WebAssembly with its default features and no flags
-//! (`cargo build --lib --target wasm32-unknown-unknown`), once its gibberish-or-not and
-//! LemmeKnow dependencies are replaced by versions that build there. On WebAssembly the
+//! (`cargo build --lib --target wasm32-unknown-unknown`), once its LemmeKnow dependency is
+//! replaced by pywhat, which builds there. On WebAssembly the
 //! search runs on the caller's thread and stops at the timeout by itself, there is no
 //! cache, the human checker never asks, and the CLI, the config file and wordlist files
 //! aren't available. See `docs/wasm.md` in the repository.

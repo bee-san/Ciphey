@@ -124,12 +124,22 @@ Text longer than the longest entry (23 bytes) skips the lookup.
 
 ### English
 
-`src/checkers/english.rs`. The text is normalised for the decision only (the result keeps
-the original): lower case, ASCII punctuation becomes a space except apostrophes inside
-words (`don't`), whitespace collapses. Text with a control character other than tab and
-line breaks is rejected outright (`hello\u{17}world`). CTF flags and secrets (16+
-letters, digits and `+/=_-` with both letters and digits: passwords, keys, hashes)
-between whitespace are left out when the rest has a word (two for a secret), like
+`src/checkers/english.rs`. [gibberish-or-not](https://crates.io/crates/gibberish-or-not) 6
+decides whether a text is natural language, with or without spaces, and in which
+language. A search asks about tens of thousands of short candidates, nearly all of them
+junk, and junk that happens to be language (a common word, two short words) is still junk
+there, so the checker has rules of its own on top. Each was measured against
+gibberish-or-not 6 deciding alone (see [What the English rules
+do](#what-the-english-rules-do)); the rules that gibberish-or-not now does better are gone
+(normalising the text before asking it, and a quadgram score and word split for text
+without spaces).
+
+The text is normalised for the word rules only (gibberish-or-not reads the text as written,
+and the result keeps the original): lower case, ASCII punctuation becomes a space except
+apostrophes inside words (`don't`), whitespace collapses. Text with a control character
+other than tab and line breaks is rejected outright (`hello\u{17}world`). CTF flags and
+secrets (16+ letters, digits and `+/=_-` with both letters and digits: passwords, keys,
+hashes) between whitespace are left out when the rest has a word (two for a secret), like
 numbers: `Well done! Flag: IW{N0_0ne_can_st0p_y0u}`, `The password is
 IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR`. Then:
 
@@ -146,36 +156,95 @@ IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR`. Then:
 
    Words of 12+ letters that change case only between runs of two letters or more are
    cased like writing too: alternating-case words run together, `hiTHEREwelcomeTOlinear`.
-2. **Space-less letters** (no whitespace, only ASCII, 8+ letters, 90%+ letters), what classical ciphers
-   leave plaintext as: a single word (rule 5), or a mean quadgram score of at least -5.1 (Low),
-   -5.3 (Medium) or -5.6 (High). Up to 12 letters it must also split into words
-   (`HELLOWORLD`, not the railfence shuffle `HWORLDELLO`), unless it has 10+ letters scoring
-   -4.4 or better.
+2. **Space-less letters** (no whitespace, only ASCII, 8+ letters, 90%+ letters), what
+   classical ciphers leave plaintext as: gibberish-or-not decides (`MEETMEATNOON`,
+   `HELLOWORLD`, not the railfence shuffle `HWORLDELLO`), unless the quadgram score is
+   below -6.5 (-7.5 at High).
 3. **Text with spaces** whose quadgram score is below -6.5 (-7.5 at High) over 12+ letters
    is far from any language: rejected (wrong Caesar shifts, reversed text).
+
+   With gibberish-or-not 6 these two quadgram vetoes change no verdict on the data set:
+   gibberish-or-not and the later rules reject the same texts. They are kept because they
+   are much cheaper: gibberish-or-not takes a few microseconds over space-less text, and
+   two thirds of the data set's space-less texts score below -6.5.
 4. **Mostly words**: two or more words, one of three letters or more, more than 80% of
    them English words, accepted. Numbers don't count either way (`number 1 1 operation`).
    Without spaces the words must be separated by writing's punctuation or `_`
    (`Hello,world!How`, `beware_the_ides_of_march`, not `9=inn@on`), and numbers count
    against.
-5. A **single word** must be a dictionary word, of 5+ letters at Low: one in 150 strings of
-   four letters is a dictionary word, and the ciphers that check at Low ask about their
-   most English-looking key, so they found `SHAG` and `MEAN` in junk. It doesn't label a
-   number with more digits than its letters (`flag = 5093751751…`, Big integer's input).
+5. A **single word** must be a dictionary word of 4 to 9 letters, of 5+ letters at Low: one
+   in 150 strings of four letters is a dictionary word, and the ciphers that check at Low
+   ask about their most English-looking key, so they found `SHAG` and `MEAN` in junk. It
+   doesn't label a number with more digits than its letters (`flag = 5093751751…`, Big
+   integer's input).
 6. **Two words** that aren't both words are rejected (`terces pot`, `peg knioge`).
 7. **No English word at all** is rejected, and so are **fewer than half English words**
    (35% at High) unless two different common words of French, German, Spanish, Italian,
    Portuguese or Dutch are in the text (`is_other_language`): reversed text, wrong
    railfence keys and partly decrypted Vigenère are below half; English sentences hardly
    ever are.
-8. Everything else goes to [gibberish-or-not](https://crates.io/crates/gibberish-or-not)'s
-   `is_gibberish` at the checker's sensitivity.
+8. Everything else goes to gibberish-or-not at the checker's sensitivity.
+
+Text that rules 5 to 7 reject is still accepted if gibberish-or-not finds it is one of the
+[other languages](#languages) Ciphey compiles in, and is then reported as `Words (French)`
+and so on, in the result, the human checker's prompt and `--top-results`.
 
 A **word** (`is_known_word`) is a word of 1 to 3 letters from `english_short_words.txt`
-(`a`, `is`, `me`, `i'm`; gibberish-or-not's dictionary lacks them), a 4 to 9 letter word in
-gibberish-or-not's dictionary (it only answers for those lengths), or a word of 10+ letters
-that splits into words (`understanding`) or scores -4.6 or better with varied letters
-(`congratulations`, not `otstontnottr`).
+(`a`, `is`, `me`, `i'm`: gibberish-or-not's word list has many more short "words", 246 of
+the 676 strings of two letters such as `bk` and `cx`, which wrong keys make all the time),
+a word of 4 or more letters in
+gibberish-or-not's English word list, or a word of 10+ letters it doesn't have that splits
+into words (`understanding`) or scores -4.6 or better with varied letters
+(`decompresses`, not `otstontnottr`).
+
+#### What the English rules do
+
+Each row is the English checker on gibberish-or-not 6 with one rule taken out, the others
+as in the first row, measured with `cargo bench --bench plaintext` when Ciphey moved to
+gibberish-or-not 6. F1 is Athena's, train / heldout; FP is false positives, train +
+heldout; Caesar is `crack()` on the held-out plaintexts.
+
+| taken out | Low F1 (train / heldout) | Low FP | Medium F1 (train / heldout) | Medium FP | Caesar right / wrong (heldout) | |
+|---|---|---|---|---|---|---|
+| none: every rule (MIGRATION.md's change 2 only) | 0.969 / 0.972 | 30 + 33 | 0.967 / 0.971 | 44 + 46 | 92.4% / 0.4% | baseline |
+| normalising the text gibberish-or-not reads | 0.971 / 0.975 | 25 + 24 | 0.971 / 0.975 | 34 + 35 | 92.4% / 0.4% | removed |
+| quadgram veto for text with spaces | 0.969 / 0.972 | 30 + 33 | 0.966 / 0.971 | 45 + 46 | 92.4% / 0.4% | kept: with the rules below, no verdict changes, and it is the cheapest reject |
+| quadgram score and word split for space-less text | 0.967 / 0.973 | 31 + 30 | 0.963 / 0.972 | 48 + 48 | 92.2% / 0.2% | removed |
+| long words (10+) by quadgram score or split, instead of gibberish-or-not's list | 0.969 / 0.972 | 30 + 32 | 0.967 / 0.972 | 43 + 43 | 92.4% / 0.4% | kept with the list (same numbers; the list misses rare words such as `decompresses`) |
+| decoder-output vetoes (case, symbols, brackets) | 0.967 / 0.971 | 36 + 35 | 0.963 / 0.970 | 53 + 49 | 92.4% / 0.4% | kept |
+| mostly English words: accepted | 0.937 / 0.937 | 29 + 32 | 0.935 / 0.937 | 43 + 45 | 88.2% / 0.4% | kept |
+| other text without spaces: one dictionary word only | 0.969 / 0.971 | 31 + 34 | 0.967 / 0.971 | 45 + 47 | 92.4% / 0.4% | kept |
+| one or two words: one dictionary word, or rejected | 0.969 / 0.971 | 30 + 34 | 0.967 / 0.973 | 44 + 47 | 92.4% / 0.4% | kept |
+| no English word, or too few: rejected | 0.964 / 0.963 | 44 + 60 | 0.946 / 0.950 | 99 + 113 | 92.4% / 0.4% | kept |
+| ... unless another language's common words are in it | 0.969 / 0.972 | 30 + 33 | 0.967 / 0.971 | 43 + 46 | 92.4% / 0.4% | kept |
+| 1 to 3 letter words from Ciphey's list, not gibberish-or-not's | 0.962 / 0.965 | 49 + 57 | 0.957 / 0.963 | 72 + 77 | 92.4% / 0.4% | kept |
+| single words: 5+ letters at Low | 0.971 / 0.974 | 30 + 33 | 0.967 / 0.971 | 44 + 46 | 93.5% / 0.7% | kept (Caesar's wrong answers) |
+| single words: 4 to 9 letters | 0.969 / 0.972 | 30 + 33 | 0.968 / 0.974 | 51 + 54 | 92.4% / 0.4% | kept |
+| flags and secrets in text left out | 0.969 / 0.972 | 30 + 33 | 0.967 / 0.971 | 44 + 46 | 92.4% / 0.4% | kept |
+| control characters | 0.969 / 0.972 | 30 + 33 | 0.967 / 0.971 | 44 + 46 | 92.4% / 0.4% | kept (no sample in the data set) |
+| NATO code words | 0.969 / 0.972 | 30 + 33 | 0.967 / 0.971 | 44 + 46 | 92.4% / 0.4% | kept (no sample in the data set) |
+| all but control characters and NATO words (gibberish-or-not alone) | 0.972 / 0.976 | 29 + 31 | 0.967 / 0.973 | 50 + 56 | 93.7% / 0.0% | - |
+
+End to end (`--e2e=3`, 296 searches, correct answers; each run is one pass, run-to-run
+spread about ±1.5):
+
+| English checker | runs |
+|---|---|
+| gibberish-or-not 5.0.7 (master) | 269 |
+| gibberish-or-not 6, every rule ("none") | 271, 272 |
+| without normalising, the spaced quadgram veto, and long words by the list only | 270, 272 |
+| ... and without the space-less quadgram score | 273, 272, 274, 274 |
+| **the checker**: the same, long words by the list or the old rule | 271, 273 |
+| ... without the one-or-two-word rule | 268, 266 |
+| ... without the 5+ letters at Low rule | 273, 273 |
+| ... without leaving out flags and secrets | 271, 274 |
+| ... without the other-language exemption | 271, 273 (#1031's French and German cases lost) |
+| single words of any length (4 to 9 letters taken out) | 256, 259 |
+| gibberish-or-not alone (all but control characters and NATO words) | 263, 264 |
+
+Other languages (informational, 48 samples) are accepted 25% / 31% / 31% of the time at
+Low / Medium / High with the exemption, 10% / 12% / 17% without it (master: 8% / 17% /
+21%).
 
 ### Code
 
@@ -204,17 +273,14 @@ picks the key. `--wordlist FILE` accepts exact lines of the file before anything
 
 ## Sensitivity
 
-gibberish-or-not's `Sensitivity` (its own docs have Low and High the wrong way round; see
-`docs/sensitivity.md`) also selects Ciphey's thresholds:
+gibberish-or-not's `Sensitivity` also selects Ciphey's thresholds (see `docs/sensitivity.md`):
 
 | | Low | Medium | High |
 |---|---|---|---|
 | Used by | Caesar, ROT47, railfence, Vigenère and the other classical ciphers (Beaufort, Hill, Vigenère Autokey, …) | every other decoder, the input check | nothing in Ciphey |
-| Space-less text, minimum quadgram score | -5.1 | -5.3 | -5.6 |
-| Text with spaces, quadgram veto below | -6.5 | -6.5 | -7.5 |
+| gibberish-or-not's minimum calibrated score | 0.9 (strictest) | 0.75 | 0.5 (most lenient) |
 | Share of English words needed (3+ words) | 50% | 50% | 35% |
 | Letters in a single word | 5+ | 4+ | 4+ |
-| gibberish-or-not threshold | strictest | | most lenient |
 
 ## Decoder-side rules
 
@@ -236,9 +302,25 @@ decoders that make most of it are careful about what they ask:
 - Caesar, Atbash and Vigenère don't check their output when their input is JSON, and
   don't accept a flag without a flag word.
 
+## Languages
+
+gibberish-or-not has one Cargo feature per language pack, and Ciphey compiles in the ones
+it accepts text in (`gibberish-or-not`'s `features` in `Cargo.toml`): English only, as
+gibberish-or-not 6.0 ships English only. A pack is added when it is measured here: its
+language's recall (the informational `non_english` category, and new categories of that
+language) against the false positives it adds on the junk categories and end to end. The
+English checker asks the other languages' packs only about text its English rules reject
+(rules 5 to 7 above) and about text it leaves to gibberish-or-not, and reports their
+language (`Words (Spanish)`).
+
+French, German, Spanish and other Latin-script sentences are partly accepted already:
+gibberish-or-not's English pack accepts many of them, labelled English, when the
+other-language exemption (rule 7) lets them through.
+
 ## The quadgram model
 
-`src/storage/ngrams/` holds the statistics the English checker and the ciphers use:
+`src/storage/ngrams/` holds the statistics the ciphers and the English checker's long-word
+rule use:
 
 - `english_quadgrams.bin`: 26⁴ bytes, one per letter quadgram `AAAA` to `ZZZZ`
   (index `((a·26 + b)·26 + c)·26 + d`). Byte `q` stores log₁₀ P = -q / 25, so 255 is
@@ -248,7 +330,10 @@ decoders that make most of it are careful about what they ask:
   word boundaries the way space-less text does.
 - `quadgram_score(text)` is the mean log₁₀ probability of the text's letter quadgrams:
   English scores about -4 to -5, other European languages -5 to -6.5, wrong shifts and
-  random letters -7 and below.
+  random letters -7 and below. Ciphers rank their keys with it (Pollux, and the quadgram
+  tables of Beaufort, Hill and substitution), the English checker scores words of 10+
+  letters that aren't in gibberish-or-not's word list with it, and Vigenère's word-ratio
+  rule (`has_mostly_words`) skips splitting text that scores below -5.6.
 - `english_short_words.txt`: words of 1 to 3 characters from the same books (frequent, in
   20+ books, usually written in lower case, not Roman numerals).
 - `english_bigrams.txt` and `bigram_fitness`: letter-pair statistics that Caesar, ROT47,
@@ -361,78 +446,79 @@ code on fixed inputs; compare versions with alternating runs (see `benches/READM
 
 ## Current numbers
 
-From `cargo bench --bench plaintext -- --e2e=3` on a shared 16-thread Linux host. Accuracy
-is deterministic; times depend on the machine.
+From `cargo bench --bench plaintext -- --e2e=3` on a shared 64-core Linux host (load 50 to
+70), with gibberish-or-not 6.0. Accuracy is deterministic; times depend on the machine.
 
 **Checkers** (2,609 positives and 20,785 negatives; train 1,140 / 9,957, heldout 1,469 / 10,828):
 
 | checker | train: precision / recall / F1 | heldout: precision / recall / F1 | false positives (train + heldout) |
 |---|---|---|---|
-| Athena@Low | 92.7% / 96.6% / 0.946 | 93.6% / 95.7% / 0.946 | 87 + 96 |
-| Athena@Medium | 91.2% / 97.3% / 0.941 | 91.1% / 96.8% / 0.939 | 107 + 139 |
-| Athena@High | 83.8% / 97.4% / 0.901 | 84.4% / 96.9% / 0.902 | 214 + 263 |
-| English@Medium | 90.5% / 83.5% / 0.869 | 90.8% / 89.4% / 0.901 | 100 + 133 |
-| LemmeKnow | 99.2% / 11.3% / 0.203 | 94.2% / 6.6% / 0.123 | 1 + 6 |
+| Athena@Low | 97.7% / 96.1% / 0.969 | 98.5% / 96.6% / 0.976 | 26 + 21 |
+| Athena@Medium | 96.7% / 96.8% / 0.968 | 97.5% / 97.5% / 0.975 | 38 + 37 |
+| Athena@High | 94.7% / 97.0% / 0.958 | 95.5% / 97.5% / 0.965 | 62 + 68 |
+| English@Medium | 96.8% / 82.9% / 0.893 | 97.7% / 89.8% / 0.936 | 31 + 31 |
+| gibberish-or-not@Medium (alone) | 95.6% / 84.8% / 0.899 | 96.3% / 91.1% / 0.936 | 45 + 51 |
+| LemmeKnow | 99.2% / 11.3% / 0.203 | 94.2% / 6.7% / 0.125 | 1 + 6 |
 | JSON | 100% / 1.9% | 100% / 0.5% | 0 |
 | Password | 85.7% / 3.2% | 100% / 1.7% | 6 + 0 |
 | Code | 100% / 2.2% | 100% / 1.3% | 0 |
 
 The format checkers' recall is low by design: they only accept their own formats. Athena's
-F1 per family at Medium: english 0.942, flag 0.993, json 1.000, code 0.958, net 0.942,
+F1 per family at Medium: english 0.979, flag 1.000, json 1.000, code 0.947, net 0.932,
 lemmeknow 0.910, password 0.884. Most remaining false positives are partly decrypted
-Vigenère (a quarter of them are accepted at Medium; the Vigenère decoder itself filters them), and a
-few reversed texts (0.5%) and wrong railfence keys (0.3%). Other languages are accepted
-17% of the time at Medium.
+Vigenère (4% of them are accepted at Medium; the Vigenère decoder itself filters them),
+wrong railfence keys (0.5%) and reversed common passwords. Other languages are accepted 31%
+of the time at Medium.
 
-**Time per check** over all samples (median / p99 / mean): Athena@Medium 4.0 µs / 18 µs /
-4.5 µs, the English checker 0.8 µs / 13 µs / 1.5 µs, LemmeKnow 2.2 µs / 5.7 µs / 2.2 µs,
-JSON 18 ns, the password list 22 ns, code 270 ns. In instructions per check: Athena@Medium
-42,600, English@Medium 14,800, LemmeKnow 25,800, code 3,200.
+**Time per check** over all samples (median / p99 / mean, three runs): Athena@Medium
+4.6–5.2 µs / 24–29 µs / 5.3–6.0 µs, the English checker 0.84–0.88 µs / 19–21 µs /
+1.9–2.1 µs, gibberish-or-not alone 0.8 µs / 18 µs / 1.9 µs, LemmeKnow 2.4 µs / 7.0 µs /
+2.7 µs, JSON 21 ns, the password list 26 ns, code 295 ns.
 
 **Decoders** (`crack()` with Athena), held-out split, right / wrong plaintext / nothing:
-Caesar 91% / 0.4% / 8%, ROT47 93% / 0.2% / 7%, Atbash 94% / 0% / 6%, railfence 85% / 1.3%
-/ 13%, Vigenère 29% / 0% / 71% (its key search, not detection, is the limit).
+Caesar 92% / 0.2% / 8%, ROT47 95% / 0% / 5%, Atbash 95% / 0% / 5%, railfence 86% / 0.9%
+/ 13%, Vigenère 29% / 0.8% / 70% (its key search, not detection, is the limit).
 
-**End to end** (3 s timeout):
+**End to end** (3 s timeout, six runs: the range):
 
 | set | cases | correct | wrong (false positive) | nothing found |
 |---|---|---|---|---|
 | regression | 18 | 18 | 0 | 0 |
-| search.toml | 39 | 39 | 0 | 0 |
-| issue1031 | 26 | 24 | 1 | 1 |
-| flags | 72 | 68 | 0 | 4 |
-| ctf | 17 | 16 | 0 | 1 |
+| search.toml | 113 | 112–113 | 0–1 | 0 |
+| issue1031 | 26 | 26 | 0 | 0 |
+| flags | 72 | 68 | 3 | 1 |
+| ctf | 17 | 16 | 1 | 0 |
 | plaintext_input | 10 | 10 | 0 | 0 |
-| no_answer | 40 | 35 | 5 | 0 |
-| all | 222 | 210 | 6 | 6 |
+| no_answer | 40 | 20–24 | 16–20 | 0 |
+| all | 296 | 271–275 | 20–24 | 1 |
 
-The six wrong: the #1031 Vigenère near miss and five no-answer inputs (see below). The six
-missed: `SEKAI{...}` under ROT13, Caesar, Atbash and railfence (need a crib), German, and
-picoCTF's `l3arn_th3_r0p35` (leetspeak without a flag around it).
+The wrong answers: wrong decoders' output on 16 to 20 of the inputs with no plaintext
+(which ones depends on how far a search gets in 3 s), three `SEKAI{...}` flags under shift
+ciphers (they need a crib), and picoCTF's `l3arn_th3_r0p35` (leetspeak without a flag around
+it). The one missed: `SEKAI{...}` under Caesar.
 
 ## Known weaknesses
 
 - **Other languages** are mostly missed: French, German and Spanish sentences pass only
-  when gibberish-or-not takes them (17% of the informational set at Medium), and German
-  base64 (`Wir treffen uns morgen am Bahnhof`) still finds nothing.
+  when gibberish-or-not's English pack takes them (31% of the informational set at Medium),
+  until their own packs are measured and compiled in ([Languages](#languages)).
 - **Short plaintext** is ambiguous: four-letter words aren't accepted from Caesar, ROT47,
   railfence or Vigenère, single words of three letters (`yes`) never, and a Caesar shift of
   a five-letter word can be another word (`Lorry` and `Fills`).
-- **Space-less junk of 12 to 20 letters** from Vigenère and railfence keys on short inputs
-  still sometimes reads as words (`seerienbashaneyr`): 5 of the 40 no-answer inputs end on
-  junk. The words-in-text rules can't separate it from real space-less text of that
-  length.
+- **Inputs with no plaintext** still often end on a wrong decoder's output that reads as
+  words (`dolenisatirsifmatini`, `sway awed`), mostly from the newer decoders (Keyboard
+  shift, Affine, Hill, T9) chained after ROT47 or railfence.
 - **Partly decrypted Vigenère** (a key with one wrong letter) is accepted by the English
-  checker a quarter of the time; only the Vigenère decoder's own word-ratio rule keeps it
-  out of results.
+  checker 4% of the time at Medium; only the Vigenère decoder's own word-ratio rule keeps
+  it out of results.
 - **Flags without a flag word** whose contents aren't words (`SECCON{7e1b9e3a}`) and any
   such flag under Caesar, ROT13 or Atbash need a crib.
 - **Formats**: IPv6, Bitcoin, JWT, dates of birth and social security numbers are among
   the patterns LemmeKnow 0.8 drops because the regex crate can't compile them; and the
   `lemmeknow_*` config keys have no effect.
-- **Words**: gibberish-or-not's dictionary only answers for words of 4 to 9 letters, so
-  long rare words (`cryptography`) count as unknown unless they score well, and names
-  count as unknown.
+- **Words**: rare words and names count as unknown unless gibberish-or-not's word list has
+  them (`cryptography`) or, for 10+ letters, they score well (`decompresses`): `Ciphey
+  rocks` is two words that aren't both words.
 
 ## Extending
 

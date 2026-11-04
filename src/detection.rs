@@ -99,8 +99,9 @@ pub enum CheckerKind {
     /// Text that is exactly one of the common passwords gibberish-or-not knows.
     #[serde(rename = "password")]
     Password,
-    /// English, judged by gibberish-or-not's dictionary and n-gram checks. The only
-    /// checker [`Sensitivity`] changes.
+    /// Natural language, judged by gibberish-or-not and Ciphey's rules for search
+    /// candidates: English, and the other languages whose gibberish-or-not packs Ciphey
+    /// compiles in (none yet). The only checker [`Sensitivity`] changes.
     #[serde(rename = "english")]
     English,
     /// Source code or a shell command, such as `import os` or `curl -s https://...`.
@@ -245,7 +246,8 @@ impl From<gibberish_or_not::Sensitivity> for Sensitivity {
 pub struct Detection {
     /// The checker that accepted the text.
     pub checker: CheckerKind,
-    /// What the checker took the text for: `Words` (English), the name of the format
+    /// What the checker took the text for: `Words` (English; `Words (French)` for another
+    /// language), the name of the format
     /// LemmeKnow matched (`Internet Protocol (IP) Address Version 4`), `Common Password`,
     /// `Regex matched: <pattern>`, `JSON Web Token`, ...
     pub description: String,
@@ -664,7 +666,7 @@ mod tests {
     #[test]
     fn sensitivity_changes_only_the_english_checker() {
         // English with typos: only High takes it for English
-        let text = "let me jnow whdn you gdt home";
+        let text = "can you pibk up some mhlk on the wzy back";
         let at =
             |sensitivity| detect_plaintext(text, &DetectOptions::new().sensitivity(sensitivity));
         assert_eq!(at(Sensitivity::Low), None);

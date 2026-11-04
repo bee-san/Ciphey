@@ -36,7 +36,9 @@ mcp = ["dep:memory-stats", "dep:rmcp", "dep:tokio"]
 [dependencies]
 chrono = "0.4.45"
 termcolor = "1.4"
-gibberish-or-not = "5.0.7"
+# Is a text natural language? One feature per language pack: Ciphey compiles in the ones
+# measured in docs/plaintext-detection.md ("Languages"); 6.0 ships English only
+gibberish-or-not = { git = "https://github.com/bee-san/gibberish-or-not", branch = "gib-lead", default-features = false, features = ["en"] }
 lazy-regex = "3.6.0"
 lazy_static = "1.4.0"
 lemmeknow = "0.8.0"
@@ -73,7 +75,7 @@ data-encoding = "2.11.0"
 encoding_rs = "0.8.35"
 html-escape = "0.3.0"
 flate2 = "1.1.10"
-# Only idna::punycode is used. 1.0.3 is the version gibberish-or-not already pulls in.
+# Only idna::punycode is used
 idna = "1.0.3"
 # XZ and .lzma decompression, pure Rust. Only the decoders: no encoder, no lzip, and no
 # `optimization` (it turns on unsafe architecture-specific code paths).
@@ -91,9 +93,7 @@ clap = {version = "4.6.1", features = ["derive"]}
 crossbeam = "0.8"
 dirs = "7.0.0"
 env_logger = "0.11.10"
-half = "=2.3.1"  # Required for candle-core compatibility
 memmap2 = "0.9.10"
-rand = "0.8"  # Required for candle-core compatibility
 rayon = "1.12.0"
 rusqlite = { version = "0.37", features = ["bundled"] }
 text_io = "0.1.13"
