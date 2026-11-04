@@ -4,7 +4,6 @@
 /// Unlike Athena, WaitAthena does not use the human checker and automatically accepts all potential plaintexts.
 use crate::{checkers::checker_result::CheckResult, config::get_config};
 use gibberish_or_not::Sensitivity;
-use lemmeknow::Identifier;
 use log::trace;
 
 use crate::storage::wait_athena_storage;
@@ -30,7 +29,6 @@ impl Check for Checker<WaitAthena> {
             tags: vec!["wait_athena", "all"],
             expected_runtime: 1.0,
             popularity: 1.0,
-            lemmeknow_config: Identifier::default(),
             sensitivity: Sensitivity::Medium, // Default to Medium sensitivity
             _phantom: std::marker::PhantomData,
         }

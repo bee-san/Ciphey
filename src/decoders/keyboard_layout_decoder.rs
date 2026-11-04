@@ -733,7 +733,7 @@ mod tests {
             result.unencrypted_text.unwrap()[0],
             "flag{wrong_layout_again}"
         );
-        assert_eq!(result.checker_name, "LemmeKnow Checker");
+        assert_eq!(result.checker_name, "pyWhat Checker");
     }
 
     #[test]

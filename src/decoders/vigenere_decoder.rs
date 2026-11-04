@@ -12,7 +12,7 @@ use crate::checkers::checker_result::CheckResult;
 use crate::checkers::checker_type::{Check, Checker};
 use crate::checkers::english::has_mostly_words;
 use crate::checkers::json_checker::is_json_object_or_array;
-use crate::checkers::lemmeknow_checker::{is_marked_ctf_flag, is_unmarked_ctf_flag};
+use crate::checkers::pywhat_checker::{is_marked_ctf_flag, is_unmarked_ctf_flag};
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
 use gibberish_or_not::Sensitivity;

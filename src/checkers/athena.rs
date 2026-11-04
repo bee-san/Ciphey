@@ -7,7 +7,6 @@ use crate::{
 };
 use dashmap::DashSet;
 use gibberish_or_not::Sensitivity;
-use lemmeknow::Identifier;
 use log::trace;
 use once_cell::sync::Lazy;
 use std::hash::{Hash, Hasher};
@@ -212,7 +211,6 @@ impl Check for Checker<Athena> {
             tags: vec!["athena", "all"],
             expected_runtime: 0.01,
             popularity: 1.0,
-            lemmeknow_config: Identifier::default(),
             sensitivity: Sensitivity::Medium, // Default to Medium sensitivity
             _phantom: std::marker::PhantomData,
         }
@@ -258,7 +256,7 @@ mod tests {
         // All missed before https://github.com/bee-san/Ciphey/issues/1031
         let flag = identify("picoCTF{b4s3_64_1s_fun}");
         assert!(flag.is_identified);
-        assert_eq!(flag.checker_name, "LemmeKnow Checker");
+        assert_eq!(flag.checker_name, "pyWhat Checker");
 
         let json = identify("{\"key\": \"value\"}");
         assert!(json.is_identified);

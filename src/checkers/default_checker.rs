@@ -1,5 +1,4 @@
 use gibberish_or_not::Sensitivity;
-use lemmeknow::Identifier;
 
 use super::{
     checker_result::CheckResult,
@@ -19,7 +18,6 @@ impl Check for Checker<DefaultChecker> {
             tags: vec![],
             expected_runtime: 0.0,
             popularity: 0.0,
-            lemmeknow_config: Identifier::default(),
             sensitivity: Sensitivity::Medium, // Default to Medium sensitivity
             _phantom: std::marker::PhantomData,
         }

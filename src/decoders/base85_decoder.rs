@@ -196,7 +196,7 @@ mod tests {
         checkers::{
             athena::Athena,
             checker_type::{Check, Checker},
-            lemmeknow_checker::LemmeKnow,
+            pywhat_checker::PyWhat,
             CheckerTypes,
         },
         decoders::interface::{Crack, Decoder},
@@ -250,7 +250,7 @@ mod tests {
     #[test]
     fn base85_sets_unencrypted_text_when_the_checker_rejects_it() {
         // LemmeKnow only accepts things like IP addresses and URLs
-        let checker = CheckerTypes::CheckLemmeKnow(Checker::<LemmeKnow>::new());
+        let checker = CheckerTypes::CheckPyWhat(Checker::<PyWhat>::new());
         let result = Decoder::<Base85Decoder>::new().crack("Xk~0{Zy<MXa%^M", &checker);
         assert!(!result.success);
         assert_eq!(result.unencrypted_text.unwrap()[0], "hello world");

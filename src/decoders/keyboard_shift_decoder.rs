@@ -800,7 +800,7 @@ mod tests {
             result.unencrypted_text.unwrap()[0],
             "flag{keyboard_shift_is_easy}"
         );
-        assert_eq!(result.checker_name, "LemmeKnow Checker");
+        assert_eq!(result.checker_name, "pyWhat Checker");
     }
 
     #[test]

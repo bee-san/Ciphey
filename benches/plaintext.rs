@@ -52,8 +52,8 @@ use ciphey::checkers::{
     code_checker::CodeChecker,
     english::EnglishChecker,
     json_checker::JsonChecker,
-    lemmeknow_checker::LemmeKnow,
     password::PasswordChecker,
+    pywhat_checker::PyWhat,
     CheckerTypes,
 };
 use ciphey::config::Config;
@@ -870,12 +870,12 @@ fn probes() -> Vec<Probe> {
             why: Box::new(|_| "gibberish-or-not".into()),
         });
     }
-    let l = Checker::<LemmeKnow>::new();
-    let l2 = Checker::<LemmeKnow>::new();
+    let l = Checker::<PyWhat>::new();
+    let l2 = Checker::<PyWhat>::new();
     v.push(Probe {
-        name: "LemmeKnow".into(),
+        name: "pyWhat".into(),
         check: Box::new(move |t| l.check(t).is_identified),
-        why: Box::new(move |t| format!("LemmeKnow Checker: {}", l2.check(t).description)),
+        why: Box::new(move |t| format!("pyWhat Checker: {}", l2.check(t).description)),
     });
     let j = Checker::<JsonChecker>::new();
     v.push(Probe {

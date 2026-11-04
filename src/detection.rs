@@ -10,7 +10,7 @@
 //! let options = DetectOptions::default();
 //!
 //! let found = detect_plaintext("192.168.0.1", &options).unwrap();
-//! assert_eq!(found.checker, CheckerKind::LemmeKnow);
+//! assert_eq!(found.checker, CheckerKind::PyWhat);
 //! assert_eq!(found.description, "Internet Protocol (IP) Address Version 4");
 //! assert_eq!(found.confidence, Some(0.7));
 //!
@@ -18,7 +18,7 @@
 //! assert_eq!(found.checker, CheckerKind::English);
 //! assert_eq!(found.description, "Words");
 //!
-//! // LemmeKnow knows the flag{...} format
+//! // pyWhat knows the flag{...} format
 //! let found = detect_plaintext("flag{b4s3_64_1s_fun}", &options).unwrap();
 //! assert_eq!(found.description, "Capture The Flag (CTF) Flag");
 //!
@@ -30,7 +30,7 @@
 //!
 //! 1. [`CheckerKind::Regex`](crate::detection::CheckerKind::Regex): a crib, text matching a regular expression;
 //! 2. [`CheckerKind::Wordlist`](crate::detection::CheckerKind::Wordlist): exact matches from a wordlist;
-//! 3. [`CheckerKind::LemmeKnow`](crate::detection::CheckerKind::LemmeKnow): over a hundred formats, from IP addresses to API keys, and CTF flags in any format;
+//! 3. [`CheckerKind::PyWhat`](crate::detection::CheckerKind::PyWhat): over a hundred formats, from IP addresses to API keys, and CTF flags in any format;
 //! 4. [`CheckerKind::Json`](crate::detection::CheckerKind::Json): JSON objects and arrays;
 //! 5. [`CheckerKind::Password`](crate::detection::CheckerKind::Password): a list of common passwords;
 //! 6. [`CheckerKind::English`](crate::detection::CheckerKind::English): English text;
@@ -41,7 +41,7 @@
 //! [#1031](https://github.com/bee-san/Ciphey/issues/1031) has the evaluation.
 //!
 //! [`DetectOptions`](crate::detection::DetectOptions) chooses which of them run and how lenient the English checker is.
-//! The defaults run LemmeKnow, JSON, the password list, English at [`Sensitivity::Medium`](crate::detection::Sensitivity::Medium)
+//! The defaults run pyWhat, JSON, the password list, English at [`Sensitivity::Medium`](crate::detection::Sensitivity::Medium)
 //! and code, which is what Athena, the checker the search uses, does with the default
 //! [`Config`](crate::config::Config). These are Athena's checkers, unchanged. Unlike
 //! Athena, `detect_plaintext` never asks the human checker, and it takes its crib and
@@ -61,8 +61,8 @@ use crate::checkers::checker_type::{Check, Checker};
 use crate::checkers::code_checker::CodeChecker;
 use crate::checkers::english::EnglishChecker;
 use crate::checkers::json_checker::JsonChecker;
-use crate::checkers::lemmeknow_checker::LemmeKnow;
 use crate::checkers::password::PasswordChecker;
+use crate::checkers::pywhat_checker::{self, PyWhat};
 use crate::checkers::regex_checker::RegexChecker;
 use crate::checkers::wordlist::WordlistChecker;
 use crate::config::get_config;
@@ -86,13 +86,14 @@ pub enum CheckerKind {
     /// `Config::wordlist` (`ciphey --wordlist`) in a search.
     #[serde(rename = "wordlist")]
     Wordlist,
-    /// [LemmeKnow](https://github.com/swanandx/lemmeknow), the Rust port of pyWhat: over
-    /// a hundred formats, such as IP and email addresses, URLs, API keys and crypto
-    /// wallet addresses, and CTF flags in any format (`picoCTF{...}`). The whole text has
-    /// to be the match. Patterns that only check which characters a text has and how
-    /// long it is (card and phone numbers) are ignored.
-    #[serde(rename = "lemmeknow")]
-    LemmeKnow,
+    /// [pyWhat](https://github.com/bee-san/pyWhat): over a hundred formats, such as IP and
+    /// email addresses, URLs, API keys and crypto wallet addresses, and CTF flags in any
+    /// format (`picoCTF{...}`). The whole text has to be the match. Regexes that only check
+    /// which characters a text has and how long it is (pyWhat's "Charset Only" ones, such as
+    /// card numbers) are ignored. Before 0.13.0 this was LemmeKnow, and its id `lemmeknow`
+    /// is still accepted.
+    #[serde(rename = "pywhat", alias = "lemmeknow")]
+    PyWhat,
     /// A JSON object or array with at least one entry.
     #[serde(rename = "json")]
     Json,
@@ -119,13 +120,21 @@ impl CheckerKind {
     pub const ALL: &'static [CheckerKind] = &[
         CheckerKind::Regex,
         CheckerKind::Wordlist,
-        CheckerKind::LemmeKnow,
+        CheckerKind::PyWhat,
         CheckerKind::Json,
         CheckerKind::Password,
         CheckerKind::English,
         CheckerKind::Code,
         CheckerKind::JwtStructure,
     ];
+
+    /// The pyWhat checker under its name before 0.13.0, when it used LemmeKnow.
+    #[deprecated(
+        since = "0.13.0",
+        note = "LemmeKnow was replaced by pyWhat: use `PyWhat`"
+    )]
+    #[allow(non_upper_case_globals)]
+    pub const LemmeKnow: CheckerKind = CheckerKind::PyWhat;
 
     /// The checker's name as Ciphey reports it, e.g. `English Checker`.
     pub fn name(self) -> &'static str {
@@ -143,7 +152,7 @@ impl CheckerKind {
         match self {
             CheckerKind::Regex => "regex",
             CheckerKind::Wordlist => "wordlist",
-            CheckerKind::LemmeKnow => "lemmeknow",
+            CheckerKind::PyWhat => "pywhat",
             CheckerKind::Json => "json",
             CheckerKind::Password => "password",
             CheckerKind::English => "english",
@@ -161,7 +170,7 @@ impl CheckerKind {
         match self {
             CheckerKind::Regex => of(&Checker::<RegexChecker>::new()),
             CheckerKind::Wordlist => of(&Checker::<WordlistChecker>::new()),
-            CheckerKind::LemmeKnow => of(&Checker::<LemmeKnow>::new()),
+            CheckerKind::PyWhat => of(&Checker::<PyWhat>::new()),
             CheckerKind::Json => of(&Checker::<JsonChecker>::new()),
             CheckerKind::Password => of(&Checker::<PasswordChecker>::new()),
             CheckerKind::English => of(&Checker::<EnglishChecker>::new()),
@@ -170,8 +179,12 @@ impl CheckerKind {
         }
     }
 
-    /// The checker Ciphey reports as `name`, e.g. in `CrackResult::checker_name`.
+    /// The checker Ciphey reports as `name`, e.g. in `CrackResult::checker_name`, or
+    /// reported before 0.13.0 (`LemmeKnow Checker`, in results cached by older versions).
     pub(crate) fn from_name(name: &str) -> Option<Self> {
+        if name == crate::checkers::LEGACY_PYWHAT_CHECKER_NAME {
+            return Some(CheckerKind::PyWhat);
+        }
         Self::ALL.iter().copied().find(|kind| kind.name() == name)
     }
 }
@@ -187,9 +200,15 @@ impl FromStr for CheckerKind {
     type Err = CipheyError;
 
     /// Parses a checker's [`id`](CheckerKind::id) or [`name`](CheckerKind::name), in any
-    /// case: `english`, `English Checker`.
+    /// case: `english`, `English Checker`. The pyWhat checker's id and name before 0.13.0,
+    /// `lemmeknow` and `LemmeKnow Checker`, are accepted for it too.
     fn from_str(name: &str) -> Result<Self, Self::Err> {
         let wanted = name.trim();
+        if wanted.eq_ignore_ascii_case("lemmeknow")
+            || wanted.eq_ignore_ascii_case(crate::checkers::LEGACY_PYWHAT_CHECKER_NAME)
+        {
+            return Ok(CheckerKind::PyWhat);
+        }
         Self::ALL
             .iter()
             .copied()
@@ -246,10 +265,10 @@ pub struct Detection {
     /// The checker that accepted the text.
     pub checker: CheckerKind,
     /// What the checker took the text for: `Words` (English), the name of the format
-    /// LemmeKnow matched (`Internet Protocol (IP) Address Version 4`), `Common Password`,
+    /// pyWhat matched (`Internet Protocol (IP) Address Version 4`), `Common Password`,
     /// `Regex matched: <pattern>`, `JSON Web Token`, ...
     pub description: String,
-    /// How sure the checker is, from 0 to 1, if it has a measure of it. Only LemmeKnow
+    /// How sure the checker is, from 0 to 1, if it has a measure of it. Only pyWhat
     /// does: this is the pyWhat rarity of the format it matched, 1 for formats that
     /// little else matches (an AWS S3 URL), less for broader ones (0.7 for an IP address
     /// or a URL, 0.5 for an email address). Ciphey ignores matches below 0.1. The other
@@ -261,7 +280,7 @@ impl Detection {
     /// A detection by `checker`, which took `text` for `description`.
     fn new(checker: CheckerKind, description: String, text: &str) -> Self {
         let confidence = match checker {
-            CheckerKind::LemmeKnow => lemmeknow_rarity(text, &description),
+            CheckerKind::PyWhat => pywhat_rarity(text, &description),
             _ => None,
         };
         Detection {
@@ -274,7 +293,7 @@ impl Detection {
 
 /// Which checkers [`detect_plaintext`] runs, and how.
 ///
-/// The default runs [`CheckerKind::LemmeKnow`], [`CheckerKind::Json`],
+/// The default runs [`CheckerKind::PyWhat`], [`CheckerKind::Json`],
 /// [`CheckerKind::Password`], [`CheckerKind::English`] at [`Sensitivity::Medium`] and
 /// [`CheckerKind::Code`], as Athena does with the default config. Whatever you choose, the checkers run in the order of [`CheckerKind::ALL`].
 ///
@@ -317,7 +336,7 @@ impl Default for DetectOptions {
     fn default() -> Self {
         DetectOptions {
             checkers: vec![
-                CheckerKind::LemmeKnow,
+                CheckerKind::PyWhat,
                 CheckerKind::Json,
                 CheckerKind::Password,
                 CheckerKind::English,
@@ -432,7 +451,7 @@ pub fn detect_plaintext(text: &str, options: &DetectOptions) -> Option<Detection
             CheckerKind::Wordlist => Checker::<WordlistChecker>::new()
                 .with_sensitivity(sensitivity)
                 .check_with_wordlist(text, options.wordlist.as_ref()?),
-            CheckerKind::LemmeKnow => Checker::<LemmeKnow>::new()
+            CheckerKind::PyWhat => Checker::<PyWhat>::new()
                 .with_sensitivity(sensitivity)
                 .check(text),
             CheckerKind::Json => Checker::<JsonChecker>::new()
@@ -506,7 +525,7 @@ pub(crate) fn for_accepted_decoding(
             .is_some()
             .then(|| Checker::<RegexChecker>::new().check(text)),
         CheckerKind::Wordlist => Some(Checker::<WordlistChecker>::new().check(text)),
-        CheckerKind::LemmeKnow => Some(Checker::<LemmeKnow>::new().check(text)),
+        CheckerKind::PyWhat => Some(Checker::<PyWhat>::new().check(text)),
         CheckerKind::Json => Some(Checker::<JsonChecker>::new().check(text)),
         CheckerKind::Password => Some(Checker::<PasswordChecker>::new().check(text)),
         CheckerKind::English => Some(Checker::<EnglishChecker>::new().check(text)),
@@ -525,14 +544,12 @@ pub(crate) fn for_accepted_decoding(
     })
 }
 
-/// The pyWhat rarity of the format called `name` that LemmeKnow finds in `text`.
-fn lemmeknow_rarity(text: &str, name: &str) -> Option<f32> {
-    Checker::<LemmeKnow>::new()
-        .lemmeknow_config
-        .identify(text)
-        .into_iter()
-        .find(|found| found.data.name == name)
-        .map(|found| found.data.rarity)
+/// The pyWhat rarity of the format called `name` that the pyWhat checker finds in `text`.
+fn pywhat_rarity(text: &str, name: &str) -> Option<f32> {
+    pywhat_checker::first_trusted_match(pywhat_checker::identifier(), text)
+        .filter(|found| found.regex.name == name)
+        // pyWhat's rarities have one decimal: no precision is lost
+        .map(|found| found.rarity as f32)
 }
 
 #[cfg(test)]
@@ -616,12 +633,12 @@ mod tests {
         let options = DetectOptions::default();
 
         let ip = detect_plaintext("192.168.0.1", &options).unwrap();
-        assert_eq!(ip.checker, CheckerKind::LemmeKnow);
+        assert_eq!(ip.checker, CheckerKind::PyWhat);
         assert_eq!(ip.description, "Internet Protocol (IP) Address Version 4");
         assert_eq!(ip.confidence, Some(0.7));
 
         let email = detect_plaintext("someone@example.com", &options).unwrap();
-        assert_eq!(email.checker, CheckerKind::LemmeKnow);
+        assert_eq!(email.checker, CheckerKind::PyWhat);
         assert_eq!(email.confidence, Some(0.5));
 
         let password = detect_plaintext("123456", &options).unwrap();
@@ -646,7 +663,7 @@ mod tests {
 
         // Any CTF's flag format, not only flag{...}
         let flag = detect_plaintext("picoCTF{b4s3_64_1s_fun}", &options).unwrap();
-        assert_eq!(flag.checker, CheckerKind::LemmeKnow);
+        assert_eq!(flag.checker, CheckerKind::PyWhat);
         assert_eq!(flag.description, "Capture The Flag (CTF) Flag");
 
         for junk in [
@@ -673,7 +690,7 @@ mod tests {
         for sensitivity in SENSITIVITIES {
             let options = DetectOptions::new().sensitivity(sensitivity);
             let ip = detect_plaintext("192.168.0.1", &options).unwrap();
-            assert_eq!(ip.checker, CheckerKind::LemmeKnow);
+            assert_eq!(ip.checker, CheckerKind::PyWhat);
         }
     }
 
@@ -695,12 +712,12 @@ mod tests {
         let reversed = DetectOptions::new().checkers([
             CheckerKind::English,
             CheckerKind::Password,
-            CheckerKind::LemmeKnow,
+            CheckerKind::PyWhat,
         ]);
         assert_eq!(
             reversed.enabled_checkers().collect::<Vec<_>>(),
             [
-                CheckerKind::LemmeKnow,
+                CheckerKind::PyWhat,
                 CheckerKind::Password,
                 CheckerKind::English
             ]
@@ -711,7 +728,7 @@ mod tests {
         assert_eq!(
             unusable.enabled_checkers().collect::<Vec<_>>(),
             [
-                CheckerKind::LemmeKnow,
+                CheckerKind::PyWhat,
                 CheckerKind::Json,
                 CheckerKind::Password,
                 CheckerKind::English,
@@ -763,7 +780,7 @@ mod tests {
             options.enabled_checkers().collect::<Vec<_>>(),
             [
                 CheckerKind::Wordlist,
-                CheckerKind::LemmeKnow,
+                CheckerKind::PyWhat,
                 CheckerKind::Json,
                 CheckerKind::Password,
                 CheckerKind::English,
@@ -786,7 +803,7 @@ mod tests {
         // The other checkers still run
         assert_eq!(
             detect_plaintext("192.168.0.1", &options).unwrap().checker,
-            CheckerKind::LemmeKnow
+            CheckerKind::PyWhat
         );
         let debug = format!("{options:?}");
         assert!(debug.contains("wordlist_entries: Some(2)"), "{debug}");
@@ -799,6 +816,11 @@ mod tests {
         let aggregates = ["Athena Checker", "WaitAthena Checker", "Template checker"];
         for &name in CHECKER_MAP.keys() {
             if aggregates.contains(&name) {
+                continue;
+            }
+            // Cached results of older versions name the pyWhat checker by its old name
+            if name == crate::checkers::LEGACY_PYWHAT_CHECKER_NAME {
+                assert_eq!(CheckerKind::from_name(name), Some(CheckerKind::PyWhat));
                 continue;
             }
             let kind = CheckerKind::from_name(name)
@@ -825,6 +847,18 @@ mod tests {
             " ENGLISH ".parse::<CheckerKind>().unwrap(),
             CheckerKind::English
         );
+        // The pyWhat checker was LemmeKnow before 0.13.0
+        for old in ["lemmeknow", "LemmeKnow", "LemmeKnow Checker"] {
+            assert_eq!(old.parse::<CheckerKind>().unwrap(), CheckerKind::PyWhat);
+        }
+        assert_eq!(
+            serde_json::from_str::<CheckerKind>("\"lemmeknow\"").unwrap(),
+            CheckerKind::PyWhat
+        );
+        #[allow(deprecated)]
+        let old_name = CheckerKind::LemmeKnow;
+        assert_eq!(old_name, CheckerKind::PyWhat);
+        assert_eq!(CheckerKind::PyWhat.name(), "pyWhat Checker");
         assert!(matches!(
             "gibberish".parse::<CheckerKind>(),
             Err(CipheyError::UnknownChecker { name }) if name == "gibberish"
@@ -844,7 +878,7 @@ mod tests {
         assert_eq!(
             serde_json::to_value(&found).unwrap(),
             serde_json::json!({
-                "checker": "lemmeknow",
+                "checker": "pywhat",
                 "description": "Internet Protocol (IP) Address Version 4",
                 "confidence": 0.7_f32,
             })
@@ -853,9 +887,8 @@ mod tests {
 
     #[test]
     fn accepted_decodings_are_described_like_detections() {
-        let lemmeknow = Checker::<LemmeKnow>::new();
-        let found =
-            for_accepted_decoding(lemmeknow.name, lemmeknow.description, "192.168.0.1").unwrap();
+        let pywhat = Checker::<PyWhat>::new();
+        let found = for_accepted_decoding(pywhat.name, pywhat.description, "192.168.0.1").unwrap();
         assert_eq!(
             found,
             detect_plaintext("192.168.0.1", &DetectOptions::default()).unwrap()
@@ -863,13 +896,13 @@ mod tests {
 
         // Accepted for a value inside the text: the checker's own description
         let inside = for_accepted_decoding(
-            lemmeknow.name,
-            lemmeknow.description,
+            pywhat.name,
+            pywhat.description,
             r#"{"url": "https://example.com"}"#,
         )
         .unwrap();
-        assert_eq!(inside.checker, CheckerKind::LemmeKnow);
-        assert_eq!(inside.description, lemmeknow.description);
+        assert_eq!(inside.checker, CheckerKind::PyWhat);
+        assert_eq!(inside.description, pywhat.description);
         assert_eq!(inside.confidence, None);
 
         let jwt = for_accepted_decoding("JWT Structure", "", r#"{"sub":"1"}"#).unwrap();

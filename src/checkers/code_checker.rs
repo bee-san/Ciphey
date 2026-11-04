@@ -1,6 +1,5 @@
 use crate::checkers::checker_result::CheckResult;
 use gibberish_or_not::Sensitivity;
-use lemmeknow::Identifier;
 
 use crate::checkers::checker_type::{Check, Checker};
 use crate::checkers::english::is_known_word;
@@ -24,7 +23,6 @@ impl Check for Checker<CodeChecker> {
             tags: vec!["code", "structured"],
             expected_runtime: 0.01,
             popularity: 1.0,
-            lemmeknow_config: Identifier::default(),
             sensitivity: Sensitivity::Medium,
             _phantom: std::marker::PhantomData,
         }

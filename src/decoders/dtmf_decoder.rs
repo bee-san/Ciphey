@@ -26,7 +26,7 @@
 use crate::checkers::checker_result::CheckResult;
 use crate::checkers::checker_type::{Check, Checker};
 use crate::checkers::human_checker::human_checker;
-use crate::checkers::lemmeknow_checker::{is_phone_number, LemmeKnow};
+use crate::checkers::pywhat_checker::{is_phone_number, PyWhat};
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
 use crate::decoders::interface::check_string_success;
@@ -155,14 +155,14 @@ impl Crack for Decoder<DtmfDecoder> {
 }
 
 /// The checkers don't take a run of digits for a phone number, as decoder junk is full of
-/// them (#1031). Keys pressed on a telephone keypad are different: when LemmeKnow's phone
-/// number pattern matches them, they are the number dialled, as long as the human
-/// checker agrees. Without a crib only: with one, the crib decides.
+/// them (#1031). Keys pressed on a telephone keypad are different: when pyWhat's phone
+/// number regex matches them with a `+` in front, they are the number dialled, as long as
+/// the human checker agrees. Without a crib only: with one, the crib decides.
 fn dialled_number(keys: &str) -> Option<CheckResult> {
     if !is_phone_number(keys) {
         return None;
     }
-    let mut result = CheckResult::new(&Checker::<LemmeKnow>::new());
+    let mut result = CheckResult::new(&Checker::<PyWhat>::new());
     result.is_identified = true;
     result.text = keys.to_string();
     result.description = "Phone Number".to_string();

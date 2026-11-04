@@ -232,7 +232,7 @@ mod tests {
             &get_athena_checker(),
         );
         assert!(result.success, "LemmeKnow should identify the flag");
-        assert_eq!(result.checker_name, "LemmeKnow Checker");
+        assert_eq!(result.checker_name, "pyWhat Checker");
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "flag{b4s3_100_1s_3m0j1}"

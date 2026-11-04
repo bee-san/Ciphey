@@ -39,13 +39,15 @@ termcolor = "1.4"
 gibberish-or-not = "5.0.7"
 lazy-regex = "3.6.0"
 lazy_static = "1.4.0"
-lemmeknow = "0.8.0"
 log = "0.4"
 # Lets `ciphey-mcp` workers watch their own memory use (feature `mcp`).
 memory-stats = { version = "1.2.0", optional = true }
 num = "0.4"
 once_cell = "1.21.4"
 proc-macro2 = "1.0.106" # Required due to https://github.com/rust-lang/rust/issues/113152
+# Identifies formats (IP addresses, API keys, CTF flags, ...): the Rust port of pyWhat.
+# No file support or MAC vendor data; the native build adds "parallel" below.
+pywhat = { git = "https://github.com/bee-san/pyWhat", branch = "pywhat-rs-fp", default-features = false }
 regex = "1.12.4"
 # Official MCP Rust SDK, only used by `ciphey-mcp` (feature `mcp`). Pinned exactly so
 # `cargo install` (which ignores Cargo.lock) builds against the version we tested.
@@ -93,6 +95,8 @@ dirs = "7.0.0"
 env_logger = "0.11.10"
 half = "=2.3.1"  # Required for candle-core compatibility
 memmap2 = "0.9.10"
+# Compiles pyWhat's regexes on rayon's pool (see the pyWhat checker's `warm_up`)
+pywhat = { git = "https://github.com/bee-san/pyWhat", branch = "pywhat-rs-fp", default-features = false, features = ["parallel"] }
 rand = "0.8"  # Required for candle-core compatibility
 rayon = "1.12.0"
 rusqlite = { version = "0.37", features = ["bundled"] }

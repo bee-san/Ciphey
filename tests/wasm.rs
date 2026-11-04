@@ -103,7 +103,7 @@ fn search_returns_plaintext_input_at_once() {
 
     let result = crack("192.168.0.1");
     assert_eq!(result.path.len(), 1);
-    assert_eq!(result.path[0].checker_name, "LemmeKnow Checker");
+    assert_eq!(result.path[0].checker_name, "pyWhat Checker");
 }
 
 #[test]
@@ -204,7 +204,7 @@ fn playfair_is_cracked_within_its_time_limit() {
 #[test]
 fn plaintext_detection_names_what_it_found() {
     let found = detect_plaintext("192.168.0.1", &DetectOptions::default()).unwrap();
-    assert_eq!(found.checker, CheckerKind::LemmeKnow);
+    assert_eq!(found.checker, CheckerKind::PyWhat);
     assert_eq!(
         found.description,
         "Internet Protocol (IP) Address Version 4"

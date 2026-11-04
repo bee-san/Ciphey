@@ -229,7 +229,7 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
     // so start compiling its regexes now, all at once, instead of one after another
     // during the first check.
     if get_config().regex.is_none() {
-        checkers::lemmeknow_checker::warm_up();
+        checkers::pywhat_checker::warm_up();
     }
 
     let initial_check_for_plaintext = check_if_input_text_is_plaintext(&text);
@@ -336,7 +336,7 @@ fn cached_result(row: storage::database::CacheRow) -> Option<DecoderResult> {
 /// input shaped like that is far more likely a Caesar shift or Atbash of a flag
 /// (`FRXNV{...}`), which keeps the shape, than a flag someone wants decoded.
 fn check_if_input_text_is_plaintext(text: &str) -> CheckResult {
-    if get_config().regex.is_none() && checkers::lemmeknow_checker::is_unmarked_ctf_flag(text) {
+    if get_config().regex.is_none() && checkers::pywhat_checker::is_unmarked_ctf_flag(text) {
         return CheckResult::new(&Checker::<Athena>::new());
     }
     check_plaintext(text)

@@ -491,7 +491,7 @@ fn dna_codon_decodes() {
 
 #[test]
 fn dtmf_decodes() {
-    // LemmeKnow takes the keys for a phone number
+    // pyWhat takes the keys for a phone number (with a + in front: see the DTMF decoder)
     assert_plaintext(
         &dtmf("697-1209 852-1336 941-1336 941-1336 770-1336 770-1336 770-1336 697-1209 697-1336 697-1477 770-1209"),
         "18005551234",
@@ -1567,7 +1567,7 @@ fn keys_are_shared_out_between_candidates() {
 fn accepted_decodings_say_what_they_are() {
     let decoded = hexadecimal("3139322e3136382e302e31");
     let detection = decoded.plaintext().unwrap().detection.as_ref().unwrap();
-    assert_eq!(detection.checker, CheckerKind::LemmeKnow);
+    assert_eq!(detection.checker, CheckerKind::PyWhat);
     assert_eq!(
         detection.description,
         "Internet Protocol (IP) Address Version 4"

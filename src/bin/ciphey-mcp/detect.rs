@@ -14,11 +14,12 @@ pub struct DetectParams {
     /// decoded first.
     #[schemars(length(min = 1, max = MAX_INPUT_CHARS))]
     pub text: String,
-    /// The checkers to run, by default all five. `lemmeknow` recognises over 100 formats
-    /// (IP and email addresses, URLs, API keys and tokens, crypto wallets, CTF flags in any
+    /// The checkers to run, by default all five. `pywhat` recognises over 100 formats (IP
+    /// and email addresses, URLs, API keys and tokens, crypto wallets, CTF flags in any
     /// format, ...), `json` accepts JSON objects and arrays, `password` matches common
     /// passwords, `english` accepts English text and `code` source code and shell
     /// commands. They run in that order, and the first to accept the text answers.
+    /// `lemmeknow` is the old name of `pywhat`.
     pub checkers: Option<Vec<CheckerChoice>>,
     /// How readily the English checker takes text for English: `low` is the strictest,
     /// `medium` the default, and `high` the most lenient (it accepts English with typos,
@@ -38,17 +39,20 @@ pub struct DetectParams {
 pub enum CheckerChoice {
     // The variants have no doc comments on purpose: with them, schemars describes the enum
     // with `oneOf`, which some MCP clients don't understand, instead of a plain `enum`.
-    Lemmeknow,
+    Pywhat,
     Json,
     Password,
     English,
     Code,
+    // `pywhat` before ciphey 0.13.0, when the checker used LemmeKnow. A variant rather than
+    // a serde alias, so that clients that check arguments against the schema send it too.
+    Lemmeknow,
 }
 
 impl From<CheckerChoice> for CheckerKind {
     fn from(choice: CheckerChoice) -> Self {
         match choice {
-            CheckerChoice::Lemmeknow => CheckerKind::LemmeKnow,
+            CheckerChoice::Pywhat | CheckerChoice::Lemmeknow => CheckerKind::PyWhat,
             CheckerChoice::Json => CheckerKind::Json,
             CheckerChoice::Password => CheckerKind::Password,
             CheckerChoice::English => CheckerKind::English,
@@ -96,7 +100,7 @@ impl DetectParams {
         };
         if request.options()?.enabled_checkers().next().is_none() {
             return Err(
-                "there are no checkers to run: list at least one of `lemmeknow`, \
+                "there are no checkers to run: list at least one of `pywhat`, \
                  `json`, `password`, `english` and `code` in `checkers`, or pass a `regex`"
                     .to_string(),
             );
@@ -159,22 +163,22 @@ pub struct DetectOutput {
     /// What the checker that accepted the text found. Null if none accepted it.
     pub detection: Option<DetectionOutput>,
     /// The checkers that ran, in order, such as
-    /// `["lemmeknow", "json", "password", "english", "code"]`.
+    /// `["pywhat", "json", "password", "english", "code"]`.
     pub checkers: Vec<String>,
 }
 
 /// What one of ciphey's plaintext checkers found.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct DetectionOutput {
-    /// The checker that accepted the text: `regex` (the crib), `lemmeknow`, `json`,
+    /// The checker that accepted the text: `regex` (the crib), `pywhat`, `json`,
     /// `password`, `english`, `code`, or `jwt_structure` (a well-formed JSON Web Token,
     /// only in `decode_with` results of the JWT decoder).
     pub checker: String,
     /// What the checker took the text for: `Words` for English, the name of the format
-    /// LemmeKnow matched, such as `Internet Protocol (IP) Address Version 4`,
+    /// pyWhat matched, such as `Internet Protocol (IP) Address Version 4`,
     /// `Common Password`, or `Regex matched: <pattern>`.
     pub description: String,
-    /// How sure the checker is, from 0 to 1, if it has a measure of it. Only LemmeKnow does:
+    /// How sure the checker is, from 0 to 1, if it has a measure of it. Only pyWhat does:
     /// the rarity of the format it matched, 1 for formats little else matches (an AWS S3
     /// URL), less for broad ones (0.7 for an IP address or a URL, 0.5 for an email address).
     /// Null for the other checkers, which answer yes or no.
@@ -289,14 +293,14 @@ mod tests {
         assert_eq!(
             ip.detection,
             Some(DetectionOutput {
-                checker: "lemmeknow".to_string(),
+                checker: "pywhat".to_string(),
                 description: "Internet Protocol (IP) Address Version 4".to_string(),
                 confidence: Some(0.7),
             })
         );
         assert_eq!(
             ip.checkers,
-            ["lemmeknow", "json", "password", "english", "code"]
+            ["pywhat", "json", "password", "english", "code"]
         );
 
         let english = detect(params("hello there general")).detection.unwrap();
@@ -324,12 +328,24 @@ mod tests {
 
         // They run in the library's order, whatever order they're given in.
         let reversed = DetectParams {
-            checkers: Some(vec![CheckerChoice::English, CheckerChoice::Lemmeknow]),
+            checkers: Some(vec![CheckerChoice::English, CheckerChoice::Pywhat]),
             ..params("192.168.0.1")
         };
         let output = detect(reversed);
-        assert_eq!(output.checkers, ["lemmeknow", "english"]);
-        assert_eq!(output.detection.unwrap().checker, "lemmeknow");
+        assert_eq!(output.checkers, ["pywhat", "english"]);
+        assert_eq!(output.detection.unwrap().checker, "pywhat");
+    }
+
+    #[test]
+    fn lemmeknow_is_the_old_name_of_pywhat() {
+        let params: DetectParams = serde_json::from_value(serde_json::json!({
+            "text": "192.168.0.1",
+            "checkers": ["lemmeknow", "pywhat"],
+        }))
+        .unwrap();
+        let output = detect(params);
+        assert_eq!(output.checkers, ["pywhat"]);
+        assert_eq!(output.detection.unwrap().checker, "pywhat");
     }
 
     #[test]

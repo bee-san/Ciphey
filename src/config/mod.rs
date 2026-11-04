@@ -1,5 +1,3 @@
-/// import general checker
-use lemmeknow::Identifier;
 use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -29,24 +27,28 @@ pub struct Config {
     /// A level of verbosity to determine.
     /// How much we print in logs.
     pub verbose: u8,
-    /// The lemmeknow config to use
-    #[serde(skip)]
-    pub lemmeknow_config: Identifier,
-    /// lemmeknow_config serialization fields
-    #[serde(default)]
-    pub lemmeknow_min_rarity: f32,
-    /// Maximum rarity threshold for lemmeknow detection
-    #[serde(default)]
-    pub lemmeknow_max_rarity: f32,
-    /// List of lemmeknow tags to include in detection
-    #[serde(default)]
-    pub lemmeknow_tags: Vec<String>,
-    /// List of lemmeknow tags to exclude from detection
-    #[serde(default)]
-    pub lemmeknow_exclude_tags: Vec<String>,
-    /// Whether to use boundaryless mode in lemmeknow detection
-    #[serde(default)]
-    pub lemmeknow_boundaryless: bool,
+    /// The pyWhat checker only uses regexes at least this rare (pyWhat's rarity, from 0 to
+    /// 1). Values below 0.1 count as 0.1: rarer regexes match ordinary text. Read from
+    /// `lemmeknow_min_rarity` too, the key before 0.13.0 (see [`LEGACY_KEYS`]).
+    #[serde(alias = "lemmeknow_min_rarity")]
+    pub pywhat_min_rarity: f32,
+    /// The pyWhat checker only uses regexes at most this rare. 0, the default of
+    /// `lemmeknow_max_rarity` before 0.13.0, means no maximum.
+    #[serde(alias = "lemmeknow_max_rarity")]
+    pub pywhat_max_rarity: f32,
+    /// If not empty, the pyWhat checker only uses regexes with one of these tags or names
+    /// (case-insensitive, as in `pywhat --include`).
+    #[serde(alias = "lemmeknow_tags")]
+    pub pywhat_tags: Vec<String>,
+    /// The pyWhat checker doesn't use regexes with any of these tags or names
+    /// (case-insensitive). Regexes tagged "Charset Only" are never used.
+    #[serde(alias = "lemmeknow_exclude_tags")]
+    pub pywhat_exclude_tags: Vec<String>,
+    /// Read and ignored: the pyWhat checker only accepts a text that is a format as a whole
+    /// (an IP address, not a sentence with one in it), because it decides when the search
+    /// stops.
+    #[serde(alias = "lemmeknow_boundaryless")]
+    pub pywhat_boundaryless: bool,
     /// Should the human checker be on?
     /// This asks yes/no for plaintext. Turn off for API
     pub human_checker_on: bool,
@@ -121,46 +123,27 @@ pub(crate) fn is_global_config_set() -> bool {
     CONFIG.get().is_some()
 }
 
-/// Creates a default lemmeknow config
-const LEMMEKNOW_DEFAULT_CONFIG: Identifier = Identifier {
-    min_rarity: 0.0_f32,
-    max_rarity: 0.0_f32,
-    tags: vec![],
-    exclude_tags: vec![],
-    file_support: false,
-    boundaryless: false,
-};
-
-/// Convert Config fields into an Identifier
-#[cfg(not(target_family = "wasm"))]
-fn make_identifier_from_config(config: &Config) -> Identifier {
-    Identifier {
-        min_rarity: config.lemmeknow_min_rarity,
-        max_rarity: config.lemmeknow_max_rarity,
-        tags: config.lemmeknow_tags.clone(),
-        exclude_tags: config.lemmeknow_exclude_tags.clone(),
-        file_support: false, // Always false as per LEMMEKNOW_DEFAULT_CONFIG
-        boundaryless: config.lemmeknow_boundaryless,
-    }
-}
-
-/// Update Config's Identifier field from its serialization fields
-#[cfg(not(target_family = "wasm"))]
-fn update_identifier_in_config(config: &mut Config) {
-    config.lemmeknow_config = make_identifier_from_config(config);
-}
+/// The keys of the pyWhat checker's settings before 0.13.0, when it used LemmeKnow, and
+/// their names now. Config files written by older versions have them, and they are read
+/// as the new keys; a file with both reads the new one.
+pub const LEGACY_KEYS: [(&str, &str); 5] = [
+    ("lemmeknow_min_rarity", "pywhat_min_rarity"),
+    ("lemmeknow_max_rarity", "pywhat_max_rarity"),
+    ("lemmeknow_tags", "pywhat_tags"),
+    ("lemmeknow_exclude_tags", "pywhat_exclude_tags"),
+    ("lemmeknow_boundaryless", "pywhat_boundaryless"),
+];
 
 impl Default for Config {
     fn default() -> Self {
         #[allow(deprecated)]
         let mut config = Config {
             verbose: 0,
-            lemmeknow_config: LEMMEKNOW_DEFAULT_CONFIG,
-            lemmeknow_min_rarity: 0.0_f32,
-            lemmeknow_max_rarity: 0.0_f32,
-            lemmeknow_tags: vec![],
-            lemmeknow_exclude_tags: vec![],
-            lemmeknow_boundaryless: false,
+            pywhat_min_rarity: 0.1,
+            pywhat_max_rarity: 1.0,
+            pywhat_tags: vec![],
+            pywhat_exclude_tags: vec![],
+            pywhat_boundaryless: false,
             human_checker_on: false,
             timeout: 5,
             top_results: false,
@@ -247,21 +230,22 @@ fn read_config_file() -> std::io::Result<String> {
 #[cfg(not(target_family = "wasm"))]
 fn parse_toml_with_unknown_keys(contents: &str) -> Result<Config, toml::de::Error> {
     // First parse into a generic Value to check for unknown keys
-    let parsed_value: toml::Value = toml::from_str(contents)?;
+    let mut parsed_value: toml::Value = toml::from_str(contents)?;
 
     // Check for unknown keys at the root level
-    if let toml::Value::Table(table) = &parsed_value {
+    if let toml::Value::Table(table) = &mut parsed_value {
+        rename_legacy_keys(table);
         let known_keys = [
             "verbose",
-            "lemmeknow_min_rarity",
             // Ignored since enhanced detection was removed, but configs written by older
             // versions have them
             "enhanced_detection",
             "model_path",
-            "lemmeknow_max_rarity",
-            "lemmeknow_tags",
-            "lemmeknow_exclude_tags",
-            "lemmeknow_boundaryless",
+            "pywhat_min_rarity",
+            "pywhat_max_rarity",
+            "pywhat_tags",
+            "pywhat_exclude_tags",
+            "pywhat_boundaryless",
             "human_checker_on",
             "timeout",
             "top_results",
@@ -279,9 +263,19 @@ fn parse_toml_with_unknown_keys(contents: &str) -> Result<Config, toml::de::Erro
     }
 
     // Parse into Config struct
-    let mut config: Config = toml::from_str(contents)?;
-    update_identifier_in_config(&mut config);
-    Ok(config)
+    parsed_value.try_into()
+}
+
+/// Renames the [`LEGACY_KEYS`] of a config file's top-level `table` to their new names.
+/// Where a file has both, the new key wins and the old one is dropped, so the file doesn't
+/// fail to parse with a duplicate key.
+#[cfg(not(target_family = "wasm"))]
+fn rename_legacy_keys(table: &mut toml::map::Map<String, toml::Value>) {
+    for (old, new) in LEGACY_KEYS {
+        if let Some(value) = table.remove(old) {
+            table.entry(new).or_insert(value);
+        }
+    }
 }
 
 /// Loads a wordlist from a file into a HashSet for efficient lookups
@@ -521,6 +515,41 @@ mod tests {
         assert!(!written.contains("enhanced_detection"), "{written}");
         assert!(!written.contains("model_path"), "{written}");
         assert!(written.contains("timeout = 7"), "{written}");
+    }
+
+    #[test]
+    fn lemmeknow_keys_are_read_as_pywhat_keys() {
+        // What config files written before 0.13.0 have
+        let config = parse_toml_with_unknown_keys(
+            "lemmeknow_min_rarity = 0.5\nlemmeknow_max_rarity = 0.9\nlemmeknow_tags = [\"IP\"]\nlemmeknow_exclude_tags = [\"Email\"]\nlemmeknow_boundaryless = true\n",
+        )
+        .unwrap();
+        assert_eq!(config.pywhat_min_rarity, 0.5);
+        assert_eq!(config.pywhat_max_rarity, 0.9);
+        assert_eq!(config.pywhat_tags, ["IP"]);
+        assert_eq!(config.pywhat_exclude_tags, ["Email"]);
+        assert!(config.pywhat_boundaryless);
+        // They are written back under the new names
+        let written = toml::to_string_pretty(&config).unwrap();
+        assert!(!written.contains("lemmeknow"), "{written}");
+        assert!(written.contains("pywhat_min_rarity = 0.5"), "{written}");
+
+        // With both, the new key wins instead of the file failing to parse
+        let both =
+            parse_toml_with_unknown_keys("lemmeknow_min_rarity = 0.5\npywhat_min_rarity = 0.3\n")
+                .unwrap();
+        assert_eq!(both.pywhat_min_rarity, 0.3);
+
+        // Other ways of reading a config (serde) take the old names too
+        let config: Config = toml::from_str("lemmeknow_max_rarity = 0.0\n").unwrap();
+        assert_eq!(config.pywhat_max_rarity, 0.0);
+
+        let defaults = Config::default();
+        assert_eq!(
+            (defaults.pywhat_min_rarity, defaults.pywhat_max_rarity),
+            (0.1, 1.0)
+        );
+        assert!(defaults.pywhat_tags.is_empty() && defaults.pywhat_exclude_tags.is_empty());
     }
 
     #[test]

@@ -27,7 +27,7 @@ use dashmap::DashSet;
 use crate::checkers::athena::Athena;
 use crate::checkers::checker_type::{Check, Checker};
 use crate::checkers::english::EnglishChecker;
-use crate::checkers::lemmeknow_checker::{is_ctf_flag_shaped, is_unmarked_ctf_flag};
+use crate::checkers::pywhat_checker::{is_ctf_flag_shaped, is_unmarked_ctf_flag};
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
 use crate::searchers::helper_functions::{
@@ -798,25 +798,25 @@ mod tests {
         // A 23-character flag hidden in a 615-character cover: 23 * 20 < 615
         let flag = "flag{zero_width_is_fun}";
         assert!(result_passes_sanity(
-            &result_node(flag, "Zero-width", "LemmeKnow Checker"),
+            &result_node(flag, "Zero-width", "pyWhat Checker"),
             615,
             false
         ));
         // The same result from a decoder without the tag is still too short
         assert!(!result_passes_sanity(
-            &result_node(flag, "Base64", "LemmeKnow Checker"),
+            &result_node(flag, "Base64", "pyWhat Checker"),
             615,
             false
         ));
         // The tag only skips the length rule: unprintable and tiny results are still
         // rejected, and so is an English-checker hit that is mostly punctuation
         assert!(!result_passes_sanity(
-            &result_node("\u{2}\u{3}\u{4}\u{5}", "Zero-width", "LemmeKnow Checker"),
+            &result_node("\u{2}\u{3}\u{4}\u{5}", "Zero-width", "pyWhat Checker"),
             615,
             false
         ));
         assert!(!result_passes_sanity(
-            &result_node("hi", "Zero-width", "LemmeKnow Checker"),
+            &result_node("hi", "Zero-width", "pyWhat Checker"),
             615,
             false
         ));

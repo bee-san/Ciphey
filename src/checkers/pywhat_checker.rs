@@ -1,120 +1,106 @@
 use super::checker_type::{Check, Checker};
 use crate::checkers::checker_result::CheckResult;
 use crate::checkers::english::is_known_word as is_english_word;
+use crate::config::{get_config, is_global_config_set, Config};
 use gibberish_or_not::Sensitivity;
-use lemmeknow::{Data, Identifier};
-#[cfg(not(target_family = "wasm"))]
-use {rayon::prelude::*, std::sync::Once};
+use once_cell::sync::{Lazy, OnceCell};
+use pywhat::{Identifier, Match, CHARSET_ONLY};
 
-/// Patterns rarer than this are ignored: they match too much ordinary text.
-const MIN_RARITY: f32 = 0.1;
+/// Regexes rarer than this are never used: they match too much ordinary text (timestamps,
+/// `key:value` pairs). The `pywhat_min_rarity` setting can only raise it.
+pub const MIN_RARITY: f64 = 0.1;
 
-/// Tags that split LemmeKnow's patterns into [`warm_up`] tasks of similar compile time.
-/// Discord, URL and YouTube each hold one of the three slowest patterns to compile.
-const WARM_UP_TAGS: [&str; 5] = ["Discord", "URL", "YouTube", "Credentials", "Finance"];
-
-/// Rarity bands that split the [`warm_up`] tasks further. LemmeKnow 0.8 only has
-/// rarities 0.2, 0.3, 0.4, 0.5, 0.7, 0.8 and 1, so the bands leave no pattern out.
-const WARM_UP_BANDS: [(f32, f32); 2] = [(1.0, 1.0), (MIN_RARITY, 0.99)];
-
-/// Starts compiling LemmeKnow's regexes on the rayon pool and returns at once.
+/// The identifier the checker uses: pyWhat's regexes of rarity [`MIN_RARITY`] to 1,
+/// without those tagged "Charset Only", narrowed by the `pywhat_*` settings of `config`
+/// (see [`Config::pywhat_min_rarity`]).
 ///
-/// LemmeKnow compiles each of its ~120 regexes the first time `identify` tries it, so
-/// the first check in a process compiles all of them one after another: about 70 ms,
-/// 30 ms of it for the Discord Webhook pattern alone. That is most of a `ciphey` run
-/// on a new input. Each regex is a separate lazy static, and `identify` only tries the
-/// patterns its filter lets through, so each task here is an [`Identifier`] whose
-/// rarity and tag filter selects one share of the patterns, run on "". The shares
-/// don't overlap and together cover every pattern the checker uses, so the slowest
-/// pattern, not the sum of all of them, sets how long compiling takes. A check that
-/// needs a pattern no task has compiled yet compiles it itself, as before: this only
-/// changes when and on which thread the patterns are compiled, not what is matched.
+/// pyWhat tags a regex "Charset Only" when it only checks which characters a text has and
+/// how long it is: more than 1 in 1,000 random strings of a common alphabet and the right
+/// length match it, after its checksum. Decoder junk matches those all the time: every 10
+/// to 13 digit number was a "Phone Number" to LemmeKnow, every SHA-1 hash a "Bitly Secret
+/// Key" (<https://github.com/bee-san/Ciphey/issues/1031>). The checksum validators
+/// (Luhn for card numbers, Base58Check and CashAddr for wallets) are part of pyWhat's
+/// default processors.
+pub fn identifier_for(config: &Config) -> Identifier {
+    let min = f64::from(config.pywhat_min_rarity).max(MIN_RARITY);
+    // 0 was the default of `lemmeknow_max_rarity` before pyWhat, and selects nothing
+    let max = match f64::from(config.pywhat_max_rarity) {
+        max if max <= 0.0 => 1.0,
+        max => max,
+    };
+    let mut identifier = Identifier::default()
+        .min_rarity(min)
+        .max_rarity(max)
+        .exclude_tags(&[CHARSET_ONLY]);
+    if !config.pywhat_tags.is_empty() {
+        identifier = identifier.include_tags(&config.pywhat_tags);
+    }
+    if !config.pywhat_exclude_tags.is_empty() {
+        identifier = identifier.exclude_tags(&config.pywhat_exclude_tags);
+    }
+    identifier
+}
+
+/// The identifier for the global config, see [`identifier_for`]. Until the global config is
+/// set (a library caller that never sets one), it is the identifier of the default config;
+/// once it is set, the identifier is built from it on first use.
+pub(crate) fn identifier() -> &'static Identifier {
+    static CONFIGURED: OnceCell<Identifier> = OnceCell::new();
+    static DEFAULT: Lazy<Identifier> = Lazy::new(|| identifier_for(&Config::default()));
+    if is_global_config_set() {
+        CONFIGURED.get_or_init(|| identifier_for(get_config()))
+    } else {
+        &DEFAULT
+    }
+}
+
+/// Starts compiling pyWhat's regexes on the rayon pool and returns at once.
+///
+/// pyWhat compiles a regex the first time a check needs it, so the first checks in a
+/// process would compile them one after another: tens of milliseconds, most of a
+/// `ciphey` run on a new input. A check that needs a regex that isn't compiled yet
+/// compiles it itself, as before: this only changes when and on which thread the regexes
+/// are compiled, not what is matched.
 ///
 /// WebAssembly has no other thread to compile them on, so there this does nothing and
-/// each pattern is compiled when a check first needs it.
+/// each regex is compiled when a check first needs it.
 pub fn warm_up() {
     #[cfg(not(target_family = "wasm"))]
     {
-        static STARTED: Once = Once::new();
-        STARTED.call_once(|| {
-            rayon::spawn(|| {
-                warm_up_tasks().par_iter().for_each(|identifier| {
-                    identifier.identify("");
-                });
-            });
-        });
+        static STARTED: std::sync::Once = std::sync::Once::new();
+        STARTED.call_once(|| rayon::spawn(|| identifier().warm_up()));
     }
 }
 
-/// The [`warm_up`] tasks: for each rarity band, one task per tag in [`WARM_UP_TAGS`]
-/// (skipping patterns an earlier tag's task takes) and one for the patterns with none
-/// of those tags.
-#[cfg_attr(target_family = "wasm", allow(dead_code))]
-fn warm_up_tasks() -> Vec<Identifier> {
-    let mut tasks = Vec::new();
-    for (min, max) in WARM_UP_BANDS {
-        let band = |include: &[&str], exclude: &[&str]| Identifier {
-            min_rarity: min,
-            max_rarity: max,
-            tags: include.iter().map(|tag| tag.to_string()).collect(),
-            exclude_tags: exclude.iter().map(|tag| tag.to_string()).collect(),
-            boundaryless: false,
-            file_support: false,
-        };
-        for (i, tag) in WARM_UP_TAGS.iter().enumerate() {
-            tasks.push(band(&[tag], &WARM_UP_TAGS[..i]));
-        }
-        tasks.push(band(&[], &WARM_UP_TAGS));
-    }
-    tasks
-}
+/// The pyWhat Checker checks if the text is, as a whole, a format pyWhat knows (an IP
+/// address, an API key, a CTF flag, ...). This is the struct for it.
+pub struct PyWhat;
 
-/// The LemmeKnow Checker checks if the text matches a known Regex pattern.
-/// This is the struct for it.
-pub struct LemmeKnow;
-
-/// LemmeKnow tags whose patterns only check which characters the text uses and how long
-/// it is, so they match decoder junk: every 10 to 13 digit number is a "Phone Number",
-/// every SHA-1 hash a "Bitly Secret Key" and a "Visual Studio App Center API Token", and
-/// digit strings are card numbers and Turkish ID numbers.
-/// See <https://github.com/bee-san/Ciphey/issues/1031>.
-///
-/// Matches with these tags are dropped after matching. That is what
-/// `Identifier::exclude_tags` does too, but lemmeknow compares every excluded tag with
-/// every pattern's tags on each call, which made each check about 1 µs slower.
-const EXCLUDED_TAGS: [&str; 5] = ["Credit Card", "Phone", "Bitly", "Visual Studio", "Turkish"];
-
-/// LemmeKnow patterns that only check the character set and length but share a tag with
-/// patterns worth keeping, so they are dropped by name instead. For example the ASIN
-/// pattern (`B` and 9 capitals or digits) is tagged "Amazon" like the SNS topic ARN, and
-/// matches Caesar shifts such as `BYFFIQILFX`. A match is only dropped if no other
-/// pattern matched too.
-const EXCLUDED_NAMES: [&str; 10] = [
-    "Amazon Standard Identification Number (ASIN)",
-    "Bitcoin Cash (BCH) Wallet Address",
-    "Litecoin (LTC) Wallet Address",
-    "Ripple (XRP) Wallet Address",
-    "Dogecoin (DOGE) Wallet Address",
-    "Google ReCaptcha API Key",
-    // Two letters and then letters and digits: `EA` and 190 or more, `AC` or `AP` and 32,
-    // `o-` and 10 to 32. A Vigenère key that happened to start a long Base64-like string
-    // with `EA` ended a search as a "Facebook Access Token".
+/// pyWhat regexes whose matches aren't plaintext for Ciphey, by name. A match is only
+/// dropped if no other regex matched too.
+const EXCLUDED_NAMES: [&str; 3] = [
+    // Ciphey's JWT decoder decodes a token: its payload is the plaintext, not the token
+    "JSON Web Token (JWT)",
+    // `EA` and 190 or more letters and digits. pyWhat's validator wants a lower-case
+    // letter, an upper-case letter and a digit, which Base64 has, and so has a Vigenère
+    // decryption of it: a wrong key that happened to start one with `EA` ended a search as
+    // a "Facebook Access Token".
     "Facebook Access Token",
-    "Twilio Account SID",
-    "Twilio Application SID",
+    // `o-` and 10 to 32 lower-case letters and digits
     "Amazon Web Services Organization Identifier",
 ];
 
-/// LemmeKnow's name for its URL pattern. It also matches anything shaped like a domain,
-/// such as `L.bo?>HoPMP` or `flag{...}`, so a URL is only accepted with a scheme or `www.`.
+/// pyWhat's name for its URL regex. It also matches anything shaped like a domain, such as
+/// `example.com` or a Caesar shift of one, so a URL is only accepted with a scheme or
+/// `www.`.
 const URL: &str = "Uniform Resource Locator (URL)";
 
-/// Shown for the generic CTF flag pattern; the same name as LemmeKnow's own flag pattern.
+/// Shown for the generic CTF flag pattern; the same name as pyWhat's own flag regex.
 const CTF_FLAG: &str = "Capture The Flag (CTF) Flag";
 
 /// Whether `text` is a flag in any CTF's format, such as `picoCTF{...}` or `DUCTF{...}`:
-/// `^[A-Za-z][A-Za-z0-9_]{1,19}\{[^{}\n]{1,200}\}$`. LemmeKnow only knows `flag{}`,
-/// `ctf{}`, `htb{}` and `thm{}`.
+/// `^[A-Za-z][A-Za-z0-9_]{1,19}\{[^{}\n]{1,200}\}$`. pyWhat only knows `flag{}`,
+/// `ctf{}`, `ctfa{}`, `htb{}`, `hackthebox{}`, `thm{}` and `tryhackme{}`.
 ///
 /// Written out by hand because the regex crate compiles a bounded repeat of a Unicode
 /// class like `[^{}\n]{1,200}` into hundreds of states, which took longer than the rest of
@@ -326,24 +312,22 @@ fn map_letter(c: char, f: impl Fn(u8) -> u8) -> char {
     }
 }
 
-impl Check for Checker<LemmeKnow> {
+impl Check for Checker<PyWhat> {
     fn new() -> Self {
         Checker {
-            // TODO: Update fields with proper values
-            name: "LemmeKnow Checker",
-            description: "Uses LemmeKnow to check for regex matches",
-            link: "https://swanandx.github.io/lemmeknow-frontend/",
-            tags: vec!["lemmeknow", "regex"],
+            name: "pyWhat Checker",
+            description: "Uses pyWhat to identify known formats and CTF flags",
+            link: "https://github.com/bee-san/pyWhat",
+            tags: vec!["pywhat", "regex"],
             expected_runtime: 0.01,
             popularity: 1.0,
-            lemmeknow_config: Identifier::default().min_rarity(MIN_RARITY),
             sensitivity: Sensitivity::Medium, // Default to Medium sensitivity
             _phantom: std::marker::PhantomData,
         }
     }
 
     fn check(&self, text: &str) -> CheckResult {
-        let description = identify(&self.lemmeknow_config, text);
+        let description = identify(identifier(), text);
         CheckResult {
             is_identified: description.is_some(),
             text: text.to_owned(),
@@ -364,23 +348,44 @@ impl Check for Checker<LemmeKnow> {
     }
 }
 
-/// What `identifier` (LemmeKnow) or the CTF flag pattern identify `text` as, if anything.
+/// What `identifier` (pyWhat) or the CTF flag pattern identify `text` as, if anything: the
+/// name of the first regex whose match is the whole of `text` and says something about it
+/// (see [`is_trusted_match`]).
 ///
 /// Text with control characters other than tabs and line breaks isn't plaintext of any
 /// format, and is a fifth of what a search checks (wrong decoders' bytes), so it skips
-/// LemmeKnow's hundred-odd regexes.
+/// pyWhat's regexes.
 pub(crate) fn identify(identifier: &Identifier, text: &str) -> Option<String> {
     if has_control_characters(text) {
         return None;
     }
+    first_trusted_match(identifier, text)
+        .map(|found| found.regex.name.clone())
+        .or_else(|| {
+            (is_ctf_flag(text) && allows(identifier, CTF_FLAG)).then(|| CTF_FLAG.to_string())
+        })
+        .or_else(|| identify_idn(text).filter(|name| allows(identifier, name)))
+}
+
+/// The first match of `identifier` that is the whole of `text` and that
+/// [`is_trusted_match`] keeps.
+pub(crate) fn first_trusted_match(identifier: &Identifier, text: &str) -> Option<Match> {
     identifier
-        .identify(text)
+        .identify_whole(text)
+        .into_iter()
+        .find(|found| is_trusted_match(found, text))
+}
+
+/// Whether `identifier` uses pyWhat's regex called `name`. The checker's own rules report
+/// what they find under the name of a pyWhat regex (the generic CTF flag pattern as
+/// "Capture The Flag (CTF) Flag", an internationalised address as "Email Address"), so a
+/// `pywhat_*` setting that leaves that regex out (`pywhat_exclude_tags = ["CTF Flag"]`,
+/// say) leaves out the rule too. Names that aren't pyWhat's are allowed.
+fn allows(identifier: &Identifier, name: &str) -> bool {
+    pywhat::regexes()
         .iter()
-        .map(|found| &found.data)
-        .find(|data| is_trusted_match(data, text))
-        .map(format_data_result)
-        .or_else(|| is_ctf_flag(text).then(|| CTF_FLAG.to_string()))
-        .or_else(|| identify_idn(text))
+        .find(|entry| entry.name == name)
+        .is_none_or(|entry| identifier.filter().contains(entry))
 }
 
 /// Whether `text` has a control character other than a tab or line break: C0 controls,
@@ -394,65 +399,35 @@ pub(crate) fn has_control_characters(text: &str) -> bool {
             .any(|b| (b < 0x20 && !matches!(b, b'\t' | b'\n' | b'\r')) || b == 0x7F)
 }
 
-/// Whether a LemmeKnow match on `text` says something about it, rather than only that it
-/// has the right characters and length.
-fn is_trusted_match(data: &Data, text: &str) -> bool {
-    if EXCLUDED_NAMES.contains(&data.name)
-        || data.tags.iter().any(|tag| EXCLUDED_TAGS.contains(tag))
-    {
+/// Whether a pyWhat match on `text` says something about it for Ciphey. "Charset Only"
+/// regexes are left out of the identifier already (see [`identifier_for`]); these are the
+/// rules on top:
+///
+/// * [`EXCLUDED_NAMES`];
+/// * a URL needs a scheme or `www.` (see [`URL`]);
+/// * a CTF flag has one pair of braces: pyWhat's `(?i)^(thm\{.*\})$` takes junk with more
+///   braces inside, like `THM{UyLgUqMJU}LjUkM^U}` from a chain of wrong decoders;
+/// * an email address needs a known top-level domain (see [`EMAIL_TLDS`]).
+fn is_trusted_match(found: &Match, text: &str) -> bool {
+    let name = found.regex.name.as_str();
+    if EXCLUDED_NAMES.contains(&name) {
         return false;
     }
-    if data.name == URL {
+    if name == URL {
         let text = text.trim_start().to_ascii_lowercase();
         return text.contains("://") || text.starts_with("www.");
     }
-    // `(?i)^(flag\{.*\}|...)$` takes junk with more braces inside, like
-    // `THM{UyLgUqMJU}LjUkM^U}` from a chain of wrong decoders: a flag has one pair
-    if data.tags.contains(&"CTF Flag") {
+    if found.tags.iter().any(|tag| tag == "CTF Flag") {
         return matches_flag_pattern(text.trim());
     }
-    match data.name {
-        EC2_INSTANCE_ID => is_ec2_instance_id(text),
-        ARN => is_arn(text),
-        EMAIL => has_known_tld(text),
-        _ => true,
-    }
+    name != EMAIL || has_known_tld(text)
 }
 
-/// LemmeKnow's name for EC2 instance IDs. Its pattern, `(?i)^i-[a-z0-9]{8}$` (or 17), takes
-/// `I-NHyontTe`; real IDs are `i-` and 8 or 17 lower-case hex digits.
-const EC2_INSTANCE_ID: &str = "Amazon Web Services EC2 Instance ID";
-
-/// Whether `text` is an EC2 instance ID: see [`EC2_INSTANCE_ID`].
-fn is_ec2_instance_id(text: &str) -> bool {
-    text.trim().strip_prefix("i-").is_some_and(|id| {
-        matches!(id.len(), 8 | 17) && id.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
-    })
-}
-
-/// LemmeKnow's name for ARNs. Its pattern is case-insensitive and allows anything between
-/// the colons, so decoder junk such as `Arn:?n8A;m:p>oo:...` matches; real ARNs start
-/// with `arn:`, a partition and a service in lower case (`arn:aws:sns:...`).
-const ARN: &str = "Amazon Resource Name (ARN)";
-
-/// Whether `text` starts like an ARN: see [`ARN`].
-fn is_arn(text: &str) -> bool {
-    let mut fields = text.trim().split(':');
-    let lower_name = |field: Option<&str>| {
-        field.is_some_and(|f| {
-            f.bytes().next().is_some_and(|b| b.is_ascii_lowercase())
-                && f.bytes()
-                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
-        })
-    };
-    fields.next() == Some("arn") && lower_name(fields.next()) && lower_name(fields.next())
-}
-
-/// LemmeKnow's name for email addresses.
+/// pyWhat's name for email addresses.
 const EMAIL: &str = "Email Address";
 
 /// Top-level domains an email address may end in: the common generic ones and the
-/// country codes most used. LemmeKnow takes any, and a Caesar shift of an address is still
+/// country codes most used. pyWhat takes any, and a Caesar shift of an address is still
 /// shaped like one (`uryyb@jbeyq.pbz` is ROT13 of `hello@world.com`), so a shifted address
 /// was taken as plaintext and the search stopped at the ciphertext.
 const EMAIL_TLDS: [&str; 112] = [
@@ -480,19 +455,26 @@ fn has_known_tld(text: &str) -> bool {
         .is_ok()
 }
 
-/// LemmeKnow's name for its phone number pattern.
+/// pyWhat's name for its phone number regex.
 const PHONE_NUMBER: &str = "Phone Number";
 
-/// Whether LemmeKnow's phone number pattern matches `text`. The checker ignores that
-/// pattern, which only counts digits (see [`EXCLUDED_TAGS`]); the DTMF decoder uses it
-/// for keys pressed on a telephone keypad, which do make a number.
-pub(crate) fn is_phone_number(text: &str) -> bool {
-    !has_control_characters(text)
-        && Checker::<LemmeKnow>::new()
-            .lemmeknow_config
-            .identify(text)
+/// Whether `keys`, digits pressed on a telephone keypad, are a phone number to pyWhat once
+/// a `+` is put in front: 10 to 15 digits, not starting with 0. pyWhat's phone number
+/// regex wants a `+` and a country code, which a keypad can't dial; without it, every run
+/// of digits in decoder junk would be a phone number. The DTMF decoder uses this for the
+/// number dialled.
+pub(crate) fn is_phone_number(keys: &str) -> bool {
+    static PHONE: Lazy<Identifier> = Lazy::new(|| {
+        Identifier::default()
+            .min_rarity(0.0)
+            .include_tags(&[PHONE_NUMBER])
+    });
+    !keys.is_empty()
+        && keys.bytes().all(|b| b.is_ascii_digit())
+        && PHONE
+            .identify_whole(&format!("+{keys}"))
             .iter()
-            .any(|found| found.data.name == PHONE_NUMBER)
+            .any(|found| found.regex.name == PHONE_NUMBER)
 }
 
 /// Shown for an internationalised domain name such as `bücher.example.com`.
@@ -500,7 +482,8 @@ const IDN: &str = "Internationalized Domain Name (IDN)";
 
 /// What `text` is if it is a domain name or email address with a non-ASCII letter in it,
 /// such as `hello.müller.example.com` or `müller@example.com`: what the Punycode decoder
-/// turns `xn--` labels into. LemmeKnow's patterns are ASCII-only. Like an email address,
+/// turns `xn--` labels into. pyWhat's email regex is ASCII-only, and its URL regex wants a
+/// scheme here (see [`URL`]). Like an email address,
 /// the domain has to end in one of [`EMAIL_TLDS`], which a Caesar shift of it doesn't.
 /// ASCII domains without a scheme aren't URLs (see [`URL`]), so these need a non-ASCII
 /// letter too.
@@ -532,12 +515,6 @@ fn identify_idn(text: &str) -> Option<String> {
     is_domain.then(|| if local.is_some() { EMAIL } else { IDN }.to_string())
 }
 
-/// Formats the data result to a string
-/// This is used to display the result in the UI
-fn format_data_result(input: &Data) -> String {
-    input.name.to_string()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -545,19 +522,19 @@ mod tests {
     use gibberish_or_not::Sensitivity;
 
     fn identify(text: &str) -> Option<String> {
-        let result = Checker::<LemmeKnow>::new().check(text);
+        let result = Checker::<PyWhat>::new().check(text);
         result.is_identified.then_some(result.description)
     }
 
     #[test]
     fn test_url_exact_match() {
-        let checker = Checker::<LemmeKnow>::new().with_sensitivity(Sensitivity::Low);
+        let checker = Checker::<PyWhat>::new().with_sensitivity(Sensitivity::Low);
         assert!(checker.check("https://google.com").is_identified);
     }
 
     #[test]
     fn test_url_with_extra_text_fails() {
-        let checker = Checker::<LemmeKnow>::new().with_sensitivity(Sensitivity::Low);
+        let checker = Checker::<PyWhat>::new().with_sensitivity(Sensitivity::Low);
         assert!(
             !checker
                 .check("https://google.com and some text")
@@ -567,27 +544,26 @@ mod tests {
 
     #[test]
     fn test_ip_exact_match() {
-        let checker = Checker::<LemmeKnow>::new().with_sensitivity(Sensitivity::Low);
+        let checker = Checker::<PyWhat>::new().with_sensitivity(Sensitivity::Low);
         assert!(checker.check("192.168.1.1").is_identified);
     }
 
     #[test]
     fn test_ip_with_extra_text_fails() {
-        let checker = Checker::<LemmeKnow>::new().with_sensitivity(Sensitivity::Low);
+        let checker = Checker::<PyWhat>::new().with_sensitivity(Sensitivity::Low);
         assert!(!checker.check("IP is 192.168.1.1").is_identified);
     }
 
     #[test]
     fn test_s3_path() {
-        let checker = Checker::<LemmeKnow>::new().with_sensitivity(Sensitivity::Low);
+        let checker = Checker::<PyWhat>::new().with_sensitivity(Sensitivity::Low);
         assert!(checker.check("s3://bucket/path/key").is_identified);
     }
 
-    // Lemmeknow can only match if its an EXACT match
-    // So this should fail
+    // The whole text has to be the match, so this should fail
     #[test]
     fn test_bitcoin_with_extra_text_fails() {
-        let checker = Checker::<LemmeKnow>::new().with_sensitivity(Sensitivity::Low);
+        let checker = Checker::<PyWhat>::new().with_sensitivity(Sensitivity::Low);
         assert!(
             !checker
                 .check("BTC address: 1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2")
@@ -608,43 +584,98 @@ mod tests {
             "10000000146",                                // "Turkish Identification Number"
             "q8Zr1Xk0pLm3Vb7Nc5Tw9Hd2Fg4Js6Ky1Ue8Ri0Oa3", // "Bitcoin Cash Wallet Address"
             "6f2c9b0e8a7d4f1e3c5b9a8d7e6f5a4b3c2d1e0f",   // SHA-1 starting with 6: "ReCaptcha"
+            "4111111111111111",                           // passes Luhn, but Charset Only
+            "8888888888",                                 // ten digits: no + for pyWhat
         ] {
             assert_eq!(identify(junk), None, "{junk}");
         }
     }
 
     #[test]
-    fn dropping_excluded_tags_after_matching_equals_exclude_tags() {
-        let excluding = lemmeknow::Identifier::default()
-            .min_rarity(MIN_RARITY)
-            .exclude_tags(&EXCLUDED_TAGS.map(String::from));
-        let all = lemmeknow::Identifier::default().min_rarity(MIN_RARITY);
+    fn charset_only_regexes_are_left_out_of_the_identifier() {
+        // Matched by pyWhat, but only by their characters and length
+        let all = Identifier::default().min_rarity(MIN_RARITY);
         for text in [
-            "8888888888",
-            "+1 (555) 123-4567",
             "4111111111111111",
-            "378282246310005",
             "5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8",
+            "BYFFIQILFX",
             "10000000146",
-            "34ABC123",
-            "192.168.0.1",
-            "https://github.com/bee-san/Ciphey",
-            "bee@skerritt.blog",
-            "736563726574",
         ] {
-            let expected: Vec<&str> = excluding
-                .identify(text)
-                .iter()
-                .map(|m| m.data.name)
-                .collect();
-            let filtered: Vec<&str> = all
-                .identify(text)
-                .iter()
-                .filter(|m| !m.data.tags.iter().any(|tag| EXCLUDED_TAGS.contains(tag)))
-                .map(|m| m.data.name)
-                .collect();
-            assert_eq!(filtered, expected, "{text}");
+            let found = all.identify_whole(text);
+            assert!(!found.is_empty(), "pyWhat should match {text}");
+            assert!(found.iter().all(|m| m.regex.charset_only()), "{text}");
+            assert!(identifier().identify_whole(text).is_empty(), "{text}");
         }
+        // Checksums are checked: a card number failing Luhn and a Bitcoin Cash address with a
+        // wrong checksum aren't matched at all
+        for text in [
+            "4111111111111112",
+            "qzlg6uvceehgzgtz6phmvy8gtdqyt6vf359at4n3lr",
+        ] {
+            assert!(all.identify_whole(text).is_empty(), "{text}");
+        }
+    }
+
+    #[test]
+    fn formats_lemmeknow_did_not_have() {
+        // LemmeKnow 0.8 dropped the regexes the regex crate can't compile
+        for (text, name) in [
+            ("2001:db8::1", "Internet Protocol (IP) Address Version 6"),
+            (
+                "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2",
+                "Bitcoin (₿) Wallet Address",
+            ),
+            ("AKIAIOSFODNN7EXAMPLE", "Amazon Web Services Access Key"),
+        ] {
+            assert_eq!(identify(text).as_deref(), Some(name), "{text}");
+        }
+    }
+
+    #[test]
+    fn jwts_are_left_to_the_jwt_decoder() {
+        let jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U";
+        assert!(identifier()
+            .identify_whole(jwt)
+            .iter()
+            .any(|m| m.regex.name == "JSON Web Token (JWT)"));
+        assert_eq!(identify(jwt), None);
+    }
+
+    #[test]
+    fn settings_narrow_the_identifier() {
+        let mut config = Config::default();
+        assert!(super::identify(&identifier_for(&config), "192.168.0.1").is_some());
+
+        // The defaults of LemmeKnow's settings, still in older config files, change nothing
+        config.pywhat_min_rarity = 0.0;
+        config.pywhat_max_rarity = 0.0;
+        let old_defaults = identifier_for(&config);
+        for text in ["192.168.0.1", "flag{x}", "bee@skerritt.blog"] {
+            assert!(super::identify(&old_defaults, text).is_some(), "{text}");
+        }
+        // ...and Charset Only regexes stay out whatever the rarity
+        assert_eq!(super::identify(&old_defaults, "4111111111111111"), None);
+
+        config.pywhat_min_rarity = 0.8;
+        let rare = identifier_for(&config);
+        assert_eq!(super::identify(&rare, "192.168.0.1"), None, "rarity 0.7");
+        assert!(super::identify(&rare, "flag{x}").is_some(), "rarity 1");
+
+        let no_flags = identifier_for(&Config {
+            pywhat_exclude_tags: vec!["CTF Flag".to_string()],
+            ..Config::default()
+        });
+        assert_eq!(super::identify(&no_flags, "flag{x}"), None);
+        // The generic flag pattern goes too
+        assert_eq!(super::identify(&no_flags, "picoCTF{b4s3_64_1s_fun}"), None);
+        assert!(super::identify(&no_flags, "192.168.0.1").is_some());
+
+        let only_ip = identifier_for(&Config {
+            pywhat_tags: vec!["IP".to_string()],
+            ..Config::default()
+        });
+        assert!(super::identify(&only_ip, "192.168.0.1").is_some());
+        assert_eq!(super::identify(&only_ip, "bee@skerritt.blog"), None);
     }
 
     #[test]
@@ -709,7 +740,8 @@ mod tests {
 
     #[test]
     fn shape_only_matches_need_the_real_format() {
-        // Matched LemmeKnow's patterns, but are decoder junk or Caesar shifts
+        // Matched LemmeKnow's patterns (pyWhat's EC2 and ARN regexes are strict now), but are
+        // decoder junk or Caesar shifts
         for junk in [
             "I-NHyontTe",                                                       // EC2 ID
             "Arn:?n8A;m:p>oo:o;n?8:<9pr<9<=nm8o899@:<:=>>:;=@@8?<or?@9nm:A9?9", // ARN
@@ -726,8 +758,11 @@ mod tests {
             "two letters and 190 letters or digits"
         );
         for (text, name) in [
-            ("i-1234567890abcdef0", EC2_INSTANCE_ID),
-            ("arn:aws:iam::123456789012:user/bee", ARN),
+            ("i-1234567890abcdef0", "Amazon Web Services EC2 Instance ID"),
+            (
+                "arn:aws:iam::123456789012:user/bee",
+                "Amazon Resource Name (ARN)",
+            ),
             ("hello@world.com", EMAIL),
             ("first.last@university.ac.uk", EMAIL),
             ("john.smith@[123.123.123.123]", EMAIL),
@@ -897,13 +932,27 @@ mod tests {
 
     #[test]
     fn phone_numbers_are_recognised_but_not_identified() {
+        // Keys dialled on a keypad: a number once a + is put in front
         assert!(is_phone_number("18005551234"));
-        assert!(!is_phone_number("hello"));
+        assert!(is_phone_number("442079460958"));
+        for not_a_number in [
+            "hello",
+            "",
+            "123456789",
+            "0123456789",
+            "+18005551234",
+            "1800 555",
+        ] {
+            assert!(!is_phone_number(not_a_number), "{not_a_number:?}");
+        }
+        // The checker itself doesn't take digits for a phone number, only an international
+        // number written with its +
         assert_eq!(identify("18005551234"), None);
+        assert_eq!(identify("+1 800 555 1234").as_deref(), Some(PHONE_NUMBER));
     }
 
-    /// Texts LemmeKnow identifies, across rarities and tags, including the slowest
-    /// patterns to compile (Discord Webhook, URL, YouTube Video).
+    /// Texts pyWhat identifies, across rarities and tags, including the slowest regexes to
+    /// compile (Discord Webhook, URL).
     const IDENTIFIABLE: [&str; 11] = [
         "https://google.com",
         "192.168.1.1",
@@ -913,47 +962,29 @@ mod tests {
         "UC11L3JDgDQMyH8iolKkVZ4w",
         "4111111111111111",
         "s3://bucket/path/key",
-        "8888888888",
+        "+1 800 555 1234",
         "ghp_0123456789abcdefghijklmnopqrstuvwxyz",
         "arn:aws:iam::123456789012:user/bee",
     ];
 
-    /// The texts in [`IDENTIFIABLE`] that LemmeKnow matches only by their characters and
-    /// length (a card number and a phone number), which the checker drops.
-    const CHARSET_ONLY: [&str; 2] = ["4111111111111111", "8888888888"];
-
-    #[test]
-    fn warm_up_tasks_split_the_checkers_patterns_without_overlap() {
-        // Each pattern the checker can match is selected by exactly one warm-up task, so
-        // the tasks compile every pattern the checker uses, each of them once.
-        let checker = Checker::<LemmeKnow>::new();
-        let tasks = warm_up_tasks();
-        for text in IDENTIFIABLE {
-            let mut expected: Vec<&str> = checker
-                .lemmeknow_config
-                .identify(text)
-                .iter()
-                .map(|m| m.data.name)
-                .collect();
-            assert!(!expected.is_empty(), "LemmeKnow should identify {text:?}");
-            let mut from_tasks: Vec<&str> = tasks
-                .iter()
-                .flat_map(|task| task.identify(text))
-                .map(|m| m.data.name)
-                .collect();
-            expected.sort_unstable();
-            from_tasks.sort_unstable();
-            assert_eq!(from_tasks, expected, "patterns matching {text:?}");
-        }
-    }
+    /// The texts in [`IDENTIFIABLE`] that pyWhat matches only with "Charset Only" regexes (a
+    /// card number), which the checker leaves out.
+    const CHARSET_ONLY: [&str; 1] = ["4111111111111111"];
 
     #[test]
     fn checks_after_warm_up_match_as_before() {
         warm_up();
         // A second call does nothing
         warm_up();
-        let checker = Checker::<LemmeKnow>::new();
+        let checker = Checker::<PyWhat>::new();
         for text in IDENTIFIABLE {
+            assert!(
+                !Identifier::default()
+                    .min_rarity(MIN_RARITY)
+                    .identify_whole(text)
+                    .is_empty(),
+                "pyWhat should identify {text:?}"
+            );
             assert_eq!(
                 checker.check(text).is_identified,
                 !CHARSET_ONLY.contains(&text),

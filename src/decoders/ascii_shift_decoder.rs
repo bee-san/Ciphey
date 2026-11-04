@@ -698,7 +698,7 @@ mod tests {
         for ciphertext in [FLAG, CTF] {
             let result = crack(ciphertext);
             assert!(result.success, "{result:?}");
-            assert_eq!(result.checker_name, "LemmeKnow Checker", "{result:?}");
+            assert_eq!(result.checker_name, "pyWhat Checker", "{result:?}");
         }
     }
 

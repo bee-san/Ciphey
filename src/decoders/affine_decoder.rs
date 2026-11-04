@@ -612,7 +612,7 @@ mod tests {
             "flag{affine_is_just_math}"
         );
         assert_eq!(result.key.as_deref(), Some("a=17, b=2"));
-        assert_eq!(result.checker_name, "LemmeKnow Checker");
+        assert_eq!(result.checker_name, "pyWhat Checker");
     }
 
     #[test]

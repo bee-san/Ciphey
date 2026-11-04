@@ -374,7 +374,7 @@ mod tests {
             result.success,
             "LemmeKnow should identify the flag: {result:?}"
         );
-        assert_eq!(result.checker_name, "LemmeKnow Checker");
+        assert_eq!(result.checker_name, "pyWhat Checker");
         assert_eq!(result.unencrypted_text.unwrap()[0], "flag{s0c1al_c0r3}");
     }
 

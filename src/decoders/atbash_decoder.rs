@@ -1,5 +1,5 @@
 use crate::checkers::json_checker::is_json_object_or_array;
-use crate::checkers::lemmeknow_checker::is_unmarked_ctf_flag;
+use crate::checkers::pywhat_checker::is_unmarked_ctf_flag;
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
 use crate::decoders::interface::check_string_success;

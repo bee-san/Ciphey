@@ -2,7 +2,6 @@ use crate::checkers::checker_result::CheckResult;
 use crate::checkers::checker_type::{Check, Checker};
 use crate::config::get_config;
 use gibberish_or_not::Sensitivity;
-use lemmeknow::Identifier;
 use log::trace;
 use std::collections::HashSet;
 
@@ -19,7 +18,6 @@ impl Check for Checker<WordlistChecker> {
             tags: vec!["wordlist", "exact-match"],
             expected_runtime: 0.01,
             popularity: 1.0,
-            lemmeknow_config: Identifier::default(),
             sensitivity: Sensitivity::Medium, // Dummy value - not used by this checker
             _phantom: std::marker::PhantomData,
         }
