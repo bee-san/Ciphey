@@ -99,6 +99,10 @@ only takes a phone number with its `+` and country code (`+1 202 555 0156`); the
 decoder takes the keys of a number dialled on a keypad (`18005551234`) for a phone number
 when pyWhat does with a `+` in front, with the human checker's agreement.
 
+Ciphey uses pywhat without its default features (no file identification, no MAC address
+vendors), so it ships only the data it needs to identify text: `cargo tree -e features -i
+pywhat` shows the features, and NOTICE the data files and their licences.
+
 When pyWhat finds nothing, the checker looks for a **CTF flag** in any format,
 `^[A-Za-z][A-Za-z0-9_]{1,19}\{[^{}\n]{1,200}\}$` (matched by hand: the regex crate compiles
 the bounded repeat into hundreds of states). Caesar shifts, Atbash and Vigenère keep a

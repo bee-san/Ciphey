@@ -3,21 +3,67 @@ Copyright (c) bee-san and Ciphey's contributors. MIT License (LICENSE).
 
 Ciphey's binaries include data from its dependencies. That data and its sources:
 
-pyWhat (https://github.com/bee-san/pyWhat, MIT License)
---------------------------------------------------------
-Its regex database (pywhat/Data/regex.json) is pyWhat's, under the MIT License. Five of its
-regexes are based on entries of the regex101 community library (https://regex101.com/library,
-no licence stated): Browser User Agent, Regex101 Permalink, ISO 8601 Timestamp, United
-Kingdom (UK) Postcode and Cron Schedule. Some bug bounty regexes are based on the regex
-database of Dora (https://github.com/sdushantha/dora), Copyright (c) 2021 Siddharth
-Dushantha, under the MIT License.
 
-The pywhat crate also embeds, for the descriptions of some matches:
-- pywhat/Data/file_signatures.json, derived from the Wikipedia article "List of file
-  signatures" by its contributors (revision 1011793547 of 2021-03-12,
-  https://en.wikipedia.org/w/index.php?title=List_of_file_signatures&oldid=1011793547):
-  CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/
-- pywhat/Data/phone_codes.json, country calling codes: licence not recorded.
-- pywhat/Data/mastercard_companies.json, MasterCard issuer prefixes and their banks:
-  licence not recorded.
-pyWhat's NOTICE and its issue #302 have the details.
+pyWhat (https://github.com/bee-san/pyWhat), MIT License
+=======================================================
+Ciphey identifies text with the pywhat crate, which embeds pyWhat's data files. The sections
+below are copied from pyWhat's NOTICE (https://github.com/bee-san/pyWhat/pull/303) for the
+files Ciphey's build embeds (it leaves out mac_vendors.json); docs/plaintext-detection.md
+says how that is checked.
+
+
+pywhat/Data/file_signatures.json
+--------------------------------
+Derived from the Wikipedia article "List of file signatures" by its contributors:
+  https://en.wikipedia.org/wiki/List_of_file_signatures
+  revision 1011793547 of 2021-03-12:
+  https://en.wikipedia.org/w/index.php?title=List_of_file_signatures&oldid=1011793547
+  authors: https://en.wikipedia.org/w/index.php?title=List_of_file_signatures&action=history
+Changes: the article's table was converted to JSON by scripts/get_file_sigs.py (2021). The
+byte order marks of big-endian UTF-16 and UTF-32 were added and the descriptions of the
+little-endian ones were corrected in 2026 (#275).
+
+Licence: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0),
+https://creativecommons.org/licenses/by-sa/4.0/
+This file, and adaptations of it, are under CC BY-SA 4.0, not under pyWhat's MIT License.
+
+
+pywhat/Data/phone_codes.json
+----------------------------
+Country calling codes (ITU-T E.164) and their countries. Most of the country names are those
+of the GitHub gist "Country and Dial or Phone codes in JSON format" by Goles, or of a fork of
+it: https://gist.github.com/Goles/3196253
+Added in 2021 (commits 71cdefb and f1c993d).
+
+Licence: not recorded; the gist states none.
+
+
+pywhat/Data/mastercard_companies.json
+-------------------------------------
+MasterCard issuer prefixes (BINs) and their banks, most likely from Mastercard's "Simplified
+BIN account range table", which issue #51 points to:
+https://www.mastercard.us/en-us/business/issuers/get-support/simplified-bin-account-range-table.html
+Added in 2021 (commit 892765a).
+
+Licence: not recorded.
+
+
+Regexes in pywhat/Data/regex.json
+---------------------------------
+Five regexes are based on entries of the regex101 community library
+(https://regex101.com/library), rewritten for pyWhat in #276. regex101 states no licence for
+library entries.
+  Browser User Agent            "Parsing browser User Agents"         https://regex101.com/r/aL8lD7/2
+  Regex101 Permalink            "regex101.com permalink id grabber"   https://regex101.com/r/wY0rM7/3
+  ISO 8601 Timestamp            "RFC3339 DateTime"                    https://regex101.com/r/qH0sU7/1
+  United Kingdom (UK) Postcode  "UK Postcode Checker"                 https://regex101.com/r/tH9mQ1/1
+  Cron Schedule                 "Cron schedule"                       https://regex101.com/r/vY5eL1/1
+
+Some of the bug bounty regexes are based on the regex database of Dora
+(https://github.com/sdushantha/dora):
+  Copyright (c) 2021 Siddharth Dushantha, under the MIT License.
+
+Some regexes are based on the patterns of gf (https://github.com/tomnomnom/gf):
+  Copyright (c) 2018 Tom Hudson, under the MIT License.
+
+The text of the MIT License is the one in LICENSE.
