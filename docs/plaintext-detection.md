@@ -367,7 +367,9 @@ text. Tune on train; held-out is the check that a change generalises.
 - **Per category**: recall of each positive category, false-positive rate of each negative
   one, acceptance of the informational ones.
 - **Time per check**: median, p99 and mean over samples, for negatives and positives
-  separately. Checks under 2 µs are repeated and averaged. On a busy machine, count
+  separately. Checks under 2 µs are repeated and averaged. pyWhat's regexes are compiled
+  first (each is compiled the first time a text could match it, and a search compiles them
+  all in the background when it starts), so the compiling isn't counted per check. On a busy machine, count
   instructions instead: `perf stat -e instructions:u` on `--repeat=5` minus `--repeat=0`,
   divided by five times the number of samples, is the mean cost of one check.
 - **What accepted negatives**: false positives by the checker and format that took them.
