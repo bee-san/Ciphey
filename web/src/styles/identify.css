@@ -78,7 +78,8 @@
   padding: 4px 6px;
 }
 .token-field input:focus-visible { outline: none; }
-.tokens { display: contents; list-style: none; margin: 0; padding: 0; }
+.tokens { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.tokens:empty { display: none; }
 .token {
   display: inline-flex;
   align-items: center;
@@ -148,7 +149,18 @@
 .rarity__fill { display: block; height: 100%; background: var(--accent-border); }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
 .tags li { font-size: 0.75rem; font-weight: 550; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text-muted); }
-.match__exploit summary { cursor: pointer; font-size: 0.875rem; font-weight: 600; color: var(--text); width: fit-content; border-radius: var(--radius-s); }
+.match__exploit summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+  width: fit-content;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-s);
+}
 .match__exploit pre {
   margin: var(--space-2) 0 0;
   padding: var(--space-3);
@@ -160,5 +172,9 @@
   overflow-wrap: anywhere;
 }
 .match__actions { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; font-size: 0.875rem; }
-.match__actions a { display: inline-flex; align-items: center; gap: 4px; }
+.match__actions > a, .match__actions > .link-button { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; }
 .match__actions .icon { width: 14px; height: 14px; }
+
+/* Matches for the text before the last edit, while pyWhat looks at the new one */
+.matches { transition: opacity 0.15s; }
+[aria-busy="true"] .matches { opacity: 0.55; transition-delay: 0.25s; }

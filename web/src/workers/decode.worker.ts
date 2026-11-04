@@ -21,6 +21,8 @@ type Decode = Extract<DecodeRequest, { type: "decode" }>;
 
 let current: { id: number; search: Search; texts: Map<number, { parent: number | null; text: string }> } | null = null;
 let dead = false;
+/** Searches cancelled before they started (the page doesn't send these, but be safe). */
+const cancelled = new Set<number>();
 
 function describe(error: unknown): string {
   const text = error instanceof Error ? error.message : String(error);
@@ -137,6 +139,7 @@ self.onmessage = async (event: MessageEvent<Message>) => {
   const message = event.data;
   if (message.type === "cancel") {
     if (current?.id === message.id) current = null; // run() frees it after its step
+    else cancelled.add(message.id);
     post({ type: "cancelled", id: message.id });
     return;
   }
@@ -145,6 +148,7 @@ self.onmessage = async (event: MessageEvent<Message>) => {
     post({ type: "error", id: message.id, message: "Ciphey has to restart after a crash." });
     return;
   }
+  if (cancelled.delete(message.id)) return;
   current = null;
   void run(message);
 };

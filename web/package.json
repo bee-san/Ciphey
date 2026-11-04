@@ -12,7 +12,7 @@
     "dev": "vite",
     "build": "npm run typecheck && vite build",
     "preview": "node scripts/serve.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.node.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
     "e2e": "node tests/e2e/e2e.mjs",
     "measure": "node scripts/measure.mjs",

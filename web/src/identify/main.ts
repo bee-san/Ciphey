@@ -7,6 +7,7 @@ import { decodeHash } from "../lib/share";
 import { assignRanges, segment } from "../lib/spans";
 import { announce, byId, characterCount, copyButton, h, icon, readTextFile, wireFileInput } from "../shell/dom";
 import { EngineClient, LatestRequest } from "../shell/engine";
+import { handOff, pickUp } from "../shell/handoff";
 import { initPage } from "../shell/page";
 import { TokenField } from "./token-field";
 
@@ -42,6 +43,9 @@ const matchCount = byId("match-count");
 const emptyState = byId("matches-empty");
 const noneState = byId("matches-none");
 const engineStatus = byId("engine-status");
+const filtersError = byId("filters-error");
+const matchesPanel = byId("matches-panel");
+const matchesError = byId("matches-error");
 
 const include = new TokenField(byId("include-tokens"), byId<HTMLInputElement>("include-input"), "the tags to show", () => refresh());
 const exclude = new TokenField(byId("exclude-tokens"), byId<HTMLInputElement>("exclude-input"), "the tags to hide", () => refresh());
@@ -133,10 +137,19 @@ sort.addEventListener("change", () => render());
 
 // --- Text -----------------------------------------------------------------------------------------
 
+/**
+ * While a newer text or filter is on its way to pyWhat, the matches shown are for the old
+ * one: the panel says so (aria-busy, and the cards dim after a moment).
+ */
+function setBusy(busy: boolean): void {
+  matchesPanel.setAttribute("aria-busy", String(busy));
+}
+
 let timer = 0;
 text.addEventListener("input", () => {
   textCount.textContent = characterCount(text.value);
   syncBackdropText();
+  setBusy(true);
   window.clearTimeout(timer);
   timer = window.setTimeout(refresh, 90);
 });
@@ -182,10 +195,14 @@ function showTextError(message: string | null): void {
 function refresh(): void {
   const options = readFilters();
   updateFiltersSummary(options);
-  if (!options) return;
+  if (!options) {
+    setBusy(false);
+    return;
+  }
   const value = text.value;
   if (value.length > MAX_TEXT_CHARS) {
     showTextError(`That's ${count(value.length)} characters. pyWhat identifies up to ${count(MAX_TEXT_CHARS)} here.`);
+    setBusy(false);
     return;
   }
   showTextError(null);
@@ -193,6 +210,7 @@ function refresh(): void {
     show("", []);
     return;
   }
+  setBusy(true);
   if (!ready) return; // sent once pyWhat is ready
   pendingText = value;
   latest.request((id) => ({ type: "identify", id, text: value, options }));
@@ -201,6 +219,8 @@ function refresh(): void {
 // --- Results --------------------------------------------------------------------------------------
 
 function show(forText: string, found: IdentifyMatch[]): void {
+  setBusy(false);
+  clearErrors();
   shownText = forText;
   matches = found;
   // Highlights are only right for the text they were found in
@@ -209,12 +229,38 @@ function show(forText: string, found: IdentifyMatch[]): void {
   if (forText.trim() !== "") announce(found.length ? `${plural(found.length, "match", "matches")} found` : "Nothing found");
 }
 
+/**
+ * pyWhat's errors: a tag or name it doesn't know goes under the filters (its message is
+ * "Passed filter contains tags or names that are not used by 'what': {...}"), anything else
+ * above the matches.
+ */
 function showError(message: string): void {
-  matchesList.hidden = true;
+  setBusy(false);
+  matches = [];
+  ranges = [];
+  shownText = "";
+  render();
   emptyState.hidden = true;
-  noneState.hidden = true;
-  matchCount.hidden = true;
-  engineStatus.replaceChildren(h("span", { class: "field__error" }, message));
+  const unknown = /not used by 'what': \{?([^}]*)\}?/.exec(message);
+  if (unknown) {
+    // pyWhat names them in lower case: give the user's own spelling back
+    const named = (unknown[1] ?? "").split(",").map((t) => t.trim().replace(/^'|'$/g, ""));
+    const typed = [...include.values, ...exclude.values].filter((t) => named.includes(t.toLowerCase()));
+    const list = typed.length ? typed.map((t) => `“${t}”`).join(", ") : named.join(", ");
+    filtersError.textContent = `pyWhat has no tag or format called ${list}. Remove it to see matches.`;
+    filtersError.hidden = false;
+    byId<HTMLDetailsElement>("filters").open = true;
+  } else {
+    matchesError.replaceChildren(h("p", { class: "notice__title" }, "pyWhat couldn't identify this text."), h("p", {}, message));
+    matchesError.hidden = false;
+  }
+}
+
+function clearErrors(): void {
+  filtersError.hidden = true;
+  filtersError.textContent = "";
+  matchesError.hidden = true;
+  matchesError.replaceChildren();
 }
 
 const colour = (id: number) => `hl-${(id % HIGHLIGHTS) + 1}`;
@@ -376,7 +422,8 @@ function activate(id: number | null): void {
 
 // --- A link with text -------------------------------------------------------------------------------
 
-const shared = decodeHash(location.hash).get("text");
+const shared = pickUp() ?? decodeHash(location.hash).get("text");
 if (shared) setText(shared.slice(0, MAX_TEXT_CHARS));
+byId("decode-link").addEventListener("click", () => handOff(text.value));
 updateFiltersSummary(readFilters());
 textCount.textContent = characterCount(text.value);

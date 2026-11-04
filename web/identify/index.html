@@ -80,13 +80,14 @@
             <p class="field__hint" id="exclude-hint">Tags or format names. "Charset Only" hides formats that only check which characters a text has.</p>
           </div>
           <datalist id="tag-list"></datalist>
+          <p class="field__error" id="filters-error" role="alert" hidden></p>
           <div><button type="button" class="button button--small" id="reset-filters">Reset filters</button></div>
         </div>
       </details>
       <p class="engine-status" id="engine-status"><span class="spinner" aria-hidden="true"></span>Loading pyWhat…</p>
     </section>
 
-    <section class="panel panel--output" aria-labelledby="matches-heading">
+    <section class="panel panel--output" id="matches-panel" aria-labelledby="matches-heading" aria-busy="false">
       <div class="panel__head">
         <h2 id="matches-heading">Matches <span class="count-badge" id="match-count" hidden></span></h2>
         <div class="sort">
@@ -113,6 +114,7 @@
           <li>If the text is encoded, <a href="../" id="decode-link">decode it with Ciphey</a> first.</li>
         </ul>
       </div>
+      <div class="notice notice--error" id="matches-error" role="alert" hidden></div>
       <ul class="matches" id="matches" aria-labelledby="matches-heading" hidden></ul>
     </section>
   </div>

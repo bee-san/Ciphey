@@ -23,8 +23,7 @@
     "noEmit": true
   },
   "include": [
-    "src",
-    "tests/unit"
+    "src"
   ],
   "exclude": [
     "src/workers",

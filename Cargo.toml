@@ -5,8 +5,9 @@ version = "0.12.1"
 edition = "2021"
 description = "Automated decoding tool, Ciphey but in Rust"
 license = "MIT"
-# The end-to-end benchmark (its scripts, corpus and baseline) is for this repository, not the crate
-exclude = ["benches/e2e/", "benches/data/e2e/"]
+# Not in the crate: the end-to-end benchmark (its scripts, corpus and baseline) is for this
+# repository, and so is the website (web/, https://bee-san.github.io/Ciphey/)
+exclude = ["benches/e2e/", "benches/data/e2e/", "/web/"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

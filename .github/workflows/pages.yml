@@ -1,0 +1,174 @@
+# The website in web/ (https://bee-san.github.io/Ciphey/): Ciphey, pyWhat and
+# gibberish-or-not in the browser. Every run builds the site's three WebAssembly modules and
+# the pages, and tests them: the unit tests, and the end-to-end test in headless Chrome
+# (every Decode example, Identify, the language panel, axe-core, privacy). A push to master
+# (or a manual run on master) then deploys it to GitHub Pages; pull requests only build and
+# test. See web/README.md.
+name: Pages
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "web/**"
+      - "wasm/**"
+      - "src/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/pages.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - "wasm/**"
+      - "src/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+# Nothing but reading the repository, unless a job asks for more
+permissions:
+  contents: read
+
+# A newer push to a pull request cancels its older run; runs on master queue up instead
+concurrency:
+  group: pages-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  # The versions the crates pin (wasm-bindgen = "=0.2.130") and the program's toolchain uses
+  WASM_BINDGEN_VERSION: "0.2.130"
+  WASM_BINDGEN_SHA256: 9687f3bb551b9f66f37ed32a40d7913a00f7962db653054e56857bc306c3227f
+  BINARYEN_VERSION: "133"
+  BINARYEN_SHA256: 2dc9c7813f5375db93d96ead4b78222fcc3e2677bbb832297af4797782a37489
+
+jobs:
+  build:
+    name: Build and test the site
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      # actions/configure-pages reads the site's settings (its base path)
+      pages: read
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust with the WebAssembly target
+        run: |
+          rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown --no-self-update
+          rustup default stable
+          rustc --version
+
+      - name: Install wasm-bindgen and wasm-opt (checksums pinned)
+        run: |
+          tools=$RUNNER_TEMP/tools
+          mkdir -p "$tools/bin"
+          cd "$RUNNER_TEMP"
+          wb=wasm-bindgen-$WASM_BINDGEN_VERSION-x86_64-unknown-linux-musl
+          curl -sSfL -o wb.tar.gz "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/$WASM_BINDGEN_VERSION/$wb.tar.gz"
+          echo "$WASM_BINDGEN_SHA256  wb.tar.gz" | sha256sum -c -
+          tar xzf wb.tar.gz
+          mv "$wb/wasm-bindgen" "$tools/bin/"
+          by=binaryen-version_$BINARYEN_VERSION
+          curl -sSfL -o by.tar.gz "https://github.com/WebAssembly/binaryen/releases/download/version_$BINARYEN_VERSION/$by-x86_64-linux.tar.gz"
+          echo "$BINARYEN_SHA256  by.tar.gz" | sha256sum -c -
+          tar xzf by.tar.gz
+          mv "$by" "$tools/binaryen"
+          ln -s "$tools/binaryen/bin/wasm-opt" "$tools/bin/wasm-opt"
+          echo "$tools/bin" >> "$GITHUB_PATH"
+          "$tools/bin/wasm-bindgen" --version
+          "$tools/bin/wasm-opt" --version
+
+      - name: Cache Cargo
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: pages-cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'web/engine/Cargo.lock') }}
+          restore-keys: pages-cargo-${{ runner.os }}-
+
+      # BRANCH ONLY (ciphey-web): Ciphey's WebAssembly build needs ciphey-wasm's temporary
+      # patches until it depends on gibberish-or-not 6 and pywhat 6. Removed before landing.
+      - name: Patch Ciphey's dependencies for WebAssembly (temporary)
+        run: bash web/scripts/branch-only-wasm-proof.sh
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install the site's dependencies
+        working-directory: web
+        run: npm ci --no-audit --no-fund
+
+      - name: Build the WebAssembly modules
+        working-directory: web
+        run: npm run wasm
+
+      - name: Unit tests
+        working-directory: web
+        run: npm test
+
+      - name: Read the Pages settings
+        id: pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      # "/Ciphey/" for https://bee-san.github.io/Ciphey/: Pages' base path when this run read
+      # it (it would be "/" on a custom domain), else the default
+      - name: Set the base path
+        env:
+          PAGES_BASE: ${{ steps.pages.outputs.base_path }}
+          READ: ${{ steps.pages.outcome == 'success' }}
+        run: |
+          if [ "$READ" = true ]; then echo "BASE_PATH=$PAGES_BASE/" >> "$GITHUB_ENV"; else echo "BASE_PATH=/Ciphey/" >> "$GITHUB_ENV"; fi
+
+      - name: Build the site
+        working-directory: web
+        run: npm run build
+
+      - name: End-to-end test in headless Chrome
+        working-directory: web
+        run: |
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          export CHROME
+          "$CHROME" --version
+          npm run e2e
+
+      - name: Upload the site
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: web/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Only this job can publish: Pages and the OIDC token that proves the run's identity to it
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # Deploys never cancel each other half-way
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

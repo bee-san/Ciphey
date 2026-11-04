@@ -6,6 +6,7 @@ them against web/src/decode/examples.ts:
 """
 import base64
 import codecs
+import hashlib
 import json
 import pathlib
 import re
@@ -51,6 +52,7 @@ EXAMPLES = {
     "morse": morse("Ciphey decodes Morse code as well"),
     "vigenere": vigenere(VIGENERE, "BROWSER"),
     "ctf-flag": b64(FLAG.encode().hex()),
+    "md5": hashlib.md5(b"password").hexdigest(),
     "french": b64(FRENCH),
 }
 

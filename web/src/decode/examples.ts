@@ -8,8 +8,8 @@ export interface Example {
   input: string;
   /** What Ciphey should find. */
   plaintext: string;
-  /** Only offered when Ciphey has a decoder of this name (for decoders still to land). */
-  needs?: string;
+  /** Only offered when Ciphey has a decoder this matches, by name or tag (for decoders still to land). */
+  needs?: RegExp;
 }
 
 export const EXAMPLES: readonly Example[] = [
@@ -44,6 +44,14 @@ export const EXAMPLES: readonly Example[] = [
     label: "CTF flag",
     input: "NjY2YzYxNjc3YjYzMzE3MDY4MzM3OTVmNzI3NTZlNzM1ZjMxNmU1Zjc5MzA3NTcyNWY2MjcyMzA3NzczMzM3Mjdk",
     plaintext: "flag{c1ph3y_runs_1n_y0ur_br0ws3r}",
+  },
+  {
+    // The verified example of #1029 (the hash cracker): hashlib.md5(b"password")
+    id: "md5",
+    label: "MD5 hash",
+    input: "5f4dcc3b5aa765d61d8327deb882cf99",
+    plaintext: "password",
+    needs: /\bhash/i,
   },
   {
     id: "french",

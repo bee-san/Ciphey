@@ -5,6 +5,7 @@ import { SENSITIVITIES } from "../lib/protocol";
 import { choiceField, decodeHash, intField, MAX_SHARE_CHARS, shareUrl } from "../lib/share";
 import { announce, byId, characterCount, copyButton, copyText, h, icon, readTextFile, wireFileInput } from "../shell/dom";
 import { EngineClient } from "../shell/engine";
+import { handOff, pickUp } from "../shell/handoff";
 import { initPage } from "../shell/page";
 import { EXAMPLES } from "./examples";
 import { TreeView } from "./tree-view";
@@ -88,17 +89,26 @@ let nextId = 1;
 /** A search told to stop, and the timer that restarts the worker if it doesn't answer. */
 let cancelling: number | null = null;
 let cancelTimer = 0;
+/** The decode request the running worker was given for the search shown, if any. */
+let sent: DecodeRequest | null = null;
 
 engine.on((event) => {
   switch (event.type) {
     case "ready":
       ready = true;
       loadError = null;
-      info = { version: event.version, decoders: event.decoders.map((d) => d.name), live: event.live, reusable: event.reusable };
+      info = {
+        version: event.version,
+        // Names and tags, for the examples that need a decoder
+        decoders: event.decoders.map((d) => [d.name, ...d.tags].join(" ")),
+        live: event.live,
+        reusable: event.reusable,
+      };
       showEngineReady();
       if (waiting) {
-        engine.post(waiting);
+        const request = waiting;
         waiting = null;
+        send(request);
       }
       return;
     case "update":
@@ -137,8 +147,33 @@ function showEngineError(): void {
   );
 }
 
+/** Gives the worker a search, or keeps it until the worker is ready. */
+function send(request: DecodeRequest): void {
+  if (ready) {
+    engine.post(request);
+    if (request.type === "decode") sent = request;
+  } else {
+    waiting = request;
+    if (loadError) restartEngine();
+  }
+}
+
+/**
+ * Starts a fresh worker. A search the old one had been given (behind a step that wouldn't
+ * stop) starts again on the new one, from the beginning.
+ */
 function restartEngine(): void {
   ready = false;
+  loadError = null;
+  cancelling = null;
+  window.clearTimeout(cancelTimer);
+  if (search && sent?.type === "decode" && sent.id === search.id) {
+    waiting = sent;
+    search.started = performance.now();
+    search.results = [];
+    tree.reset();
+  }
+  sent = null;
   engineStatus.replaceChildren(h("span", { class: "spinner", "aria-hidden": "true" }), "Loading Ciphey…");
   engine.restart();
 }
@@ -226,7 +261,7 @@ let shownExamples = "";
 
 /** Draws the example buttons, again only if the set changed (so a focused one stays focused). */
 function renderExamples(): void {
-  const available = EXAMPLES.filter((e) => !e.needs || info?.decoders.includes(e.needs));
+  const available = EXAMPLES.filter((e) => !e.needs || (info?.decoders.some((d) => e.needs?.test(d)) ?? false));
   const key = available.map((e) => e.id).join(" ");
   if (key === shownExamples) return;
   shownExamples = key;
@@ -316,11 +351,7 @@ function start(): void {
   if (window.matchMedia("(max-width: 959px)").matches) byId("output").scrollIntoView({ block: "start" });
   announce("Decoding…");
 
-  if (ready) engine.post(request);
-  else {
-    waiting = request;
-    if (loadError) restartEngine();
-  }
+  send(request);
   tick();
 }
 
@@ -361,6 +392,7 @@ function cancel(say = true): void {
   if (waiting) waiting = null;
   else if (ready) {
     cancelling = s.id;
+    sent = null;
     engine.post({ type: "cancel", id: s.id });
     window.clearTimeout(cancelTimer);
     cancelTimer = window.setTimeout(() => {
@@ -433,7 +465,7 @@ function nothing(status: Ending, message: string | null, s: Search, elapsed: num
           ? "Check the crib: with one set, only text it matches is accepted."
           : "If you know part of the answer (a flag format, a word), set it as a crib under Options.",
         "Plaintext that isn't English is often missed. A crib helps there too.",
-        h("span", {}, "Not sure it's encoded? ", h("a", { href: "identify/" }, "See what pyWhat identifies in it"), "."),
+        h("span", {}, "Not sure it's encoded? ", identifyLink(s.input, "See what pyWhat identifies in it"), "."),
       ];
       return h(
         "div",
@@ -464,13 +496,15 @@ function renderResult(r: DecodeResult, s: Search, main: boolean): HTMLElement {
     h("span", { class: "badge badge--success" }, icon("check"), "Plaintext found"),
     h("span", { class: "field__meta" }, `in ${duration(r.elapsedMs)} · ${plural(r.path.length, "layer")}`),
   );
-  const text = h("pre", { class: "plaintext", id: plaintextId, tabindex: 0, "aria-label": "Plaintext" }, r.plaintext);
+  // Focusable, so a long plaintext can be scrolled with the keyboard
+  const text = h("pre", { class: "plaintext", id: plaintextId, tabindex: 0, role: "group", "aria-label": "Plaintext" }, r.plaintext);
   const actions = h(
     "div",
     { class: "actions result__actions" },
     copyButton("Copy plaintext", () => r.plaintext),
     copyButton("Copy path", () => pathText(r.path)),
     main ? shareButton(s) : null,
+    main ? identifyLink(r.plaintext, "Identify the plaintext", "button button--small button--ghost") : null,
   );
   const steps = h(
     "ol",
@@ -507,6 +541,11 @@ function renderResult(r: DecodeResult, s: Search, main: boolean): HTMLElement {
     h("h3", { class: "result__path-title" }, "Path ", h("span", { class: "field__meta" }, r.path.map(stepLabel).join(" → "))),
     steps,
   );
+}
+
+/** A link to the Identify page that takes `text` along (sessionStorage, not the URL). */
+function identifyLink(text: string, label: string, cls = ""): HTMLAnchorElement {
+  return h("a", { href: "identify/", class: cls || null, onclick: () => handOff(text) }, label);
 }
 
 // --- Sharing ----------------------------------------------------------------------------------
@@ -568,5 +607,7 @@ function openShared(): void {
 }
 
 updateOptionsSummary();
+const handedOver = pickUp();
+if (handedOver) input.value = handedOver.slice(0, MAX_INPUT_CHARS);
 inputCount.textContent = characterCount(input.value);
 openShared();

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Serves web/dist the way GitHub Pages serves the site: under /Ciphey/, directories as their
-// index.html, gzip when the browser accepts it, .wasm as application/wasm, 404 otherwise.
+// index.html, gzip when the browser accepts it (level 5: GitHub Pages served lemmeknow-frontend's
+// .wasm in 386,261 bytes on 2026-11-04, between gzip -4 and -6 of the same file), .wasm as
+// application/wasm, max-age=600 like Pages, and 404 otherwise.
 // For `npm run preview`, the end-to-end test and the measurements; no dependencies.
 //
 //   node scripts/serve.mjs [--port 4173] [--root dist] [--base /Ciphey/]
@@ -58,7 +60,7 @@ export function serve({ port = 4173, root = "dist", base = "/Ciphey/", host = "1
     if (gzip) {
       res.writeHead(200, { ...headers, "content-encoding": "gzip", vary: "Accept-Encoding" });
       if (req.method === "HEAD") return res.end();
-      pipeline(createReadStream(file), createGzip({ level: 6 }), res, () => {});
+      pipeline(createReadStream(file), createGzip({ level: 5 }), res, () => {});
     } else {
       res.writeHead(200, { ...headers, "content-length": statSync(file).size });
       if (req.method === "HEAD") return res.end();
