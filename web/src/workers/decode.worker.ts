@@ -13,6 +13,13 @@ const post = (event: DecodeEvent) => self.postMessage(event);
 
 /** How long one step searches before it reports back: about 25 updates a second. */
 const STEP_MS = 40;
+/**
+ * The search stops before Ciphey's WebAssembly memory passes this. Its queue of branches
+ * grows by about 1 KB per branch (for a 56-character input), and a long search with no
+ * plaintext reached the 4 GiB a 32-bit module can have after 27 s (3.8 million branches),
+ * which aborts the module. Phones have less to give than that.
+ */
+const MEMORY_LIMIT = 2 * 1024 ** 3;
 /** Characters of each node's text the page gets (it shows up to 160). */
 const PREVIEW_CHARS = 160;
 
@@ -20,23 +27,30 @@ type Message = DecodeRequest;
 type Decode = Extract<DecodeRequest, { type: "decode" }>;
 
 let current: { id: number; search: Search; texts: Map<number, { parent: number | null; text: string }> } | null = null;
+let memory: WebAssembly.Memory | null = null;
 let dead = false;
 /** Searches cancelled before they started (the page doesn't send these, but be safe). */
 const cancelled = new Set<number>();
 
+const memoryBytes = () => memory?.buffer.byteLength ?? 0;
+
 function describe(error: unknown): string {
   const text = error instanceof Error ? error.message : String(error);
-  // A Rust panic aborts the module: the call throws a RuntimeError ("unreachable"), and
-  // the instance is unusable from then on (its message went to console.error)
-  if (error instanceof WebAssembly.RuntimeError || /unreachable/i.test(text)) {
+  // A Rust panic or a failed allocation aborts the module: the call throws a RuntimeError
+  // ("unreachable"), and the instance is unusable from then on
+  if (error instanceof WebAssembly.RuntimeError || /unreachable|out of memory/i.test(text)) {
     dead = true;
+    if (memoryBytes() > MEMORY_LIMIT / 2 || /out of memory/i.test(text)) {
+      return "Ciphey ran out of memory. Try a shorter time limit, or a crib.";
+    }
     return "Ciphey crashed on this input. That's a bug in Ciphey: please report it, with the input, at github.com/bee-san/Ciphey/issues.";
   }
   return text;
 }
 
 const ready = init({ module_or_path: wasmUrl })
-  .then(() => {
+  .then((output) => {
+    memory = output.memory;
     const decoders = (listDecoders() as DecoderInfo[]).map((d) => ({ name: d.name, tags: d.tags }));
     post({ type: "ready", version: cipheyVersion(), decoders, live: true, reusable: true });
     return true;
@@ -96,6 +110,9 @@ async function run(request: Decode): Promise<void> {
     for (;;) {
       const p: SearchProgress = search.step(STEP_MS);
       if (current?.search !== search) return; // cancelled or replaced while stepping
+      // Stop before the module runs out of memory (it can't give memory back: the page
+      // starts a new worker for the next search)
+      const full = p.status === "running" && memoryBytes() > MEMORY_LIMIT;
       const nodes: TreeNode[] = p.nodes.map((n) => ({
         id: n.id,
         parent: n.parent,
@@ -112,7 +129,7 @@ async function run(request: Decode): Promise<void> {
         type: "update",
         id,
         update: {
-          status: p.status,
+          status: full ? "memory_full" : p.status,
           elapsedMs: p.elapsedMs,
           expanded: p.expanded,
           queued: p.queued,
@@ -122,7 +139,7 @@ async function run(request: Decode): Promise<void> {
           results: p.results.map((r) => withStepTexts(r, texts)),
         },
       });
-      if (p.status !== "running") break;
+      if (p.status !== "running" || full) break;
       // Let a "cancel" (or a new search) in between two steps
       await new Promise((resolve) => setTimeout(resolve, 0));
       if (current?.search !== search) return;

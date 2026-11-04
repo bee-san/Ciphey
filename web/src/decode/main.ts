@@ -362,7 +362,9 @@ function tick(): void {
   const elapsed = performance.now() - search.started;
   progress.value = Math.min(elapsed, progress.max);
   const found = search.results.length ? ` · ${plural(search.results.length, "plaintext")} found` : "";
-  searchText.textContent = `${ready || !waiting ? "Searching" : "Loading Ciphey"}… ${duration(elapsed)} of ${search.options.timeout} s${found}`;
+  // A decoder that has started finishes even if the time limit passes meanwhile
+  const clock = elapsed < search.options.timeout * 1000 ? `${duration(elapsed)} of ${search.options.timeout} s` : "time's up, finishing the last step";
+  searchText.textContent = `${ready || !waiting ? "Searching" : "Loading Ciphey"}… ${clock}${found}`;
   searchStats.textContent = search.expanded
     ? `${plural(search.expanded, "node")} explored · depth ${search.depth} · ${plural(search.queued, "branch", "branches")} waiting`
     : "";
@@ -419,8 +421,9 @@ function finish(status: Ending, message: string | null, elapsedMs?: number): voi
   if (hadFocus) decodeButton.focus();
   const elapsed = elapsedMs ?? performance.now() - s.started;
 
-  // A crashed module can't search again: start a fresh one for the next search
-  if (status === "error" && message?.startsWith("Ciphey crashed")) restartEngine();
+  // A crashed module can't search again, and one that filled its memory can't give it back:
+  // start a fresh one for the next search
+  if ((status === "error" && /^Ciphey (crashed|ran out of memory)/.test(message ?? "")) || status === "memory_full") restartEngine();
 
   tree.finish();
   treePanel.hidden = tree.size === 0;
@@ -434,8 +437,13 @@ function finish(status: Ending, message: string | null, elapsedMs?: number): voi
   // Plaintexts found before a cancel or the time limit ("Find every plaintext") still count
   if (s.results.length && status !== "error") {
     renderResults(s);
-    if (status === "cancelled" || status === "timed_out") {
-      const why = status === "cancelled" ? `Search cancelled after ${duration(elapsed)}` : `The time limit (${s.options.timeout} s) ended the search`;
+    if (status === "cancelled" || status === "timed_out" || status === "memory_full") {
+      const why =
+        status === "cancelled"
+          ? `Search cancelled after ${duration(elapsed)}`
+          : status === "memory_full"
+            ? `Ciphey stopped after ${duration(elapsed)} to stay within your browser's memory`
+            : `The time limit (${s.options.timeout} s) ended the search`;
       resultBox.prepend(h("p", { class: "field__hint" }, `${why}; these were found before it.`));
     }
     const first = s.results[0] as DecodeResult;
@@ -461,6 +469,19 @@ function nothing(status: Ending, message: string | null, s: Search, elapsed: num
         { class: "notice notice--error", role: "alert" },
         h("p", { class: "notice__title" }, "Ciphey couldn't search this input."),
         h("p", {}, message ?? "Something went wrong."),
+      );
+    case "memory_full":
+      return h(
+        "div",
+        { class: "notice" },
+        h("p", { class: "notice__title" }, `Ciphey stopped after ${duration(elapsed)}, before your browser ran out of memory.`),
+        h(
+          "ul",
+          {},
+          h("li", {}, `It had found no plaintext, and ${plural(s.queued, "branch", "branches")} were still waiting to be tried.`),
+          h("li", {}, s.options.regex ? "Check the crib: with one set, only text it matches is accepted." : "If you know part of the answer (a flag format, a word), set it as a crib under Options."),
+          h("li", {}, "Plaintext that isn't English is often missed. A crib helps there too."),
+        ),
       );
     default: {
       const title =

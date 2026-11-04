@@ -65,7 +65,11 @@ export interface TreeNode {
   queuedChildren?: number;
 }
 
-export type SearchStatus = "running" | "decoded" | "not_found" | "timed_out";
+/**
+ * Where a search is. Ciphey reports the first four; "memory_full" is the page's own: the
+ * worker stopped the search before it ran out of WebAssembly memory (see the worker).
+ */
+export type SearchStatus = "running" | "decoded" | "not_found" | "timed_out" | "memory_full";
 
 export interface SearchUpdate {
   status: SearchStatus;

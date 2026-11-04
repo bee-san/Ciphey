@@ -13,8 +13,12 @@ import { TokenField } from "./token-field";
 
 initPage();
 
-/** Larger texts are refused: identifying is as you type, and pyWhat checks every format. */
-const MAX_TEXT_CHARS = 1_000_000;
+/**
+ * Larger texts are refused: identifying runs as you type, and pyWhat's output is about 11 KB
+ * of JSON per match (each carries its format's whole entry), so 100,000 characters dense
+ * with identifiers already make 72 MB of it (0.7 s to identify, 0.2 s to parse, measured).
+ */
+const MAX_TEXT_CHARS = 100_000;
 /** The page draws this many cards at most (highlights cover every match up to MAX_RANGES). */
 const MAX_CARDS = 200;
 const MAX_RANGES = 5000;
@@ -201,7 +205,16 @@ function refresh(): void {
   }
   const value = text.value;
   if (value.length > MAX_TEXT_CHARS) {
-    showTextError(`That's ${count(value.length)} characters. pyWhat identifies up to ${count(MAX_TEXT_CHARS)} here.`);
+    const message = `That's ${count(value.length)} characters. pyWhat identifies up to ${count(MAX_TEXT_CHARS)} here.`;
+    showTextError(message);
+    // The matches shown were for another text: take them away
+    matches = [];
+    ranges = [];
+    shownText = "";
+    render();
+    emptyState.hidden = true;
+    matchesError.replaceChildren(h("p", { class: "notice__title" }, "The text is too long to identify."), h("p", {}, message));
+    matchesError.hidden = false;
     setBusy(false);
     return;
   }

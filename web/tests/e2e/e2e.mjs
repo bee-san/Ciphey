@@ -12,7 +12,9 @@
 // best-practice violations, in both themes, at desktop and phone widths; keyboard focus is
 // visible; nothing is requested from another origin; no CSP violations or console errors.
 // Prints PASS/FAIL per check; exits 1 if any failed.
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createRequire } from "node:module";
 import puppeteer from "puppeteer-core";
 import { EXAMPLES } from "../../src/decode/examples.ts";
@@ -246,6 +248,22 @@ await check("decode: Escape cancels a search, and the next search runs", async (
   const next = await decodeResult(decode);
   assert(next.plaintext === EXAMPLES[0].plaintext, `then got ${next.plaintext ?? next.notice}`);
   return r.notice;
+});
+
+await check("decode: a text file opens into the input, and a binary file is refused", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ciphey-e2e-"));
+  const textFile = join(dir, "secret.txt");
+  writeFileSync(textFile, "aGVsbG8gdGhlcmUgZ2VuZXJhbA==\n");
+  const binary = join(dir, "photo.png");
+  writeFileSync(binary, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 1, 0]));
+  const input = await decode.$("#file");
+  await input.uploadFile(textFile);
+  await decode.waitForFunction(() => document.getElementById("input").value === "aGVsbG8gdGhlcmUgZ2VuZXJhbA==", { timeout: 5_000 });
+  await input.uploadFile(binary);
+  await decode.waitForFunction(() => !document.getElementById("input-error").hidden, { timeout: 5_000 });
+  const message = await text(decode, "#input-error");
+  assert(/doesn't look like text/.test(message), `got ${message}`);
+  return message;
 });
 
 await check("decode: input that is already plaintext says so", async () => {

@@ -76,9 +76,14 @@ tests/unit/, tests/e2e/                                  the tests
   runs Ciphey's `Search` a step (40 ms) at a time and posts the tree's new nodes after each,
   and the page draws them once per frame. Cancel tells the worker to stop between two steps;
   if a step doesn't end within 300 ms (a slow decoder on a big input), the page terminates
-  the worker and starts a new one. Identify and Is it language? run as you type: one request
-  is with the worker at a time, and only the newest text waits behind it
-  (`LatestRequest` in `src/shell/engine.ts`).
+  the worker and starts a new one. A search with no plaintext keeps queueing branches, about
+  1 KB each for a short input, and at 4 GiB a 32-bit module aborts (after 27 s, 3.8 million
+  branches, in one measurement). So the worker stops a search once the module's memory
+  passes 2 GiB, says why, and the page starts a fresh worker for the next search. Identify
+  and Is it language? run as you type: one request is with the worker at a time, and only
+  the newest text waits behind it (`LatestRequest` in `src/shell/engine.ts`). Identify takes
+  up to 100,000 characters: pyWhat's output carries each format's whole entry, about 11 KB
+  of JSON per match, so that much text dense with identifiers already makes 72 MB of it.
 - **One module per tool**, loaded only by its page's worker. Measured with `wasm-opt -Oz`:
 
   | Module | Raw | gzip -9 |
@@ -163,7 +168,8 @@ The target is WCAG 2.2 AA.
   needs a decoder Ciphey doesn't have yet, such as #1029's hash cracker, is hidden);
 - the tree grows while a search runs, a search without a plaintext ends with advice,
   Escape cancels, a crib that isn't a valid regex is reported at the crib, Ctrl+Enter
-  decodes, and a share link opens and runs its search;
+  decodes, a share link opens and runs its search, a text file opens and a binary one is
+  refused, input that is already plaintext says so, and Find every plaintext lists several;
 - Identify finds and highlights an email address, an IP address, a CTF flag, a Bitcoin
   wallet and a URL, and its filters and sorting work;
 - Is it language? says a sentence is language and a keyboard mash and a Caesar shift aren't;

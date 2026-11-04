@@ -100,16 +100,19 @@ export function copyButton(label: string, get: () => string, extraClass = ""): H
   return button;
 }
 
-/** Reads a file as UTF-8 text, refusing files over `maxBytes`. */
-export async function readTextFile(file: File, maxBytes: number): Promise<{ text: string } | { error: string }> {
-  if (file.size > maxBytes) {
-    const kb = Math.round(maxBytes / 1024);
-    return { error: `${file.name} is ${Math.ceil(file.size / 1024).toLocaleString("en")} KB. Files up to ${kb} KB can be read here.` };
-  }
+/**
+ * Reads a file as UTF-8 text of at most `maxChars` characters (as the text fields count them).
+ * A file over 4 bytes per allowed character can't fit, so it isn't read at all.
+ */
+export async function readTextFile(file: File, maxChars: number): Promise<{ text: string } | { error: string }> {
+  const tooLong = (n: string) => `${file.name} has ${n} characters. Files up to ${maxChars.toLocaleString("en")} characters can be read here.`;
+  if (file.size > maxChars * 4) return { error: tooLong(`over ${maxChars.toLocaleString("en")}`) };
   const text = new TextDecoder("utf-8", { fatal: false }).decode(await file.arrayBuffer());
   if (text.includes("\u0000") || (text.match(/\uFFFD/g)?.length ?? 0) > text.length / 20) {
     return { error: `${file.name} doesn't look like text. Ciphey and pyWhat read text, such as a .txt file.` };
   }
+  const chars = Array.from(text).length;
+  if (chars > maxChars) return { error: tooLong(chars.toLocaleString("en")) };
   return { text };
 }
 
