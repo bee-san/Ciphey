@@ -220,7 +220,8 @@ different cases, the ones they are comparable on, so compare tools in the
 | no_answer | 12/39 (31%) | 2/39 (5%) | 37/39 (95%)¹ | 35/39 (90%) | 6/39 (15%) |
 | **all** | **234/376 (62.2%)** | **79/376 (21.0%)** | **143/199 (71.9%)** | **146/160 (91.2%)** | **95/170 (55.9%)** |
 
-¹ Python Ciphey never gave up on an input with no answer: all 37 are runs killed at 6 s.
+¹ 33 of Python Ciphey's 37 are runs killed at 6 s; it gave up by itself, within 1.2 s, only on
+the two CJK strings, the emoji and the symbols.
 
 Without the 92 expected failures (no decoder yet, hashes, other languages), master gets
 226 of 284 cases right (79.6%) and 0.12.0 68 (23.9%): encodings 87/92 against 25/92,
@@ -247,7 +248,7 @@ encodings, 14 flags, 6 short and 5 long texts, 10 plaintext inputs) and the 39 w
 |---|---|---|---|
 | master | 61 ms / 5.51 s / 5.66 s | 49 ms / 78 ms (222) | 5.54 s (its 5 s timeout) |
 | 0.12.0 | 0.15 s / 5.11 s / 6.03 s | 75 ms / 0.14 s (77) | 5.21 s |
-| Python Ciphey 5.14.0 | 1.64 s / 6.04 s / 6.05 s | 1.22 s / 2.19 s (106) | 6.04 s (killed: it never gave up) |
+| Python Ciphey 5.14.0 | 1.64 s / 6.04 s / 6.05 s | 1.22 s / 2.19 s (106) | 6.04 s (33 of its 37 killed at 6 s) |
 | CyberChef | 4 ms / 12 ms / 88 ms | 4 ms / 12 ms (111) | 2 ms |
 | CyberChef, intensive | 1.77 s / 4.10 s / 6.21 s | 1.88 s / 3.97 s (89) | 0.13 s |
 
@@ -277,8 +278,9 @@ lists 43 changed verdicts there and `--check` fails, as it should.
   three layers; master also solves 7 of the 20 chains of 4 and 5 layers that Magic's default
   depth can't reach (Python Ciphey 9).
 * Master's weak spot is **inputs with no answer**: it returns junk for 27 of 39 (all six
-  English-like letter strings, the keyboard mashing, the shuffled words, digit strings), where
-  CyberChef gives up on 35 and Python Ciphey runs out of time on 37.
+  English-like letter strings, the four keyboard mashings, the three shuffled sentences, the
+  three digit strings and 11 of the other 23 random strings), where CyberChef gives up on 35
+  and Python Ciphey on 37, 33 of them by running out of time.
 * Chains get harder with depth: master solves 9, 9, 5 and 2 of the ten chains of 2, 3, 4 and
   5 layers (Python Ciphey 5, 7, 5, 4).
 * Hashes (0/16, #1029), other languages (8/36, gibberish-or-not 6) and short texts (9/15) are
@@ -304,7 +306,12 @@ lists 43 changed verdicts there and `--check` fails, as it should.
   answer, 111 first).
 * CyberChef's comparable cases come from Magic's detection, layer by layer. `flag.28` (ROT13
   over Base64) isn't counted for it, although Magic solves it with its ROT13'd-Base64 preset:
-  one operation for two layers.
+  one operation for two layers. Three tagged cases are ones Magic can't answer although it
+  picks the right operation: `enc.unicode_escape.1` (CyberChef keeps the unescaped accented
+  text as Latin-1 bytes, and Magic's pruning drops a result that isn't UTF-8),
+  `enc.unicode_plus.1` (Unescape Unicode Characters keeps the spaces between the codes) and,
+  in intensive mode, `enc.utf7.1` (the same pruning). They count as CyberChef's misses;
+  corpus v2 should leave them out.
 * The corpus has one or two cases per encoding, so a single case moving is a large change in
   a small category. Categories, not single encodings, are the unit to compare.
 * Corpus v1's plaintexts are English apart from the `language` category; most are one

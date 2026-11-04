@@ -76,8 +76,8 @@ with:
 Paste those lines and the `uptime` lines into the PR. To show what the new decoder gains, run
 its own cases of the full corpus too (they are tagged with its issue as expected failures),
 for example `--ids base45`, and drop `--subset quick` for the whole corpus (about 6 minutes
-per binary) when the change touches the search or the checkers. CI runs `--subset smoke`
-(10 cases) on the debug binary.
+per binary) when the change touches the search or the checkers. CI runs `run.py --selftest`
+and then `--subset smoke` (10 cases) on the debug binary.
 
 ## Inputs
 

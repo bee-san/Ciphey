@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Installs what the end-to-end benchmark compares Ciphey with, and what corpus.py needs, into
-# TOOLS (default: .tools/ at the repository root, which git doesn't track if you add it to
-# .git/info/exclude). Every version is pinned here; docs/benchmark-e2e.md says why.
+# TOOLS (default: .tools/ at the repository root, which .gitignore leaves out; the runner wants
+# CyberChef inside the repository). Every version is pinned: the Python ones here, npm's in
+# benches/data/e2e/cyberchef-lock.json. docs/benchmark-e2e.md says why.
 #
 #   benches/e2e/setup.sh [all|ciphey-0.12.0|python-ciphey|node|gen]
 #
