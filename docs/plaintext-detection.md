@@ -445,78 +445,79 @@ code on fixed inputs; compare versions with alternating runs (see `benches/READM
 
 ## Current numbers
 
-From `cargo bench --bench plaintext -- --e2e=3` on a shared 16-thread Linux host. Accuracy
-is deterministic; times depend on the machine.
+From `cargo bench --bench plaintext -- --e2e=3` on a shared 64-core Linux host (load 50 to
+70), with gibberish-or-not 6.0. Accuracy is deterministic; times depend on the machine.
 
 **Checkers** (2,609 positives and 20,785 negatives; train 1,140 / 9,957, heldout 1,469 / 10,828):
 
 | checker | train: precision / recall / F1 | heldout: precision / recall / F1 | false positives (train + heldout) |
 |---|---|---|---|
-| Athena@Low | 92.7% / 96.6% / 0.946 | 93.6% / 95.7% / 0.946 | 87 + 96 |
-| Athena@Medium | 91.2% / 97.3% / 0.941 | 91.1% / 96.8% / 0.939 | 107 + 139 |
-| Athena@High | 83.8% / 97.4% / 0.901 | 84.4% / 96.9% / 0.902 | 214 + 263 |
-| English@Medium | 90.5% / 83.5% / 0.869 | 90.8% / 89.4% / 0.901 | 100 + 133 |
-| LemmeKnow | 99.2% / 11.3% / 0.203 | 94.2% / 6.6% / 0.123 | 1 + 6 |
+| Athena@Low | 97.7% / 96.1% / 0.969 | 98.5% / 96.6% / 0.976 | 26 + 21 |
+| Athena@Medium | 96.7% / 96.8% / 0.968 | 97.5% / 97.5% / 0.975 | 38 + 37 |
+| Athena@High | 94.7% / 97.0% / 0.958 | 95.5% / 97.5% / 0.965 | 62 + 68 |
+| English@Medium | 96.8% / 82.9% / 0.893 | 97.7% / 89.8% / 0.936 | 31 + 31 |
+| gibberish-or-not@Medium (alone) | 95.6% / 84.8% / 0.899 | 96.3% / 91.1% / 0.936 | 45 + 51 |
+| LemmeKnow | 99.2% / 11.3% / 0.203 | 94.2% / 6.7% / 0.125 | 1 + 6 |
 | JSON | 100% / 1.9% | 100% / 0.5% | 0 |
 | Password | 85.7% / 3.2% | 100% / 1.7% | 6 + 0 |
 | Code | 100% / 2.2% | 100% / 1.3% | 0 |
 
 The format checkers' recall is low by design: they only accept their own formats. Athena's
-F1 per family at Medium: english 0.942, flag 0.993, json 1.000, code 0.958, net 0.942,
+F1 per family at Medium: english 0.979, flag 1.000, json 1.000, code 0.947, net 0.932,
 lemmeknow 0.910, password 0.884. Most remaining false positives are partly decrypted
-Vigenère (a quarter of them are accepted at Medium; the Vigenère decoder itself filters them), and a
-few reversed texts (0.5%) and wrong railfence keys (0.3%). Other languages are accepted
-17% of the time at Medium.
+Vigenère (4% of them are accepted at Medium; the Vigenère decoder itself filters them),
+wrong railfence keys (0.5%) and reversed common passwords. Other languages are accepted 31%
+of the time at Medium.
 
-**Time per check** over all samples (median / p99 / mean): Athena@Medium 4.0 µs / 18 µs /
-4.5 µs, the English checker 0.8 µs / 13 µs / 1.5 µs, LemmeKnow 2.2 µs / 5.7 µs / 2.2 µs,
-JSON 18 ns, the password list 22 ns, code 270 ns. In instructions per check: Athena@Medium
-42,600, English@Medium 14,800, LemmeKnow 25,800, code 3,200.
+**Time per check** over all samples (median / p99 / mean, three runs): Athena@Medium
+4.6–5.2 µs / 24–29 µs / 5.3–6.0 µs, the English checker 0.84–0.88 µs / 19–21 µs /
+1.9–2.1 µs, gibberish-or-not alone 0.8 µs / 18 µs / 1.9 µs, LemmeKnow 2.4 µs / 7.0 µs /
+2.7 µs, JSON 21 ns, the password list 26 ns, code 295 ns.
 
 **Decoders** (`crack()` with Athena), held-out split, right / wrong plaintext / nothing:
-Caesar 91% / 0.4% / 8%, ROT47 93% / 0.2% / 7%, Atbash 94% / 0% / 6%, railfence 85% / 1.3%
-/ 13%, Vigenère 29% / 0% / 71% (its key search, not detection, is the limit).
+Caesar 92% / 0.2% / 8%, ROT47 95% / 0% / 5%, Atbash 95% / 0% / 5%, railfence 86% / 0.9%
+/ 13%, Vigenère 29% / 0.8% / 70% (its key search, not detection, is the limit).
 
-**End to end** (3 s timeout):
+**End to end** (3 s timeout, six runs: the range):
 
 | set | cases | correct | wrong (false positive) | nothing found |
 |---|---|---|---|---|
 | regression | 18 | 18 | 0 | 0 |
-| search.toml | 39 | 39 | 0 | 0 |
-| issue1031 | 26 | 24 | 1 | 1 |
-| flags | 72 | 68 | 0 | 4 |
-| ctf | 17 | 16 | 0 | 1 |
+| search.toml | 113 | 112–113 | 0–1 | 0 |
+| issue1031 | 26 | 26 | 0 | 0 |
+| flags | 72 | 68 | 3 | 1 |
+| ctf | 17 | 16 | 1 | 0 |
 | plaintext_input | 10 | 10 | 0 | 0 |
-| no_answer | 40 | 35 | 5 | 0 |
-| all | 222 | 210 | 6 | 6 |
+| no_answer | 40 | 20–24 | 16–20 | 0 |
+| all | 296 | 271–275 | 20–24 | 1 |
 
-The six wrong: the #1031 Vigenère near miss and five no-answer inputs (see below). The six
-missed: `SEKAI{...}` under ROT13, Caesar, Atbash and railfence (need a crib), German, and
-picoCTF's `l3arn_th3_r0p35` (leetspeak without a flag around it).
+The wrong answers: wrong decoders' output on 16 to 20 of the inputs with no plaintext
+(which ones depends on how far a search gets in 3 s), three `SEKAI{...}` flags under shift
+ciphers (they need a crib), and picoCTF's `l3arn_th3_r0p35` (leetspeak without a flag around
+it). The one missed: `SEKAI{...}` under Caesar.
 
 ## Known weaknesses
 
 - **Other languages** are mostly missed: French, German and Spanish sentences pass only
-  when gibberish-or-not takes them (17% of the informational set at Medium), and German
-  base64 (`Wir treffen uns morgen am Bahnhof`) still finds nothing.
+  when gibberish-or-not's English pack takes them (31% of the informational set at Medium),
+  until their own packs are measured and compiled in ([Languages](#languages)).
 - **Short plaintext** is ambiguous: four-letter words aren't accepted from Caesar, ROT47,
   railfence or Vigenère, single words of three letters (`yes`) never, and a Caesar shift of
   a five-letter word can be another word (`Lorry` and `Fills`).
-- **Space-less junk of 12 to 20 letters** from Vigenère and railfence keys on short inputs
-  still sometimes reads as words (`seerienbashaneyr`): 5 of the 40 no-answer inputs end on
-  junk. The words-in-text rules can't separate it from real space-less text of that
-  length.
+- **Inputs with no plaintext** still often end on a wrong decoder's output that reads as
+  words (`dolenisatirsifmatini`, `sway awed`), mostly from the newer decoders (Keyboard
+  shift, Affine, Hill, T9) chained after ROT47 or railfence.
 - **Partly decrypted Vigenère** (a key with one wrong letter) is accepted by the English
-  checker a quarter of the time; only the Vigenère decoder's own word-ratio rule keeps it
-  out of results.
+  checker 4% of the time at Medium; only the Vigenère decoder's own word-ratio rule keeps
+  it out of results.
 - **Flags without a flag word** whose contents aren't words (`SECCON{7e1b9e3a}`) and any
   such flag under Caesar, ROT13 or Atbash need a crib.
 - **Formats**: IPv6, Bitcoin, JWT, dates of birth and social security numbers are among
   the patterns LemmeKnow 0.8 drops because the regex crate can't compile them; and the
   `lemmeknow_*` config keys have no effect.
-- **Words**: gibberish-or-not's dictionary only answers for words of 4 to 9 letters, so
-  long rare words (`cryptography`) count as unknown unless they score well, and names
-  count as unknown.
+- **Words**: rare words and names count as unknown unless gibberish-or-not's word list has
+  them (`cryptography`) or, for 10+ letters, they score well (`decompresses`): `Ciphey
+  rocks` is two words that aren't both words.
 
 ## Extending
 
