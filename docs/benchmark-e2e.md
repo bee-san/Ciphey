@@ -27,6 +27,7 @@ python3 benches/e2e/run.py v0.12.0=.tools/ciphey-0.12.0/bin/ciphey
 python3 benches/e2e/run.py python-ciphey:.tools/pyciphey/bin/python
 python3 benches/e2e/run.py cyberchef:.tools/node cyberchef-intensive:.tools/node
 python3 benches/e2e/run.py --summarize target/e2e/*/results.tsv          # one table from saved runs
+python3 benches/e2e/run.py --selftest           # the output parsers and verdict rules, no binary
 ```
 
 A tool is `[name=][adapter:]path`, the adapter one of `ciphey` (the default: any ciphey
@@ -55,11 +56,15 @@ cases and B first on odd ones, so the host's load affects both alike. The A/B re
 every case whose verdict differs and the geometric mean of the per-case time ratios B/A, with
 a 95% confidence interval from Student's t on the log ratios.
 
-**Verdicts.** A case's answer is the text after `The plaintext is:`. It is **correct** if it
-equals the expected plaintext after the case's match rule, **wrong** if it doesn't (a false
-positive), and **nothing** if the tool found no plaintext or ran out of time. For an input
-with no plaintext (`no_answer`) giving up is correct and any answer is wrong, including
-"Your input text is the plaintext". The match rules, in the `match` column, are:
+**Verdicts.** A case's answer is the text after `The plaintext is:`, up to the last "the
+decoder(s) used" line. It is **correct** if it equals the expected plaintext after the case's
+match rule, **wrong** if it doesn't (a false positive), and **nothing** if the tool found no
+plaintext ("ciphey has failed to decode the text."), ran out of time or crashed. Output with
+neither an answer nor that message counts as an error, so a broken binary isn't credited with
+giving up. For an input with no plaintext (`no_answer`) giving up is correct and any answer
+is wrong, including "Your input text is the plaintext". `run.py --selftest` checks these rules
+and the parsers on canned output of master, 0.12.0, Python Ciphey and CyberChef. The match
+rules, in the `match` column, are:
 
 | Rule | Compares | Used for |
 |---|---|---|
@@ -83,10 +88,11 @@ is **comparable** on (the `tools` column): the cases whose every layer it has a 
   `cipheycore` has no wheels for later versions. [`python_ciphey.py`](../benches/e2e/python_ciphey.py)
   does what `ciphey -q -t TEXT` does (verbosity below zero turns its human checker off) and
   also prints the decoder path. Its decoders are the 37 modules it registers: no A1Z26,
-  Base58 Flickr, URL-safe Base64, Base65536, Z85, DNA, DTMF, railfence or substitution, and
-  only an English checker, so it isn't compared on other languages. Its hash cracker looks
-  hashes up on web sites, so hashes aren't compared either. Its ~0.85 s start-up is in its
-  times.
+  Base58 Flickr, URL-safe Base64, Base65536, Z85, DNA, DTMF, railfence or substitution (the
+  files of the first seven exist but aren't imported), an ASCII shift within 0 to 127 only,
+  and only an English checker, so it isn't compared on other languages. Its hash cracker
+  (`hash.py`, which looked hashes up on web sites) isn't registered either, so hashes aren't
+  compared. Its ~0.85 s start-up is in its times.
 * **CyberChef 11.5.0** (npm `cyberchef`, Node.js API), the Magic operation with its default
   settings: depth 3, no intensive mode, no extensive language support, no crib. Magic
   doesn't give one answer but a ranked list; its answer here is its first suggestion, baked
@@ -94,33 +100,38 @@ is **comparable** on (the `tools` column): the cases whose every layer it has a 
   above the input itself, it counts as "nothing", which is correct for plaintext input.
   `cyberchef-intensive` is the same with intensive mode on, which also brute-forces
   single-byte XOR, bit rotations and 152 text encodings on the first 100 bytes. Magic only
-  tries operations that have a detection pattern (46 of CyberChef's 505), so it has no
-  Caesar, ROT13, Vigenère, Atbash or reversed text, and in intensive mode only those
-  brute-forces on top. Both run in one warm Node process: CyberChef's 1.6 s start-up isn't
-  in its times. The summary also says how often the answer was among Magic's first five
-  suggestions.
+  tries an operation when one of its detection patterns matches the data (46 of CyberChef's
+  505 operations have one), so it has no Caesar, ROT13, Vigenère, Atbash or reversed text.
+  A case is comparable on CyberChef when, at every layer, the operation that undoes it is
+  among those Magic's own detection (`findMatchingInputOps`) picks for the data at that layer,
+  and the case has at most 3 layers, the most a recipe gets at the default depth. In
+  intensive mode a layer can also be one of the brute-forces. So zero-padded octal (`040`),
+  inputs shorter than a pattern's minimum length and the 20 chains of 4 or 5 layers don't
+  count against it. Both modes run in one warm Node process: CyberChef's 1.6 s start-up
+  isn't in its times, and a worker that dies only costs its case. The summary also says how
+  often the answer was among Magic's first five suggestions.
 
 ## Corpus v1
 
 376 cases, generated by `corpus.py` with seed 20261104 and frozen: re-running the generator
-with the pinned packages reproduces the file byte for byte (`corpus.py --check`). A change to
-the cases makes a corpus v2 next to it, so that results stay comparable; the runner records
-the corpus's sha256 (v1: `412f2c61be13…`).
+with the tools `setup.sh` installs reproduces the file byte for byte (`corpus.py --check`).
+A change to the cases makes a corpus v2 next to it, so that results stay comparable; the
+runner records the corpus's sha256 (v1: `5ea4362e4939…`).
 
 | Category | Cases | What | Python Ciphey | CyberChef (intensive) |
 |---|---:|---|---:|---:|
-| `encoding` | 119 | one layer (a few with Base64 or hex outside) of each of 87 encodings Ciphey decodes, some in two formats, and of 27 it doesn't decode yet | 31 | 41 (47) |
-| `classical` | 59 | 42 ciphers and keys Ciphey cracks (Caesar, ROT13, ROT47, ROT18, Atbash, affine, Vigenère, Beaufort, autokey, railfence, route, substitution, Playfair, Hill, single-byte and repeating-key XOR, ASCII shift, reversed text) and 12 it doesn't have yet | 27 | 0 (3) |
+| `encoding` | 119 | one layer (a few with Base64 or hex outside) of each of 87 encodings Ciphey decodes, some in two formats, and of 27 it doesn't decode yet | 31 | 40 (46) |
+| `classical` | 59 | 42 ciphers and keys Ciphey cracks (Caesar, ROT13, ROT47, ROT18, Atbash, affine, Vigenère, Beaufort, autokey, railfence, route, substitution, Playfair, Hill, single-byte and repeating-key XOR, ASCII shift, reversed text) and 12 it doesn't have yet | 26 | 0 (3) |
 | `hash` | 16 | MD5, SHA-1, SHA-256 and NTLM of four common passwords | - | - |
-| `chain` | 40 | 2 to 5 layers, ten of each: half only base encodings, half with a classical cipher inside | 40 | 20 (20) |
+| `chain` | 40 | 2 to 5 layers, ten of each: half only base encodings, half with a classical cipher inside | 40 | 9 (9) |
 | `flag` | 30 | CTF flags in 12 formats under 30 encodings and chains, 7 of them with random hex inside | 28 | 15 (16) |
-| `short` | 15 | 2 to 11 characters (`go`, `yes`, `hi mom`) | 15 | 9 (9) |
+| `short` | 15 | 2 to 11 characters (`go`, `yes`, `hi mom`) | 15 | 6 (6) |
 | `long` | 12 | 713 to 2,445 characters of public-domain prose | 10 | 5 (5) |
 | `language` | 36 | German, French, Spanish, Italian, Portuguese, Dutch, Polish, Turkish, Russian, Chinese, Japanese and Korean, as Base64, hex and plaintext | - | 36 (36) |
 | `plaintext` | 10 | input that already is the plaintext: sentences, a URL, an email address, an IP address, JSON, a shell command, a flag, code | 10 | 10 (10) |
 | `no_answer` | 39 | random letters, digits, hex and Base64 of random bytes, keyboard mashing, English letter-bigram gibberish, sentences with each word's letters shuffled, CJK, emoji, symbols | 39 | 39 (39) |
 
-116 cases are comparable on all four tools: 77 with an answer and the 39 without one.
+101 cases are comparable on all four tools: 62 with an answer and the 39 without one.
 
 **Expected failures.** The `xfail` column marks cases Ciphey can't decode until something
 lands, so that the decoder PRs' gains show up: 39 encodings and ciphers it has no decoder for
@@ -165,27 +176,27 @@ books (its `en_test` list):
 ## Baseline, 2026-11-04
 
 On the Ciphey program's shared build host: an AMD EPYC 9R14 KVM guest with 64 vCPUs, Amazon
-Linux 2023, kernel 6.12, with a load average of 44 to 62 from other jobs during every run. Corpus v1,
-timeout 5 s, `RAYON_NUM_THREADS=4`.
+Linux 2023, kernel 6.12, with a load average of 44 to 54 from other jobs during every run.
+Corpus v1, timeout 5 s, `RAYON_NUM_THREADS=4`.
 
 | Tool | Version | Runs (UTC) |
 |---|---|---|
-| ciphey master | 9350174d, `cargo build --release`, rustc 1.99.1 | with 0.12.0, interleaved: 14:37 to 14:52 |
+| ciphey master | 9350174d, `cargo build --release --locked`, rustc 1.99.1 | with 0.12.0, interleaved: 18:07 to 18:22 |
 | ciphey 0.12.0 | crates.io, `cargo install --locked` | see master |
-| Python Ciphey | 5.14.0 on CPython 3.9.25 | 14:52 to 15:02 |
-| CyberChef Magic | npm `cyberchef` 11.5.0 on Node.js 24.21.0 | 15:24 to 15:25, intensive 15:25 to 15:32 |
+| Python Ciphey | 5.14.0 on CPython 3.9.25 | 18:22 to 18:32 |
+| CyberChef Magic | npm `cyberchef` 11.5.0 on Node.js 24.21.0 | 18:32, intensive 18:32 to 18:38 |
 
-The per-case results are in [`benches/data/e2e/baseline-2026-11-04.tsv`](../benches/data/e2e/baseline-2026-11-04.tsv)
-(answers left out); `python3 benches/e2e/run.py --summarize benches/data/e2e/baseline-2026-11-04.tsv`
-prints every table below. The commands were these, with master's release binary copied to
-`.tools/ciphey-master-9350174d/` and the other tools installed by hand with the versions
-`setup.sh` pins (it puts them in `.tools/pyciphey` and `.tools/node`):
+The per-case results are in [`benches/data/e2e/baseline-2026-11-04.tsv`](../benches/data/e2e/baseline-2026-11-04.tsv),
+without the answers and with decoder paths cut to 100 characters;
+`python3 benches/e2e/run.py --summarize benches/data/e2e/baseline-2026-11-04.tsv` prints
+every table below. The commands, with master's release binary copied to
+`.tools/ciphey-master-9350174d/` and the other tools installed by `setup.sh`:
 
 ```sh
 python3 benches/e2e/run.py master=.tools/ciphey-master-9350174d/ciphey v0.12.0=.tools/ciphey-0.12.0/bin/ciphey
-python3 benches/e2e/run.py python-ciphey:.venv-pyciphey/bin/python
-python3 benches/e2e/run.py cyberchef:.tools/cyberchef
-python3 benches/e2e/run.py cyberchef-intensive:.tools/cyberchef
+python3 benches/e2e/run.py python-ciphey:.tools/pyciphey/bin/python
+python3 benches/e2e/run.py cyberchef:.tools/node
+python3 benches/e2e/run.py cyberchef-intensive:.tools/node
 python3 benches/e2e/run.py master=.tools/ciphey-master-9350174d/ciphey master=.tools/ciphey-master-9350174d/ciphey
 ```
 
@@ -197,17 +208,19 @@ different cases, the ones they are comparable on, so compare tools in the
 
 | Category | master | 0.12.0 | Python Ciphey 5.14.0 | CyberChef | CyberChef, intensive |
 |---|---:|---:|---:|---:|---:|
-| encoding | 87/119 (73%) | 25/119 (21%) | 27/31 (87%) | 36/41 (88%) | 35/47 (74%) |
-| classical | 44/59 (75%) | 11/59 (19%) | 18/27 (67%) | - | 3/3 |
+| encoding | 87/119 (73%) | 25/119 (21%) | 27/31 (87%) | 37/40 (92%) | 36/46 (78%) |
+| classical | 44/59 (75%) | 11/59 (19%) | 18/26 (69%) | - | 3/3 |
 | hash | 0/16 | 0/16 | - | - | - |
-| chain | 25/40 (62%) | 1/40 (2%) | 21/40 (52%) | 9/20 (45%) | 8/20 (40%) |
+| chain | 25/40 (62%) | 1/40 (2%) | 21/40 (52%) | 9/9 | 8/9 |
 | flag | 28/30 (93%) | 7/30 (23%) | 17/28 (61%) | 11/15 (73%) | 0/16 (0%) |
-| short | 9/15 (60%) | 9/15 (60%) | 7/15 (47%) | 4/9 (44%) | 2/9 (22%) |
-| long | 11/12 (92%) | 4/12 (33%) | 7/10 (70%) | 4/5 (80%) | 3/5 (60%) |
+| short | 9/15 (60%) | 9/15 (60%) | 7/15 (47%) | 5/6 | 2/6 |
+| long | 11/12 (92%) | 4/12 (33%) | 7/10 (70%) | 4/5 | 3/5 |
 | language | 8/36 (22%) | 11/36 (31%) | - | 36/36 (100%) | 34/36 (94%) |
 | plaintext | 10/10 (100%) | 9/10 (90%) | 9/10 (90%) | 9/10 (90%) | 3/10 (30%) |
-| no_answer | 12/39 (31%) | 2/39 (5%) | 37/39 (95%) | 35/39 (90%) | 6/39 (15%) |
-| **all** | **234/376 (62.2%)** | **79/376 (21.0%)** | **143/200 (71.5%)** | **144/175 (82.3%)** | **94/185 (50.8%)** |
+| no_answer | 12/39 (31%) | 2/39 (5%) | 37/39 (95%)¹ | 35/39 (90%) | 6/39 (15%) |
+| **all** | **234/376 (62.2%)** | **79/376 (21.0%)** | **143/199 (71.9%)** | **146/160 (91.2%)** | **95/170 (55.9%)** |
+
+¹ Python Ciphey never gave up on an input with no answer: all 37 are runs killed at 6 s.
 
 Without the 92 expected failures (no decoder yet, hashes, other languages), master gets
 226 of 284 cases right (79.6%) and 0.12.0 68 (23.9%): encodings 87/92 against 25/92,
@@ -217,51 +230,52 @@ and Italian as hex), and 11 of 0.12.0's.
 
 #### Head to head
 
-The 116 cases every tool is comparable on: 77 with an answer (19 encodings, 20 chains of
-base encodings, 14 flags, 9 short and 5 long texts, 10 plaintext inputs) and the 39 without.
+The 101 cases every tool is comparable on: 62 with an answer (18 encodings, 9 chains of base
+encodings, 14 flags, 6 short and 5 long texts, 10 plaintext inputs) and the 39 without.
 
-| Tool | Correct of 77 | Wrong | Nothing | False positives of 39 | Median time | p90 time |
+| Tool | Correct of 62 | Wrong | Nothing | False positives of 39 | Median time | p90 time |
 |---|---:|---:|---:|---:|---:|---:|
-| master | 62 (80.5%) | 8 | 7 | 27 (69%) | 66 ms | 5.46 s |
-| 0.12.0 | 33 (42.9%) | 24 | 20 | 37 (95%) | 0.18 s | 5.12 s |
-| Python Ciphey 5.14.0 | 60 (77.9%) | 13 | 4 | 2 (5%) | 1.36 s | 6.04 s |
-| CyberChef | 54 (70.1%) | 11 | 12 | 4 (10%) | 5 ms | 33 ms |
-| CyberChef, intensive | 31 (40.3%) | 36 | 10 | 33 (85%) | 1.43 s | 5.30 s |
+| master | 57 (91.9%) | 3 | 2 | 27 (69%) | 61 ms | 5.43 s |
+| 0.12.0 | 31 (50.0%) | 20 | 11 | 37 (95%) | 0.14 s | 5.09 s |
+| Python Ciphey 5.14.0 | 52 (83.9%) | 8 | 2 | 2 (5%)¹ | 1.30 s | 6.04 s |
+| CyberChef | 55 (88.7%) | 6 | 1 | 4 (10%) | 4 ms | 19 ms |
+| CyberChef, intensive | 31 (50.0%) | 24 | 7 | 33 (85%) | 1.28 s | 4.16 s |
 
 ### Time
 
 | Tool | All cases: median / p90 / p99 | Correct answers: median / p90 | No answer: time to give up, median |
 |---|---|---|---|
-| master | 62 ms / 5.48 s / 5.65 s | 50 ms / 73 ms (222) | 5.47 s (its 5 s timeout) |
-| 0.12.0 | 0.15 s / 5.10 s / 6.04 s | 77 ms / 0.14 s (77) | 5.19 s |
-| Python Ciphey 5.14.0 | 1.61 s / 6.05 s / 6.06 s | 1.24 s / 2.25 s (106) | 6.04 s (killed: it never gave up) |
-| CyberChef | 5 ms / 21 ms / 6.22 s | 5 ms / 12 ms (109) | 2 ms |
-| CyberChef, intensive | 1.81 s / 4.67 s / 6.22 s | 1.92 s / 4.09 s (88) | 0.15 s |
+| master | 61 ms / 5.51 s / 5.66 s | 49 ms / 78 ms (222) | 5.54 s (its 5 s timeout) |
+| 0.12.0 | 0.15 s / 5.11 s / 6.03 s | 75 ms / 0.14 s (77) | 5.21 s |
+| Python Ciphey 5.14.0 | 1.64 s / 6.04 s / 6.05 s | 1.22 s / 2.19 s (106) | 6.04 s (killed: it never gave up) |
+| CyberChef | 4 ms / 12 ms / 88 ms | 4 ms / 12 ms (111) | 2 ms |
+| CyberChef, intensive | 1.77 s / 4.10 s / 6.21 s | 1.88 s / 3.97 s (89) | 0.13 s |
 
 Ciphey's and Python Ciphey's times are whole processes, start-up included (under 50 ms for
 Ciphey, about 0.85 s for Python Ciphey); CyberChef's are calls into a warm process.
 
 ### Determinism
 
-Master against itself over the whole corpus, interleaved (`run.py master=… master=…`, 15:10
-to 15:23 UTC), gave 234/376 correct in both runs, as in the baseline run, with one verdict
-different: `lang.ru.base64`, a false positive found after 5.30 s in one run and nothing at the
-5 s timeout in the other. The time ratio of the two runs was 0.997 (95% confidence interval
-0.986 to 1.007). On the quick subset (76 cases), master against itself took 54 s, changed no
-verdict and had a time ratio of 0.991 (0.956 to 1.027); master against 0.12.0 lists 43 changed
-verdicts there and `--check` fails, as it should. CyberChef ran twice too (the first runs
-counted the restart of the Node process after a timeout into the next timed-out case): the
-same verdicts by default, and in intensive mode two cases that finish close to the timeout
-changed places (`enc.bech32.1`, `flag.19`), 94 correct both times.
+Master against itself over the whole corpus, interleaved (`run.py master=… master=…`, 18:38
+to 18:52 UTC), gave the same 234/376 in both runs and in the baseline run, with no verdict
+different in any of the three; the time ratio of the pair was 0.999 (95% confidence interval
+0.984 to 1.015). Earlier runs of the same binaries on the same inputs (before the CyberChef
+tags were redone) differed in one or two expected failures each, found as junk answers close
+to the 5 s timeout (`lang.ru.base64`, `hash.sha1.3`), and 0.12.0 differed in four of its own
+near the timeout (net 0). On the quick subset (76 cases), master against itself took 54 s,
+changed no verdict and had a time ratio of 0.991 (0.956 to 1.027); master against 0.12.0
+lists 43 changed verdicts there and `--check` fails, as it should.
 
 ### What stands out
 
 * Where it has decoders, master is far ahead of 0.12.0 (79.6% against 23.9%), mostly because
   0.12.0 accepts junk: 230 of its 297 misses are wrong answers, typically from long chains of
   Vigenère, railfence and ROT47.
-* On the cases all tools can do, master answers 62 of 77 right, a little ahead of Python
-  Ciphey (60) and CyberChef (54), and about 20 times faster than Python Ciphey (median 66 ms
-  against 1.36 s).
+* On the cases all tools can do, master answers 57 of 62 right, ahead of CyberChef (55) and
+  Python Ciphey (52), and about 20 times faster than Python Ciphey (median 61 ms against
+  1.30 s). CyberChef answers in a few milliseconds but only within its detection patterns and
+  three layers; master also solves 7 of the 20 chains of 4 and 5 layers that Magic's default
+  depth can't reach (Python Ciphey 9).
 * Master's weak spot is **inputs with no answer**: it returns junk for 27 of 39 (all six
   English-like letter strings, the keyboard mashing, the shuffled words, digit strings), where
   CyberChef gives up on 35 and Python Ciphey runs out of time on 37.
@@ -269,10 +283,12 @@ changed places (`enc.bech32.1`, `flag.19`), 94 correct both times.
   5 layers (Python Ciphey 5, 7, 5, 4).
 * Hashes (0/16, #1029), other languages (8/36, gibberish-or-not 6) and short texts (9/15) are
   the other gaps. Of the 92 single encodings Ciphey has decoders for, master missed 5: Base58
-  Monero, binary written with X and Y, T9 with a word outside its dictionary, and the
-  zero-width and acrostic texts, where it takes the cover text for the plaintext. Of the 47
-  classical ciphers it missed a substitution (one letter wrong), a Playfair and a Hill
-  cipher of 18 letters.
+  Monero (its decoder uses bs58's `MONERO` alphabet, which is Bitcoin's, and reads the text as
+  one number instead of Monero's 8-byte blocks), binary written with X and Y separated by
+  spaces (`simplesubstitution` sees three symbols), T9 with a word outside its dictionary, and
+  the zero-width and acrostic texts, where it takes the cover text for the plaintext. Of the 47
+  classical ciphers it missed a substitution (one letter wrong), a Playfair and a Hill cipher
+  of 18 letters.
 * CyberChef's intensive mode makes Magic worse at first suggestions: its text-encoding
   brute force ranks CJK readings of Base64 above the right answer.
 
@@ -284,8 +300,11 @@ changed places (`enc.bech32.1`, `flag.19`), 94 correct both times.
   decoder" was decided from their source (registered modules, Magic's patterns), not from
   their results.
 * CyberChef Magic suggests, it doesn't answer: counting only its first suggestion is strict.
-  How often the answer was among its first five is in the summary (116 of 136 cases with
-  an answer, 109 first).
+  How often the answer was among its first five is in the summary (117 of 121 cases with an
+  answer, 111 first).
+* CyberChef's comparable cases come from Magic's detection, layer by layer. `flag.28` (ROT13
+  over Base64) isn't counted for it, although Magic solves it with its ROT13'd-Base64 preset:
+  one operation for two layers.
 * The corpus has one or two cases per encoding, so a single case moving is a large change in
   a small category. Categories, not single encodings, are the unit to compare.
 * Corpus v1's plaintexts are English apart from the `language` category; most are one
