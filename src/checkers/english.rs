@@ -2,7 +2,7 @@ use crate::checkers::checker_result::CheckResult;
 use crate::checkers::lemmeknow_checker::{has_control_characters, is_ctf_flag_shaped};
 use crate::decoders::nato_phonetic_decoder::decode_nato;
 use crate::storage::ngrams::{is_short_word, quadgram_score, quadgram_score_and_letters};
-use gibberish_or_not::{is_gibberish, Sensitivity};
+use gibberish_or_not::{is_gibberish, is_word, Sensitivity};
 use lemmeknow::Identifier;
 
 use crate::checkers::checker_type::{Check, Checker};
@@ -698,11 +698,8 @@ fn has_varied_letters(word: &str) -> bool {
 const LONG_WORD_SPLIT_MIN_SCORE: f64 = -5.6;
 
 /// Whether `word` (lower case) is in gibberish-or-not's dictionary.
-///
-/// gibberish-or-not only looks a text up in its dictionary when it is 4 to 9 bytes long:
-/// it rejects anything shorter outright and scores anything longer.
 fn is_dictionary_word(word: &str) -> bool {
-    (4..10).contains(&word.len()) && !is_gibberish(word, Sensitivity::Medium)
+    (4..10).contains(&word.len()) && is_word(word)
 }
 
 /// Strings look funny, they might have commas, be uppercase etc
