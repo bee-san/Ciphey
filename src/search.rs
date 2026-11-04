@@ -26,10 +26,13 @@
 //!
 //! A search never asks a human, uses no cache and prints nothing.
 //!
-//! While a search runs, the library's checkers read the config made from its options.
-//! Run one search at a time, or several with the same options. Interleaving the steps of
-//! several searches on one thread is fine, because each step puts its own options back in
-//! place. [`perform_cracking`](crate::perform_cracking) goes back to the global config.
+//! While a search runs, the library's checkers read the config made from its options. It
+//! stays in place after the search ends, until another search starts or
+//! [`perform_cracking`](crate::perform_cracking) runs, which goes back to the global config;
+//! the single decoders ([`decoders`](crate::decoders)) and [`config::get_config`] see it
+//! too. Run one search at a time, or several with the same options. Interleaving the
+//! steps of several searches on one thread is fine, because each step puts its own options
+//! back in place. [`detect_plaintext`](crate::detect_plaintext) only reads its own options.
 
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
