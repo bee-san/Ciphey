@@ -3435,7 +3435,7 @@ dependencies = [
 [[package]]
 name = "pywhat"
 version = "6.0.0-alpha.1"
-source = "git+https://github.com/bee-san/pyWhat?branch=pywhat-rs-fp#bf25f119df7808a1366848f3fba23bc4ae3ff4a1"
+source = "git+https://github.com/bee-san/pyWhat?branch=main#43a5f1a05ce505ec3ec01e50367256c66ef24ad4"
 dependencies = [
  "fancy-regex",
  "rayon",
