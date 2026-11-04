@@ -434,11 +434,11 @@ Caesar 91% / 0.4% / 8%, ROT47 93% / 0.2% / 7%, Atbash 94% / 0% / 6%, railfence 8
 | all | 296 | 269–272 | 22–25 | 1 | 1–2 |
 
 The wrong answers: wrong decoders' output on the inputs with no plaintext (which ones
-depends on how far a search gets in 3 s), the #1031 Vigenère near miss, three `SEKAI{...}`
-flags under shift ciphers (they need a crib), and picoCTF's `l3arn_th3_r0p35` (leetspeak
-without a flag around it). The no-answer input `+1 555 0100 2234` is a phone number to
-pyWhat, so the search returns it unchanged. The missed: German base64, and `SEKAI{...}`
-under Caesar.
+depends on how far a search gets in 3 s), German base64 (`Wir treffen uns morgen am
+Bahnhof` isn't found, and a wrong decoding is), `SEKAI{...}` under ROT13, Atbash and
+railfence (they need a crib), and picoCTF's `l3arn_th3_r0p35` (leetspeak without a flag
+around it). The no-answer input `+1 555 0100 2234` is a phone number to pyWhat, so the
+search returns it unchanged. The missed: `SEKAI{...}` under Caesar (and sometimes ROT13).
 
 ## Known weaknesses
 
