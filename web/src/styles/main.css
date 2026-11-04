@@ -1,0 +1,6 @@
+/* One stylesheet for the three pages (cached once, ~6 KB compressed). */
+@import "./base.css";
+@import "./components.css";
+@import "./decode.css";
+@import "./identify.css";
+@import "./language.css";

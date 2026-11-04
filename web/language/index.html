@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!--shell:csp-->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<title>Is it language? gibberish-or-not in your browser</title>
+<meta name="description" content="Type some text and gibberish-or-not says whether it's natural language or gibberish, the check Ciphey uses to know it has found the plaintext. Runs entirely in your browser.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="/theme.js"></script>
+</head>
+<body>
+<!--shell:header-->
+<main id="main" class="page page--language" tabindex="-1">
+  <div class="page-intro">
+    <h1>Is it language?</h1>
+    <p class="lede"><a href="https://github.com/bee-san/gibberish-or-not">gibberish-or-not</a> tells natural language apart from gibberish. It's how Ciphey knows a decoded text reads as words. Type, and its verdict follows.</p>
+  </div>
+
+  <div class="workbench">
+    <section class="panel panel--input" aria-labelledby="text-heading">
+      <h2 id="text-heading" class="visually-hidden">Text</h2>
+      <div class="field">
+        <div class="field__label-row">
+          <label for="text">Text</label>
+          <span class="field__meta" id="text-count">0 characters</span>
+        </div>
+        <textarea id="text" rows="6" spellcheck="false" autocomplete="off" placeholder="The quick brown fox jumps over the lazy dog" aria-describedby="text-hint"></textarea>
+        <p class="field__hint" id="text-hint">The verdict updates as you type, up to 10,000 characters.</p>
+      </div>
+      <fieldset class="field">
+        <legend>Sensitivity</legend>
+        <div class="segmented" id="sensitivity">
+          <input type="radio" name="sensitivity" id="sens-low" value="low"><label for="sens-low">Low</label>
+          <input type="radio" name="sensitivity" id="sens-medium" value="medium" checked><label for="sens-medium">Medium</label>
+          <input type="radio" name="sensitivity" id="sens-high" value="high"><label for="sens-high">High</label>
+        </div>
+        <p class="field__hint">Low is the strictest: it needs the highest score to call text language. Ciphey uses Medium.</p>
+      </fieldset>
+      <fieldset class="field">
+        <legend>Try an example</legend>
+        <div class="chips" id="examples"></div>
+      </fieldset>
+      <p class="engine-status" id="engine-status"><span class="spinner" aria-hidden="true"></span>Loading gibberish-or-not…</p>
+    </section>
+
+    <section class="panel panel--output" aria-labelledby="verdict-heading">
+      <div class="panel__head">
+        <h2 id="verdict-heading">Verdict</h2>
+        <span class="field__meta" id="verdict-meta"></span>
+      </div>
+      <div class="verdict verdict--empty" id="verdict">
+        <div class="verdict__mark" aria-hidden="true"></div>
+        <div>
+          <p class="verdict__title" id="verdict-title">Type some text</p>
+          <p class="verdict__detail" id="verdict-detail">The verdict, the language and the score show up here.</p>
+        </div>
+      </div>
+      <div class="score" id="score">
+        <div class="score__head">
+          <span id="score-label">Score</span>
+          <strong class="score__value" id="score-value">–</strong>
+        </div>
+        <div class="score__track" aria-hidden="true">
+          <div class="score__fill" id="score-fill"></div>
+          <span class="score__tick score__tick--high"><span>High</span></span>
+          <span class="score__tick score__tick--medium"><span>Medium</span></span>
+          <span class="score__tick score__tick--low"><span>Low</span></span>
+        </div>
+        <p class="field__hint">The calibrated score is from 0 to 1. Text at or above a sensitivity's mark counts as language at that sensitivity.</p>
+      </div>
+      <p class="notice" id="password-note" hidden>This is also one of the common passwords gibberish-or-not knows, which Ciphey's password checker accepts.</p>
+      <p class="field__hint" id="languages-note"></p>
+    </section>
+  </div>
+
+  <p class="visually-hidden" role="status" id="announcer"></p>
+</main>
+<!--shell:footer-->
+<script type="module" src="/src/language/main.ts"></script>
+</body>
+</html>

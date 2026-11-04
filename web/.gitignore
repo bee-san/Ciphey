@@ -1,0 +1,7 @@
+node_modules/
+dist/
+# Built by scripts/build-wasm.sh
+src/wasm/
+engine/target/
+# Test and measurement output
+test-results/

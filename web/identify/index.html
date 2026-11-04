@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!--shell:csp-->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<title>Identify with pyWhat: what is this text?</title>
+<meta name="description" content="Paste any text and pyWhat finds what's in it: email and IP addresses, URLs, API keys, cryptocurrency wallets, CTF flags and more. Runs entirely in your browser.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="/theme.js"></script>
+</head>
+<body>
+<!--shell:header-->
+<main id="main" class="page page--identify" tabindex="-1">
+  <div class="page-intro">
+    <h1>Identify</h1>
+    <p class="lede">Paste any text and <a href="https://github.com/bee-san/pyWhat">pyWhat</a> finds what's in it: email and IP addresses, URLs, API keys, cryptocurrency wallets, CTF flags and over a hundred more formats.</p>
+  </div>
+
+  <div class="workbench">
+    <section class="panel panel--input" aria-labelledby="text-heading">
+      <h2 id="text-heading" class="visually-hidden">Text</h2>
+      <div class="field">
+        <div class="field__label-row">
+          <label for="text">Text to identify</label>
+          <span class="field__meta" id="text-count">0 characters</span>
+        </div>
+        <div class="highlighter dropzone" id="dropzone">
+          <div class="highlighter__backdrop" id="backdrop" aria-hidden="true"></div>
+          <textarea id="text" rows="8" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="thm{flag} bee@skerritt.blog 192.168.0.1" aria-describedby="text-hint text-error"></textarea>
+          <div class="dropzone__overlay" aria-hidden="true">Drop the file to identify what's in it</div>
+        </div>
+        <p class="field__hint" id="text-hint">Matches are highlighted as you type. Or <button type="button" class="link-button" id="open-file">open a file</button> (or drop one here), up to 1 MB of text.</p>
+        <p class="field__error" id="text-error" hidden></p>
+        <input type="file" id="file" hidden>
+      </div>
+
+      <fieldset class="field">
+        <legend>Try an example</legend>
+        <div class="chips" id="examples"></div>
+      </fieldset>
+
+      <details class="disclosure" id="filters">
+        <summary>Filters <span class="disclosure__summary" id="filters-summary">Rarity 0.1 to 1</span></summary>
+        <div class="disclosure__body">
+          <div class="check">
+            <input type="checkbox" id="boundaryless" checked aria-describedby="boundaryless-hint">
+            <div>
+              <label for="boundaryless">Find matches inside longer text</label>
+              <p class="field__hint" id="boundaryless-hint">Off: only lines that are a match from start to end count.</p>
+            </div>
+          </div>
+          <fieldset class="field">
+            <legend>Rarity</legend>
+            <div class="range-pair">
+              <label for="min-rarity">From</label>
+              <input type="number" id="min-rarity" min="0" max="1" step="0.05" value="0.1" inputmode="decimal" aria-describedby="rarity-hint rarity-error">
+              <label for="max-rarity">to</label>
+              <input type="number" id="max-rarity" min="0" max="1" step="0.05" value="1" inputmode="decimal" aria-describedby="rarity-hint rarity-error">
+            </div>
+            <p class="field__hint" id="rarity-hint">How specific a format is: 1 for formats that little else looks like (an AWS key), lower for broad ones (0.5 for an email address).</p>
+            <p class="field__error" id="rarity-error" hidden></p>
+          </fieldset>
+          <div class="field">
+            <label for="include-input">Only these tags</label>
+            <div class="token-field" id="include-tokens">
+              <ul class="tokens" aria-label="Tags to show only"></ul>
+              <input type="text" id="include-input" list="tag-list" autocomplete="off" placeholder="Credentials, CTF Flag, …" aria-describedby="include-hint">
+            </div>
+            <p class="field__hint" id="include-hint">Type a tag and press Enter. Empty shows every tag.</p>
+          </div>
+          <div class="field">
+            <label for="exclude-input">Hide these tags</label>
+            <div class="token-field" id="exclude-tokens">
+              <ul class="tokens" aria-label="Tags to hide"></ul>
+              <input type="text" id="exclude-input" list="tag-list" autocomplete="off" placeholder="Charset Only, Phone, …" aria-describedby="exclude-hint">
+            </div>
+            <p class="field__hint" id="exclude-hint">Tags or format names. "Charset Only" hides formats that only check which characters a text has.</p>
+          </div>
+          <datalist id="tag-list"></datalist>
+          <div><button type="button" class="button button--small" id="reset-filters">Reset filters</button></div>
+        </div>
+      </details>
+      <p class="engine-status" id="engine-status"><span class="spinner" aria-hidden="true"></span>Loading pyWhat…</p>
+    </section>
+
+    <section class="panel panel--output" aria-labelledby="matches-heading">
+      <div class="panel__head">
+        <h2 id="matches-heading">Matches <span class="count-badge" id="match-count" hidden></span></h2>
+        <div class="sort">
+          <label for="sort">Sort by</label>
+          <span class="select">
+            <select id="sort">
+              <option value="rarity">Rarity, most specific first</option>
+              <option value="rarity-reverse">Rarity, broadest first</option>
+              <option value="name">Name, A to Z</option>
+              <option value="matched">Matched text, A to Z</option>
+            </select>
+          </span>
+        </div>
+      </div>
+      <div class="empty" id="matches-empty">
+        <p class="empty__title">Paste some text to see what's in it.</p>
+        <p>pyWhat knows <span id="regex-count">over 150</span> formats. Try an example on the left.</p>
+      </div>
+      <div class="empty" id="matches-none" hidden>
+        <p class="empty__title">Nothing found.</p>
+        <ul>
+          <li>Lower the rarity range's start: broad formats such as phone numbers start low.</li>
+          <li>Turn on <strong>Find matches inside longer text</strong> if it's off.</li>
+          <li>If the text is encoded, <a href="../" id="decode-link">decode it with Ciphey</a> first.</li>
+        </ul>
+      </div>
+      <ul class="matches" id="matches" aria-labelledby="matches-heading" hidden></ul>
+    </section>
+  </div>
+
+  <p class="visually-hidden" role="status" id="announcer"></p>
+</main>
+<!--shell:footer-->
+<script type="module" src="/src/identify/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+/* Design tokens. Colours use light-dark(): the page follows the system theme, and the
+   theme button pins one by setting data-theme on <html> (public/theme.js applies it before
+   the first paint). Every text colour is at least 4.5:1 on the surfaces it is used on, and
+   every control boundary and focus ring at least 3:1 (the numbers are in web/README.md). */
+
+:root {
+  color-scheme: light dark;
+
+  --bg: light-dark(#f7f6f2, #0f1217);
+  --surface: light-dark(#ffffff, #171b22);
+  --surface-sunken: light-dark(#f2f0ea, #0c0e12);
+  --surface-hover: light-dark(#ebe8df, #20252e);
+  --border: light-dark(#dcd8cd, #2b313c);
+  --border-strong: light-dark(#8f8a7c, #67707f);
+  --text: light-dark(#1b1d21, #e7e9ee);
+  --text-muted: light-dark(#575c66, #a1a8b5);
+  --accent: #ffd400;
+  --accent-hover: #ffe14d;
+  --accent-border: light-dark(#8a6d00, #ffd400);
+  --on-accent: #17181b;
+  --accent-text: light-dark(#7a5a00, #ffd84d);
+  --accent-soft: light-dark(#fff4c2, #2e2808);
+  --link: light-dark(#0b6577, #6fd0de);
+  --success: light-dark(#1d6b32, #7ad88e);
+  --success-soft: light-dark(#e3f4e6, #12301b);
+  --danger: light-dark(#b42318, #ff8a80);
+  --danger-soft: light-dark(#fdecea, #3a1714);
+  --info-soft: light-dark(#e6f3f6, #0f2a30);
+  --focus: light-dark(#0b57d0, #8ab4ff);
+  --shadow-1: light-dark(rgb(20 20 10 / 0.06), transparent);
+  --shadow-2: light-dark(rgb(20 20 10 / 0.22), transparent);
+  --shadow: 0 1px 2px var(--shadow-1);
+  --shadow-raised: 0 1px 2px var(--shadow-1), 0 14px 32px -20px var(--shadow-2);
+
+  /* Highlight colours for pyWhat's matches (backgrounds behind text, and their swatches) */
+  --hl-1: light-dark(#ffe58a, #5c4a00);
+  --hl-2: light-dark(#b9ecf2, #0f4d57);
+  --hl-3: light-dark(#ffcfe0, #6a1f3c);
+  --hl-4: light-dark(#cdeec2, #23502a);
+  --hl-5: light-dark(#ddd4ff, #3d2f79);
+  --hl-6: light-dark(#ffd6b3, #6b3814);
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", "DejaVu Sans Mono", "Liberation Mono", Consolas, monospace;
+
+  --radius-s: 6px;
+  --radius: 8px;
+  --radius-l: 14px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --page-width: 1200px;
+  --gutter: clamp(16px, 4vw, 32px);
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 1rem/1.55 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+main { flex: 1; }
+
+h1, h2, h3, h4 { margin: 0; line-height: 1.2; }
+h1 { font-size: clamp(1.75rem, 1.4rem + 1.5vw, 2.25rem); font-weight: 750; letter-spacing: -0.02em; }
+h2 { font-size: 1.125rem; font-weight: 650; letter-spacing: -0.005em; }
+h3 { font-size: 1rem; font-weight: 650; }
+p { margin: 0; }
+
+a { color: var(--link); text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+
+code, kbd, pre, samp, textarea.mono { font-family: var(--font-mono); }
+code { font-size: 0.92em; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-s);
+}
+
+::selection { background: light-dark(#ffe58a, #6b5800); color: var(--text); }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+[hidden] { display: none !important; }
+
+.skip-link {
+  position: absolute;
+  left: var(--space-4);
+  top: -100px;
+  z-index: 10;
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 650;
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+.skip-link:focus { top: var(--space-3); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
