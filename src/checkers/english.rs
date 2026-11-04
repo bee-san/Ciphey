@@ -758,7 +758,11 @@ fn has_varied_letters(word: &str) -> bool {
 /// dictionary lookup per letter and word length, and nothing that low is English.
 const LONG_WORD_SPLIT_MIN_SCORE: f64 = -5.6;
 
-/// Whether `word` (lower case) is in gibberish-or-not's dictionary.
+/// Whether `word` (lower case), 4 to 9 bytes long, is in gibberish-or-not's English word
+/// list. gibberish-or-not 5's dictionary only answered for those lengths; the limit stays
+/// for [`is_single_word`], because single words of other lengths ended searches of inputs
+/// with no plaintext (measured with gibberish-or-not 6: 256 and 259 of 296 end-to-end
+/// searches right without it, 271 and 273 with it).
 fn is_dictionary_word(word: &str) -> bool {
     (4..10).contains(&word.len()) && is_word(word)
 }
