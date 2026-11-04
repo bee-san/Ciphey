@@ -10,9 +10,9 @@ use pywhat::{Identifier, Match, CHARSET_ONLY};
 /// `key:value` pairs). The `pywhat_min_rarity` setting can only raise it.
 pub const MIN_RARITY: f64 = 0.1;
 
-/// The identifier the checker uses: pyWhat's regexes of rarity [`MIN_RARITY`] to 1,
-/// without those tagged "Charset Only", narrowed by the `pywhat_*` settings of `config`
-/// (see [`Config::pywhat_min_rarity`]).
+/// pyWhat's regexes as the checker uses them: those of rarity [`MIN_RARITY`] to 1, without
+/// those tagged "Charset Only", narrowed by the `pywhat_*` settings of a config (see
+/// [`Config::pywhat_min_rarity`] and [`identifiers_for`]).
 ///
 /// pyWhat tags a regex "Charset Only" when it only checks which characters a text has and
 /// how long it is: more than 1 in 1,000 random strings of a common alphabet and the right
@@ -21,37 +21,101 @@ pub const MIN_RARITY: f64 = 0.1;
 /// Key" (<https://github.com/bee-san/Ciphey/issues/1031>). The checksum validators
 /// (Luhn for card numbers, Base58Check and CashAddr for wallets) are part of pyWhat's
 /// default processors.
-pub fn identifier_for(config: &Config) -> Identifier {
+#[derive(Clone, Debug)]
+pub struct Identifiers {
+    /// Every regex the settings select but the URL regex.
+    others: Identifier,
+    /// The URL regex, if the settings select it. It is by far the slowest of pyWhat's
+    /// regexes (18 KB, run by fancy-regex), and the checker only takes a URL with a scheme
+    /// or `www.` (see [`URL`]), so it only runs on text that has one: what it matches
+    /// otherwise would be rejected anyway.
+    url: Option<Identifier>,
+}
+
+impl Identifiers {
+    /// The matches of the regexes whose match is the whole of `text`, in pyWhat's
+    /// database order, as one identifier with both parts would give them.
+    pub fn identify_whole(&self, text: &str) -> Vec<Match> {
+        let mut found = self.others.identify_whole(text);
+        if let Some(url) = self.url.as_ref().filter(|_| has_scheme_or_www(text)) {
+            let urls = url.identify_whole(text);
+            if !urls.is_empty() {
+                found.extend(urls);
+                found.sort_by_key(|found| found.regex.index);
+            }
+        }
+        found
+    }
+
+    /// Whether the settings select pyWhat's regex called `name` (any name that isn't one of
+    /// pyWhat's is selected).
+    fn uses(&self, name: &str) -> bool {
+        if name == URL {
+            return self.url.is_some();
+        }
+        pywhat::regexes()
+            .iter()
+            .find(|entry| entry.name == name)
+            .is_none_or(|entry| self.others.filter().contains(entry))
+    }
+
+    /// Compiles every regex now, see [`warm_up`].
+    fn warm_up(&self) {
+        self.others.warm_up();
+        if let Some(url) = &self.url {
+            url.warm_up();
+        }
+    }
+}
+
+/// [`Identifiers`] for the `pywhat_*` settings of `config`.
+pub fn identifiers_for(config: &Config) -> Identifiers {
     let min = f64::from(config.pywhat_min_rarity).max(MIN_RARITY);
     // 0 was the default of `lemmeknow_max_rarity` before pyWhat, and selects nothing
     let max = match f64::from(config.pywhat_max_rarity) {
         max if max <= 0.0 => 1.0,
         max => max,
     };
-    let mut identifier = Identifier::default()
+    let mut all = Identifier::default()
         .min_rarity(min)
         .max_rarity(max)
         .exclude_tags(&[CHARSET_ONLY]);
     if !config.pywhat_tags.is_empty() {
-        identifier = identifier.include_tags(&config.pywhat_tags);
+        all = all.include_tags(&config.pywhat_tags);
     }
     if !config.pywhat_exclude_tags.is_empty() {
-        identifier = identifier.exclude_tags(&config.pywhat_exclude_tags);
+        all = all.exclude_tags(&config.pywhat_exclude_tags);
     }
-    identifier
+    let url_entry = pywhat::regexes().iter().find(|entry| entry.name == URL);
+    let url = url_entry
+        .filter(|entry| all.filter().contains(entry))
+        .map(|_| Identifier::default().min_rarity(0.0).include_tags(&[URL]));
+    Identifiers {
+        others: all.exclude_tags(&[URL]),
+        url,
+    }
 }
 
-/// The identifier for the global config, see [`identifier_for`]. Until the global config is
-/// set (a library caller that never sets one), it is the identifier of the default config;
-/// once it is set, the identifier is built from it on first use.
-pub(crate) fn identifier() -> &'static Identifier {
-    static CONFIGURED: OnceCell<Identifier> = OnceCell::new();
-    static DEFAULT: Lazy<Identifier> = Lazy::new(|| identifier_for(&Config::default()));
+/// The [`Identifiers`] for the global config, see [`identifiers_for`]. Until the global
+/// config is set (a library caller that never sets one), they are those of the default
+/// config; once it is set, they are built from it on first use.
+pub(crate) fn identifiers() -> &'static Identifiers {
+    static CONFIGURED: OnceCell<Identifiers> = OnceCell::new();
+    static DEFAULT: Lazy<Identifiers> = Lazy::new(|| identifiers_for(&Config::default()));
     if is_global_config_set() {
-        CONFIGURED.get_or_init(|| identifier_for(get_config()))
+        CONFIGURED.get_or_init(|| identifiers_for(get_config()))
     } else {
         &DEFAULT
     }
+}
+
+/// Whether `text` starts with `www.` or has `://` in it, as a URL needs to (see [`URL`]).
+fn has_scheme_or_www(text: &str) -> bool {
+    let text = text.trim_start();
+    text.contains("://")
+        || text
+            .get(..4)
+            .is_some_and(|start| start.eq_ignore_ascii_case("www."))
 }
 
 /// Starts compiling pyWhat's regexes on the rayon pool and returns at once.
@@ -68,7 +132,7 @@ pub fn warm_up() {
     #[cfg(not(target_family = "wasm"))]
     {
         static STARTED: std::sync::Once = std::sync::Once::new();
-        STARTED.call_once(|| rayon::spawn(|| identifier().warm_up()));
+        STARTED.call_once(|| rayon::spawn(|| identifiers().warm_up()));
     }
 }
 
@@ -332,7 +396,7 @@ impl Check for Checker<PyWhat> {
     }
 
     fn check(&self, text: &str) -> CheckResult {
-        let description = identify(identifier(), text);
+        let description = identify(identifiers(), text);
         CheckResult {
             is_identified: description.is_some(),
             text: text.to_owned(),
@@ -353,44 +417,33 @@ impl Check for Checker<PyWhat> {
     }
 }
 
-/// What `identifier` (pyWhat) or the CTF flag pattern identify `text` as, if anything: the
-/// name of the first regex whose match is the whole of `text` and says something about it
-/// (see [`is_trusted_match`]).
+/// What pyWhat's `identifiers` or the CTF flag pattern identify `text` as, if anything:
+/// the name of the first regex whose match is the whole of `text` and says something about
+/// it (see [`is_trusted_match`]).
 ///
 /// Text with control characters other than tabs and line breaks isn't plaintext of any
 /// format, and is a fifth of what a search checks (wrong decoders' bytes), so it skips
 /// pyWhat's regexes.
-pub(crate) fn identify(identifier: &Identifier, text: &str) -> Option<String> {
+pub(crate) fn identify(identifiers: &Identifiers, text: &str) -> Option<String> {
     if has_control_characters(text) {
         return None;
     }
-    first_trusted_match(identifier, text)
+    first_trusted_match(identifiers, text)
         .map(|found| found.regex.name.clone())
-        .or_else(|| {
-            (is_ctf_flag(text) && allows(identifier, CTF_FLAG)).then(|| CTF_FLAG.to_string())
-        })
-        .or_else(|| identify_idn(text).filter(|name| allows(identifier, name)))
+        .or_else(|| (is_ctf_flag(text) && identifiers.uses(CTF_FLAG)).then(|| CTF_FLAG.to_string()))
+        .or_else(|| identify_idn(text).filter(|name| identifiers.uses(name)))
 }
 
-/// The first match of `identifier` that is the whole of `text` and that
-/// [`is_trusted_match`] keeps.
-pub(crate) fn first_trusted_match(identifier: &Identifier, text: &str) -> Option<Match> {
-    identifier
+/// The first match of `identifiers` that is the whole of `text` and that
+/// [`is_trusted_match`] keeps. The checker's own rules report what they find under the
+/// name of a pyWhat regex (the generic CTF flag pattern as "Capture The Flag (CTF) Flag",
+/// an internationalised address as "Email Address"), so a `pywhat_*` setting that leaves
+/// that regex out (`pywhat_exclude_tags = ["CTF Flag"]`, say) leaves out the rule too.
+pub(crate) fn first_trusted_match(identifiers: &Identifiers, text: &str) -> Option<Match> {
+    identifiers
         .identify_whole(text)
         .into_iter()
         .find(|found| is_trusted_match(found, text))
-}
-
-/// Whether `identifier` uses pyWhat's regex called `name`. The checker's own rules report
-/// what they find under the name of a pyWhat regex (the generic CTF flag pattern as
-/// "Capture The Flag (CTF) Flag", an internationalised address as "Email Address"), so a
-/// `pywhat_*` setting that leaves that regex out (`pywhat_exclude_tags = ["CTF Flag"]`,
-/// say) leaves out the rule too. Names that aren't pyWhat's are allowed.
-fn allows(identifier: &Identifier, name: &str) -> bool {
-    pywhat::regexes()
-        .iter()
-        .find(|entry| entry.name == name)
-        .is_none_or(|entry| identifier.filter().contains(entry))
 }
 
 /// Whether `text` has a control character other than a tab or line break: C0 controls,
@@ -405,7 +458,7 @@ pub(crate) fn has_control_characters(text: &str) -> bool {
 }
 
 /// Whether a pyWhat match on `text` says something about it for Ciphey. "Charset Only"
-/// regexes are left out of the identifier already (see [`identifier_for`]); these are the
+/// regexes are left out already (see [`Identifiers`]); these are the
 /// rules on top:
 ///
 /// * [`EXCLUDED_NAMES`];
@@ -420,8 +473,7 @@ fn is_trusted_match(found: &Match, text: &str) -> bool {
         return false;
     }
     if name == URL {
-        let text = text.trim_start().to_ascii_lowercase();
-        return text.contains("://") || text.starts_with("www.");
+        return has_scheme_or_www(text);
     }
     if found.tags.iter().any(|tag| tag == "CTF Flag") {
         return matches_flag_pattern(text.trim());
@@ -648,7 +700,7 @@ mod tests {
             let found = all.identify_whole(text);
             assert!(!found.is_empty(), "pyWhat should match {text}");
             assert!(found.iter().all(|m| m.regex.charset_only()), "{text}");
-            assert!(identifier().identify_whole(text).is_empty(), "{text}");
+            assert!(identifiers().identify_whole(text).is_empty(), "{text}");
         }
         // Checksums are checked: a card number failing Luhn and a Bitcoin Cash address with a
         // wrong checksum aren't matched at all
@@ -717,7 +769,7 @@ mod tests {
     #[test]
     fn jwts_are_left_to_the_jwt_decoder() {
         let jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U";
-        assert!(identifier()
+        assert!(identifiers()
             .identify_whole(jwt)
             .iter()
             .any(|m| m.regex.name == "JSON Web Token (JWT)"));
@@ -725,14 +777,58 @@ mod tests {
     }
 
     #[test]
+    fn the_url_regex_only_runs_on_text_with_a_scheme_or_www() {
+        // The same matches, in the same order, as one identifier with every regex
+        let one = Identifier::default()
+            .min_rarity(MIN_RARITY)
+            .exclude_tags(&[pywhat::CHARSET_ONLY]);
+        let split = identifiers_for(&Config::default());
+        for text in [
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_abcd",
+            "http://10.10.10.5/secret/flag.txt",
+            "s3://bucket/path/key",
+            "www.google.com",
+            "WWW.GOOGLE.COM",
+            "192.168.0.1",
+            "bee@skerritt.blog",
+        ] {
+            let names = |found: Vec<Match>| -> Vec<String> {
+                found.into_iter().map(|m| m.regex.name.clone()).collect()
+            };
+            assert_eq!(
+                names(split.identify_whole(text)),
+                names(one.identify_whole(text)),
+                "{text}"
+            );
+        }
+        // Without a scheme or `www.` the URL regex isn't run: the checker wouldn't take
+        // its match
+        assert!(one
+            .identify_whole("example.com")
+            .iter()
+            .any(|m| m.regex.name == URL));
+        assert!(split.identify_whole("example.com").is_empty());
+        assert!(has_scheme_or_www("  https://x.org") && has_scheme_or_www("Www.x.org"));
+        assert!(!has_scheme_or_www("example.com") && !has_scheme_or_www("ww"));
+        // Settings that leave the URL regex out leave it out of both
+        let no_urls = identifiers_for(&Config {
+            pywhat_exclude_tags: vec!["URL".to_string()],
+            ..Config::default()
+        });
+        assert!(no_urls.url.is_none());
+        assert_eq!(super::identify(&no_urls, "https://google.com"), None);
+    }
+
+    #[test]
     fn settings_narrow_the_identifier() {
         let mut config = Config::default();
-        assert!(super::identify(&identifier_for(&config), "192.168.0.1").is_some());
+        assert!(super::identify(&identifiers_for(&config), "192.168.0.1").is_some());
 
         // The defaults of LemmeKnow's settings, still in older config files, change nothing
         config.pywhat_min_rarity = 0.0;
         config.pywhat_max_rarity = 0.0;
-        let old_defaults = identifier_for(&config);
+        let old_defaults = identifiers_for(&config);
         for text in ["192.168.0.1", "flag{x}", "bee@skerritt.blog"] {
             assert!(super::identify(&old_defaults, text).is_some(), "{text}");
         }
@@ -740,11 +836,11 @@ mod tests {
         assert_eq!(super::identify(&old_defaults, "4111111111111111"), None);
 
         config.pywhat_min_rarity = 0.8;
-        let rare = identifier_for(&config);
+        let rare = identifiers_for(&config);
         assert_eq!(super::identify(&rare, "192.168.0.1"), None, "rarity 0.7");
         assert!(super::identify(&rare, "flag{x}").is_some(), "rarity 1");
 
-        let no_flags = identifier_for(&Config {
+        let no_flags = identifiers_for(&Config {
             pywhat_exclude_tags: vec!["CTF Flag".to_string()],
             ..Config::default()
         });
@@ -753,7 +849,7 @@ mod tests {
         assert_eq!(super::identify(&no_flags, "picoCTF{b4s3_64_1s_fun}"), None);
         assert!(super::identify(&no_flags, "192.168.0.1").is_some());
 
-        let only_ip = identifier_for(&Config {
+        let only_ip = identifiers_for(&Config {
             pywhat_tags: vec!["IP".to_string()],
             ..Config::default()
         });

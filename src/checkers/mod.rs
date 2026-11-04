@@ -107,7 +107,7 @@ static CODE_CHECKER: Lazy<Checker<CodeChecker>> = Lazy::new(Checker::<CodeChecke
 /// checks is rejected.
 pub(crate) fn identify_plaintext(text: &str, sensitivity: Sensitivity) -> Option<Identification> {
     let pywhat = &*PYWHAT_CHECKER;
-    if let Some(description) = pywhat_checker::identify(pywhat_checker::identifier(), text) {
+    if let Some(description) = pywhat_checker::identify(pywhat_checker::identifiers(), text) {
         return Some(Identification::by(pywhat, "PyWhat", description));
     }
     if let Some(description) = json_checker::identify(text) {

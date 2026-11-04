@@ -546,7 +546,7 @@ pub(crate) fn for_accepted_decoding(
 
 /// The pyWhat rarity of the format called `name` that the pyWhat checker finds in `text`.
 fn pywhat_rarity(text: &str, name: &str) -> Option<f32> {
-    pywhat_checker::first_trusted_match(pywhat_checker::identifier(), text)
+    pywhat_checker::first_trusted_match(pywhat_checker::identifiers(), text)
         .filter(|found| found.regex.name == name)
         // pyWhat's rarities have one decimal: no precision is lost
         .map(|found| found.rarity as f32)

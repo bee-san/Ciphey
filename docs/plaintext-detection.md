@@ -82,7 +82,8 @@ Base58 isn't a Bitcoin or Litecoin address any more. On top of that, the checker
   local, link-local, multicast, NAT64, and `::1`-style addresses): pyWhat takes any hex
   groups with colons, such as the decoder junk `DB:F::E9` or a reversed address;
 - URLs without `://` or a leading `www.`: pyWhat's URL regex takes bare domains
-  (`example.com`);
+  (`example.com`). It is also by far pyWhat's slowest regex (18 KB, run by fancy-regex),
+  so the checker only runs it on text that has one;
 - email addresses whose top-level domain isn't one of 112 common ones (`EMAIL_TLDS`), or
   an IP in brackets. A Caesar shift of an address is still shaped like one
   (`uryyb@jbeyq.pbz`);
