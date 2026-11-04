@@ -128,7 +128,7 @@ fn decode_quoted_printable(text: &str) -> Option<Vec<u8>> {
     let mut i = 0;
     while let Some(offset) = bytes[i..].iter().position(|&byte| byte == b'=') {
         let equals = i + offset;
-        decoded.extend_from_slice(&bytes[i..equals]);
+        append_literal(&mut decoded, &bytes[i..equals]);
 
         if let (Some(high), Some(low)) = (
             hex_value(bytes.get(equals + 1)),
@@ -153,9 +153,30 @@ fn decode_quoted_printable(text: &str) -> Option<Vec<u8>> {
         // A soft line break that joins two lines; one at the very end proves nothing.
         looks_encoded = looks_encoded || bytes[i..].iter().any(|b| !b.is_ascii_whitespace());
     }
-    decoded.extend_from_slice(&bytes[i..]);
+    append_literal(&mut decoded, &bytes[i..]);
 
     looks_encoded.then_some(decoded)
+}
+
+/// Appends literal bytes, dropping transport whitespace before hard line breaks.
+/// Encoded spaces and tabs are appended separately and must never be trimmed.
+fn append_literal(decoded: &mut Vec<u8>, bytes: &[u8]) {
+    for line in bytes.split_inclusive(|&byte| byte == b'\n') {
+        if let Some(body) = line.strip_suffix(b"\n") {
+            let (body, ending): (&[u8], &[u8]) = match body.strip_suffix(b"\r") {
+                Some(body) => (body, b"\r\n"),
+                None => (body, b"\n"),
+            };
+            let end = body
+                .iter()
+                .rposition(|byte| !matches!(byte, b' ' | b'\t'))
+                .map_or(0, |index| index + 1);
+            decoded.extend_from_slice(&body[..end]);
+            decoded.extend_from_slice(ending);
+        } else {
+            decoded.extend_from_slice(line);
+        }
+    }
 }
 
 /// The value of an ASCII hex digit, upper or lower case.
@@ -205,6 +226,24 @@ mod tests {
             .crack(text, &get_athena_checker())
             .unencrypted_text
             .map(|texts| texts[0].clone())
+    }
+
+    #[test]
+    fn qualification_qp_discards_transport_whitespace() {
+        // RFC 2045 section 6.7 rule 3: literal trailing whitespace is transport noise.
+        assert_eq!(
+            decode_quoted_printable("=41 \t\r\n=42\t \n=43"),
+            Some(b"A\r\nB\nC".to_vec())
+        );
+    }
+
+    #[test]
+    fn qualification_qp_keeps_encoded_and_internal_whitespace() {
+        // Encoded whitespace is data, even at the end of a line.
+        assert_eq!(
+            decode_quoted_printable("=41=20=09\r\n=42 \t=43"),
+            Some(b"A \t\r\nB \tC".to_vec())
+        );
     }
 
     #[test]
