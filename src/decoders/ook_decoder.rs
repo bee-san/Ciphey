@@ -95,6 +95,9 @@ impl Crack for Decoder<OokDecoder> {
         let mut output = Vec::new();
         if let Err(e) = Brainfuck::new(&program)
             .with_instructions_limit(BRAINFUCK_INSTRUCTION_LIMIT)
+            // On by default: it times the run with std::time::Instant, which panics on
+            // wasm32-unknown-unknown, and the timing isn't used
+            .with_bench_execution(false)
             .with_output_ref(&mut output)
             .execute()
         {

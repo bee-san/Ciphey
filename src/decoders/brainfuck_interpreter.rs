@@ -71,6 +71,9 @@ impl Crack for Decoder<BrainfuckInterpreter> {
         let mut buf = vec![];
         match Brainfuck::new(text)
             .with_instructions_limit(BRAINFUCK_INSTRUCTION_LIMIT)
+            // On by default: it times the run with std::time::Instant, which panics on
+            // wasm32-unknown-unknown, and the timing isn't used
+            .with_bench_execution(false)
             .with_output_ref(&mut buf)
             .execute()
         {

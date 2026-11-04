@@ -18,8 +18,6 @@ use crate::config::get_config;
 use gibberish_or_not::Sensitivity;
 use log::{debug, trace};
 use once_cell::sync::Lazy;
-use std::fs;
-use std::path::Path;
 
 /// Vigenere square where the first index is ciphertext and the second index
 /// is the key
@@ -37,40 +35,33 @@ static VIGENERE_SQUARE: Lazy<Vec<Vec<char>>> = Lazy::new(|| {
 static ENGLISH_BIGRAMS: Lazy<Vec<Vec<i64>>> = Lazy::new(|| {
     let mut bigrams_vec = vec![vec![0; 26]; 26];
 
-    // Path to english bigrams file
-    let f_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("src")
-        .join("storage")
-        .join("ngrams")
-        .join("english_bigrams.txt");
-
-    // Read the file content
-    if let Ok(content) = fs::read_to_string(&f_path) {
-        let content_lines = content.split('\n');
-        for line in content_lines {
-            if line.is_empty() {
-                continue;
-            }
-            let line_split: Vec<&str> = line.split_ascii_whitespace().collect();
-            if line_split.is_empty() {
-                continue;
-            }
-            let mut chars_itr = line_split[0].chars();
-            let char1: char = chars_itr
-                .next()
-                .expect("Could not retrieve first char")
-                .to_ascii_uppercase();
-            let char2: char = chars_itr
-                .next()
-                .expect("Could not retrieve second char")
-                .to_ascii_uppercase();
-
-            let fitness = line_split[1]
-                .parse::<i64>()
-                .expect("Could not parse fitness value");
-
-            bigrams_vec[(char1 as u8 - b'A') as usize][(char2 as u8 - b'A') as usize] = fitness;
+    // Built into the binary. It used to be read at run time from the source directory,
+    // which only exists on the machine that compiled Ciphey: where a prebuilt release
+    // binary runs, and on WebAssembly, every bigram scored 0.
+    let content_lines = include_str!("../storage/ngrams/english_bigrams.txt").split('\n');
+    for line in content_lines {
+        if line.is_empty() {
+            continue;
         }
+        let line_split: Vec<&str> = line.split_ascii_whitespace().collect();
+        if line_split.is_empty() {
+            continue;
+        }
+        let mut chars_itr = line_split[0].chars();
+        let char1: char = chars_itr
+            .next()
+            .expect("Could not retrieve first char")
+            .to_ascii_uppercase();
+        let char2: char = chars_itr
+            .next()
+            .expect("Could not retrieve second char")
+            .to_ascii_uppercase();
+
+        let fitness = line_split[1]
+            .parse::<i64>()
+            .expect("Could not parse fitness value");
+
+        bigrams_vec[(char1 as u8 - b'A') as usize][(char2 as u8 - b'A') as usize] = fitness;
     }
 
     bigrams_vec

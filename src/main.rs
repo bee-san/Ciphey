@@ -1,7 +1,11 @@
+#[cfg(not(target_family = "wasm"))]
 use ciphey::cli::parse_cli_args;
+#[cfg(not(target_family = "wasm"))]
 use ciphey::cli_pretty_printing::{program_exiting_successful_decoding, success};
+#[cfg(not(target_family = "wasm"))]
 use ciphey::{perform_cracking, CipheyError};
 
+#[cfg(not(target_family = "wasm"))]
 fn main() {
     // Turn CLI arguments into a library object
     let (text, config) = parse_cli_args();
@@ -36,4 +40,12 @@ fn main() {
             std::process::exit(1);
         }
     }
+}
+
+/// The command-line tool needs a terminal, files and threads. On WebAssembly the library
+/// is all of Ciphey (docs/wasm.md); this binary only exists so that
+/// `cargo build --target wasm32-unknown-unknown` builds.
+#[cfg(target_family = "wasm")]
+fn main() {
+    eprintln!("ciphey: the command-line tool doesn't run on WebAssembly; use the ciphey library");
 }

@@ -94,8 +94,8 @@ use crate::decoders::zlib_decoder::ZlibDecoder;
 
 use crate::decoders::brainfuck_interpreter::BrainfuckInterpreter;
 
+use crate::parallel::*;
 use log::trace;
-use rayon::prelude::*;
 
 /// The struct which contains all of the decoders
 /// Where decoders is crackers, decryptors, etc.
@@ -164,6 +164,8 @@ impl Decoders {
 /// [`Enum`] for our custom results.
 /// if our checker succeed, we return `Break` variant containing [`CrackResult`]
 /// else we return `Continue` with the decoded results.
+// Only the breadth-first search, which WebAssembly builds leave out, reads the results
+#[cfg_attr(target_family = "wasm", allow(dead_code))]
 pub enum MyResults {
     /// Variant containing successful [`CrackResult`]
     Break(CrackResult),

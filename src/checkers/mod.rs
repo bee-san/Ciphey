@@ -12,9 +12,9 @@ use self::{
     wordlist::WordlistChecker,
 };
 
+use crate::parallel::*;
 use gibberish_or_not::Sensitivity;
 use once_cell::sync::Lazy;
-use rayon::prelude::*;
 use std::collections::HashMap;
 
 /// The default checker we use which simply calls all other checkers in order.
@@ -179,6 +179,7 @@ impl CheckerTypes {
     /// rayon stops starting new candidates once one is found. The human checker is then
     /// asked about it, as the loop asked, and if the human says no the search goes on
     /// after it. Smaller candidate lists, and other checkers, are checked one at a time.
+    /// On WebAssembly, which has no threads, the "parallel" check runs in order too.
     pub(crate) fn first_identified(&self, texts: &[String]) -> Option<(usize, CheckResult)> {
         let total_bytes: usize = texts.iter().map(String::len).sum();
         match self {

@@ -5,21 +5,27 @@
 
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+#[cfg(not(target_family = "wasm"))]
 use std::thread;
 
+#[cfg(not(target_family = "wasm"))]
 use crossbeam::channel::{bounded, Receiver, Select, TryRecvError};
 
 use crate::checkers::athena::Athena;
 use crate::checkers::checker_type::{Check, Checker};
 use crate::checkers::CheckerTypes;
+use crate::clock::Deadline;
 use crate::config::get_config;
 use crate::filtration_system::{filter_and_get_decoders, MyResults};
-use crate::{timer, CipheyError, DecoderResult};
+#[cfg(not(target_family = "wasm"))]
+use crate::timer;
+use crate::{CipheyError, DecoderResult};
 /// This module provides access to the A* search algorithm
 /// which uses a heuristic to prioritize decoders.
 mod astar;
 /// This module provides access to the breadth first search
 /// which searches for the plaintext.
+#[cfg(not(target_family = "wasm"))]
 mod bfs;
 /// This module contains helper functions used by the A* search algorithm.
 mod helper_functions;
@@ -43,6 +49,11 @@ pub(crate) use helper_functions::reset_decoder_stats;
 /// Returns `Ok(None)` if the search space is exhausted, or
 /// [`CipheyError::Timeout`] if the timer expires first. In `top_results` mode
 /// the search always runs until the timer and returns the first result, if any.
+///
+/// The search runs on a thread of its own, and a timer thread ends it. WebAssembly has no
+/// threads, so there it runs on this thread and stops at the timeout itself, see
+/// [`search_until`].
+#[cfg(not(target_family = "wasm"))]
 pub fn search_for_plaintext(input: String) -> Result<Option<DecoderResult>, CipheyError> {
     let config = get_config();
     let timeout = config.timeout;
@@ -53,7 +64,18 @@ pub fn search_for_plaintext(input: String) -> Result<Option<DecoderResult>, Ciph
     let stop = Arc::new(AtomicBool::new(false));
     let s = stop.clone();
     // Use A* search algorithm instead of BFS
-    let handle = thread::spawn(move || astar::astar(input, result_sender, s));
+    let handle = thread::spawn(move || {
+        astar::astar(
+            input,
+            |result| {
+                result_sender
+                    .send(result)
+                    .expect("Should successfully send the result")
+            },
+            s,
+            Deadline::NEVER,
+        )
+    });
 
     wait_for_search_result(
         result_recv,
@@ -65,9 +87,57 @@ pub fn search_for_plaintext(input: String) -> Result<Option<DecoderResult>, Ciph
     )
 }
 
+/// Performs the search algorithm on this thread, see [`search_until`]: WebAssembly has no
+/// threads for the search and its timer.
+///
+/// Returns `Ok(None)` if the search space is exhausted, or [`CipheyError::Timeout`] if
+/// the timeout passes first. In `top_results` mode the search runs until the timeout or
+/// until the search space is exhausted, and returns the first result, if any.
+#[cfg(target_family = "wasm")]
+pub fn search_for_plaintext(input: String) -> Result<Option<DecoderResult>, CipheyError> {
+    let config = get_config();
+    let deadline = Deadline::after(std::time::Duration::from_secs(u64::from(config.timeout)));
+    search_until(input, deadline, config.timeout, config.top_results)
+}
+
+/// Runs the search on this thread until it finds a result, the search space is exhausted or
+/// `deadline` passes, which the search checks before each step and before each decoder.
+/// This replaces the search thread and the timer thread of native targets, and returns what
+/// they do: the first result, `Ok(None)` once the search space is exhausted (and in
+/// `top_results` mode when nothing was found), or a [`CipheyError::Timeout`] for `timeout`
+/// seconds. `top_results_mode` is the config's `top_results`.
+#[cfg_attr(not(target_family = "wasm"), allow(dead_code))]
+pub(crate) fn search_until(
+    input: String,
+    deadline: Deadline,
+    timeout: u32,
+    top_results_mode: bool,
+) -> Result<Option<DecoderResult>, CipheyError> {
+    let mut first_result = None;
+    let mut exhausted = false;
+    astar::astar(
+        input,
+        |result| match result {
+            // In top_results mode the search goes on after a result; keep the first
+            Some(result) => {
+                first_result.get_or_insert(result);
+            }
+            None => exhausted = true,
+        },
+        Arc::new(AtomicBool::new(false)),
+        deadline,
+    );
+    match first_result {
+        Some(result) => Ok(Some(result)),
+        None if exhausted || top_results_mode => Ok(None),
+        None => Err(CipheyError::Timeout { secs: timeout }),
+    }
+}
+
 /// Waits for the search thread to send a result or for the timer to expire.
 ///
 /// Split out of [`search_for_plaintext`] so it can be tested with hand-built channels.
+#[cfg(not(target_family = "wasm"))]
 fn wait_for_search_result(
     result_recv: Receiver<Option<DecoderResult>>,
     timer: Receiver<()>,
@@ -153,6 +223,7 @@ fn wait_for_search_result(
 /// The result channel is drained while waiting. In `top_results` mode the search thread
 /// can be blocked sending a result into the bounded channel, so joining it without
 /// receiving would deadlock.
+#[cfg(not(target_family = "wasm"))]
 fn stop_search(
     stop: &AtomicBool,
     handle: thread::JoinHandle<()>,
@@ -378,5 +449,56 @@ mod tests {
         let result = wait_with_deadline(result_rx, timer_rx, search, false);
 
         assert_eq!(result.unwrap().unwrap().text[0], "found");
+    }
+
+    // `search_until` is how WebAssembly builds search: on the caller's thread, until a
+    // deadline. It runs on every target, so these check it natively too.
+
+    #[test]
+    fn search_until_returns_the_plaintext() {
+        let deadline = Deadline::after(std::time::Duration::from_secs(60));
+        let result = search_until("SGVsbG8gV29ybGQ=".to_string(), deadline, 60, false);
+        let result = result
+            .unwrap()
+            .expect("Base64 of Hello World should be decoded");
+        assert_eq!(result.text[0], "Hello World");
+        assert_eq!(result.path.last().unwrap().decoder, "Base64");
+    }
+
+    #[test]
+    fn search_until_an_exhausted_search_is_ok_none() {
+        let deadline = Deadline::after(std::time::Duration::from_secs(60));
+        assert!(matches!(
+            search_until(String::new(), deadline, 60, false),
+            Ok(None)
+        ));
+    }
+
+    #[test]
+    fn search_until_the_deadline_is_a_timeout_error() {
+        // `AAAA` has no plaintext, and without a deadline the search would go on until
+        // memory runs out
+        let started = std::time::Instant::now();
+        let deadline = Deadline::after(std::time::Duration::from_millis(500));
+        let result = search_until("AAAA".to_string(), deadline, 7, false);
+        assert!(matches!(result, Err(CipheyError::Timeout { secs: 7 })));
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(60),
+            "the search didn't stop at its deadline"
+        );
+
+        // A deadline that has already passed: nothing is searched
+        let deadline = Deadline::after(std::time::Duration::ZERO);
+        let result = search_until("SGVsbG8gV29ybGQ=".to_string(), deadline, 7, false);
+        assert!(matches!(result, Err(CipheyError::Timeout { secs: 7 })));
+    }
+
+    #[test]
+    fn search_until_in_top_results_mode_ends_without_an_error() {
+        // As natively: in top_results mode the search runs until the timeout, and finding
+        // nothing by then isn't an error
+        let deadline = Deadline::after(std::time::Duration::from_millis(300));
+        let result = search_until("AAAA".to_string(), deadline, 7, true);
+        assert!(matches!(result, Ok(None)), "{result:?}");
     }
 }

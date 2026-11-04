@@ -18,6 +18,13 @@
 //! let detection = plaintext.detection.as_ref().unwrap();
 //! assert_eq!(detection.description, "Internet Protocol (IP) Address Version 4");
 //! ```
+//!
+//! The library is written to build for WebAssembly with its default features and no flags
+//! (`cargo build --lib --target wasm32-unknown-unknown`), once its gibberish-or-not and
+//! LemmeKnow dependencies are replaced by versions that build there. On WebAssembly the
+//! search runs on the caller's thread and stops at the timeout by itself, there is no
+//! cache, the human checker never asks, and the CLI, the config file and wordlist files
+//! aren't available. See `docs/wasm.md` in the repository.
 // Warns in case we forget to include documentation
 #![warn(
     missing_docs,
@@ -32,6 +39,7 @@ mod api_library_input_struct;
 /// Checkers is a module that contains the functions that check if the input is plaintext
 pub mod checkers;
 /// CLI Arg Parsing library
+#[cfg(not(target_family = "wasm"))]
 pub mod cli;
 /// CLI Input Parser parses the input from the CLI and returns a struct.
 mod cli_input_parser;
@@ -50,6 +58,8 @@ mod cli_input_parser;
 /// assert!(!warning_msg.is_empty());
 /// ```
 pub mod cli_pretty_printing;
+/// The clock the search's timeout and the decoders' time limits are measured with
+mod clock;
 /// The Config module enables a configuration module
 /// Like a global API to access config details
 pub mod config;
@@ -62,12 +72,15 @@ mod error;
 /// The filtration system builds what decoders to use at runtime
 /// By default it will use them all.
 mod filtration_system;
+/// rayon's parallel iterators on native targets, sequential ones on WebAssembly
+mod parallel;
 /// The searcher is the thing which searches for the plaintext
 /// It is the core of the program.
 mod searchers;
 /// Storage module for dictionaries and invisible characters
 pub mod storage;
 /// Timer for internal use
+#[cfg(not(target_family = "wasm"))]
 mod timer;
 
 use checkers::{
@@ -77,6 +90,7 @@ use checkers::{
     wait_athena::WaitAthena,
 };
 use log::debug;
+#[cfg(not(target_family = "wasm"))]
 use std::time::SystemTime;
 
 use crate::{
@@ -144,6 +158,7 @@ pub use error::CipheyError;
 /// * [`CipheyError::Timeout`] if `config.timeout` expires before the search finishes.
 ///   Never returned in `top_results` mode, which always runs until the timeout.
 pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResult>, CipheyError> {
+    #[cfg(not(target_family = "wasm"))]
     let start_time = SystemTime::now();
 
     // Reject a bad regex here instead of panicking in the regex checker later.
@@ -164,13 +179,17 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
     //   (which can be an intermediate encoding) isn't the answer for other runs
     // * in top_results mode: every candidate has to be found by searching, and the one
     //   returned is just the first candidate, not a confirmed plaintext
+    // WebAssembly builds have no cache: it is a SQLite database in the home directory.
+    #[cfg(not(target_family = "wasm"))]
     let use_cache = modified_config.regex.is_none() && !modified_config.top_results;
 
     config::set_global_config(modified_config);
     let text = text.to_string();
 
     /* Initializing database */
+    #[cfg(not(target_family = "wasm"))]
     let db_result = storage::database::setup_database();
+    #[cfg(not(target_family = "wasm"))]
     match db_result {
         Ok(_) => (),
         Err(e) => {
@@ -185,11 +204,13 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
     // would be: the checkers that accepted it may have been wrong (and are stricter now),
     // and with the human checker on, the user gets asked. A cached answer that fails is
     // forgotten and the input is searched again.
+    #[cfg(not(target_family = "wasm"))]
     let cache_result = if use_cache {
         storage::database::read_cache(&text)
     } else {
         Ok(None)
     };
+    #[cfg(not(target_family = "wasm"))]
     match cache_result {
         Ok(Some(row)) => {
             log::debug!("Cache hit for text: {}", text);
@@ -227,6 +248,7 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
             path: vec![crack_result],
         };
 
+        #[cfg(not(target_family = "wasm"))]
         if use_cache {
             let cache_result = success_result_to_cache(&text, start_time, &output);
             match cache_result {
@@ -264,6 +286,7 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
         ));
     }
 
+    #[cfg(not(target_family = "wasm"))]
     if let Some(output) = &result {
         if use_cache {
             let cache_result = success_result_to_cache(&text, start_time, output);
@@ -284,6 +307,7 @@ pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResu
 
 /// The result stored in a cache row, if its plaintext still passes the checkers (and the
 /// human checker, if it is on).
+#[cfg(not(target_family = "wasm"))]
 fn cached_result(row: storage::database::CacheRow) -> Option<DecoderResult> {
     let path: Vec<CrackResult> = row
         .path
@@ -333,6 +357,7 @@ fn check_plaintext(text: &str) -> CheckResult {
 }
 
 /// Stores a successful DecoderResult into the cache table
+#[cfg(not(target_family = "wasm"))]
 fn success_result_to_cache(
     text: &String,
     start_time: SystemTime,
@@ -404,6 +429,7 @@ pub fn reset_decoder_stats() {
 
 /// Gets the test directory path
 #[doc(hidden)]
+#[cfg(not(target_family = "wasm"))]
 pub fn get_test_dir_path() -> std::path::PathBuf {
     let mut path = dirs::home_dir().expect("Could not find home directory");
     path.push(".ciphey");
@@ -413,6 +439,7 @@ pub fn get_test_dir_path() -> std::path::PathBuf {
 
 /// Sets the global database path
 #[doc(hidden)]
+#[cfg(not(target_family = "wasm"))]
 pub fn set_test_db_path() {
     let mut path = get_test_dir_path();
     std::fs::create_dir_all(&path).expect("Could not create .ciphey directory");
@@ -422,12 +449,14 @@ pub fn set_test_db_path() {
 
 /// Helper struct for testing database
 #[doc(hidden)]
+#[cfg(not(target_family = "wasm"))]
 pub struct TestDatabase {
     /// PathBuf to database file
     pub path: std::path::PathBuf,
 }
 
 #[doc(hidden)]
+#[cfg(not(target_family = "wasm"))]
 impl Default for TestDatabase {
     fn default() -> Self {
         TestDatabase {
@@ -437,6 +466,7 @@ impl Default for TestDatabase {
 }
 
 #[doc(hidden)]
+#[cfg(not(target_family = "wasm"))]
 impl Drop for TestDatabase {
     fn drop(&mut self) {
         let mut db_file_path = self.path.as_path().to_path_buf();

@@ -34,16 +34,18 @@
 
 #[cfg(test)]
 mod tests;
-use crate::storage;
-use crate::storage::wait_athena_storage::PlaintextResult;
 use crate::DecoderResult;
 use std::env;
 use std::ffi::OsStr;
-use std::fs::write;
 use std::io::Write;
 use std::sync::OnceLock;
 use termcolor::{Buffer, Color, ColorSpec, WriteColor};
-use text_io::read;
+// For the prompts that offer to save results to a file: native targets only
+#[cfg(not(target_family = "wasm"))]
+use {
+    crate::storage, crate::storage::wait_athena_storage::PlaintextResult, std::fs::write,
+    text_io::read,
+};
 
 /// Parse RGB string in format "r,g,b" to RGB values.
 ///
@@ -256,9 +258,18 @@ fn enable_ansi_support() -> bool {
 ///
 /// # Returns
 /// * `bool` - Always true
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_family = "wasm")))]
 fn enable_ansi_support() -> bool {
     true
+}
+
+/// WebAssembly has no terminal, so text is never coloured there.
+///
+/// # Returns
+/// * `bool` - Always false
+#[cfg(target_family = "wasm")]
+fn enable_ansi_support() -> bool {
+    false
 }
 
 /// Colors text based on its role, defaulting to statement color if no role is specified.
@@ -339,6 +350,7 @@ fn error(text: &str) -> String {
 ///
 /// # Returns
 /// * `String` - The text colored in the question color
+#[cfg(not(target_family = "wasm"))]
 fn question(text: &str) -> String {
     color_string(text, "question")
 }
@@ -359,6 +371,7 @@ fn question(text: &str) -> String {
 ///
 /// # Panics
 /// Panics if there is an error writing to file when output_method is set to a file
+#[cfg(not(target_family = "wasm"))]
 pub fn program_exiting_successful_decoding(result: DecoderResult) {
     let config = crate::config::get_config();
     if config.api_mode {
@@ -433,6 +446,7 @@ pub fn program_exiting_successful_decoding(result: DecoderResult) {
 ///
 /// Counts characters rather than bytes: zero-width characters take 3 bytes in UTF-8,
 /// so dividing by the byte length made text that is entirely invisible look 33% invisible.
+#[cfg(not(target_family = "wasm"))]
 fn invisible_char_ratio(text: &str) -> f64 {
     let total = text.chars().count();
     if total == 0 {
@@ -594,6 +608,7 @@ pub fn warning_unknown_config_key(key: &str) {
 ///
 /// # Panics
 /// This function can panic if stdin cannot be read when prompting to write many results to a file.
+#[cfg(not(target_family = "wasm"))]
 pub fn display_top_results(results: &[PlaintextResult]) {
     let config = crate::config::get_config();
     if config.api_mode {

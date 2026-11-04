@@ -35,13 +35,14 @@ use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
 use crate::checkers::checker_result::CheckResult;
 use crate::checkers::CheckerTypes;
+use crate::clock::Instant;
 use crate::config::get_config;
 use crate::storage::ENGLISH_FREQS;
 use gibberish_or_not::Sensitivity;
 use log::{debug, trace};
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 /// Fewer letters than this and the search rarely finds the square: a wrong square can
 /// score as well as the right one, and one run of the annealing finds it in only about a

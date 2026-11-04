@@ -1,13 +1,17 @@
 use crate::checkers::checker_result::CheckResult;
-use crate::cli_pretty_printing::human_checker_check;
-use crate::config::get_config;
-use crate::storage::database;
-use crate::timer;
-use dashmap::DashSet;
 use std::cell::Cell;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Mutex, OnceLock};
-use text_io::read;
+// Only for asking on the terminal, which WebAssembly builds don't do
+#[cfg(not(target_family = "wasm"))]
+use {
+    crate::cli_pretty_printing::human_checker_check,
+    crate::config::get_config,
+    crate::storage::database,
+    crate::timer,
+    dashmap::DashSet,
+    std::sync::atomic::{AtomicBool, Ordering},
+    std::sync::{Mutex, OnceLock},
+    text_io::read,
+};
 
 thread_local! {
     /// Whether [`human_checker`] accepts candidates without asking on this thread, see
@@ -36,21 +40,26 @@ pub(crate) fn without_prompts<T>(f: impl FnOnce() -> T) -> T {
 }
 
 /// Prompts already shown in this process so repeated candidates do not ask again.
+#[cfg(not(target_family = "wasm"))]
 static SEEN_PROMPTS: OnceLock<DashSet<String>> = OnceLock::new();
 // if human checker is called, we set this to true
 // so we dont call it again
 /// Indicates whether a human has already accepted a candidate in this process.
+#[cfg(not(target_family = "wasm"))]
 static HUMAN_CONFIRMED: AtomicBool = AtomicBool::new(false);
 // Mutex to ensure only one thread prompts the user at a time
 /// Serializes interactive prompts so concurrent searches do not overlap on stdin/stdout.
+#[cfg(not(target_family = "wasm"))]
 static PROMPT_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 /// Returns the process-wide set of prompts that have already been shown.
+#[cfg(not(target_family = "wasm"))]
 fn get_seen_prompts() -> &'static DashSet<String> {
     SEEN_PROMPTS.get_or_init(DashSet::new)
 }
 
 /// Returns the mutex used to serialize access to the human prompt.
+#[cfg(not(target_family = "wasm"))]
 fn get_prompt_lock() -> &'static Mutex<()> {
     PROMPT_LOCK.get_or_init(|| Mutex::new(()))
 }
@@ -60,6 +69,7 @@ fn get_prompt_lock() -> &'static Mutex<()> {
 /// Humans have the last say.
 /// TODO: Add a way to specify a list of checkers to use in the library. This checker is not library friendly!
 // compile this if we are not running tests
+#[cfg(not(target_family = "wasm"))]
 pub fn human_checker(input: &CheckResult) -> bool {
     // The library's single-decoder functions never ask, see `without_prompts`
     if PROMPTS_OFF.with(Cell::get) {
@@ -83,11 +93,20 @@ pub fn human_checker(input: &CheckResult) -> bool {
     result
 }
 
+/// WebAssembly has no terminal to ask on, so every candidate the other checkers identify is
+/// accepted, as in API mode, whatever `human_checker_on` says. Callers that want a human to
+/// decide (a web page, say) show the result and let them search again.
+#[cfg(target_family = "wasm")]
+pub fn human_checker(_input: &CheckResult) -> bool {
+    true
+}
+
 /// Asks the human about `input` with `ask`, unless they were already asked about it.
 ///
 /// Only one prompt is shown at a time. Accepting a candidate ends the search, so a
 /// candidate that was already asked about was rejected and is rejected again without
 /// asking.
+#[cfg(not(target_family = "wasm"))]
 fn ask_once(input: &CheckResult, ask: impl FnOnce(&CheckResult) -> bool) -> bool {
     // Acquire the lock to ensure only one thread prompts the user at a time
     let lock_result = get_prompt_lock().lock();
@@ -124,6 +143,7 @@ fn ask_once(input: &CheckResult, ask: impl FnOnce(&CheckResult) -> bool) -> bool
 
 /// Shows the prompt for `input` and reads the answer from stdin.
 /// Rejections are recorded in the database.
+#[cfg(not(target_family = "wasm"))]
 fn prompt_user(input: &CheckResult) -> bool {
     human_checker_check(&input.description, &input.text);
 
