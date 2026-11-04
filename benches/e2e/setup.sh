@@ -10,9 +10,11 @@
 #   $TOOLS/node/                      npm cyberchef 11.5.0 (Magic) and jsfuck 0.4.0
 #   $TOOLS/gen/bin/python             the PyPI encoders corpus.py uses, on Python 3.12 (uv)
 #
-# Needs cargo, uv (or $UV) and node/npm 24+ on PATH. The pins are kept in this script rather
-# than in requirements.txt/package.json files so that GitHub's dependency graph doesn't
-# report the old packages of Python Ciphey and CyberChef as dependencies of Ciphey.
+# Needs cargo, uv (or $UV) and node/npm 24+ on PATH. The Python pins are kept in this script,
+# and npm's lock in benches/data/e2e/cyberchef-lock.json (the exact 389 packages the baseline
+# ran with), rather than in requirements.txt/package.json/package-lock.json files, so that
+# GitHub's dependency graph doesn't report Python Ciphey's and CyberChef's old dependencies
+# as Ciphey's.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 TOOLS=${TOOLS:-$ROOT/.tools}
@@ -44,22 +46,24 @@ if [[ $what == all || $what == python-ciphey ]]; then
 fi
 
 if [[ $what == all || $what == node ]]; then
-  # --ignore-scripts: cyberchef's postinstall runs grunt, which isn't installed for users of
-  # the package; the one step the Node API needs (adding .mjs to crypto-api's imports) is
-  # run by hand below. terser is a devDependency that the Node API imports anyway.
+  # npm ci installs exactly the lock. --ignore-scripts: cyberchef's postinstall runs grunt,
+  # which isn't installed for users of the package; the one step the Node API needs (adding
+  # .mjs to crypto-api's imports) is run by hand below. terser is a devDependency that the
+  # Node API imports anyway.
   mkdir -p "$TOOLS/node"
   cat > "$TOOLS/node/package.json" <<'EOF'
 {"name": "ciphey-e2e-tools", "private": true,
  "dependencies": {"cyberchef": "11.5.0", "jsfuck": "0.4.0", "terser": "5.51.2"}}
 EOF
-  (cd "$TOOLS/node" && npm install --no-audit --no-fund --ignore-scripts &&
+  cp "$ROOT/benches/data/e2e/cyberchef-lock.json" "$TOOLS/node/package-lock.json"
+  (cd "$TOOLS/node" && npm ci --no-audit --no-fund --ignore-scripts &&
     node --no-warnings node_modules/cyberchef/src/core/config/scripts/fixCryptoApiImports.mjs)
 fi
 
 if [[ $what == all || $what == gen ]]; then
   "$UV" venv -p 3.12 "$TOOLS/gen"
   "$UV" pip install -p "$TOOLS/gen/bin/python" base45==0.4.4 base58==2.1.1 base65536==0.1.1 base91==1.0.1 \
-    base92==2.0.0 cipheydists==0.3.35 lz4==4.4.5 lzstring==1.0.4 pybase62==1.0.0 pycipher==0.5.2 \
-    zstandard==0.25.0
+    base92==2.0.0 cipheydists==0.3.35 future==1.0.0 lz4==4.4.5 lzstring==1.0.4 pybase62==1.0.0 \
+    pycipher==0.5.2 six==1.17.0 zstandard==0.25.0
 fi
 echo "tools in $TOOLS"

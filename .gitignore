@@ -24,5 +24,6 @@ doc/
 .aider*
 .cursor
 
-# Python bytecode (benches/e2e)
+# Python bytecode, and the tools benches/e2e/setup.sh installs
 __pycache__/
+/.tools/

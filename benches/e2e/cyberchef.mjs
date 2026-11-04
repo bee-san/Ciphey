@@ -12,6 +12,8 @@
 //     each result. `ms` is the time of Magic plus the bake of the first suggestion.
 //   {"op": "bake", "input": "...", "recipe": [{"op": "To Base64", "args": [...]}]}
 //     Runs a recipe and returns its output as text (UTF-8).
+//   {"op": "checks", "hex": "..."}     (corpus.py) the operations Magic would try on these bytes:
+//     the names of the operations whose detection patterns match (Magic's findMatchingInputOps)
 //   {"op": "jsfuck", "input": "..."}   (corpus.py) JSFuck.encode from npm jsfuck, if installed
 //   {"op": "eval", "code": "..."}      (corpus.py --verify) String(eval(code))
 import { pathToFileURL } from "node:url";
@@ -25,6 +27,7 @@ if (!dir) {
     process.exit(2);
 }
 const chef = (await import(pathToFileURL(join(dir, "node_modules/cyberchef/src/node/index.mjs")).href)).default;
+const MagicLib = (await import(pathToFileURL(join(dir, "node_modules/cyberchef/src/core/lib/Magic.mjs")).href)).default;
 
 /** The text of a dish: UTF-8 decoded, as the web app shows it. */
 function dishText(dish) {
@@ -44,6 +47,11 @@ async function bakeText(input, recipe) {
 async function handle(req) {
     if (req.op === "bake") {
         return { output: dishText(await chef.bake(req.input, req.recipe)) };
+    }
+    if (req.op === "checks") {
+        const bytes = Uint8Array.from(req.hex.match(/../g) || [], h => parseInt(h, 16));
+        const ops = new MagicLib(bytes.buffer).findMatchingInputOps().map(m => m.op);
+        return { ops: [...new Set(ops)] };
     }
     if (req.op === "jsfuck") {
         const { JSFuck } = createRequire(join(dir, "package.json"))("jsfuck");

@@ -3,9 +3,10 @@
 
     python3 benches/e2e/run.py target/release/ciphey                    # one binary, every case
     python3 benches/e2e/run.py --subset quick OLD/ciphey NEW/ciphey      # A/B, interleaved per case
-    python3 benches/e2e/run.py python-ciphey:.venv-pyciphey/bin/python   # Python Ciphey 5.x
-    python3 benches/e2e/run.py cyberchef:.tools/cyberchef                # CyberChef Magic (depth 3)
-    python3 benches/e2e/run.py cyberchef-intensive:.tools/cyberchef      # ... with intensive mode
+    python3 benches/e2e/run.py python-ciphey:.tools/pyciphey/bin/python  # Python Ciphey 5.x
+    python3 benches/e2e/run.py cyberchef:.tools/node                     # CyberChef Magic (depth 3)
+    python3 benches/e2e/run.py cyberchef-intensive:.tools/node           # ... with intensive mode
+    python3 benches/e2e/run.py --selftest                                # the parsers and verdict rules
     python3 benches/e2e/run.py --summarize target/e2e/*/results.tsv     # one table from saved runs
 
 A tool is `[name=][adapter:]path`; the adapter defaults to `ciphey` (any ciphey binary). With
@@ -40,6 +41,8 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
+sys.path.insert(0, HERE)
+from cyberchef import CyberChef, CyberChefError  # noqa: E402  (stdlib only, next to this file)
 CONFIG_TOML = os.path.join(ROOT, "benches", "data", "config.toml")
 CATEGORIES = ["encoding", "classical", "hash", "chain", "flag", "short", "long", "language", "plaintext", "no_answer"]
 ADAPTERS = ["ciphey", "python-ciphey", "cyberchef", "cyberchef-intensive"]
@@ -167,6 +170,59 @@ class Tool:
         shutil.rmtree(self.scratch, ignore_errors=True)
 
 
+def parse_ciphey(out, err, rc):
+    """(status, answer, decoder path) from a ciphey run's stdout, stderr and exit code (None if
+    it was killed). The answer is the text between "The plaintext is:" and the last "the
+    decoder(s) used" line. "none" needs ciphey's own failure message: other output that has no
+    answer is an "error", so a broken binary doesn't get credited with giving up."""
+    text = ANSI.sub("", out)
+    marker = "The plaintext is:\n"
+    if rc is None:
+        return "timeout", None, ""
+    i = text.find(marker)
+    if i >= 0:
+        rest = text[i + len(marker):]
+        found = list(re.finditer(r"\nthe decoders? used (?:is|are) ", rest))
+        if found:
+            last = found[-1]
+            return "answer", rest[: last.start()], rest[last.end():].split("\n", 1)[0].strip()
+        return "answer", rest.rstrip("\n"), ""
+    if rc != 0:
+        return "error", None, f"exit {rc}: {err.strip()[-200:]}"
+    if "ciphey has failed to decode the text." not in text:
+        return "error", None, "no answer and no failure message: " + text.strip()[-200:]
+    if "Timed out" in err:
+        return "timeout", None, ""
+    return "none", None, ""
+
+
+def parse_python_ciphey(out, err, rc):
+    """(status, answer, decoder path) from python_ciphey.py's JSON line."""
+    if rc is None:
+        return "timeout", None, ""
+    lines = [ln for ln in out.splitlines() if ln.startswith("{")]
+    if rc != 0 or not lines:
+        return "error", None, f"exit {rc}: {err.strip()[-200:]}"
+    res = json.loads(lines[-1])
+    if res["status"] == "answer":
+        return "answer", res["plaintext"], " → ".join(res["path"])
+    return "none", None, ""
+
+
+def magic_answer(reply, case_input):
+    """(status, answer, recipe) from the worker's Magic reply: the first suggestion, or "none"
+    with the input itself when nothing ranks above the input."""
+    results = reply["results"]
+    if not results:  # "Nothing of interest could be detected about the input data"
+        return "none", case_input, ""
+    top = results[0]
+    if not top["recipe"]:
+        return "none", case_input, ""
+    if top["output"] is None:
+        return "error", None, "recipe failed: " + " → ".join(top["recipe"])
+    return "answer", top["output"], " → ".join(top["recipe"])
+
+
 class CipheyTool(Tool):
     """Any ciphey binary: `ciphey -d -c T --text=INPUT` with a fresh HOME."""
 
@@ -186,23 +242,7 @@ class CipheyTool(Tool):
         argv = [self.path, "-d", "-c", str(self.args.timeout), "--text=" + case.input]
         out, err, rc, secs = run_process(argv, env, self.args.timeout + GRACE)
         shutil.rmtree(home, ignore_errors=True)
-        text = ANSI.sub("", out)
-        marker = "The plaintext is:\n"
-        if rc is None:
-            return "timeout", None, "", secs
-        i = text.find(marker)
-        if i >= 0:
-            rest = text[i + len(marker):]
-            found = list(re.finditer(r"\nthe decoders? used (?:is|are) ", rest))
-            if found:
-                last = found[-1]
-                return "answer", rest[: last.start()], rest[last.end():].split("\n", 1)[0].strip(), secs
-            return "answer", rest.rstrip("\n"), "", secs
-        if rc != 0:
-            return "error", None, f"exit {rc}: {err.strip()[-200:]}", secs
-        if "Timed out" in err:
-            return "timeout", None, "", secs
-        return "none", None, "", secs
+        return parse_ciphey(out, err, rc) + (secs,)
 
     def info(self):
         info = super().info()
@@ -227,15 +267,7 @@ class PythonCipheyTool(Tool):
         out, err, rc, secs = run_process([self.path, os.path.join(HERE, "python_ciphey.py")], env,
                                          self.args.timeout + GRACE, stdin=case.input.encode("utf-8"))
         shutil.rmtree(home, ignore_errors=True)
-        if rc is None:
-            return "timeout", None, "", secs
-        lines = [ln for ln in out.splitlines() if ln.startswith("{")]
-        if rc != 0 or not lines:
-            return "error", None, f"exit {rc}: {err.strip()[-200:]}", secs
-        res = json.loads(lines[-1])
-        if res["status"] == "answer":
-            return "answer", res["plaintext"], " → ".join(res["path"]), secs
-        return "none", None, "", secs
+        return parse_python_ciphey(out, err, rc) + (secs,)
 
     def info(self):
         info = super().info()
@@ -254,31 +286,24 @@ class CyberChefTool(Tool):
 
     def __init__(self, name, path, args):
         super().__init__(name, path, args)
-        sys.path.insert(0, HERE)
-        from cyberchef import CyberChef
-
         self.chef = CyberChef(path, node=args.node)
         self.chef.start()
 
     def run(self, case):
-        if self.chef.proc is None or self.chef.proc.poll() is not None:
-            self.chef.start()  # after a timeout killed it; its start-up isn't the case's time
-        t0 = time.perf_counter()
-        reply = self.chef.magic(case.input, depth=self.args.depth, intensive=self.intensive, top=5,
-                                timeout=self.args.timeout + GRACE)
+        self.last_alternatives = []
+        try:
+            if self.chef.proc is None or self.chef.proc.poll() is not None:
+                self.chef.start()  # after a timeout or a crash; its start-up isn't the case's time
+            t0 = time.perf_counter()
+            reply = self.chef.magic(case.input, depth=self.args.depth, intensive=self.intensive, top=5,
+                                    timeout=self.args.timeout + GRACE)
+        except CyberChefError as e:  # the worker died or failed: this case is an error, the next one restarts it
+            self.chef.close()
+            return "error", None, str(e).splitlines()[0][:200], 0.0
         if reply is None:
             return "timeout", None, "", time.perf_counter() - t0
-        secs = reply["ms"] / 1000
-        results = reply["results"]
-        self.last_alternatives = [r["output"] for r in results]
-        if not results:  # "Nothing of interest could be detected about the input data"
-            return "none", case.input, "", secs
-        top = results[0]
-        if not top["recipe"]:
-            return "none", case.input, "", secs
-        if top["output"] is None:
-            return "error", None, "recipe failed: " + " → ".join(top["recipe"]), secs
-        return "answer", top["output"], " → ".join(top["recipe"]), secs
+        self.last_alternatives = [r["output"] for r in reply["results"]]
+        return magic_answer(reply, case.input) + (reply["ms"] / 1000,)
 
     def info(self):
         info = super().info()
@@ -496,6 +521,124 @@ def ab_report(rows, cases, a, b):
 # ---------------------------------------------------------------------------------------
 
 
+def check_failures(rows, cases, names):
+    """The cases `--check` fails on: with one tool, those it didn't get right that aren't
+    expected failures; with two (A/B), those A got right and B didn't."""
+    by_id = {c.id: c for c in cases}
+    first = {}
+    for r in rows:
+        first.setdefault((r["tool"], r["id"]), r)
+    if len(names) == 1:
+        return [i for (t, i), r in first.items() if r["verdict"] != "correct" and not by_id[i].xfail]
+    a, b = names
+    return [i for (t, i), r in first.items() if t == a and r["verdict"] == "correct" and (b, i) in first
+            and first[(b, i)]["verdict"] != "correct"]
+
+
+def selftest():
+    """Canned outputs of master, 0.12.0, Python Ciphey and CyberChef through the parsers and the
+    verdict rules (`--selftest`, run by CI before the smoke run). Needs no binary."""
+    green, gold, reset = "\x1b[0m\x1b[1m\x1b[38;2;0;255;0m", "\x1b[0m\x1b[1m\x1b[38;2;255;215;0m", "\x1b[0m"
+    fail = "\x1b[0m\x1b[1m\x1b[38;2;255;0;0m⛔️ ciphey has failed to decode the text.\nIf you want more help, ask.\x1b[0m\n"
+    ciphey = [
+        # (stdout, stderr, exit code, expected (status, answer, path))
+        (f"\n🥳 ciphey has decoded 122 times.\n\nThe plaintext is:\n{green}Hello, World!{reset}\nthe decoder used is {gold}Base64{reset}\n",
+         "", 0, ("answer", "Hello, World!", "Base64")),
+        (f"\nThe plaintext is:\n{green}Ciphey is very fast{reset}\nthe decoders used are {gold}Base64 → Hexadecimal → caesar{reset}\n",
+         "", 0, ("answer", "Ciphey is very fast", "Base64 → Hexadecimal → caesar")),
+        (f"{green}Your input text is the plaintext 🥳{reset}\nThe plaintext is:\n{green}Hi there{reset}\nthe decoder used is {gold}Default decoder{reset}\n",
+         "", 0, ("answer", "Hi there", "Default decoder")),
+        ("\n🥳 ciphey has decoded 64 times.\n\nThe plaintext is:\nHello\nthe decoder used is Base64\n", "", 0,
+         ("answer", "Hello", "Base64")),  # 0.12.0: no colours
+        ("The plaintext is:\nline 1\nthe decoder used is a trick\nline 3\nthe decoders used are A → B\n", "", 0,
+         ("answer", "line 1\nthe decoder used is a trick\nline 3", "A → B")),  # the last marker counts
+        (fail, "Timed out after 5s, try a longer --cracking-timeout\n", 0, ("timeout", None, "")),
+        (fail, "", 0, ("none", None, "")),
+        ("", "thread 'main' panicked at src/main.rs:1:\n", 101, ("error", None, "exit 101: thread 'main' panicked at src/main.rs:1:")),
+        ("", "", 0, ("error", None, "no answer and no failure message: ")),
+        ("garbage", "", 0, ("error", None, "no answer and no failure message: garbage")),
+        ("The plaintext is:\nhalf", "", None, ("timeout", None, "")),  # killed
+    ]
+    python = [
+        ('{"status": "answer", "plaintext": "hello", "path": ["base64", "utf8"]}\n', "", 0, ("answer", "hello", "base64 → utf8")),
+        ('{"status": "none"}\n', "", 0, ("none", None, "")),
+        ("", "Traceback ...", 1, ("error", None, "exit 1: Traceback ...")),
+        ("", "", None, ("timeout", None, "")),
+    ]
+    magic = [
+        ({"results": []}, ("none", "INPUT", "")),
+        ({"results": [{"recipe": [], "output": "INPUT"}]}, ("none", "INPUT", "")),
+        ({"results": [{"recipe": ["From Base64"], "output": "hello"}]}, ("answer", "hello", "From Base64")),
+        ({"results": [{"recipe": ["Gunzip"], "output": None}]}, ("error", None, "recipe failed: Gunzip")),
+    ]
+
+    def case(category, inp, expected, match="exact"):
+        return Case(["t", category, "", "ciphey", "", match, "", "-", inp, expected])
+
+    verdicts = [
+        # (case, status, answer, verdict)
+        (case("no_answer", "x1y2", "-", "none"), "answer", "junk", "wrong"),
+        (case("no_answer", "x1y2", "-", "none"), "answer", "x1y2", "wrong"),  # "Your input text is the plaintext"
+        (case("no_answer", "x1y2", "-", "none"), "none", None, "correct"),
+        (case("no_answer", "x1y2", "-", "none"), "timeout", None, "correct"),
+        (case("no_answer", "x1y2", "-", "none"), "error", None, "nothing"),
+        (case("no_answer", "x1y2", "-", "none"), "none", "x1y2", "correct"),  # CyberChef suggesting nothing
+        (case("plaintext", "Hi there", "Hi there"), "answer", "Hi there", "correct"),
+        (case("plaintext", "Hi there", "Hi there"), "none", "Hi there", "correct"),  # CyberChef
+        (case("plaintext", "Hi there", "Hi there"), "none", None, "nothing"),
+        (case("encoding", "SGk=", "Hi there"), "none", "SGk=", "nothing"),
+        (case("encoding", "SGk=", "Hi there"), "answer", "Hi there \n", "correct"),
+        (case("encoding", "SGk=", "Hi there"), "answer", "hi there", "wrong"),
+        (case("encoding", "x", "HELLO WORLD", "fold"), "answer", "hello   world", "correct"),
+        (case("encoding", "x", "HELLO WORLD", "fold"), "answer", "helloworld", "wrong"),
+        (case("encoding", "x", "HELLO WORLD", "letters"), "answer", "helloworld", "correct"),
+        (case("encoding", "x", "HELLO WORLD", "letters"), "answer", "hello wor1d", "wrong"),
+        (case("encoding", "x", '{"a":1,"b":[2]}', "json"), "answer", '{\n  "b": [2],\n  "a": 1\n}', "correct"),
+        (case("encoding", "x", '{"a":1}', "json"), "answer", '{"a":2}', "wrong"),
+        (case("encoding", "x", "Hi"), "timeout", None, "nothing"),
+    ]
+    xf = Case(["x", "encoding", "", "ciphey", "#1", "exact", "", "-", "i", "e"])
+    ok = Case(["o", "encoding", "", "ciphey", "", "exact", "", "-", "i", "e"])
+
+    def row(tool, cid, v):
+        return {"tool": tool, "id": cid, "verdict": v}
+
+    checks = [
+        # (rows, names, failing ids)
+        ([row("A", "o", "correct"), row("A", "x", "nothing")], ["A"], []),  # an expected failure doesn't fail
+        ([row("A", "o", "wrong"), row("A", "x", "nothing")], ["A"], ["o"]),
+        ([row("A", "o", "correct"), row("B", "o", "nothing")], ["A", "B"], ["o"]),  # B lost a case
+        ([row("A", "o", "nothing"), row("B", "o", "correct")], ["A", "B"], []),  # B gained one
+        ([row("A", "x", "correct"), row("B", "x", "wrong")], ["A", "B"], ["x"]),
+    ]
+    failures = []
+    for rows, names, want in checks:
+        got = check_failures(rows, [xf, ok], names)
+        if got != want:
+            failures.append(f"check_failures({rows}, {names}) = {got}, want {want}")
+    for out, err, rc, want in ciphey:
+        got = parse_ciphey(out, err, rc)
+        if got != want:
+            failures.append(f"parse_ciphey({out[:40]!r}, rc={rc}) = {got}, want {want}")
+    for out, err, rc, want in python:
+        got = parse_python_ciphey(out, err, rc)
+        if got != want:
+            failures.append(f"parse_python_ciphey({out[:40]!r}, rc={rc}) = {got}, want {want}")
+    for reply, want in magic:
+        got = magic_answer(reply, "INPUT")
+        if got != want:
+            failures.append(f"magic_answer({reply}) = {got}, want {want}")
+    for c, status, answer, want in verdicts:
+        got = verdict(c, status, answer)
+        if got != want:
+            failures.append(f"verdict({c.category}, {c.match}, {status}, {answer!r}) = {got}, want {want}")
+    for f in failures:
+        print("SELFTEST FAILED: " + f)
+    n = len(checks) + len(ciphey) + len(python) + len(magic) + len(verdicts)
+    print(f"SELFTEST {'FAILED' if failures else 'OK'} ({n - len(failures)} of {n} checks)")
+    return 1 if failures else 0
+
+
 def uptime():
     try:
         return subprocess.run(["uptime"], capture_output=True, text=True, timeout=10).stdout.strip()
@@ -554,11 +697,14 @@ def main():
     ap.add_argument("--all-cases", action="store_true", help="also run cases not tagged as comparable on the tool")
     ap.add_argument("--summarize", nargs="+", metavar="RESULTS_TSV",
                     help="summarize saved runs instead: results.tsv files under target/e2e, or benches/data/e2e/baseline-*.tsv")
+    ap.add_argument("--selftest", action="store_true", help="check the output parsers and verdict rules, no binary needed")
     ap.add_argument("--check", action="store_true",
                     help="exit 1 if a case that isn't an expected failure isn't correct (one tool), or if a case "
                          "A got right isn't right for B (A/B)")
     args = ap.parse_args()
 
+    if args.selftest:
+        sys.exit(selftest())
     corpus_path = corpora()[args.corpus]
     cases, corpus_sha = load_corpus(corpus_path)
     if args.summarize:
@@ -660,16 +806,7 @@ def main():
     print(f"uptime after: {meta['uptime_end']}")
     print(f"wrote {out_dir}/results.tsv, summary.md, meta.json")
     if args.check:
-        by_id = {c.id: c for c in sel}
-        first = {}
-        for r in rows:
-            first.setdefault((r["tool"], r["id"]), r)
-        if len(tools) == 1:
-            failed = [i for (t, i), r in first.items() if r["verdict"] != "correct" and not by_id[i].xfail]
-        else:
-            a, b = names
-            failed = [i for (t, i), r in first.items() if t == a and r["verdict"] == "correct" and (b, i) in first
-                      and first[(b, i)]["verdict"] != "correct"]
+        failed = check_failures(rows, sel, names)
         if failed:
             print("CHECK FAILED: " + ", ".join(failed))
             sys.exit(1)

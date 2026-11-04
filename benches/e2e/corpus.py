@@ -6,16 +6,16 @@ reproduce it byte for byte (`--check`). Changing the cases means a new version
 (corpus-v2.tsv) so that results stay comparable. See docs/benchmark-e2e.md.
 
 Every ciphertext comes from an implementation that is independent of Ciphey's decoders:
-Python's standard library, PyPI reference packages (pinned in requirements.txt),
-CyberChef's operations (through cyberchef.py) or a short encoder written here from the
-published definition, cited next to it. `--verify` decodes every case again with a second,
-independent implementation where one exists.
+Python's standard library, PyPI reference packages (pinned in setup.sh), CyberChef's
+operations (through cyberchef.py) or a short encoder written here from the published
+definition, cited next to it. `--verify` decodes every case again with a second, independent
+implementation where one exists. Which cases CyberChef is comparable on comes from Magic's
+own detection (cyberchef_tools), so generating needs the CyberChef install too.
 
-    uv venv -p 3.12 .venv-gen
-    uv pip install -p .venv-gen/bin/python -r benches/e2e/requirements.txt
-    .venv-gen/bin/python benches/e2e/corpus.py --cyberchef .tools/cyberchef          # write
-    .venv-gen/bin/python benches/e2e/corpus.py --cyberchef .tools/cyberchef --check  # compare
-    .venv-gen/bin/python benches/e2e/corpus.py --cyberchef .tools/cyberchef --verify # decode again
+    benches/e2e/setup.sh gen && benches/e2e/setup.sh node                     # into .tools/
+    .tools/gen/bin/python benches/e2e/corpus.py --cyberchef .tools/node          # write
+    .tools/gen/bin/python benches/e2e/corpus.py --cyberchef .tools/node --check  # compare
+    .tools/gen/bin/python benches/e2e/corpus.py --cyberchef .tools/node --verify # decode again
 """
 
 import argparse
@@ -1230,10 +1230,13 @@ def load_plaintexts():
 
 
 # ---------------------------------------------------------------------------------------
-# What each tool can decode. A case is comparable on a tool when the tool has a decoder for
-# every layer: Python Ciphey 5.14.0's registered decoders and crackers (ciphey/basemods),
-# CyberChef Magic's operations with a `checks` pattern (OperationConfig.json), and in
-# intensive mode also its brute force of single-byte XOR, bit rotation and text encodings.
+# What each tool can decode. A case is comparable on Python Ciphey 5.14.0 when it has a
+# decoder or cracker for every layer (its registered modules, ciphey/basemods). It is
+# comparable on CyberChef Magic when Magic would try the right operation at every layer: the
+# layer's decoding operation (CC_OPS) is among the operations whose detection patterns match
+# the text at that layer (Magic's own findMatchingInputOps, through the worker), and there are
+# at most 3 layers (Magic's default depth runs recipes of at most 3 operations). In intensive
+# mode a layer may instead be one Magic brute-forces (CC_BRUTE).
 
 
 class Layer:
@@ -1248,61 +1251,61 @@ def layer(name, fn, tools=(), xfail="", match="exact"):
     L[name] = Layer(name, fn, tools, xfail, match)
 
 
-P_, C_, I_ = PY, CC, CCI
-layer("base64", b64, (P_, C_))
-layer("base64_url", b64url, (C_,))
-layer("base64_itoa64", b64_itoa64, (C_,))
-layer("base32", b32, (P_, C_))
-layer("base32hex", b32hex, (C_,))
+P_ = PY
+layer("base64", b64, (P_,))
+layer("base64_url", b64url)
+layer("base64_itoa64", b64_itoa64)
+layer("base32", b32, (P_,))
+layer("base32hex", b32hex)
 layer("base32_crockford", b32_crockford)
 layer("zbase32", zbase32)
-layer("hex", hexlower, (P_, C_))
-layer("hex_spaced", b16_spaced, (P_, C_))
+layer("hex", hexlower, (P_,))
+layer("hex_spaced", b16_spaced, (P_,))
 layer("base36", base36)
 layer("bigint", bigint)
 layer("bigint_named", bigint_named)
-layer("base58_bitcoin", b58_bitcoin, (P_, C_))
-layer("base58_ripple", b58_ripple, (P_, C_))
+layer("base58_bitcoin", b58_bitcoin, (P_,))
+layer("base58_ripple", b58_ripple, (P_,))
 layer("base58_flickr", b58_flickr)
 layer("base58_monero", b58_monero)
 layer("base62", b62, (P_,), xfail="#924")
 layer("base65536", b65536)
-layer("base85", b85, (P_, C_))
-layer("ascii85", a85, (P_, C_))
-layer("ascii85_adobe", a85_adobe, (C_,))
-layer("z85", z85, (C_,))
+layer("base85", b85, (P_,))
+layer("ascii85", a85, (P_,))
+layer("ascii85_adobe", a85_adobe)
+layer("z85", z85)
 layer("base91", b91, (P_,))
 layer("base92", b92)
 layer("base100", b100)
 layer("uuencode", uuencode, (P_,))
-layer("binary", binary, (P_, C_))
-layer("decimal", decimal, (P_, C_))
-layer("octal", octal, (P_, C_))
-layer("url", url, (P_, C_))
-layer("url_all", url_all, (P_, C_))
-layer("html_dec", html_dec, (C_,))
-layer("html_hex", html_hex, (C_,))
-layer("unicode_escape", uni_escape, (C_,))
-layer("unicode_plus", uni_plus, (C_,))
+layer("binary", binary, (P_,))
+layer("decimal", decimal, (P_,))
+layer("octal", octal, (P_,))
+layer("url", url, (P_,))
+layer("url_all", url_all, (P_,))
+layer("html_dec", html_dec)
+layer("html_hex", html_hex)
+layer("unicode_escape", uni_escape)
+layer("unicode_plus", uni_plus)
 layer("backslash_octal", bs_octal)
 layer("backslash_hex", bs_hex)
-layer("quoted_printable", qp, (C_,))
+layer("quoted_printable", qp)
 layer("mime_b", mime_b)
 layer("mime_q", mime_q)
 layer("punycode", punycode)
-layer("utf16le", utf16le, (I_,))
-layer("utf16be_bom", utf16be_bom, (I_,))
-layer("hexdump_xxd", xxd, (C_,))
-layer("hexdump_c", hexdump_c, (C_,))
+layer("utf16le", utf16le)
+layer("utf16be_bom", utf16be_bom)
+layer("hexdump_xxd", xxd)
+layer("hexdump_c", hexdump_c)
 layer("morse", morse, (P_,), match="fold")
-layer("morse_lines", morse_lines, (P_, C_), match="fold")
+layer("morse_lines", morse_lines, (P_,), match="fold")
 layer("morse_symbols", morse_symbols, match="fold")
 layer("binary_xy", binary_xy, (P_,))
 layer("braille", braille, (P_,), match="fold")
 layer("a1z26", a1z26, match="letters")
-layer("a1z26_spaces", a1z26_cyberchef, (C_,), match="letters")
-layer("bacon26", bacon26, (C_,), match="letters")
-layer("bacon24", bacon24_cyberchef, (C_,), match="letters")
+layer("a1z26_spaces", a1z26_cyberchef, match="letters")
+layer("bacon26", bacon26, match="letters")
+layer("bacon24", bacon24_cyberchef, match="letters")
 layer("polybius", polybius, match="letters")
 layer("tap_dots", tap_dots, match="letters")
 layer("tap_digits", tap_digits, (P_,), match="letters")
@@ -1329,11 +1332,11 @@ layer("ook", ook)
 layer("aaencode", aaencode)
 layer("jsfuck", jsfuck)
 layer("citrix_ctx1", citrix_ctx1)
-layer("jwt", jwt_hs256, (C_,), match="json")
-layer("gzip", gz, (P_, C_))
-layer("zlib", zl, (C_,))
-layer("deflate", deflate, (C_,))
-layer("bzip2", bz, (C_,))
+layer("jwt", jwt_hs256, match="json")
+layer("gzip", gz, (P_,))
+layer("zlib", zl)
+layer("deflate", deflate)
+layer("bzip2", bz)
 layer("xz", xz)
 # Classical ciphers
 for k in (3, 7, 13, 19, 23):
@@ -1361,19 +1364,19 @@ for kw in ("PLAYFAIR EXAMPLE", "MONARCHY", "KEYWORD"):
     layer("playfair_" + kw.split()[0].lower(), pycipher("Playfair", key=keyword_square(kw)), match="letters")
 layer("hill2", hill2(), match="letters")
 for k in (0x2A, 0x5C, 0x13):
-    layer(f"xor_{k:02x}", xor1(k), (P_, I_))
+    layer(f"xor_{k:02x}", xor1(k), (P_,))
 for key in (b"KEY", b"ICE", b"s3cr3t"):
     layer("xorkey_" + key.decode().lower(), xorkey(key), (P_,))
 layer("ascii_shift3", ascii_shift(3), (P_,))
-layer("ascii_shift130", ascii_shift(130), (P_,))
+layer("ascii_shift130", ascii_shift(130))  # Python Ciphey shifts within 0-127 only
 # Not in Ciphey yet (expected failures until the issue's decoder lands)
 layer("base45", b45, xfail="#923")
-layer("bech32", bech32, (C_,), xfail="#931")
-layer("modhex", modhex, (C_,), xfail="#932")
+layer("bech32", bech32, xfail="#931")
+layer("modhex", modhex, xfail="#932")
 layer("xxencode", xxencode, xfail="#934")
 layer("bubblebabble", bubblebabble, xfail="#936")
-layer("utf7", utf7, (I_,), xfail="#942")
-layer("ebcdic", ebcdic, (I_,), xfail="#944")
+layer("utf7", utf7, xfail="#942")
+layer("ebcdic", ebcdic, xfail="#944")
 layer("cisco7", cisco7, xfail="#949")
 layer("ternary", ternary, xfail="#953")
 layer("chuck_norris", chucknorris, xfail="#954")
@@ -1401,8 +1404,8 @@ layer("adfgvx", pycipher("ADFGVX", key=keyword_square("PH0QG64MEA1YL2NOFDXKR3CVS
 layer("columnar", pycipher("ColTrans", "GERMAN"), xfail="#1014", match="letters")
 layer("double_transposition", text(lambda s, rng: __import__("pycipher").ColTrans("CIPHER").encipher(__import__("pycipher").ColTrans("GERMAN").encipher(s))), xfail="#1015", match="letters")
 layer("fractionated_morse", pycipher("FracMorse", key="ROUNDTABLECFGHIJKMPQSVWXYZ"), xfail="#1016", match="letters")
-layer("rotl3", rotl(3), (I_,), xfail="#1019")
-layer("bitnot", bitnot, (I_,))  # NOT is XOR with 0xFF: the single-byte XOR cracker covers it
+layer("rotl3", rotl(3), xfail="#1019")
+layer("bitnot", bitnot)  # NOT is XOR with 0xFF: Ciphey's single-byte XOR cracker covers it
 layer("zstd", zstd, xfail="#1025")
 layer("lz4", lz4frame, xfail="#1026")
 layer("lzstring", lzstring_b64, xfail="#1027")
@@ -1410,6 +1413,24 @@ for h in ("md5", "sha1", "sha256", "ntlm"):
     layer(h, hash_hex(h), xfail="#1029")
 
 MATCH_ORDER = ["exact", "json", "fold", "letters"]
+
+# The CyberChef operation that undoes each layer, among those Magic can detect
+CC_OPS = {
+    "base64": "From Base64", "base64_url": "From Base64", "base64_itoa64": "From Base64", "base32": "From Base32",
+    "base32hex": "From Base32", "hex": "From Hex", "hex_spaced": "From Hex", "backslash_hex": "From Hex",
+    "base58_bitcoin": "From Base58", "base58_ripple": "From Base58", "base85": "From Base85", "ascii85": "From Base85",
+    "ascii85_adobe": "From Base85", "z85": "From Base85", "binary": "From Binary", "decimal": "From Decimal",
+    "octal": "From Octal", "url": "URL Decode", "url_all": "URL Decode", "html_dec": "From HTML Entity",
+    "html_hex": "From HTML Entity", "unicode_escape": "Unescape Unicode Characters",
+    "unicode_plus": "Unescape Unicode Characters", "quoted_printable": "From Quoted Printable",
+    "hexdump_xxd": "From Hexdump", "hexdump_c": "From Hexdump", "morse": "From Morse Code",
+    "morse_lines": "From Morse Code", "a1z26_spaces": "A1Z26 Cipher Decode", "bacon26": "Bacon Cipher Decode",
+    "bacon24": "Bacon Cipher Decode", "jwt": "JWT Decode", "gzip": "Gunzip", "zlib": "Zlib Inflate",
+    "deflate": "Raw Inflate", "bzip2": "Bzip2 Decompress", "bech32": "From Bech32", "modhex": "From Modhex",
+}
+# Layers intensive mode brute-forces whether or not a pattern matches
+CC_BRUTE = {"xor_2a", "xor_5c", "xor_13", "bitnot", "rotl3", "utf16le", "utf16be_bom", "ebcdic", "utf7"}
+CC_DEPTH = 3
 
 
 def is_ascii_printable(s):
@@ -1654,14 +1675,11 @@ class Case:
         if match is None:
             match = max((x.match for x in ls), key=MATCH_ORDER.index) if ls else "exact"
         self.match = match
+        self.fixed_tools = tools is not None
         if tools is None:
             tools = {CIPHEY}
             if ls and all(PY in x.tools for x in ls):
                 tools.add(PY)
-            if ls and all(CC in x.tools for x in ls):
-                tools.add(CC)
-            if ls and all(CC in x.tools or CCI in x.tools for x in ls):
-                tools.add(CCI)
         self.tools = tools
         self.expected = plaintext if expected is None else expected
         self.input = ciphertext
@@ -1669,10 +1687,26 @@ class Case:
 
     def encode(self, rng):
         data = self.plaintext.encode("utf-8")
+        self.layer_data = []
         for name in self.layers:
             data = L[name].fn(data, rng)
+            self.layer_data.append(data)
         self.input = data.decode("utf-8")
+        if not self.fixed_tools or self.category == "language":
+            self.tools |= cyberchef_tools(self.layers, self.layer_data)
         return self
+
+
+def cyberchef_tools(layers, layer_data):
+    """{CC, CCI}, {CCI} or set(): whether Magic would try the right operation at every layer."""
+    if len(layers) > CC_DEPTH:
+        return set()
+    default = intensive = True
+    for name, data in zip(layers, layer_data):
+        detected = name in CC_OPS and CC_OPS[name] in CHEF.request({"op": "checks", "hex": data.hex()})["ops"]
+        default = default and detected
+        intensive = intensive and (detected or name in CC_BRUTE)
+    return ({CC} if default else set()) | ({CCI} if intensive else set())
 
 
 def pick(rng, pools, pool, n, filt=None):
@@ -1753,7 +1787,7 @@ def build_cases():
     for code in LANGS:
         for layers, key in ((["base64"], "1"), (["hex"], "2"), ([], "1")):
             t = lang[code + key]
-            tools = {CIPHEY, CC, CCI}
+            tools = {CIPHEY} if layers else {CIPHEY, CC, CCI}  # Python Ciphey has only an English checker
             cid = f"lang.{code}.{'+'.join(layers) or 'plain'}"
             add(Case(cid, "language", layers, t, code + key, xfail="gibberish-or-not 6", tools=tools).encode(r))
 
