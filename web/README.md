@@ -102,14 +102,14 @@ tests/unit/, tests/e2e/                                  the tests
 
   | Module | Raw | gzip -9 |
   | --- | ---: | ---: |
-  | Decode (Ciphey) | 5,524,730 B | 2,249,482 B |
+  | Decode (Ciphey) | 5,524,685 B | 2,249,665 B |
   | Identify (pyWhat) | 1,371,295 B | 482,092 B |
   | Is it language? (gibberish-or-not) | 1,246,330 B | 1,025,539 B |
   | One module for all three (an earlier scratch build) | 6,840,303 B | 3,244,570 B |
 
   `scripts/build-wasm.sh` writes the source paths the modules embed (in panic messages)
-  relative to the cargo home and the repository, so a build is the same on every machine with
-  the same toolchain.
+  relative to the cargo home, the repository and the target directory, so a build is the same
+  on every machine with the same toolchain: GitHub's runner builds these three byte for byte.
 
   With one module, Identify would load 3.2 MB instead of 0.5 MB, and every page would wait
   for the biggest one. (Ciphey links gibberish-or-not and pyWhat itself, so once it uses
