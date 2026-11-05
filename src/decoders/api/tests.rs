@@ -445,6 +445,15 @@ fn caesar_cracks() {
 }
 
 #[test]
+fn cisco_type7_decodes() {
+    assert_plaintext(&cisco_type7("02050D480809"), "cisco");
+    // The example of https://github.com/bee-san/Ciphey/issues/949, a password the checks
+    // don't take for plaintext
+    assert_first(&cisco_type7("073C345C1D1B2A5614000E1845"), "Sup3rS3cret!");
+    assert_eq!(decoder_info("type7").unwrap().name, "Cisco Type 7");
+}
+
+#[test]
 fn citrix_ctx1_decodes() {
     assert_plaintext(
         &citrix_ctx1("MNGIKIANMEGBKIANMHGCOHECJADFPPFKINCIOBEEIFCA"),

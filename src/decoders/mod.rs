@@ -153,6 +153,8 @@ pub mod base85_decoder;
 pub mod base91_decoder;
 /// The base92_decoder module decodes Base92 (thenoviceoof)
 pub mod base92_decoder;
+/// The cisco_type7_decoder module decodes Cisco IOS type 7 passwords
+pub mod cisco_type7_decoder;
 /// The citrix_ctx1_decoder module decodes citrix ctx1
 pub mod citrix_ctx1_decoder;
 /// The core_socialist_values_decoder module decodes the Core Socialist Values encoding (社会主义核心价值观)
@@ -308,6 +310,7 @@ use base91_decoder::Base91Decoder;
 use base92_decoder::Base92Decoder;
 use braille_decoder::BrailleDecoder;
 use caesar_decoder::CaesarDecoder;
+use cisco_type7_decoder::CiscoType7Decoder;
 use citrix_ctx1_decoder::CitrixCTX1Decoder;
 use core_socialist_values_decoder::CoreSocialistValuesDecoder;
 use gzip_decoder::GzipDecoder;
@@ -433,6 +436,8 @@ pub enum DecoderType {
     Base91Decoder(base91_decoder::Base91Decoder),
     /// base92 decoder
     Base92Decoder(base92_decoder::Base92Decoder),
+    /// Cisco type 7 password decoder
+    CiscoType7Decoder(cisco_type7_decoder::CiscoType7Decoder),
     /// citrix ctx1 decoder
     CitrixCtx1Decoder(citrix_ctx1_decoder::CitrixCTX1Decoder),
     /// core socialist values decoder
@@ -628,6 +633,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Base65536",
             DecoderBox::new(Decoder::<Base65536Decoder>::new()),
+        ),
+        (
+            "Cisco Type 7",
+            DecoderBox::new(Decoder::<CiscoType7Decoder>::new()),
         ),
         (
             "Citrix Ctx1",

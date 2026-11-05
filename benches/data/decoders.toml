@@ -521,6 +521,23 @@ success = true
 input = "Pvcurl vf na nhgbzngrq qrpbqvat gbby. Lbh tvir vg rapelcgrq be rapbqrq grkg naq vg gevrf gb jbex bhg jung jnf qbar gb vg, jvgubhg lbh univat gb xabj gur xrl be rira gur pvcure. Vg frnepurf guebhtu znal cbffvoyr qrpbqvatf, purpxf rnpu pnaqvqngr gb frr jurgure vg ybbxf yvxr Ratyvfu be zngpurf n xabja cnggrea fhpu nf na rznvy nqqerff, naq fgbcf jura vg svaqf fbzrguvat gung ernqf yvxr cynvagrkg. Zbfg bs gur gvzr guvf gnxrf yrff guna n frpbaq, juvpu znxrf vg unaql sbe pncgher gur synt punyyratrf, chmmyr uhagf naq sbe nalbar jub fghzoyrf npebff n fgenatr fgevat va n ybt svyr."
 expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
 
+# Cisco Type 7 inputs are PyPI passlib 1.7.4's cisco_type7.using(salt=7).hash(text) for
+# medium and salt=15 for long (IOS writes offsets 0 to 15); cisco_type7.decode gives the
+# plaintexts back. The long one goes round the 53-byte key 11 times.
+[[case]]
+decoder = "Cisco Type 7"
+size = "medium"
+success = true
+input = "072224495A49140057131F4C10222E64273F31621F0E110B155E564D40514E021E025C4A175E5B515A025C0E1318560A174606490208086158460C59081602474C10222E6423362C621209124300164D574157064D"
+expected = "Meet me at the old lighthouse after midnight and bring the map, the key and a torch."
+
+[[case]]
+decoder = "Cisco Type 7"
+size = "long"
+success = true
+input = "1531021C0C2F3264212075231D4717161559545947510A431C135A57535A5C52141F54090B16173D1C13445C02100A61455A491C0B1400121C102F2F64272175271D0419070452194C564C1A4319185D185E47124146025E15474C5844040916504B091A350C5901181157050A1F442E242A2D73212D530E024F4141504C5B5B1B17580F564D175B53435D055C461357170F1D09131B1F0E0A61474B10590A05520E1A01246B30203675211A171E061318197147141D0619045A50524012415C1954130050170912081D1B1B091C32454C051C4513170803002325233B7F75211B02150812165C59505C4E0019185D5153524650141F5446145D5244040E014F03031D61455A49150A1819184C0823202168163B251F0E050B41594B185E551A0010134A185613595B5B1C55461759431016140A1B18130C290C4F1A590419520E0105232764293731301614054F4157575C13471A0C0805194F5F565C155D1F1B000E56531753150B560E1207284249490D0D16064B1E012B2F37683F3C291647060F005F574C564C1A4D583B564B43135D53141F5303474C5E091646105302154F354D450C0A451B17181F443E2325267334620002150C0F521518445C0700105654595C5641155D1F1B0E0656531D53000B494B050E31585B1B1C45031A0E4C02262A2368303D231F0B130D06534A1413441B19021A5C185F465C41474B5A080318510B01460555120901240C5901164504061E0106262E37683236301C14054300164A4C415500041D564A4C455A5C521402554606185B0B14460252070341"
+expected = "Ciphey is an automated decoding tool. You give it encrypted or encoded text and it tries to work out what was done to it, without you having to know the key or even the cipher. It searches through many possible decodings, checks each candidate to see whether it looks like English or matches a known pattern such as an email address, and stops when it finds something that reads like plaintext. Most of the time this takes less than a second, which makes it handy for capture the flag challenges, puzzle hunts and for anyone who stumbles across a strange string in a log file."
+
 [[case]]
 decoder = "Citrix Ctx1"
 size = "medium"
