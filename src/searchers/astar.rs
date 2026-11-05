@@ -90,11 +90,15 @@ struct AStarNode {
     /// The last decoder's checker identified `state.text` as plaintext.
     is_result: bool,
     /// Unique within the search, in the order nodes were made: the input is 0. Set when
-    /// the batch that made the node is collected.
-    id: u64,
-    /// The id of the node it was decoded from, `None` for the input.
-    parent: Option<u64>,
+    /// the batch that made the node is collected. 32 bits keep the open set's nodes small;
+    /// a search makes a few million nodes a minute.
+    id: u32,
+    /// The id of the node it was decoded from, [`NO_PARENT`] for the input.
+    parent: u32,
 }
+
+/// [`AStarNode::parent`] of the input.
+const NO_PARENT: u32 = u32::MAX;
 
 impl Ord for AStarNode {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -293,7 +297,7 @@ fn expand_node(
                         total_cost: f32::NEG_INFINITY,
                         is_result: true,
                         id: 0,
-                        parent: Some(current_node.id),
+                        parent: current_node.id,
                     });
                     update_decoder_stats(decoder.get_name(), true);
                 }
@@ -328,7 +332,7 @@ fn expand_node(
                     total_cost: cost + heuristic,
                     is_result: false,
                     id: 0,
-                    parent: Some(current_node.id),
+                    parent: current_node.id,
                 });
             }
             update_decoder_stats(decoder.get_name(), produced_any);
@@ -435,7 +439,7 @@ pub(crate) struct AStar {
     /// How the search ended, once it has.
     ended: Option<StepEnd>,
     /// The id the next node gets
-    next_id: u64,
+    next_id: u32,
     /// The seen-set's size when the search ended and freed it
     seen_at_end: usize,
 }
@@ -463,7 +467,7 @@ impl AStar {
             total_cost: 0.0,
             is_result: false,
             id: 0,
-            parent: None,
+            parent: NO_PARENT,
         });
 
         AStar {
@@ -550,7 +554,8 @@ impl AStar {
             .collect();
         for node in &mut new_nodes {
             node.id = self.next_id;
-            self.next_id += 1;
+            // Past 4 billion nodes, ids would repeat
+            self.next_id = self.next_id.saturating_add(1);
         }
 
         let (mut results, children): (Vec<AStarNode>, Vec<AStarNode>) =
@@ -560,13 +565,13 @@ impl AStar {
             for node in &batch {
                 watch(&Expanded {
                     state: &node.state,
-                    id: node.id,
-                    parent: node.parent,
+                    id: u64::from(node.id),
+                    parent: (node.parent != NO_PARENT).then_some(u64::from(node.parent)),
                     depth: node.depth,
                     total_cost: node.total_cost,
                     children: children
                         .iter()
-                        .filter(|child| child.parent == Some(node.id))
+                        .filter(|child| child.parent == node.id)
                         .count(),
                 });
             }
@@ -629,7 +634,10 @@ impl AStar {
                 }
             }
 
-            send(Some(node.state.clone()), node.parent);
+            send(
+                Some(node.state.clone()),
+                (node.parent != NO_PARENT).then_some(u64::from(node.parent)),
+            );
 
             if !get_config().top_results {
                 stop.store(true, AtomicOrdering::Relaxed);
@@ -784,7 +792,7 @@ mod tests {
             total_cost: 0.0,
             is_result: false,
             id: 0,
-            parent: None,
+            parent: NO_PARENT,
         };
         let stop = Arc::new(AtomicBool::new(false));
         let children = expand_node(
@@ -893,7 +901,7 @@ mod tests {
             total_cost: 0.0,
             is_result: true,
             id: 0,
-            parent: None,
+            parent: NO_PARENT,
         };
         assert!(!result_passes_sanity(&node, 800, false));
 
@@ -907,7 +915,7 @@ mod tests {
             total_cost: 0.0,
             is_result: true,
             id: 0,
-            parent: None,
+            parent: NO_PARENT,
         };
         assert!(result_passes_sanity(&node, 16, false));
     }
@@ -927,7 +935,7 @@ mod tests {
                 total_cost: f32::NEG_INFINITY,
                 is_result: true,
                 id: 0,
-                parent: None,
+                parent: NO_PARENT,
             }
         };
         let mut results = vec![
@@ -952,7 +960,7 @@ mod tests {
             total_cost: 0.0,
             is_result: true,
             id: 0,
-            parent: None,
+            parent: NO_PARENT,
         };
         // e.g. Reverse -> Atbash -> Reverse of FRXNV{l0h_s0haq_z3}
         assert!(!result_passes_sanity(
@@ -989,7 +997,7 @@ mod tests {
             total_cost: 0.0,
             is_result: true,
             id: 0,
-            parent: None,
+            parent: NO_PARENT,
         }
     }
 

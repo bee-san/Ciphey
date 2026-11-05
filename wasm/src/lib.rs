@@ -51,7 +51,7 @@ export interface SearchOptions {
   topResults?: boolean;
   /** The English checker's sensitivity, for the input and the decoders that don't choose (the ciphers do). Default "medium". */
   sensitivity?: EnglishSensitivity;
-  /** How many characters of each node's text `SearchNode.text` keeps. Default 120. */
+  /** How many characters (code points) of each node's text `SearchNode.text` keeps. Default 120. */
   previewChars?: number;
 }
 
@@ -103,9 +103,9 @@ export interface SearchNode {
   /** The decoder that made this text from its parent's, null for the input. */
   decoder: string | null;
   key: string | null;
-  /** The start of the text, at most `previewChars` characters. */
+  /** The start of the text, at most `previewChars` characters (code points: an emoji is one, though its JavaScript `length` is 2). */
   text: string;
-  /** How many characters the whole text has. */
+  /** How many characters (code points) the whole text has. */
   length: number;
   /** The search's priority for the node (f = g + h): it expands the lowest first. */
   cost: number;
@@ -189,10 +189,21 @@ extern "C" {
     fn console_error(message: &str);
 }
 
+#[wasm_bindgen]
+extern "C" {
+    /// The options of `new Search` and `decode`, as JavaScript passes them
+    #[wasm_bindgen(typescript_type = "SearchOptions")]
+    pub type SearchOptionsArg;
+
+    /// The options of `detectPlaintext`, as JavaScript passes them
+    #[wasm_bindgen(typescript_type = "DetectOptions")]
+    pub type DetectOptionsArg;
+}
+
 /// The version of the ciphey library in this module, such as "0.12.1".
 #[wasm_bindgen(js_name = cipheyVersion)]
 pub fn ciphey_version() -> String {
-    env!("CARGO_PKG_VERSION").to_string()
+    ciphey::VERSION.to_string()
 }
 
 /// Searches for the plaintext of `input` to the end and returns the first plaintext it
@@ -204,12 +215,12 @@ pub fn ciphey_version() -> String {
 /// Throws if the options aren't valid: an unknown field, a negative timeout, a regex that
 /// doesn't compile.
 #[wasm_bindgen(unchecked_return_type = "SearchResult | null")]
-pub fn decode(
-    input: &str,
-    #[wasm_bindgen(unchecked_param_type = "SearchOptions | undefined")] options: JsValue,
-) -> Result<JsValue, JsError> {
+pub fn decode(input: &str, options: Option<SearchOptionsArg>) -> Result<JsValue, JsError> {
     install_panic_hook();
-    to_js(&decode_with_options(input, from_js(options)?)?)
+    to_js(&decode_with_options(
+        input,
+        from_js(options.map(JsValue::from))?,
+    )?)
 }
 
 /// A search for the plaintext of one input, run a step at a time.
@@ -228,12 +239,9 @@ impl JsSearch {
     ///
     /// Throws if the options aren't valid.
     #[wasm_bindgen(constructor)]
-    pub fn new(
-        input: &str,
-        #[wasm_bindgen(unchecked_param_type = "SearchOptions | undefined")] options: JsValue,
-    ) -> Result<JsSearch, JsError> {
+    pub fn new(input: &str, options: Option<SearchOptionsArg>) -> Result<JsSearch, JsError> {
         install_panic_hook();
-        let options = search_options(from_js(options)?)?;
+        let options = search_options(from_js(options.map(JsValue::from))?)?;
         Ok(JsSearch {
             search: Search::new(input, options).map_err(Error::from)?,
         })
@@ -241,7 +249,8 @@ impl JsSearch {
 
     /// Searches for about `budgetMs` milliseconds and reports what it did. A step can run
     /// longer: it ends between two batches of up to ten nodes, and one batch can take a
-    /// while on long text. Once the search is over, it returns at once.
+    /// while on long text. `Infinity` runs it to its end. Once the search is over, it
+    /// returns at once.
     ///
     /// # Errors
     ///
@@ -251,7 +260,11 @@ impl JsSearch {
         &mut self,
         #[wasm_bindgen(js_name = budgetMs)] budget_ms: f64,
     ) -> Result<JsValue, JsError> {
-        let budget = millis(budget_ms, "budgetMs")?;
+        let budget = if budget_ms == f64::INFINITY {
+            Duration::MAX
+        } else {
+            millis(budget_ms, "budgetMs")?
+        };
         let progress = self.search.step(budget);
         to_js(&JsSearchProgress::new(&self.search, progress))
     }
@@ -300,10 +313,13 @@ pub fn list_decoders() -> Result<JsValue, JsError> {
 #[wasm_bindgen(js_name = detectPlaintext, unchecked_return_type = "PlaintextDetection | null")]
 pub fn detect_plaintext_js(
     text: &str,
-    #[wasm_bindgen(unchecked_param_type = "DetectOptions | undefined")] options: JsValue,
+    options: Option<DetectOptionsArg>,
 ) -> Result<JsValue, JsError> {
     install_panic_hook();
-    to_js(&detect_with_options(text, from_js(options)?)?)
+    to_js(&detect_with_options(
+        text,
+        from_js(options.map(JsValue::from))?,
+    )?)
 }
 
 /// The options of `new Search` and `decode`, as JavaScript passes them.
@@ -317,7 +333,7 @@ pub struct JsSearchOptions {
     /// `regex`
     pub regex: Option<String>,
     /// `topResults`
-    pub top_results: bool,
+    pub top_results: Option<bool>,
     /// `sensitivity`
     pub sensitivity: Option<Sensitivity>,
     /// `previewChars`
@@ -615,7 +631,7 @@ pub fn decoder_list() -> Vec<JsDecoderInfo> {
 /// If both `timeout` and `timeoutMs` are given, the timeout isn't a number of seconds or
 /// milliseconds, or the regex doesn't compile.
 pub fn search_options(options: JsSearchOptions) -> Result<SearchOptions, Error> {
-    let mut search = SearchOptions::new().top_results(options.top_results);
+    let mut search = SearchOptions::new().top_results(options.top_results.unwrap_or(false));
     let timeout = match (options.timeout, options.timeout_ms) {
         (Some(_), Some(_)) => {
             return Err(Error(
@@ -690,13 +706,39 @@ fn to_js<T: Serialize>(value: &T) -> Result<JsValue, JsError> {
 
 /// The options JavaScript passed, through JSON (`JSON.stringify`), so that unknown fields
 /// are errors: `undefined` and `null` are the defaults.
-fn from_js<T: for<'de> Deserialize<'de> + Default>(value: JsValue) -> Result<T, JsError> {
-    if value.is_undefined() || value.is_null() {
+///
+/// Only a plain object is options: an array, a `Map` or a number throws. So does a field
+/// that is `NaN` or ±`Infinity`, which `JSON.stringify` would turn into `null`, the
+/// default.
+fn from_js<T: for<'de> Deserialize<'de> + Default>(value: Option<JsValue>) -> Result<T, JsError> {
+    let Some(value) = value.filter(|value| !value.is_undefined() && !value.is_null()) else {
         return Ok(T::default());
+    };
+    if !is_plain_object(&value) {
+        return Err(JsError::new("options: not a plain object"));
+    }
+    for entry in js_sys::Object::entries(value.unchecked_ref()).iter() {
+        let entry: js_sys::Array = entry.unchecked_into();
+        if entry.get(1).as_f64().is_some_and(|n| !n.is_finite()) {
+            let field = entry.get(0).as_string().unwrap_or_default();
+            return Err(JsError::new(&format!(
+                "options: {field} isn't a finite number"
+            )));
+        }
     }
     let json =
         js_sys::JSON::stringify(&value).map_err(|_| JsError::new("options: not a plain object"))?;
     serde_json::from_str(&String::from(json)).map_err(|e| JsError::new(&format!("options: {e}")))
+}
+
+/// Whether `value` is a plain object, `{...}`: its prototype is null or an object without
+/// a prototype of its own, `Object.prototype` of any realm.
+fn is_plain_object(value: &JsValue) -> bool {
+    if !value.is_object() || js_sys::Array::is_array(value) || value.is_function() {
+        return false;
+    }
+    let prototype = js_sys::Object::get_prototype_of(value);
+    prototype.is_null() || js_sys::Object::get_prototype_of(&prototype).is_null()
 }
 
 #[cfg(test)]

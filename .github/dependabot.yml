@@ -16,3 +16,7 @@ updates:
         versions: [">= 0.9"]
       - dependency-name: "half"
         versions: [">= 2.4"]
+      # Pinned exactly to the wasm-bindgen CLI that builds the browser API (wasm/build.sh,
+      # docs/wasm.md): bump the crates and the CLI together, by hand.
+      - dependency-name: "wasm-bindgen"
+      - dependency-name: "wasm-bindgen-test"

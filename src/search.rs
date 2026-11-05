@@ -26,13 +26,27 @@
 //!
 //! A search never asks a human, uses no cache and prints nothing.
 //!
-//! While a search runs, the library's checkers read the config made from its options. It
-//! stays in place after the search ends, until another search starts or
-//! [`perform_cracking`](crate::perform_cracking) runs, which goes back to the global config;
-//! the single decoders ([`decoders`](crate::decoders)) and [`config::get_config`] see it
-//! too. Run one search at a time, or several with the same options. Interleaving the
-//! steps of several searches on one thread is fine, because each step puts its own options
-//! back in place. [`detect_plaintext`](crate::detect_plaintext) only reads its own options.
+//! # One config at a time
+//!
+//! The library's checkers read a config that the whole process shares. While a search runs,
+//! it is a config made from the search's options. `Search::new` puts it in place and each
+//! [`Search::step`] puts it back, and it stays after the search ends, until another search
+//! does the same or [`perform_cracking`](crate::perform_cracking) goes back to the global
+//! config. So, natively:
+//!
+//! - don't run [`perform_cracking`](crate::perform_cracking), [`Search::new`] or
+//!   [`Search::step`] on one thread while a search with other options steps on another.
+//!   The checks would read the wrong options, and the search would give wrong answers,
+//!   such as a plaintext the other search's crib accepted;
+//! - the single decoders ([`decoders`](crate::decoders)) and [`config::get_config`] see the
+//!   last search's options too. [`detect_plaintext`](crate::detect_plaintext) only reads its
+//!   own.
+//!
+//! Searches with the same options can run on several threads at once. On WebAssembly there
+//! is one thread. Interleaving the steps of several searches on one thread is fine,
+//! because each step puts its own options back in place, but the searches then share the
+//! decoders' statistics, which the search's costs use, so their trees can differ from
+//! those of searches run one after another. Their answers didn't, in Ciphey's tests.
 
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
@@ -74,8 +88,8 @@ pub struct SearchOptions {
     /// How strict the English checker is, for the decoders that don't choose for
     /// themselves (the ciphers do), and for the input itself. Medium by default.
     pub sensitivity: Sensitivity,
-    /// How much of a node's text [`SearchNode::text`] keeps, in characters. 120 by
-    /// default.
+    /// How much of a node's text [`SearchNode::text`] keeps, in characters (`char`s).
+    /// 120 by default.
     pub preview_chars: usize,
 }
 
@@ -196,15 +210,16 @@ pub struct SearchNode {
     pub decoder: Option<&'static str>,
     /// The key it decoded with, such as `13` for a Caesar shift, if it takes one.
     pub key: Option<String>,
-    /// The text, cut to its first [`SearchOptions::preview_chars`] characters.
+    /// The text, cut to its first [`SearchOptions::preview_chars`] characters (`char`s:
+    /// Unicode scalar values).
     pub text: String,
-    /// How many characters the whole text has.
+    /// How many characters (`char`s) the whole text has.
     pub text_chars: usize,
     /// The A* search's priority for the node, f = g + h: the path's cost so far plus an
     /// estimate of what is left. The search expands the lowest first.
     pub cost: f32,
-    /// How many children expanding it queued. Results and texts the search had already
-    /// seen aren't counted.
+    /// How many children expanding it queued. Results aren't counted, even one the search
+    /// rejected and queued as an ordinary node, and neither are texts it had already seen.
     pub children: usize,
 }
 
@@ -320,8 +335,10 @@ impl Search {
     pub fn new(input: &str, options: SearchOptions) -> Result<Search, CipheyError> {
         let config = search_config(&options)?;
         config::use_search_config(config);
-        // The decoders' statistics, which the search's edge costs use, start empty, so
-        // the search explores like a new `ciphey` process
+        // What earlier searches worked out (rejected texts, the substitution cracker's
+        // results) is forgotten, and the decoders' statistics, which the search's edge
+        // costs use, start empty: the search explores like a new `ciphey` process
+        config::forget_config_dependent_state();
         crate::reset_decoder_stats();
         if options.top_results {
             crate::storage::wait_athena_storage::clear_plaintext_results();
@@ -519,43 +536,58 @@ fn search_result(
     }
 }
 
-/// The config for a search with `options`. The last search's is used again if its
-/// options were the same: a config lives as long as the process.
-fn search_config(options: &SearchOptions) -> Result<&'static SearchConfig, CipheyError> {
-    /// The last config made, and the options it was made for
-    static LAST: Mutex<Option<(SearchOptions, &'static SearchConfig)>> = Mutex::new(None);
+/// How many configs [`search_config`] keeps for reuse.
+const KEPT_CONFIGS: usize = 16;
 
-    let regex = options
-        .regex
-        .as_deref()
-        .map(regex::Regex::new)
-        .transpose()
-        .map_err(CipheyError::InvalidRegex)?;
-    let mut last = LAST
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
+/// The config for a search with `options`. A config lives as long as the process (about
+/// 1 KB, plus the crib's text), so the last [`KEPT_CONFIGS`] are kept and used again for
+/// options seen before. The crib's compiled regex isn't part of it: the regex checker
+/// compiles it, and each thread keeps only the last one.
+fn search_config(options: &SearchOptions) -> Result<&'static SearchConfig, CipheyError> {
+    /// The configs made, newest last, with the options they were made for
+    static MADE: Mutex<Vec<(SearchOptions, &'static SearchConfig)>> = Mutex::new(Vec::new());
+
+    if let Some(pattern) = options.regex.as_deref() {
+        regex::Regex::new(pattern).map_err(CipheyError::InvalidRegex)?;
+    }
     // Neither is part of the config
     let key = SearchOptions {
         sensitivity: Sensitivity::Medium,
         preview_chars: 0,
         ..options.clone()
     };
-    if let Some((last_options, config)) = last.as_ref() {
-        if *last_options == key {
-            return Ok(config);
-        }
+    let mut made = MADE
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    if let Some(i) = made.iter().position(|(options, _)| *options == key) {
+        let entry = made.remove(i);
+        let config = entry.1;
+        made.push(entry);
+        return Ok(config);
     }
     let config = Config {
-        timeout: u32::try_from(options.timeout.as_secs()).unwrap_or(u32::MAX),
+        timeout: whole_seconds(options.timeout),
         regex: options.regex.clone(),
         top_results: options.top_results,
         human_checker_on: false,
         api_mode: true,
         ..Config::default()
     };
-    let config: &'static SearchConfig = Box::leak(Box::new(SearchConfig { config, regex }));
-    *last = Some((key, config));
+    let config: &'static SearchConfig = Box::leak(Box::new(SearchConfig { config }));
+    if made.len() == KEPT_CONFIGS {
+        made.remove(0);
+    }
+    made.push((key, config));
     Ok(config)
+}
+
+/// `duration` in whole seconds, rounded up, as `Config::timeout` and
+/// [`CipheyError::Timeout`] count it.
+fn whole_seconds(duration: Duration) -> u32 {
+    let secs = duration
+        .as_secs()
+        .saturating_add(u64::from(duration.subsec_nanos() > 0));
+    u32::try_from(secs).unwrap_or(u32::MAX)
 }
 
 #[cfg(test)]
@@ -566,12 +598,30 @@ mod tests {
     // whole process reads, which would disturb the other unit tests running beside it.
 
     #[test]
-    fn options_are_reused_only_when_they_match() {
+    fn configs_are_reused_when_the_options_match() {
         let a = search_config(&SearchOptions::default()).unwrap();
         let b = search_config(&SearchOptions::default().sensitivity(Sensitivity::Low)).unwrap();
         assert!(std::ptr::eq(a, b));
         let c = search_config(&SearchOptions::default().top_results(true)).unwrap();
         assert!(!std::ptr::eq(a, c));
         assert!(c.config.top_results && !c.config.human_checker_on && c.config.api_mode);
+        // Alternating between two option sets makes no new configs
+        assert!(std::ptr::eq(
+            a,
+            search_config(&SearchOptions::default()).unwrap()
+        ));
+        assert!(std::ptr::eq(
+            c,
+            search_config(&SearchOptions::default().top_results(true)).unwrap()
+        ));
+    }
+
+    #[test]
+    fn timeouts_round_up_to_whole_seconds() {
+        assert_eq!(whole_seconds(Duration::from_millis(400)), 1);
+        assert_eq!(whole_seconds(Duration::from_secs(5)), 5);
+        assert_eq!(whole_seconds(Duration::from_millis(5001)), 6);
+        assert_eq!(whole_seconds(Duration::ZERO), 0);
+        assert_eq!(whole_seconds(Duration::MAX), u32::MAX);
     }
 }

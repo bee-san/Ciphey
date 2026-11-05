@@ -111,6 +111,9 @@ pub use detection::{detect_plaintext, is_plaintext, DetectOptions, Detection};
 pub use error::CipheyError;
 pub use search::{Search, SearchOptions};
 
+/// The version of this library, such as `0.12.1`.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 /// The main function to call which performs the cracking.
 /// ```rust
 /// use ciphey::perform_cracking;

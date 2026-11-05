@@ -90,13 +90,18 @@ static CONFIG: OnceCell<Config> = OnceCell::new();
 /// Returned by [`get_config`] until [`set_global_config`] is called
 static DEFAULT_CONFIG: Lazy<Config> = Lazy::new(Config::default);
 
-/// The config of a [`Search`](crate::search::Search), with its crib compiled.
+/// The config of a [`Search`](crate::search::Search).
 pub(crate) struct SearchConfig {
     /// What [`get_config`] returns while it is in use
     pub(crate) config: Config,
-    /// `config.regex`, compiled
-    pub(crate) regex: Option<regex::Regex>,
 }
+
+/// Every thread reads the search config through [`SEARCH_CONFIG`]
+const _: () = {
+    /// Compiles only for `Sync` types
+    const fn sync<T: Sync>() {}
+    sync::<SearchConfig>();
+};
 
 /// The [`SearchConfig`] in use, or null. While it is set, [`get_config`] returns it instead
 /// of the global config, so that each [`Search`](crate::search::Search) runs with its own
@@ -135,7 +140,7 @@ pub(crate) fn use_global_config() {
 /// Forgets what was worked out with the config in use: the checks it rejected and the
 /// substitution cracker's results. Both depend on the crib and wordlist. Any other cache
 /// that depends on the config has to be cleared here too.
-fn forget_config_dependent_state() {
+pub(crate) fn forget_config_dependent_state() {
     crate::checkers::athena::forget_rejections();
     crate::decoders::monoalphabetic_substitution_decoder::forget_search_cache();
 }

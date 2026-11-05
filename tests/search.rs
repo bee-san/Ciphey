@@ -49,6 +49,10 @@ fn search_api() {
     interleaved_searches_keep_their_own_options();
     top_results_collects_every_plaintext();
     sensitivity_changes_what_the_english_checker_accepts();
+    sensitivity_reaches_the_decoders();
+    the_substitution_crackers_cache_follows_the_options();
+    a_repeated_search_explores_the_same_tree();
+    nodes_count_characters_and_their_own_children();
     perform_cracking_after_a_search_uses_its_own_config();
 }
 
@@ -164,9 +168,10 @@ fn a_timeout_is_timed_out() {
     );
     // Short steps: the search was reported on several times before its timeout
     assert!(steps.len() >= 2, "{} steps", steps.len());
+    // The error counts whole seconds, rounded up
     assert!(matches!(
         Search::new("AAAA", options).unwrap().run(),
-        Err(CipheyError::Timeout { .. })
+        Err(CipheyError::Timeout { secs: 1 })
     ));
 }
 
@@ -254,6 +259,147 @@ fn sensitivity_changes_what_the_english_checker_accepts() {
     );
     assert!(first_check(Sensitivity::Low).is_empty());
     assert!(first_check(Sensitivity::Medium).is_empty());
+}
+
+/// The Base64 of `text`.
+fn base64(text: &str) -> String {
+    use base64::Engine as _;
+    base64::engine::general_purpose::STANDARD.encode(text)
+}
+
+fn sensitivity_reaches_the_decoders() {
+    // The Base64 decoder checks its output with Athena at the search's sensitivity: only
+    // the most lenient takes the typos for English
+    let typos = "Tihs is a sentnce wtih smoe tyops in it"; // codespell:ignore tihs,wtih,smoe
+    let encoded = base64(typos);
+    let decoded = |sensitivity| {
+        let options = SearchOptions::default()
+            .timeout(Duration::from_secs(10))
+            .sensitivity(sensitivity);
+        matches!(Search::new(&encoded, options).unwrap().run(), Ok(Some(found)) if found.plaintext == typos)
+    };
+    assert!(decoded(Sensitivity::High));
+    assert!(!decoded(Sensitivity::Low));
+}
+
+fn the_substitution_crackers_cache_follows_the_options() {
+    // The cracker remembers, per letter pattern, whether the checker accepted a key. With
+    // a crib it doesn't match, it accepts none, which the next search without the crib
+    // mustn't reuse
+    let cipher = "Qaxeiw ar pf pvcdopcaq giqkwxcadf cddn. Wdv masi ac ifqkwxcig cizc pfg ac ckair cd \
+                  tdkl dvc tepc tpr gdfi cd ac, ceif redtr wdv cei xnpafcizc. Ac lfdtr opfw ifqdgafmr \
+                  pfg qnprraqpn qaxeikr, pfg ac liixr nipkfafm fit dfir.";
+    let cracked = |options: SearchOptions| match Search::new(cipher, options).unwrap().run() {
+        Ok(Some(found)) => {
+            found
+                .plaintext
+                .starts_with("Ciphey is an automatic decryption tool.")
+                && found
+                    .path
+                    .iter()
+                    .any(|step| step.decoder == "Monoalphabetic Substitution")
+        }
+        _ => false,
+    };
+    assert!(cracked(options()));
+    let miss = SearchOptions::default()
+        .timeout(Duration::from_secs(3))
+        .regex("^NOPE")
+        .unwrap();
+    if let Ok(Some(found)) = Search::new(cipher, miss).unwrap().run() {
+        assert!(found.plaintext.starts_with("NOPE"), "{:?}", found.plaintext);
+    }
+    assert!(cracked(options()));
+}
+
+fn a_repeated_search_explores_the_same_tree() {
+    // Like a new `ciphey` process each time: nothing learnt in the first search (decoder
+    // statistics, the substitution cracker's cache, Athena's rejections) changes the
+    // second. The searches run on one thread: with several, rayon's timing can reorder a
+    // step's work natively (#1139). The nodes are compared as sets, because some decoders
+    // list candidates in HashMap order, which differs between runs
+    let tree = || {
+        let options = SearchOptions::default().timeout(Duration::from_secs(60));
+        let mut search = Search::new("VGhlIHF1aWNrIGJyb3duIGZveA==X", options).unwrap();
+        let mut nodes = Vec::new();
+        for _ in 0..60 {
+            if search.state() != SearchState::Running {
+                break;
+            }
+            nodes.extend(
+                search
+                    .step(Duration::ZERO)
+                    .expanded
+                    .into_iter()
+                    .map(|node| (node.depth, node.decoder, node.text)),
+            );
+        }
+        nodes.sort();
+        nodes
+    };
+    let one_thread = || {
+        let pool = rayon_pool();
+        pool.map_or_else(tree, |pool| pool.install(tree))
+    };
+    let first = one_thread();
+    assert!(first.len() > 100, "{} nodes", first.len());
+    assert_eq!(first, one_thread());
+}
+
+/// A pool of one thread, natively; WebAssembly has only one anyway.
+#[cfg(not(target_family = "wasm"))]
+fn rayon_pool() -> Option<rayon::ThreadPool> {
+    rayon::ThreadPoolBuilder::new().num_threads(1).build().ok()
+}
+
+/// WebAssembly has only one thread.
+#[cfg(target_family = "wasm")]
+fn rayon_pool() -> Option<NoPool> {
+    None
+}
+
+/// Stands in for rayon's pool on WebAssembly.
+#[cfg(target_family = "wasm")]
+struct NoPool;
+
+#[cfg(target_family = "wasm")]
+impl NoPool {
+    fn install<T>(&self, f: impl FnOnce() -> T) -> T {
+        f()
+    }
+}
+
+fn nodes_count_characters_and_their_own_children() {
+    // Text that isn't ASCII: lengths and previews count characters, not bytes
+    let input = "Ünïcödé ﬁlé ☃ «quoted» 日本語のテキスト 😀😀";
+    let options = options().preview_chars(3);
+    let mut search = Search::new(input, options).unwrap();
+    let mut expanded = Vec::new();
+    while search.state() == SearchState::Running && expanded.len() < 200 {
+        expanded.extend(search.step(Duration::ZERO).expanded);
+    }
+    let root = &expanded[0];
+    assert_eq!(root.text, "Ünï");
+    assert_eq!(root.text_chars, input.chars().count());
+    // Each node counts its own children: those with it as their parent that were
+    // reported, at most
+    for node in &expanded {
+        let reported = expanded
+            .iter()
+            .filter(|child| child.parent == Some(node.id))
+            .count();
+        assert!(
+            reported <= node.children,
+            "node {}: {reported} > {}",
+            node.id,
+            node.children
+        );
+    }
+    let sum: usize = expanded.iter().map(|node| node.children).sum();
+    assert!(
+        sum < expanded.len() * 200,
+        "children look like the whole batch's"
+    );
 }
 
 fn perform_cracking_after_a_search_uses_its_own_config() {

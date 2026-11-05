@@ -7,6 +7,8 @@ WORKDIR /app/ciphey
 COPY Cargo.toml Cargo.lock ./
 COPY src/ src/
 COPY benches/ benches/
+# A workspace member (the WebAssembly bindings): cargo loads every member's manifest
+COPY wasm/ wasm/
 RUN cargo build --release
 
 FROM alpine:3.12

@@ -91,7 +91,7 @@ link all three.
 | Export | What it does |
 | --- | --- |
 | `new Search(input, options?)` | A search for the plaintext of `input`. Nothing runs until `step`; the timeout counts from here. Throws on bad options |
-| `search.step(budgetMs)` | Searches for about `budgetMs` ms and returns a `SearchProgress` |
+| `search.step(budgetMs)` | Searches for about `budgetMs` ms and returns a `SearchProgress`. `Infinity` runs it to its end |
 | `search.status` | `"running"`, `"decoded"`, `"not_found"` (nothing left to try) or `"timed_out"` |
 | `search.results()` | Every `SearchResult` so far |
 | `search.free()` | Frees the search's memory in the module |
@@ -109,8 +109,10 @@ The options of `new Search` and `decode`, all optional:
   the strictest;
 - `previewChars`: how much of each node's text to report, default 120.
 
-Unknown fields, a negative timeout and a regex that doesn't compile throw an `Error` that
-says why.
+Options must be a plain object, `undefined` or `null` (`null` fields are the defaults).
+Unknown fields, numbers that are negative, `NaN` or infinite, and a regex that doesn't
+compile throw an `Error` that says why. Lengths and `previewChars` count characters as
+code points: an emoji is one, though its JavaScript `length` is 2.
 
 `step` returns a `SearchProgress`:
 
@@ -137,10 +139,25 @@ A `SearchResult` has:
   the input was already plaintext.
 
 A step returns between two batches of up to ten nodes once its budget has passed, so one
-can run longer than the budget: as long as the slowest batch takes, such as Playfair's
-cracker (up to 1.5 s). The search checks its own timeout before every decoder. Searches
-never prompt, use no cache and print nothing. A panic is logged to `console.error` before
-the module aborts; the instance is unusable after that, so start a new one.
+can run longer than the budget: as long as the slowest batch takes. Playfair's cracker
+allows itself 1.5 s, and on long input the first step can take much longer: on 1 MB of
+text, 11 to 14 s under Node.js, most of it in the Base58 decoders
+([#1138](https://github.com/bee-san/Ciphey/issues/1138)). The search checks its own
+timeout before every decoder. Searches never prompt, use no cache and print nothing. A
+panic is logged to `console.error` before the module aborts; the instance is unusable
+after that, so start a new one.
+
+### Memory
+
+A search keeps every node it hasn't expanded yet, so its memory grows for as long as it
+runs: about 1 KB per queued node for short input, more for long input (a node holds its
+text and its whole decoder path). A search with no plaintext queues hundreds of thousands
+of nodes a minute: one measured in Chrome reached 4 GiB, all a wasm32 module can address,
+after 27 s, and the module aborted. Running out of memory isn't a panic, so nothing is
+logged. Keep timeouts short, or watch `queued` (or the module's memory) and stop the
+search, as ciphey-web does. `search.free()` gives the memory back to the module for the
+next search, though the module itself never shrinks. Bounding the queue is
+[#1144](https://github.com/bee-san/Ciphey/issues/1144).
 
 ### In a Web Worker
 
@@ -163,13 +180,15 @@ onmessage = async ({ data }) => {
   }
   // { type: "decode", input, options }
   current?.free();
+  current = null;
   let search;
   try {
-    search = current = new Search(data.input, data.options);
+    search = new Search(data.input, data.options);
   } catch (error) {
-    postMessage({ type: "error", message: error.message });
+    postMessage({ type: "error", message: error.message }); // a bad crib, say
     return;
   }
+  current = search;
   let update;
   do {
     update = search.step(40);

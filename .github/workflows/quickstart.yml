@@ -108,6 +108,11 @@ jobs:
         # JSON-RPC-over-stdio integration test.
         run: cargo test --features mcp --bin ciphey-mcp --test mcp_stdio
 
+      - name: Run the browser API's tests (natively)
+        # wasm/, a workspace member; the commands above only build the root package.
+        # Its WebAssembly tests need the wasm32 build, which comes with gibberish-or-not 6.
+        run: cargo test -p ciphey-wasm
+
   lints:
     name: Lints
     runs-on: ubuntu-latest
@@ -132,3 +137,6 @@ jobs:
 
       - name: Run cargo clippy (mcp feature)
         run: cargo clippy --all-targets --features mcp -- -D warnings
+
+      - name: Run cargo clippy (the browser API, wasm/)
+        run: cargo clippy -p ciphey-wasm --all-targets -- -D warnings

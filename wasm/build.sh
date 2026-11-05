@@ -13,7 +13,8 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
-out=${1:-$root/wasm/pkg}
+# Relative to where it is run from, before the cd below
+out=$(realpath -m "${1:-$root/wasm/pkg}")
 target_dir=${CARGO_TARGET_DIR:-$root/target}
 
 cd "$root"
