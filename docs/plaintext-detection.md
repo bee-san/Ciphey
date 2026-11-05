@@ -91,7 +91,8 @@ ignores:
   reversed address, were IPv6 addresses to it;
 - UK postcodes that don't start with one of the 124 postcode areas (`UK_POSTCODE_AREAS`):
   a Caesar shift of a postcode is still shaped like one (`TX1B 1BB` is ROT1 of `SW1A
-  1AA`). About a third of the shifts that pyWhat takes land on an area and stay postcodes;
+  1AA`). Of the 67 Caesar shifts of pyWhat's seven example postcodes that its regex
+  takes, 17 land on an area and stay postcodes (`WA1E 1EE`);
 - URLs without `://` or a leading `www.`: pyWhat's URL regex takes bare domains
   (`example.com`). It is also by far pyWhat's slowest regex (18 KB, run by fancy-regex),
   so the checker only runs it on text that has one;

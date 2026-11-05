@@ -880,7 +880,7 @@ mod tests {
             );
         }
         // Caesar shifts of `SW1A 1AA`, `EC1A 1BB` and `CR2 6XH`: still shaped like postcodes.
-        // About a third of the shifts that pyWhat takes land on an area (`WA1E 1EE`), and
+        // A quarter of the shifts that pyWhat takes land on an area (`WA1E 1EE`), and
         // stay postcodes.
         for shifted in ["TX1B 1BB", "ZD1H 1HH", "AY1W 1XX", "ET2 6ZJ"] {
             assert!(
