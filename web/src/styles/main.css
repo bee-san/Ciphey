@@ -1,0 +1,12 @@
+/* One stylesheet for the three pages (cached once, ~6 KB compressed). */
+@import "./base.css";
+@import "./components.css";
+@import "./decode.css";
+@import "./identify.css";
+@import "./language.css";
+
+/* iOS Safari zooms into a field under 16 px when it gets focus. The highlighter's textarea and
+   its backdrop change together: they must stay the same size. */
+@media (max-width: 720px) {
+  textarea, .highlighter textarea, .highlighter__backdrop, .sort select { font-size: 1rem; }
+}

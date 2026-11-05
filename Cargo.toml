@@ -5,8 +5,9 @@ version = "0.12.1"
 edition = "2021"
 description = "Automated decoding tool, Ciphey but in Rust"
 license = "MIT"
-# The end-to-end benchmark (its scripts, corpus and baseline) is for this repository, not the crate
-exclude = ["benches/e2e/", "benches/data/e2e/"]
+# Not in the crate: the end-to-end benchmark (its scripts, corpus and baseline) is for this
+# repository, and so is the website (web/, https://bee-san.github.io/Ciphey/)
+exclude = ["benches/e2e/", "benches/data/e2e/", "/web/"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -127,6 +128,14 @@ panic = "abort"
 strip = "symbols"
 codegen-units = 1
 
+# The WebAssembly module of the browser API (wasm/, docs/wasm.md): release, optimised for
+# size, since the module is downloaded. Not stripped: wasm-bindgen and wasm-opt read the
+# module's `target_features` section, and wasm/build.sh strips the rest with wasm-opt.
+[profile.wasm]
+inherits = "release"
+opt-level = "z"
+strip = "none"
+
 # The profile that 'cargo dist' will build with
 [profile.dist]
 inherits = "release"
@@ -162,6 +171,10 @@ harness = false
 [[bench]]
 name = "plaintext"
 harness = false
+
+[workspace]
+# The browser API: JavaScript bindings for WebAssembly (docs/wasm.md)
+members = ["wasm"]
 
 # Config for 'cargo dist'
 [workspace.metadata.dist]

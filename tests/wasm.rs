@@ -12,7 +12,8 @@
 //! Two tests run the benchmark fixtures, which were recorded natively: every decoder on
 //! its inputs (`benches/data/decoders.toml`) and the whole search corpus
 //! (`benches/data/search.toml`). Anything that reads std's clock or waits on a thread,
-//! even inside std or a dependency, panics on wasm32-unknown-unknown, and these find it.
+//! even inside std or a dependency, panics on wasm32-unknown-unknown, and these find it on
+//! every path their inputs reach.
 //! Natively they are ignored: `cargo bench -- --test` checks the same fixtures there, in
 //! optimised builds.
 //!

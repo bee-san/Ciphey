@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "WebWorker"],
+    "types": ["vite/client"]
+  },
+  "include": ["src/workers", "src/lib/protocol.ts", "src/lib/pywhat.ts"],
+  "exclude": []
+}

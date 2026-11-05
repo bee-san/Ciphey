@@ -1,0 +1,66 @@
+/* Is it language? */
+
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-sunken);
+  min-height: 92px;
+}
+.verdict__mark {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--border-strong);
+}
+.verdict__mark .icon { width: 28px; height: 28px; stroke-width: 2; }
+.verdict__title { font-size: 1.375rem; font-weight: 750; letter-spacing: -0.01em; }
+.verdict__detail { color: var(--text-muted); }
+.verdict--yes { background: var(--success-soft); border-color: var(--success); }
+.verdict--yes .verdict__mark { border: 0; background: var(--success); color: var(--surface); }
+.verdict--no { background: var(--surface-sunken); border-color: var(--border-strong); }
+.verdict--no .verdict__mark { border: 0; background: var(--text-muted); color: var(--surface); }
+
+.score { display: grid; gap: var(--space-2); }
+.score__head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; }
+.score__value { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.score__track {
+  position: relative;
+  height: 14px;
+  margin: 4px 0 28px;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.score__fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--text-muted);
+  transition: width 0.18s ease-out;
+}
+.score--yes .score__fill { background: var(--success); }
+.score__tick { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text); border-radius: 1px; }
+.score__tick span {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.score__tick--high { left: 50%; }
+.score__tick--medium { left: 75%; }
+.score__tick--low { left: 90%; }
+.score__tick.is-current span { color: var(--text); }
+@media (max-width: 420px) {
+  .score__tick--low span { transform: translateX(-30%); }
+}

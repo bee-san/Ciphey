@@ -89,6 +89,11 @@ struct AStarNode {
     total_cost: f32,
     /// The last decoder's checker identified `state.text` as plaintext.
     is_result: bool,
+    /// Unique within the search, in the order nodes were made: the input is 0. Set when
+    /// the batch that made the node is collected.
+    id: u64,
+    /// The id of the node it was decoded from, `None` for the input.
+    parent: Option<u64>,
 }
 
 impl Ord for AStarNode {
@@ -117,6 +122,7 @@ impl PartialEq for AStarNode {
 impl Eq for AStarNode {}
 
 /// The open set.
+#[derive(Default)]
 struct ThreadSafePriorityQueue {
     /// Backing heap.
     queue: Mutex<BinaryHeap<AStarNode>>,
@@ -227,13 +233,15 @@ fn result_passes_sanity(node: &AStarNode, original_input_len: usize, input_is_fl
     true
 }
 
-/// Run every applicable decoder on the node's text and return the children. Decoders that
-/// haven't started when the search is stopped or `deadline` passes are skipped.
+/// Run every applicable decoder on the node's text, with an Athena checker at
+/// `sensitivity`, and return the children. Decoders that haven't started when the search
+/// is stopped or `deadline` passes are skipped.
 fn expand_node(
     current_node: &AStarNode,
     seen_strings: &DashSet<u64>,
     stop: &Arc<AtomicBool>,
     deadline: Deadline,
+    sensitivity: Sensitivity,
 ) -> Vec<AStarNode> {
     if stop.load(AtomicOrdering::Relaxed) || deadline.has_passed() {
         return Vec::new();
@@ -255,7 +263,8 @@ fn expand_node(
                 return children;
             }
 
-            let checker = CheckerTypes::CheckAthena(Checker::<Athena>::new());
+            let checker =
+                CheckerTypes::CheckAthena(Checker::<Athena>::new().with_sensitivity(sensitivity));
             let mut result = decoder.crack(text, &checker);
 
             // Taken out so the per-candidate clones below don't copy every candidate.
@@ -283,6 +292,8 @@ fn expand_node(
                         cost: current_node.cost + 1.0,
                         total_cost: f32::NEG_INFINITY,
                         is_result: true,
+                        id: 0,
+                        parent: Some(current_node.id),
                     });
                     update_decoder_stats(decoder.get_name(), true);
                 }
@@ -316,6 +327,8 @@ fn expand_node(
                     cost,
                     total_cost: cost + heuristic,
                     is_result: false,
+                    id: 0,
+                    parent: Some(current_node.id),
                 });
             }
             update_decoder_stats(decoder.get_name(), produced_any);
@@ -364,63 +377,200 @@ fn keep_first_of_each_text(results: &mut Vec<AStarNode>) {
     });
 }
 
-/// Search for a decoder sequence that turns `input` into plaintext. Calls `send` with
-/// `Some(result)` on success (repeatedly in `top_results` mode), or `None` if the space is
-/// exhausted. Stops early, without calling `send(None)`, when `stop` is set or `deadline`
-/// passes.
-pub fn astar(
-    input: String,
-    mut send: impl FnMut(Option<DecoderResult>),
-    stop: Arc<AtomicBool>,
-    deadline: Deadline,
-) {
-    let original_input_len = input.chars().count();
-    // With a crib the crib decides what the flag looks like
-    let input_is_flag = is_ctf_flag_shaped(&input) && get_config().regex.is_none();
-    let initial = DecoderResult {
-        text: vec![input],
-        path: vec![],
-    };
+/// How [`AStar::step`] left the search.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum StepEnd {
+    /// There is more to search.
+    Running,
+    /// A result was sent, and the search stopped (not in `top_results` mode).
+    Found,
+    /// Nothing is left to search. `None` was sent.
+    Exhausted,
+    /// The stop flag was set or the deadline passed.
+    Stopped,
+}
 
-    let seen_strings: DashSet<u64> = DashSet::new();
-    let seen_results: DashSet<u64> = DashSet::new();
-    let open_set = ThreadSafePriorityQueue::new();
-    // Like the seen-sets, Athena's memory of rejected candidates starts empty.
-    crate::checkers::athena::forget_rejections();
+/// A node [`AStar::step`] expanded, as it reports it to its watcher.
+pub(crate) struct Expanded<'a> {
+    /// The node's text and the decoder path to it
+    pub(crate) state: &'a DecoderResult,
+    /// The node's id: unique within the search, the input is 0
+    pub(crate) id: u64,
+    /// The id of the node it was decoded from, `None` for the input
+    pub(crate) parent: Option<u64>,
+    /// Decoders applied
+    pub(crate) depth: u32,
+    /// Its A* priority, f = g + h: the open set expands the lowest first
+    pub(crate) total_cost: f32,
+    /// How many of the children expanding it made were queued: results and texts the
+    /// search had already seen aren't
+    pub(crate) children: usize,
+}
 
-    open_set.push(AStarNode {
-        state: initial,
-        depth: 0,
-        cost: 0.0,
-        total_cost: 0.0,
-        is_result: false,
-    });
+/// What [`AStar::step`] calls for each node it expanded.
+pub(crate) type Watcher<'w> = &'w mut dyn FnMut(&Expanded<'_>);
 
-    let mut curr_depth: u32 = 0;
-    let mut expanded_nodes: usize = 0;
+/// What [`AStar::step`] calls with each result and the id of the node it was decoded from,
+/// or with `(None, None)` once the search space is exhausted.
+pub(crate) type Sender<'s> = &'s mut dyn FnMut(Option<DecoderResult>, Option<u64>);
 
-    while !open_set.is_empty() && !stop.load(AtomicOrdering::Relaxed) && !deadline.has_passed() {
-        let batch = open_set.extract_batch(PARALLEL_BATCH_SIZE);
-        if let Some(deepest) = batch.iter().map(|n| n.depth).max() {
-            curr_depth = curr_depth.max(deepest);
+/// An A* search that runs one batch of nodes at a time, see [`AStar::step`].
+pub(crate) struct AStar {
+    /// Characters in the input, for [`result_passes_sanity`].
+    original_input_len: usize,
+    /// Whether the input is shaped like a CTF flag, for [`result_passes_sanity`].
+    input_is_flag: bool,
+    /// The sensitivity of the Athena checker the decoders get.
+    sensitivity: Sensitivity,
+    /// Hashes of the texts already queued.
+    seen_strings: DashSet<u64>,
+    /// Hashes of the results already handled.
+    seen_results: DashSet<u64>,
+    /// The nodes still to expand.
+    open_set: ThreadSafePriorityQueue,
+    /// The deepest node expanded so far.
+    curr_depth: u32,
+    /// How many nodes have been expanded.
+    expanded_nodes: usize,
+    /// How the search ended, once it has.
+    ended: Option<StepEnd>,
+    /// The id the next node gets
+    next_id: u64,
+    /// The seen-set's size when the search ended and freed it
+    seen_at_end: usize,
+}
+
+impl AStar {
+    /// A search for plaintext in `input`, with nothing expanded yet. The decoders get an
+    /// Athena checker at `sensitivity`; the CLI's search uses `Sensitivity::Medium`.
+    pub(crate) fn new(input: String, sensitivity: Sensitivity) -> AStar {
+        let original_input_len = input.chars().count();
+        // With a crib the crib decides what the flag looks like
+        let input_is_flag = is_ctf_flag_shaped(&input) && get_config().regex.is_none();
+        let initial = DecoderResult {
+            text: vec![input],
+            path: vec![],
+        };
+
+        let open_set = ThreadSafePriorityQueue::new();
+        // Like the seen-sets, Athena's memory of rejected candidates starts empty.
+        crate::checkers::athena::forget_rejections();
+
+        open_set.push(AStarNode {
+            state: initial,
+            depth: 0,
+            cost: 0.0,
+            total_cost: 0.0,
+            is_result: false,
+            id: 0,
+            parent: None,
+        });
+
+        AStar {
+            original_input_len,
+            input_is_flag,
+            sensitivity,
+            seen_strings: DashSet::new(),
+            seen_results: DashSet::new(),
+            open_set,
+            curr_depth: 0,
+            expanded_nodes: 0,
+            ended: None,
+            // The input is node 0
+            next_id: 1,
+            seen_at_end: 0,
         }
-        expanded_nodes += batch.len();
+    }
+
+    /// How many nodes have been expanded.
+    pub(crate) fn expanded_nodes(&self) -> usize {
+        self.expanded_nodes
+    }
+
+    /// How many nodes are waiting to be expanded.
+    pub(crate) fn queued_nodes(&self) -> usize {
+        self.open_set.len()
+    }
+
+    /// The depth of the deepest node expanded so far.
+    pub(crate) fn depth(&self) -> u32 {
+        self.curr_depth
+    }
+
+    /// How many texts the seen-set holds, or held when the search ended.
+    pub(crate) fn seen(&self) -> usize {
+        self.seen_strings.len().max(self.seen_at_end)
+    }
+
+    /// Expands the next batch of up to `PARALLEL_BATCH_SIZE` nodes. Calls `send` with
+    /// each result and the id of the node it came from (in `top_results` mode the search
+    /// goes on after one), or with `None` when the search space is exhausted, and `watch`,
+    /// if given, with each node of the batch once it is expanded.
+    ///
+    /// Decoders that haven't started when `stop` is set or `deadline` passes are skipped,
+    /// and the search ends with [`StepEnd::Stopped`]. Once it has ended, calling this
+    /// again does nothing and returns the same end.
+    pub(crate) fn step(
+        &mut self,
+        stop: &Arc<AtomicBool>,
+        deadline: Deadline,
+        send: Sender<'_>,
+        watch: Option<Watcher<'_>>,
+    ) -> StepEnd {
+        if let Some(ended) = self.ended {
+            return ended;
+        }
+        if stop.load(AtomicOrdering::Relaxed) || deadline.has_passed() {
+            return self.end(StepEnd::Stopped);
+        }
+        if self.open_set.is_empty() {
+            send(None, None);
+            return self.end(StepEnd::Exhausted);
+        }
+
+        let batch = self.open_set.extract_batch(PARALLEL_BATCH_SIZE);
+        if let Some(deepest) = batch.iter().map(|n| n.depth).max() {
+            self.curr_depth = self.curr_depth.max(deepest);
+        }
+        self.expanded_nodes += batch.len();
         trace!(
             "Expanding batch of {} nodes (depth {}, open set {}, seen {}, expanded {})",
             batch.len(),
-            curr_depth,
-            open_set.len(),
-            seen_strings.len(),
-            expanded_nodes
+            self.curr_depth,
+            self.open_set.len(),
+            self.seen_strings.len(),
+            self.expanded_nodes
         );
 
-        let new_nodes: Vec<AStarNode> = batch
+        let seen_strings = &self.seen_strings;
+        let sensitivity = self.sensitivity;
+        let mut new_nodes: Vec<AStarNode> = batch
             .par_iter()
-            .flat_map(|node| expand_node(node, &seen_strings, &stop, deadline))
+            .flat_map(|node| expand_node(node, seen_strings, stop, deadline, sensitivity))
             .collect();
+        for node in &mut new_nodes {
+            node.id = self.next_id;
+            self.next_id += 1;
+        }
 
         let (mut results, children): (Vec<AStarNode>, Vec<AStarNode>) =
             new_nodes.into_iter().partition(|n| n.is_result);
+
+        if let Some(watch) = watch {
+            for node in &batch {
+                watch(&Expanded {
+                    state: &node.state,
+                    id: node.id,
+                    parent: node.parent,
+                    depth: node.depth,
+                    total_cost: node.total_cost,
+                    children: children
+                        .iter()
+                        .filter(|child| child.parent == Some(node.id))
+                        .count(),
+                });
+            }
+        }
 
         if results.len() > 1 {
             keep_first_of_each_text(&mut results);
@@ -435,11 +585,11 @@ pub fn astar(
             let Some(text) = node.state.text.first() else {
                 continue;
             };
-            if !seen_results.insert(calculate_hash(text)) {
+            if !self.seen_results.insert(calculate_hash(text)) {
                 debug!("Skipping duplicate result: {:?}", text);
                 continue;
             }
-            if !result_passes_sanity(&node, original_input_len, input_is_flag) {
+            if !result_passes_sanity(&node, self.original_input_len, self.input_is_flag) {
                 debug!(
                     "Rejected implausible result {:?} from path {:?}; continuing search",
                     text,
@@ -449,9 +599,9 @@ pub fn astar(
                         .map(|p| p.decoder)
                         .collect::<Vec<_>>()
                 );
-                if seen_strings.insert(calculate_hash(text)) {
+                if self.seen_strings.insert(calculate_hash(text)) {
                     let heuristic = generate_heuristic(text, &node.state.path, None);
-                    open_set.push(AStarNode {
+                    self.open_set.push(AStarNode {
                         total_cost: node.cost + heuristic,
                         is_result: false,
                         ..node
@@ -462,7 +612,7 @@ pub fn astar(
 
             debug!(
                 "Found result after expanding {} nodes: {:?}",
-                expanded_nodes, node.state.text
+                self.expanded_nodes, node.state.text
             );
             decoded_how_many_times(node.depth);
 
@@ -479,35 +629,67 @@ pub fn astar(
                 }
             }
 
-            send(Some(node.state.clone()));
+            send(Some(node.state.clone()), node.parent);
 
             if !get_config().top_results {
                 stop.store(true, AtomicOrdering::Relaxed);
-                let queued_nodes = open_set.len() + children.len();
+                self.seen_at_end = self.seen_strings.len();
+                let queued_nodes = self.open_set.len() + children.len();
                 free_leftovers(
-                    (open_set, children, seen_strings, seen_results),
+                    (
+                        std::mem::take(&mut self.open_set),
+                        children,
+                        std::mem::take(&mut self.seen_strings),
+                        std::mem::take(&mut self.seen_results),
+                    ),
                     queued_nodes,
                 );
-                return;
+                self.ended = Some(StepEnd::Found);
+                return StepEnd::Found;
             }
         }
 
         for node in children {
-            open_set.push(node);
+            self.open_set.push(node);
         }
 
-        if seen_strings.len() > PRUNE_THRESHOLD {
+        if self.seen_strings.len() > PRUNE_THRESHOLD {
             debug!("Seen-set exceeded {} entries; clearing", PRUNE_THRESHOLD);
-            seen_strings.clear();
+            self.seen_strings.clear();
         }
+        StepEnd::Running
     }
 
-    // The search space is exhausted, unless the search was stopped or ran out of time
-    if !stop.load(AtomicOrdering::Relaxed) && !deadline.has_passed() {
-        send(None);
+    /// Ends the search with `end`, and frees what it leaves behind.
+    fn end(&mut self, end: StepEnd) -> StepEnd {
+        self.ended = Some(end);
+        self.seen_at_end = self.seen_strings.len();
+        let queued_nodes = self.open_set.len();
+        free_leftovers(
+            (
+                std::mem::take(&mut self.open_set),
+                std::mem::take(&mut self.seen_strings),
+                std::mem::take(&mut self.seen_results),
+            ),
+            queued_nodes,
+        );
+        end
     }
-    let queued_nodes = open_set.len();
-    free_leftovers((open_set, seen_strings, seen_results), queued_nodes);
+}
+
+/// Search for a decoder sequence that turns `input` into plaintext. Calls `send` with
+/// `Some(result)` on success (repeatedly in `top_results` mode), or `None` if the space is
+/// exhausted. Stops early, without calling `send(None)`, when `stop` is set or `deadline`
+/// passes.
+pub fn astar(
+    input: String,
+    mut send: impl FnMut(Option<DecoderResult>),
+    stop: Arc<AtomicBool>,
+    deadline: Deadline,
+) {
+    let mut search = AStar::new(input, Sensitivity::Medium);
+    let mut send = |result: Option<DecoderResult>, _: Option<u64>| send(result);
+    while search.step(&stop, deadline, &mut send, None) == StepEnd::Running {}
 }
 
 #[cfg(test)]
@@ -601,12 +783,20 @@ mod tests {
             cost: 0.0,
             total_cost: 0.0,
             is_result: false,
+            id: 0,
+            parent: None,
         };
         let stop = Arc::new(AtomicBool::new(false));
-        let children = expand_node(&node, &DashSet::new(), &stop, Deadline::NEVER);
+        let children = expand_node(
+            &node,
+            &DashSet::new(),
+            &stop,
+            Deadline::NEVER,
+            Sensitivity::Medium,
+        );
         assert!(children.iter().any(|child| child.is_result), "{children:?}");
         let passed = Deadline::after(std::time::Duration::ZERO);
-        assert!(expand_node(&node, &DashSet::new(), &stop, passed).is_empty());
+        assert!(expand_node(&node, &DashSet::new(), &stop, passed, Sensitivity::Medium).is_empty());
     }
 
     #[test]
@@ -702,6 +892,8 @@ mod tests {
             cost: 1.0,
             total_cost: 0.0,
             is_result: true,
+            id: 0,
+            parent: None,
         };
         assert!(!result_passes_sanity(&node, 800, false));
 
@@ -714,6 +906,8 @@ mod tests {
             cost: 1.0,
             total_cost: 0.0,
             is_result: true,
+            id: 0,
+            parent: None,
         };
         assert!(result_passes_sanity(&node, 16, false));
     }
@@ -732,6 +926,8 @@ mod tests {
                 cost,
                 total_cost: f32::NEG_INFINITY,
                 is_result: true,
+                id: 0,
+                parent: None,
             }
         };
         let mut results = vec![
@@ -755,6 +951,8 @@ mod tests {
             cost: 3.0,
             total_cost: 0.0,
             is_result: true,
+            id: 0,
+            parent: None,
         };
         // e.g. Reverse -> Atbash -> Reverse of FRXNV{l0h_s0haq_z3}
         assert!(!result_passes_sanity(
@@ -790,6 +988,8 @@ mod tests {
             cost: 1.0,
             total_cost: 0.0,
             is_result: true,
+            id: 0,
+            parent: None,
         }
     }
 

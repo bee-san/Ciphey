@@ -1,0 +1,32 @@
+# Two of the site's three WebAssembly modules, one per tool, so each page loads only its own:
+#   identify  pyWhat's `wasm` feature
+#   language  gibberish-or-not's `wasm` feature
+# The third, Decode's, is Ciphey's own browser API: the ciphey-wasm crate in ../../wasm.
+# Built by ../scripts/build-wasm.sh (wasm-bindgen --target web, then wasm-opt -Oz).
+# A workspace of its own, apart from Ciphey's: Ciphey's builds and `cargo publish` never
+# see it.
+[workspace]
+members = ["identify", "language"]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT"
+
+[workspace.dependencies]
+wasm-bindgen = "=0.2.130"
+# BRANCH ONLY (ciphey-web): git versions until pywhat 6 and gibberish-or-not 6 are on
+# crates.io; master depends on crates.io versions only. The commits are pyWhat's main with
+# #300 merged (43a5f1a0) and the head of bee-san/gibberish-or-not#10 (branch gib-lead).
+pywhat = { git = "https://github.com/bee-san/pyWhat", rev = "43a5f1a05ce505ec3ec01e50367256c66ef24ad4", default-features = false, features = ["wasm"] }
+gibberish-or-not = { git = "https://github.com/bee-san/gibberish-or-not", rev = "b56b0c5ecc2b86e6074ae3f13bc4873a36feba08", features = ["wasm"] }
+
+# Small and fast to load: size over speed, one codegen unit, no unwinding, no debug info.
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"

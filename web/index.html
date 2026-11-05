@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!--shell:csp-->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<title>Ciphey: decode anything in your browser</title>
+<meta name="description" content="Paste text that's been encoded or encrypted. Ciphey works out how and hands you the plaintext: Base64, hex, Caesar, Vigenère, Morse and more, several layers deep. Runs entirely in your browser.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="/theme.js"></script>
+</head>
+<body>
+<!--shell:header-->
+<main id="main" class="page page--decode" tabindex="-1">
+  <div class="page-intro">
+    <h1>Decode</h1>
+    <p class="lede">Paste text that's been encoded or encrypted. Ciphey works out how and hands you the plaintext: no key, no cipher name, no hints.</p>
+  </div>
+
+  <div class="workbench">
+    <section class="panel panel--input" aria-labelledby="input-heading">
+      <h2 id="input-heading" class="visually-hidden">Input</h2>
+      <form id="decode-form" class="stack" novalidate>
+        <div class="field">
+          <div class="field__label-row">
+            <label for="input">Encoded or encrypted text</label>
+            <span class="field__meta" id="input-count">0 characters</span>
+          </div>
+          <div class="dropzone" id="dropzone">
+            <textarea id="input" name="input" rows="7" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="Paste encoded text, such as aGVsbG8gdGhlcmUgZ2VuZXJhbA==" aria-describedby="input-hint input-error"></textarea>
+            <div class="dropzone__overlay" aria-hidden="true">Drop the file to decode it</div>
+          </div>
+          <p class="field__hint" id="input-hint">Or <button type="button" class="link-button" id="open-file">open a file</button> (or drop one here), up to <span id="input-limit">65,536</span> characters. <span class="shortcut-hint" id="shortcut-hint">Ctrl + Enter decodes.</span></p>
+          <p class="field__error" id="input-error" hidden></p>
+          <input type="file" id="file" aria-label="A text file" hidden>
+        </div>
+
+        <fieldset class="field">
+          <legend>Try an example</legend>
+          <div class="chips" id="examples"></div>
+        </fieldset>
+
+        <details class="disclosure" id="options">
+          <summary>Options <span class="disclosure__summary" id="options-summary">5 s · Medium sensitivity</span></summary>
+          <div class="disclosure__body">
+            <div class="field">
+              <label for="timeout">Time limit</label>
+              <div class="input-suffix">
+                <input type="number" id="timeout" min="1" max="60" step="1" value="5" inputmode="numeric" aria-describedby="timeout-hint timeout-error">
+                <span>seconds</span>
+              </div>
+              <p class="field__hint" id="timeout-hint">How long Ciphey searches before it gives up, from 1 to 60. A long search can stop sooner, once it has used the memory your browser can give it.</p>
+              <p class="field__error" id="timeout-error" hidden></p>
+            </div>
+            <div class="field">
+              <label for="regex">Crib <span class="field__meta">(optional)</span></label>
+              <input type="text" id="regex" class="mono" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="such as flag\{" aria-describedby="regex-hint regex-error">
+              <p class="field__hint" id="regex-hint">A regular expression the plaintext has to match, if you know part of it. The other checkers are off while it's set.</p>
+              <p class="field__error" id="regex-error" hidden></p>
+            </div>
+            <fieldset class="field">
+              <legend>Sensitivity</legend>
+              <div class="segmented" id="sensitivity">
+                <input type="radio" name="sensitivity" id="sens-low" value="low"><label for="sens-low">Low</label>
+                <input type="radio" name="sensitivity" id="sens-medium" value="medium" checked><label for="sens-medium">Medium</label>
+                <input type="radio" name="sensitivity" id="sens-high" value="high"><label for="sens-high">High</label>
+              </div>
+              <p class="field__hint">How easily the English checker accepts text as plaintext. Low is the strictest.</p>
+            </fieldset>
+            <div class="check">
+              <input type="checkbox" id="top-results" aria-describedby="top-hint">
+              <div>
+                <label for="top-results">Find every plaintext</label>
+                <p class="field__hint" id="top-hint">Keep searching after the first plaintext, until the time limit, and list all of them.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div class="actions">
+          <button type="submit" class="button button--primary" id="decode" aria-keyshortcuts="Control+Enter Meta+Enter">Decode</button>
+          <button type="button" class="button button--ghost" id="clear">Clear</button>
+          <span class="engine-status" id="engine-status"><span class="spinner" aria-hidden="true"></span>Loading Ciphey…</span>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel panel--output" id="output" aria-labelledby="output-heading">
+      <div class="panel__head">
+        <h2 id="output-heading">Result</h2>
+        <span class="field__meta" id="output-meta"></span>
+      </div>
+
+      <div class="empty" id="output-empty">
+        <p class="empty__title">The plaintext shows up here.</p>
+        <ul>
+          <li>Ciphey tries chains of <span id="decoder-count">over 80</span> decoders and crackers, the most promising first.</li>
+          <li>It stops when one of its checkers accepts the text as plaintext: English words, a known format (pyWhat), JSON or your crib.</li>
+          <li>You watch the search as it happens, and see each layer it took off.</li>
+        </ul>
+      </div>
+
+      <div id="search" class="search" hidden>
+        <div class="search__status">
+          <span class="spinner" id="search-spinner" aria-hidden="true"></span>
+          <p id="search-text">Searching…</p>
+          <button type="button" class="button button--small" id="cancel" aria-keyshortcuts="Escape" hidden>Cancel <kbd aria-hidden="true">Esc</kbd></button>
+        </div>
+        <p class="field__meta search__stats" id="search-stats"></p>
+        <progress id="search-progress" max="1" value="0" aria-label="Time used of the time limit"></progress>
+      </div>
+
+      <div id="result" class="result" hidden></div>
+
+      <details class="disclosure tree-panel" id="tree-panel" open hidden>
+        <summary>Search tree <span class="disclosure__summary" id="tree-summary"></span></summary>
+        <div class="disclosure__body">
+          <p class="field__hint" id="tree-hint"></p>
+          <ul class="tree" id="tree" tabindex="0" aria-label="Search tree"></ul>
+        </div>
+      </details>
+    </section>
+  </div>
+
+  <dialog id="share-dialog" aria-labelledby="share-title" aria-describedby="share-warning">
+    <h2 id="share-title">Share this decode</h2>
+    <p id="share-warning" class="notice notice--warning">The link holds your input, so anyone who gets it can read it. Don't share secrets, keys or passwords this way. The input stays in the part of the link after <code>#</code>, which browsers don't send to the server.</p>
+    <div class="field">
+      <label for="share-url">Link</label>
+      <input type="text" id="share-url" class="mono" readonly>
+    </div>
+    <div class="actions">
+      <button type="button" class="button" id="share-close">Close</button>
+      <button type="button" class="button button--primary" id="share-copy">Copy link</button>
+    </div>
+  </dialog>
+
+  <p class="visually-hidden" role="status" id="announcer"></p>
+</main>
+<!--shell:footer-->
+<script type="module" src="/src/decode/main.ts"></script>
+</body>
+</html>

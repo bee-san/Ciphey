@@ -3,6 +3,7 @@ use lemmeknow::Identifier;
 use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicPtr, Ordering};
 // The config file and wordlist files: native targets only (WebAssembly has no files)
 #[cfg(not(target_family = "wasm"))]
 use {
@@ -89,6 +90,56 @@ static CONFIG: OnceCell<Config> = OnceCell::new();
 /// Returned by [`get_config`] until [`set_global_config`] is called
 static DEFAULT_CONFIG: Lazy<Config> = Lazy::new(Config::default);
 
+/// The config of a [`Search`](crate::search::Search), with its crib compiled.
+pub(crate) struct SearchConfig {
+    /// What [`get_config`] returns while it is in use
+    pub(crate) config: Config,
+    /// `config.regex`, compiled
+    pub(crate) regex: Option<regex::Regex>,
+}
+
+/// The [`SearchConfig`] in use, or null. While it is set, [`get_config`] returns it instead
+/// of the global config, so that each [`Search`](crate::search::Search) runs with its own
+/// options. [`perform_cracking`](crate::perform_cracking) clears it.
+///
+/// Every pointer stored here comes from [`Box::leak`] and is never written through, so
+/// references to it stay valid for the rest of the process.
+static SEARCH_CONFIG: AtomicPtr<SearchConfig> = AtomicPtr::new(std::ptr::null_mut());
+
+/// The [`SearchConfig`] in use, if a search set one.
+pub(crate) fn search_config() -> Option<&'static SearchConfig> {
+    let config = SEARCH_CONFIG.load(Ordering::Acquire);
+    // SAFETY: see SEARCH_CONFIG. Null pointers give `None`.
+    unsafe { config.as_ref() }
+}
+
+/// Makes `config` the config every check reads, see [`SEARCH_CONFIG`]. If another config was
+/// in use, what was worked out with it is forgotten.
+pub(crate) fn use_search_config(config: &'static SearchConfig) {
+    let config = std::ptr::from_ref(config).cast_mut();
+    if SEARCH_CONFIG.swap(config, Ordering::AcqRel) != config {
+        forget_config_dependent_state();
+    }
+}
+
+/// Goes back to the global config, if a search's config was in use.
+pub(crate) fn use_global_config() {
+    if !SEARCH_CONFIG
+        .swap(std::ptr::null_mut(), Ordering::AcqRel)
+        .is_null()
+    {
+        forget_config_dependent_state();
+    }
+}
+
+/// Forgets what was worked out with the config in use: the checks it rejected and the
+/// substitution cracker's results. Both depend on the crib and wordlist. Any other cache
+/// that depends on the config has to be cleared here too.
+fn forget_config_dependent_state() {
+    crate::checkers::athena::forget_rejections();
+    crate::decoders::monoalphabetic_substitution_decoder::forget_search_cache();
+}
+
 /// To initialize global config with custom values
 pub fn set_global_config(config: Config) {
     CONFIG.set(config).ok(); // ok() used to make compiler happy about using Result
@@ -108,17 +159,23 @@ pub fn set_global_config(config: Config) {
 /// set_global_config(config);
 /// assert_eq!(get_config().timeout, 42);
 /// ```
+///
+/// While a [`Search`](crate::search::Search) is running, this returns the config made from
+/// its options instead.
 pub fn get_config() -> &'static Config {
+    if let Some(search) = search_config() {
+        return &search.config;
+    }
     // Don't initialise CONFIG here: anything printed before the real config is set
     // (e.g. a warning while parsing the config file) would otherwise lock in the
     // defaults and silently discard every CLI option.
     CONFIG.get().unwrap_or_else(|| &DEFAULT_CONFIG)
 }
 
-/// Whether [`set_global_config`] has been called. From then on [`get_config`] returns
-/// the same config for the rest of the process.
+/// Whether [`set_global_config`] has been called, or a search set its config. From then
+/// on [`get_config`] returns the same config until the next search starts.
 pub(crate) fn is_global_config_set() -> bool {
-    CONFIG.get().is_some()
+    CONFIG.get().is_some() || search_config().is_some()
 }
 
 /// Creates a default lemmeknow config

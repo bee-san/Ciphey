@@ -629,6 +629,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ciphey-wasm"
+version = "0.12.1"
+dependencies = [
+ "ciphey",
+ "js-sys",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+]
+
+[[package]]
 name = "clap"
 version = "4.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

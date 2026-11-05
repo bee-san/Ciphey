@@ -1,0 +1,29 @@
+{
+  "name": "ciphey-web",
+  "private": true,
+  "description": "Ciphey, pyWhat and gibberish-or-not in the browser (https://bee-san.github.io/Ciphey/)",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "wasm": "bash scripts/build-wasm.sh",
+    "dev": "vite",
+    "build": "npm run typecheck && vite build",
+    "preview": "node scripts/serve.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.node.json",
+    "test": "vitest run",
+    "e2e": "node tests/e2e/e2e.mjs",
+    "measure": "node scripts/measure.mjs",
+    "screenshots": "node scripts/screenshots.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "axe-core": "4.14.0",
+    "puppeteer-core": "25.16.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "vitest": "5.1.0"
+  }
+}

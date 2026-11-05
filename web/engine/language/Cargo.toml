@@ -1,0 +1,13 @@
+[package]
+name = "ciphey-web-language"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen.workspace = true
+gibberish-or-not.workspace = true
