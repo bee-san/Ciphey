@@ -792,7 +792,7 @@ mod tests {
     }
 
     #[test]
-    fn flag_is_identified_by_lemmeknow() {
+    fn flag_is_identified_by_pywhat() {
         let result = Decoder::<KeyboardShiftDecoder>::new()
             .crack("g;sh}lrunpstf+djogy+od+rsdu|", &get_athena_checker());
         assert!(result.success);
@@ -800,7 +800,7 @@ mod tests {
             result.unencrypted_text.unwrap()[0],
             "flag{keyboard_shift_is_easy}"
         );
-        assert_eq!(result.checker_name, "LemmeKnow Checker");
+        assert_eq!(result.checker_name, "pyWhat Checker");
     }
 
     #[test]

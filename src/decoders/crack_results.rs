@@ -152,6 +152,18 @@ mod tests {
     };
     use super::*;
 
+    #[test]
+    fn cached_results_of_the_lemmeknow_checker_are_read() {
+        // A cache row written by ciphey 0.12, when the format checker used LemmeKnow
+        let json = r#"{"success":true,"encrypted_text":"3139322e3136382e302e31","unencrypted_text":["192.168.0.1"],"decoder":"Hexadecimal","checker_name":"LemmeKnow Checker","checker_description":"Uses LemmeKnow to check for regex matches","key":null,"description":"x","link":"y"}"#;
+        let result: CrackResult = serde_json::from_str(json).unwrap();
+        assert_eq!(result.checker_name, "pyWhat Checker");
+        assert_eq!(
+            result.unencrypted_text,
+            Some(vec!["192.168.0.1".to_string()])
+        );
+    }
+
     struct MockDecoder;
     impl Crack for Decoder<MockDecoder> {
         fn new() -> Decoder<MockDecoder> {

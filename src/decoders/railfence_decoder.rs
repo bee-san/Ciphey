@@ -5,7 +5,7 @@
 //! Ranks every rails/offset candidate by English letter-pair fitness and only asks the
 //! checker (at Low sensitivity) about the best one.
 
-use crate::checkers::lemmeknow_checker::{is_ctf_flag_shaped, is_marked_ctf_flag};
+use crate::checkers::pywhat_checker::{is_ctf_flag_shaped, is_marked_ctf_flag};
 use crate::checkers::CheckerTypes;
 use crate::config::get_config;
 use crate::decoders::interface::check_string_success;

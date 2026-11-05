@@ -617,7 +617,7 @@ fn is_single_byte_flag(view: &[u8]) -> bool {
 /// Keys of 2 or more bytes that decrypt `view` to a CTF flag, shortest first. Each key is
 /// the start of the view XORed with the start of a flag prefix, so keys up to the prefix
 /// length are found exactly. Longer keys are not guessed: a printable but wrong flag would
-/// still match LemmeKnow's flag pattern.
+/// still match the pyWhat checker's flag pattern.
 ///
 /// A key as long as the prefix is made from the prefix alone, so nothing checks it, and
 /// any text of the right length that stays printable "decrypts" to a flag. Such a key is
@@ -713,8 +713,8 @@ fn frequency_key(sample: &[u8]) -> Option<Vec<u8>> {
 
 /// Whether more than half of `key` is the best single-byte key of `sample`. Text XORed with
 /// one byte sometimes gets a longer key that "improves" a few of its bytes instead (an
-/// email address XORed with 0x5a came out as `aghtlddinw@plcaowar.hrg`, which LemmeKnow
-/// accepts). That is single-byte XOR, and its cracker's job.
+/// email address XORed with 0x5a came out as `aghtlddinw@plcaowar.hrg`, which pyWhat's
+/// email regex matches). That is single-byte XOR, and its cracker's job.
 fn is_mostly_single_byte_key(sample: &[u8], key: &[u8]) -> bool {
     best_column_key(sample, 1, 0).is_some_and(|(_, single)| {
         key.iter().filter(|&&byte| byte == single).count() * 2 > key.len()
@@ -1256,8 +1256,8 @@ mod tests {
     #[test]
     fn does_not_improve_single_byte_xor_with_a_longer_key() {
         // An email address XORed with single bytes. Frequency analysis picks the 3-byte
-        // key 0x5a5a5d for the first, which gives "aghtlddinw@plcaowar.hrg", and LemmeKnow
-        // accepts that as an email address.
+        // key 0x5a5a5d for the first, which gives "aghtlddinw@plcaowar.hrg", and pyWhat's
+        // email regex matches it.
         let email = b"agotlcdiiw@wlcfowfr.org";
         for single in [0x5a, 0x13, 0xc3] {
             let bytes: Vec<u8> = email.iter().map(|byte| byte ^ single).collect();

@@ -725,7 +725,7 @@ mod tests {
     }
 
     #[test]
-    fn flag_is_identified_by_lemmeknow() {
+    fn flag_is_identified_by_pywhat() {
         let decoder = Decoder::<KeyboardLayoutDecoder>::new();
         let result = decoder.crack("unai?,prbi{nafrgy{aiacb+", &get_athena_checker());
         assert!(result.success);
@@ -733,7 +733,7 @@ mod tests {
             result.unencrypted_text.unwrap()[0],
             "flag{wrong_layout_again}"
         );
-        assert_eq!(result.checker_name, "LemmeKnow Checker");
+        assert_eq!(result.checker_name, "pyWhat Checker");
     }
 
     #[test]

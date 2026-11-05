@@ -648,7 +648,7 @@ mod tests {
     }
 
     #[test]
-    fn flag_is_identified_by_lemmeknow() {
+    fn flag_is_identified_by_pywhat() {
         // Not the best scoring key, but among the 5 that are checked
         let rank = best_candidates(FLAG_HEX)
             .iter()
@@ -659,7 +659,7 @@ mod tests {
         let result = crack(FLAG_HEX);
         assert!(result.success);
         assert_eq!(result.key.as_deref(), Some("0x5a"));
-        assert_eq!(result.checker_name, "LemmeKnow Checker");
+        assert_eq!(result.checker_name, "pyWhat Checker");
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "flag{x0r_1s_n0t_3ncrypt10n}"

@@ -551,7 +551,7 @@ mod tests {
             "H4sICAAAAAAC/2ZsYWcudHh0AEvLSUyvTi/Nq8osiM9NrQUA3xCTdA8AAAA=",
             &get_athena_checker(),
         );
-        assert!(result.success, "LemmeKnow should identify the CTF flag");
+        assert!(result.success, "pyWhat should identify the CTF flag");
         assert_eq!(result.unencrypted_text.unwrap(), ["flag{gunzip_me}"]);
         assert_eq!(result.key.as_deref(), Some("flag.txt"));
     }

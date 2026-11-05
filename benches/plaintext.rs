@@ -52,8 +52,8 @@ use ciphey::checkers::{
     code_checker::CodeChecker,
     english::EnglishChecker,
     json_checker::JsonChecker,
-    lemmeknow_checker::LemmeKnow,
     password::PasswordChecker,
+    pywhat_checker::PyWhat,
     CheckerTypes,
 };
 use ciphey::config::Config;
@@ -670,7 +670,7 @@ fn latin1_misread_bytes(bytes: &[u8]) -> String {
     bytes.iter().map(|&b| char::from(b)).collect()
 }
 
-/// Samples of the LemmeKnow formats that look like credentials (API keys, tokens,
+/// Samples of the pyWhat formats that look like credentials (API keys, tokens,
 /// webhooks), made from random characters at start-up. Committed strings in these formats,
 /// even pyWhat's published examples, are blocked by GitHub's secret scanning, so they
 /// can't be in the data files. Shape-only patterns that Ciphey ignores on purpose (Twilio
@@ -870,12 +870,12 @@ fn probes() -> Vec<Probe> {
             why: Box::new(|_| "gibberish-or-not".into()),
         });
     }
-    let l = Checker::<LemmeKnow>::new();
-    let l2 = Checker::<LemmeKnow>::new();
+    let l = Checker::<PyWhat>::new();
+    let l2 = Checker::<PyWhat>::new();
     v.push(Probe {
-        name: "LemmeKnow".into(),
+        name: "pyWhat".into(),
         check: Box::new(move |t| l.check(t).is_identified),
-        why: Box::new(move |t| format!("LemmeKnow Checker: {}", l2.check(t).description)),
+        why: Box::new(move |t| format!("pyWhat Checker: {}", l2.check(t).description)),
     });
     let j = Checker::<JsonChecker>::new();
     v.push(Probe {
@@ -2227,6 +2227,17 @@ fn main() {
     report_overview(&samples, &tsv);
     if args.checkers {
         let probes = selected(probes());
+        if args.latency {
+            // pyWhat compiles each of its regexes the first time a text gets past that
+            // regex's cheap checks, which the first 200 samples `run_probe` warms up with
+            // don't all do. A search compiles them all in the background when it starts
+            // (`pywhat_checker::warm_up`), so compile them here before timing anything,
+            // with the pyWhat checker: Athena would remember its rejections.
+            let pywhat = Checker::<PyWhat>::new();
+            for s in &samples {
+                black_box(pywhat.check(&s.text));
+            }
+        }
         let runs: Vec<Run> = probes
             .iter()
             .map(|p| run_probe(p, &samples, args.latency))

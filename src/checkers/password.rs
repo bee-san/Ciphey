@@ -1,6 +1,5 @@
 use crate::checkers::checker_result::CheckResult;
 use gibberish_or_not::{is_password, Sensitivity};
-use lemmeknow::Identifier;
 
 use crate::checkers::checker_type::{Check, Checker};
 
@@ -59,7 +58,6 @@ impl Check for Checker<PasswordChecker> {
             tags: vec!["password", "security"],
             expected_runtime: 0.01,
             popularity: 1.0,
-            lemmeknow_config: Identifier::default(),
             sensitivity: Sensitivity::Medium,
             _phantom: std::marker::PhantomData,
         }

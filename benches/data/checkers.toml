@@ -2,14 +2,14 @@
 #
 # [inputs] holds the texts; each [[case]] runs one checker on one input.
 #
-#   checker     = "english" | "lemmeknow" | "password" | "athena"   (checkers.rs)
+#   checker     = "english" | "pywhat" | "password" | "athena"   (checkers.rs)
 #                 "regex" | "wordlist" | "athena"                    (crib.rs, `crib = true`)
 #   sensitivity = "Low" | "Medium" | "High", default "Medium". Caesar, railfence and
 #                 rot47 check their candidates at Low; most other decoders use Medium.
 #   identified  = what the checker returns today. Checked before measuring.
 #
 # Misses matter most: during a search almost every candidate is rejected, and a
-# rejected candidate pays for every checker Athena runs (LemmeKnow, then the
+# rejected candidate pays for every checker Athena runs (pyWhat, then the
 # password list, then the English checker).
 
 [inputs]
@@ -89,39 +89,39 @@ sensitivity = "High"
 input = "rot13_paragraph"
 identified = false
 
-# LemmeKnow (regex database of ~130 known formats)
+# pyWhat (regex database of ~150 known formats)
 [[case]]
-checker = "lemmeknow"
+checker = "pywhat"
 input = "url"
 identified = true
 
 [[case]]
-checker = "lemmeknow"
+checker = "pywhat"
 input = "ipv4"
 identified = true
 
 [[case]]
-checker = "lemmeknow"
+checker = "pywhat"
 input = "email"
 identified = true
 
 [[case]]
-checker = "lemmeknow"
+checker = "pywhat"
 input = "sentence"
 identified = false
 
 [[case]]
-checker = "lemmeknow"
+checker = "pywhat"
 input = "gibberish"
 identified = false
 
 [[case]]
-checker = "lemmeknow"
+checker = "pywhat"
 input = "paragraph"
 identified = false
 
 [[case]]
-checker = "lemmeknow"
+checker = "pywhat"
 input = "base64_like"
 identified = false
 

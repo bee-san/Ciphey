@@ -5,8 +5,8 @@ use self::{
     code_checker::CodeChecker,
     english::EnglishChecker,
     json_checker::JsonChecker,
-    lemmeknow_checker::LemmeKnow,
     password::PasswordChecker,
+    pywhat_checker::PyWhat,
     regex_checker::RegexChecker,
     wait_athena::WaitAthena,
     wordlist::WordlistChecker,
@@ -33,10 +33,11 @@ pub mod english;
 pub mod human_checker;
 /// The JSON Checker checks if the text is a JSON object or array
 pub mod json_checker;
-/// The LemmeKnow Checker checks if the text matches a known Regex pattern.
-pub mod lemmeknow_checker;
 /// The Password checker checks if the text matches a known common password
 pub mod password;
+/// The pyWhat Checker checks if the text is a format pyWhat knows (IP addresses, API keys,
+/// CTF flags, ...)
+pub mod pywhat_checker;
 /// The Regex checker checks to see if the intended text matches the plaintext
 pub mod regex_checker;
 /// The WaitAthena Checker is a variant of Athena that collects all plaintexts found during the search
@@ -85,19 +86,19 @@ impl Identification {
 
 /// The checkers [`identify_plaintext`] runs, built once: building one allocates, and
 /// Athena runs on every candidate of every decoder.
-static LEMMEKNOW_CHECKER: Lazy<Checker<LemmeKnow>> = Lazy::new(Checker::<LemmeKnow>::new);
-/// See [`LEMMEKNOW_CHECKER`].
+static PYWHAT_CHECKER: Lazy<Checker<PyWhat>> = Lazy::new(Checker::<PyWhat>::new);
+/// See [`PYWHAT_CHECKER`].
 static JSON_CHECKER: Lazy<Checker<JsonChecker>> = Lazy::new(Checker::<JsonChecker>::new);
-/// See [`LEMMEKNOW_CHECKER`].
+/// See [`PYWHAT_CHECKER`].
 static PASSWORD_CHECKER: Lazy<Checker<PasswordChecker>> =
     Lazy::new(Checker::<PasswordChecker>::new);
-/// See [`LEMMEKNOW_CHECKER`].
+/// See [`PYWHAT_CHECKER`].
 static ENGLISH_CHECKER: Lazy<Checker<EnglishChecker>> = Lazy::new(Checker::<EnglishChecker>::new);
-/// See [`LEMMEKNOW_CHECKER`].
+/// See [`PYWHAT_CHECKER`].
 static CODE_CHECKER: Lazy<Checker<CodeChecker>> = Lazy::new(Checker::<CodeChecker>::new);
 
 /// Runs the plaintext checkers of Athena and WaitAthena (after the wordlist) in order and
-/// returns the first identification: LemmeKnow (known formats and CTF flags), JSON, the
+/// returns the first identification: pyWhat (known formats and CTF flags), JSON, the
 /// common-password list, English at `sensitivity`, and code. The order is cheapest and
 /// most specific first; English goes before code so that text that reads as English is
 /// reported as words.
@@ -105,9 +106,9 @@ static CODE_CHECKER: Lazy<Checker<CodeChecker>> = Lazy::new(Checker::<CodeChecke
 /// Nothing is allocated unless a checker identifies the text: almost every text a search
 /// checks is rejected.
 pub(crate) fn identify_plaintext(text: &str, sensitivity: Sensitivity) -> Option<Identification> {
-    let lemmeknow = &*LEMMEKNOW_CHECKER;
-    if let Some(description) = lemmeknow_checker::identify(&lemmeknow.lemmeknow_config, text) {
-        return Some(Identification::by(lemmeknow, "LemmeKnow", description));
+    let pywhat = &*PYWHAT_CHECKER;
+    if let Some(description) = pywhat_checker::identify(pywhat_checker::identifiers(), text) {
+        return Some(Identification::by(pywhat, "PyWhat", description));
     }
     if let Some(description) = json_checker::identify(text) {
         return Some(Identification::by(
@@ -146,8 +147,8 @@ const PARALLEL_CHECK_MIN_BYTES: usize = 16 * 1024;
 
 /// CheckerTypes is a wrapper enum for Checker
 pub enum CheckerTypes {
-    /// Wrapper for LemmeKnow Checker
-    CheckLemmeKnow(Checker<LemmeKnow>),
+    /// Wrapper for the pyWhat Checker
+    CheckPyWhat(Checker<PyWhat>),
     /// Wrapper for English Checker
     CheckEnglish(Checker<EnglishChecker>),
     /// Wrapper for Athena Checker
@@ -208,7 +209,7 @@ impl CheckerTypes {
     /// This functions calls appropriate check function of Checker
     pub fn check(&self, text: &str) -> CheckResult {
         match self {
-            CheckerTypes::CheckLemmeKnow(lemmeknow_checker) => lemmeknow_checker.check(text),
+            CheckerTypes::CheckPyWhat(pywhat_checker) => pywhat_checker.check(text),
             CheckerTypes::CheckEnglish(english_checker) => english_checker.check(text),
             CheckerTypes::CheckAthena(athena_checker) => athena_checker.check(text),
             CheckerTypes::CheckWaitAthena(wait_athena_checker) => wait_athena_checker.check(text),
@@ -223,10 +224,10 @@ impl CheckerTypes {
     /// Sets the sensitivity level for gibberish detection
     pub fn with_sensitivity(&self, sensitivity: Sensitivity) -> Self {
         match self {
-            CheckerTypes::CheckLemmeKnow(_checker) => {
-                let mut new_checker = Checker::<LemmeKnow>::new();
+            CheckerTypes::CheckPyWhat(_checker) => {
+                let mut new_checker = Checker::<PyWhat>::new();
                 new_checker.sensitivity = sensitivity;
-                CheckerTypes::CheckLemmeKnow(new_checker)
+                CheckerTypes::CheckPyWhat(new_checker)
             }
             CheckerTypes::CheckEnglish(_checker) => {
                 let mut new_checker = Checker::<EnglishChecker>::new();
@@ -274,7 +275,7 @@ impl CheckerTypes {
     /// Gets the current sensitivity level
     pub fn get_sensitivity(&self) -> Sensitivity {
         match self {
-            CheckerTypes::CheckLemmeKnow(checker) => checker.get_sensitivity(),
+            CheckerTypes::CheckPyWhat(checker) => checker.get_sensitivity(),
             CheckerTypes::CheckEnglish(checker) => checker.get_sensitivity(),
             CheckerTypes::CheckAthena(checker) => checker.get_sensitivity(),
             CheckerTypes::CheckWaitAthena(checker) => checker.get_sensitivity(),
@@ -308,6 +309,10 @@ impl CheckerBox {
     }
 }
 
+/// What the pyWhat checker was called before 0.13.0, when it used LemmeKnow. Results cached
+/// by older versions name it, so [`CHECKER_MAP`] still knows it.
+pub(crate) const LEGACY_PYWHAT_CHECKER_NAME: &str = "LemmeKnow Checker";
+
 /// Global hashmap for translating strings to Checkers
 pub static CHECKER_MAP: Lazy<HashMap<&str, CheckerBox>> = Lazy::new(|| {
     HashMap::from([
@@ -329,12 +334,14 @@ pub static CHECKER_MAP: Lazy<HashMap<&str, CheckerBox>> = Lazy::new(|| {
             CheckerBox::new(Checker::<JsonChecker>::new()),
         ),
         (
-            "LemmeKnow Checker",
-            CheckerBox::new(Checker::<LemmeKnow>::new()),
-        ),
-        (
             "Password Checker",
             CheckerBox::new(Checker::<PasswordChecker>::new()),
+        ),
+        ("pyWhat Checker", CheckerBox::new(Checker::<PyWhat>::new())),
+        // The pyWhat checker's name before 0.13.0, in results cached by older versions
+        (
+            LEGACY_PYWHAT_CHECKER_NAME,
+            CheckerBox::new(Checker::<PyWhat>::new()),
         ),
         (
             "Regex Checker",
@@ -362,7 +369,7 @@ mod tests {
     use crate::checkers::{
         athena::Athena,
         checker_type::{Check, Checker},
-        lemmeknow_checker::LemmeKnow,
+        pywhat_checker::PyWhat,
         CheckerTypes, PARALLEL_CHECK_MIN_BYTES,
     };
 
@@ -407,10 +414,10 @@ mod tests {
         assert!(athena.first_identified(&[]).is_none());
 
         // Other checkers check one at a time
-        let lemmeknow = CheckerTypes::CheckLemmeKnow(Checker::<LemmeKnow>::new());
-        let (index, result) = lemmeknow.first_identified(&short).expect("a hit");
+        let pywhat = CheckerTypes::CheckPyWhat(Checker::<PyWhat>::new());
+        let (index, result) = pywhat.first_identified(&short).expect("a hit");
         assert_eq!(index, 3);
-        assert_eq!(result.checker_name, "LemmeKnow Checker");
+        assert_eq!(result.checker_name, "pyWhat Checker");
     }
 
     #[test]

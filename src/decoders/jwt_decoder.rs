@@ -18,7 +18,6 @@ use crate::checkers::CheckerTypes;
 use crate::config::get_config;
 use base64::{engine::general_purpose, Engine as _};
 use gibberish_or_not::Sensitivity;
-use lemmeknow::Identifier;
 use log::trace;
 use serde_json::{Map, Value};
 
@@ -123,7 +122,6 @@ pub(crate) fn jwt_structure_checker() -> Checker<JwtStructure> {
         tags: vec!["jwt", "structure"],
         expected_runtime: 0.0,
         popularity: 0.5,
-        lemmeknow_config: Identifier::default(),
         sensitivity: Sensitivity::Medium,
         _phantom: std::marker::PhantomData,
     }
@@ -304,7 +302,7 @@ mod tests {
         checkers::{
             athena::Athena,
             checker_type::{Check, Checker},
-            lemmeknow_checker::LemmeKnow,
+            pywhat_checker::PyWhat,
             CheckerTypes, CHECKER_MAP,
         },
         decoders::{
@@ -562,13 +560,13 @@ mod tests {
 
     #[test]
     fn with_a_crib_a_string_value_must_be_identified() {
-        // The LemmeKnow checker stands in for the regex checker here
-        let checker = CheckerTypes::CheckLemmeKnow(Checker::<LemmeKnow>::new());
+        // The pyWhat checker stands in for the regex checker here
+        let checker = CheckerTypes::CheckPyWhat(Checker::<PyWhat>::new());
 
         // The flag is a value, so a crib anchored to it doesn't match the whole payload
         let result = crack_with_crib(FLAG, &checker);
         assert!(result.success);
-        assert_eq!(result.checker_name, "LemmeKnow Checker");
+        assert_eq!(result.checker_name, "pyWhat Checker");
         assert_eq!(
             result.unencrypted_text,
             Some(vec![FLAG_PAYLOAD.to_string()])

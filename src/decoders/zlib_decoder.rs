@@ -602,7 +602,7 @@ mod tests {
         );
         // Athena takes the whole text for JSON, but the flag inside it says more
         assert!(result.success);
-        assert_eq!(result.checker_name, "LemmeKnow Checker");
+        assert_eq!(result.checker_name, "pyWhat Checker");
     }
 
     #[test]

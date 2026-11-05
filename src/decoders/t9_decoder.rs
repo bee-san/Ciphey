@@ -712,8 +712,8 @@ mod tests {
 
     #[test]
     fn decodes_zero_as_a_space() {
-        // dCode's encoder writes 0 for a space. End to end the search never gets here: the
-        // LemmeKnow checker takes 10 to 13 digits for a phone number first.
+        // dCode's encoder writes 0 for a space. Before pyWhat, the search never got here
+        // end to end: LemmeKnow took 10 to 13 digits for a phone number first.
         assert_cracks("43556096753", "hello world");
         assert_eq!(candidates("43556096753").unwrap(), ["hello world"]);
         assert_eq!(candidates("4355619675310").unwrap(), ["hello world"]);

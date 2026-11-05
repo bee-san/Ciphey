@@ -669,7 +669,7 @@ mod tests {
     use crate::checkers::{
         athena::Athena,
         checker_type::{Check, Checker},
-        lemmeknow_checker::LemmeKnow,
+        pywhat_checker::PyWhat,
         CheckerTypes,
     };
     use crate::decoders::interface::{Crack, Decoder};
@@ -996,11 +996,11 @@ mod tests {
 
     #[test]
     fn unidentified_candidates_are_returned_for_the_search() {
-        // LemmeKnow doesn't identify HELLO WORLD, so the candidate that reads as words is
+        // pyWhat doesn't identify HELLO WORLD, so the candidate that reads as words is
         // returned unidentified, for the search to keep decoding
         let decoder = Decoder::<NullCipherDecoder>::new();
-        let lemmeknow = CheckerTypes::CheckLemmeKnow(Checker::<LemmeKnow>::new());
-        let result = decoder.crack(ISSUE_EXAMPLE, &lemmeknow);
+        let pywhat = CheckerTypes::CheckPyWhat(Checker::<PyWhat>::new());
+        let result = decoder.crack(ISSUE_EXAMPLE, &pywhat);
         assert!(!result.success);
         assert_eq!(
             result.unencrypted_text,

@@ -615,7 +615,7 @@ mod tests {
 
     #[test]
     fn cracks_a_rot18_flag() {
-        // LemmeKnow takes it for a CTF flag
+        // pyWhat takes it for a CTF flag
         assert_cracked(
             "synt{e5g63_6f_a5g_e5g68}",
             "flag{r0t18_1s_n0t_r0t13}",
@@ -625,7 +625,7 @@ mod tests {
 
     #[test]
     fn cracks_rot5_digits() {
-        // LemmeKnow takes it for an IPv4 address. No letters, so there is one decoding.
+        // pyWhat takes it for an IPv4 address. No letters, so there is one decoding.
         assert_cracked("647.613.5.6", "192.168.0.1", "letters 0, digits 5");
     }
 

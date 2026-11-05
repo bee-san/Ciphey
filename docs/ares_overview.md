@@ -56,7 +56,7 @@ ciphey uses a sophisticated system to determine whether decoded text is valid pl
 The Athena checker is the main orchestrator that runs multiple sub-checkers in sequence:
 
 1. **Regex Checker** (if configured): Checks if the text matches a user-provided regular expression
-2. **LemmeKnow Checker**: Uses the [LemmeKnow](https://github.com/swanandx/lemmeknow) library (a Rust version of [PyWhat](https://github.com/bee-san/pyWhat)) to identify if the text matches known patterns like IP addresses, URLs, etc.
+2. **pyWhat Checker**: Uses [pyWhat](https://github.com/bee-san/pyWhat)'s Rust crate to identify if the text matches known patterns like IP addresses, URLs, etc. (Before 0.13.0 this was [LemmeKnow](https://github.com/swanandx/lemmeknow).)
 3. **English Checker**: Determines if the text is valid English using the [gibberish-or-not](https://crates.io/crates/gibberish-or-not) library
 
 ### 2. Human Checker (Optional)

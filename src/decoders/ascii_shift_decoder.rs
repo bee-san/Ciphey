@@ -694,11 +694,11 @@ mod tests {
     }
 
     #[test]
-    fn flags_are_identified_by_lemmeknow() {
+    fn flags_are_identified_by_pywhat() {
         for ciphertext in [FLAG, CTF] {
             let result = crack(ciphertext);
             assert!(result.success, "{result:?}");
-            assert_eq!(result.checker_name, "LemmeKnow Checker", "{result:?}");
+            assert_eq!(result.checker_name, "pyWhat Checker", "{result:?}");
         }
     }
 
@@ -769,7 +769,7 @@ mod tests {
     #[test]
     fn julius_is_read_from_base64() {
         // The challenge's string is Base64 of bytes that aren't UTF-8. The flag doesn't read
-        // like English, but it is shaped like a flag, so it is checked. LemmeKnow only knows
+        // like English, but it is shaped like a flag, so it is checked. pyWhat only knows
         // flag{}, ctf{} and ctfa{} flags, so Athena may not identify it; it comes first anyway.
         let raw = decode_base64(JULIUS).unwrap();
         assert!(std::str::from_utf8(&raw).is_err());

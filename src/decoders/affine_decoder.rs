@@ -603,7 +603,7 @@ mod tests {
     }
 
     #[test]
-    fn flag_is_identified_by_lemmeknow() {
+    fn flag_is_identified_by_pywhat() {
         let affine_decoder = Decoder::<AffineDecoder>::new();
         let result = affine_decoder.crack("jhca{cjjips_iw_zewn_ycnr}", &get_athena_checker());
         assert!(result.success);
@@ -612,7 +612,7 @@ mod tests {
             "flag{affine_is_just_math}"
         );
         assert_eq!(result.key.as_deref(), Some("a=17, b=2"));
-        assert_eq!(result.checker_name, "LemmeKnow Checker");
+        assert_eq!(result.checker_name, "pyWhat Checker");
     }
 
     #[test]

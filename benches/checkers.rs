@@ -1,4 +1,4 @@
-//! The plaintext checkers: English (gibberish detection), LemmeKnow (regex database of
+//! The plaintext checkers: English (gibberish detection), pyWhat (regex database of
 //! known formats), the common-password list, and Athena, which runs them in turn and is
 //! what every decoder calls on every candidate.
 //!
@@ -14,8 +14,8 @@ mod common;
 use ciphey::checkers::athena::Athena;
 use ciphey::checkers::checker_type::{Check, Checker};
 use ciphey::checkers::english::EnglishChecker;
-use ciphey::checkers::lemmeknow_checker::LemmeKnow;
 use ciphey::checkers::password::PasswordChecker;
+use ciphey::checkers::pywhat_checker::PyWhat;
 use ciphey::checkers::CheckerTypes;
 use common::CheckerFixtures;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
@@ -35,7 +35,7 @@ fn checkers(c: &mut Criterion) {
         let text = fixtures.input(&case.input);
         let checker = match case.checker.as_str() {
             "english" => CheckerTypes::CheckEnglish(Checker::<EnglishChecker>::new()),
-            "lemmeknow" => CheckerTypes::CheckLemmeKnow(Checker::<LemmeKnow>::new()),
+            "pywhat" => CheckerTypes::CheckPyWhat(Checker::<PyWhat>::new()),
             "password" => CheckerTypes::CheckPassword(Checker::<PasswordChecker>::new()),
             "athena" => CheckerTypes::CheckAthena(Checker::<Athena>::new()),
             other => panic!("unknown checker {other:?} in checkers.toml"),

@@ -669,7 +669,7 @@ mod tests {
     use crate::checkers::{
         athena::Athena,
         checker_type::{Check, Checker},
-        lemmeknow_checker::LemmeKnow,
+        pywhat_checker::PyWhat,
         CheckerTypes,
     };
 
@@ -1040,9 +1040,9 @@ mod tests {
 
     #[test]
     fn best_guess_is_returned_when_the_checker_accepts_nothing() {
-        // LemmeKnow alone doesn't take English for plaintext, so the best decryption comes
+        // pyWhat alone doesn't take English for plaintext, so the best decryption comes
         // back unconfirmed, for the search to decode further
-        let checker = CheckerTypes::CheckLemmeKnow(Checker::<LemmeKnow>::new());
+        let checker = CheckerTypes::CheckPyWhat(Checker::<PyWhat>::new());
         let result = Decoder::<VigenereAutokeyDecoder>::new().crack(VECTORS[0].0, &checker);
         assert!(!result.success);
         assert_eq!(result.unencrypted_text, Some(vec![LIGHTHOUSE.to_string()]));

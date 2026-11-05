@@ -2,7 +2,6 @@
 /// This means that we can standardise the way we check for plaintext
 use crate::checkers::checker_result::CheckResult;
 use gibberish_or_not::Sensitivity;
-use lemmeknow::Identifier;
 
 /// Every checker is of type CheckerType
 /// This will let us pick & choose which checkers to use
@@ -24,8 +23,6 @@ pub struct Checker<Type> {
     pub expected_runtime: f32,
     /// The popularity of the checker
     pub popularity: f32,
-    /// lemmeknow config object
-    pub lemmeknow_config: Identifier,
     /// The sensitivity level for gibberish detection
     /// This is only used by checkers that implement the SensitivityAware trait
     pub sensitivity: Sensitivity,

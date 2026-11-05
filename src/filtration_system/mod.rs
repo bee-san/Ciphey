@@ -380,7 +380,8 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
         components: vec![
             // First: the search ranks results found in the same step by checker class and
             // path cost, then keeps this order. Railfence rearranges a JWT into strings the
-            // LemmeKnow checker takes for URLs, which must not beat the decoded JWT.
+            // format checker took for URLs (LemmeKnow, before pyWhat), which must not beat
+            // the decoded JWT.
             Box::new(jwt),
             // Before every decoder that reads the cover text around a hidden message
             // (Vigenere, Reverse, the classical ciphers, simplesubstitution): when two find
@@ -484,11 +485,11 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(base36),
             Box::new(uuencode),
             // Before rot47: when two decoders find plaintext in the same step the search
-            // reports the one listed first, and LemmeKnow takes rot47 of `104,101,108,...`
-            // for a Bitcoin Cash address.
+            // reports the one listed first, and LemmeKnow (before pyWhat) took rot47 of
+            // `104,101,108,...` for a Bitcoin Cash address.
             Box::new(decimal),
             // Before rot47 for the same reason: rot47 turns `222-666-3-33` (CODE) into
-            // `555099906066`, which LemmeKnow takes for a phone number.
+            // `555099906066`, which LemmeKnow (before pyWhat) took for a phone number.
             Box::new(multi_tap),
             // Before rot47 too, which turns digits into `_`, `` ` `` and `a`-`h`. Decimal also
             // reads a run of digits, but where one of the two finds text the other almost
@@ -499,12 +500,12 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // first in this list wins a tie.
             Box::new(dtmf),
             // Before railfence: results found in the same step tie and keep this order, and
-            // railfence turns T9's `43556 96753` into `4936575563 `, which LemmeKnow takes
-            // for a phone number.
+            // railfence turns T9's `43556 96753` into `4936575563 `, which LemmeKnow (before
+            // pyWhat) took for a phone number.
             Box::new(t9),
             // Before the classical ciphers: when several decoders find plaintext in one
             // search batch, the first in this list wins a tie, and rot47 turns Base64
-            // into strings LemmeKnow takes for URLs.
+            // into strings LemmeKnow (before pyWhat) took for URLs.
             Box::new(xor_single_byte),
             // Before Morse Code, which also reads knocks written with dots (`.. ...` is IS),
             // and rot47, which turns `5,2 1,1 4,4` into words like `XOU TOT WOW`: when both
@@ -519,8 +520,8 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             // After Baconian: both read groups of five 0s and 1s, and when two decoders
             // find plaintext in the same step the search reports the one listed first.
             Box::new(baudot),
-            // Before rot47, which shifts digits to other digits that LemmeKnow can take for
-            // a number it knows, and so can win a tie in the same search step
+            // Before rot47, which shifts digits to other digits that the format checker can
+            // take for a number it knows, and so can win a tie in the same search step
             Box::new(polybius),
             // Before rot47 for the same reason: Pollux ciphertexts are digit strings too
             Box::new(pollux),
@@ -535,8 +536,8 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(utf16),
             // Before rot47: when two decoders find plaintext in the same step the search
             // reports the one listed first, and rot47 can shift 01248 digits into strings
-            // LemmeKnow takes for Litecoin addresses (the issue example `88421…` becomes
-            // `LLHFE…`).
+            // LemmeKnow (before pyWhat) took for Litecoin addresses (the issue example
+            // `88421…` becomes `LLHFE…`).
             Box::new(yunying),
             // Before rot47, which reads each character as its low byte and so turns
             // fullwidth, squared and negative circled letters into ASCII too: when two

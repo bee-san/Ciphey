@@ -258,7 +258,7 @@ pub fn generate_heuristic(
 /// ## Rationale
 ///
 /// 1. The gibberish_or_not library requires at least 3 characters to work effectively
-/// 2. LemmeKnow and other pattern matchers perform poorly on very short strings
+/// 2. pyWhat and other pattern matchers perform poorly on very short strings
 /// 3. Most encoding schemes produce output of at least 3 characters
 /// 4. Strings with high percentages of non-printable characters are unlikely to be valid encodings
 ///

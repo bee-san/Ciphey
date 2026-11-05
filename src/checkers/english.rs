@@ -1,9 +1,8 @@
 use crate::checkers::checker_result::CheckResult;
-use crate::checkers::lemmeknow_checker::{has_control_characters, is_ctf_flag_shaped};
+use crate::checkers::pywhat_checker::{has_control_characters, is_ctf_flag_shaped};
 use crate::decoders::nato_phonetic_decoder::decode_nato;
 use crate::storage::ngrams::{is_short_word, quadgram_score, quadgram_score_and_letters};
 use gibberish_or_not::{is_gibberish, Sensitivity};
-use lemmeknow::Identifier;
 
 use crate::checkers::checker_type::{Check, Checker};
 
@@ -98,7 +97,6 @@ impl Check for Checker<EnglishChecker> {
             tags: vec!["english", "nlp"],
             expected_runtime: 0.01,
             popularity: 1.0,
-            lemmeknow_config: Identifier::default(),
             sensitivity: Sensitivity::Medium, // Default to Medium sensitivity
             _phantom: std::marker::PhantomData,
         }
@@ -227,7 +225,7 @@ fn count_bytes(text: &str, matches: fn(&u8) -> bool) -> usize {
 /// leetspeak, hex or random letters by design, and a password, key or hash is random.
 /// Counting them as words rejected the text, so the search went on and changed them
 /// (Leetspeak turned the flag into `IW{No_one_can_stop_you}`), or found nothing. A text
-/// that is only a flag is LemmeKnow's to identify, and one that is only a secret is
+/// that is only a flag is pyWhat's to identify, and one that is only a secret is
 /// decoder output to decode further. Secrets need two other words, flags one.
 fn without_opaque_tokens(text: &str) -> std::borrow::Cow<'_, str> {
     let has_brace = text.contains('{');

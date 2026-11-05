@@ -788,7 +788,7 @@ mod tests {
             "XQAAgAD//////////wAzGwhHWEd6K75Ymkebw2KhGkZOeR3p05l//+n3gAA=",
         ] {
             let result = crack(text);
-            assert!(result.success, "LemmeKnow should identify the CTF flag");
+            assert!(result.success, "pyWhat should identify the CTF flag");
             assert_eq!(result.unencrypted_text.unwrap(), [FLAG]);
         }
     }

@@ -463,7 +463,7 @@ mod tests {
     /// `HELLO_WORLD` with U+200B and U+200C swapped
     const HELLO_WORLD_SWAPPED: &str = "[CBBCBCCCDCBBCCBCBDCBBCBBCCDCBBCBBCCDCBBCBBBBDCCBCCCCCDCBBBCBBBDCBBCBBBBDCBBBCCBCDCBBCBBCCDCBBCCBCC]";
 
-    /// A flag in the issue scheme, without a cover. LemmeKnow takes it for a CTF flag.
+    /// A flag in the issue scheme, without a cover. pyWhat takes it for a CTF flag.
     const FLAG: &str = "[BCCBBCCBDBCCBCCBBDBCCBBBBCDBCCBBCCCDBCCCCBCCDBCCCCBCBDBCCBBCBCDBCCCBBCBDBCCBCCCCDBCBCCCCCDBCCCBCCCDBCCBCBBCDBCCBBCBBDBCCCBCBBDBCCBCBBBDBCBCCCCCDBCCBCBBCDBCCCBBCCDBCBCCCCCDBCCBBCCBDBCCCBCBCDBCCBCCCBDBCCCCCBC]";
 
     /// The cover of the long-cover vector, before and after the hidden flag
@@ -711,7 +711,7 @@ mod tests {
     #[test]
     fn decodes_non_bmp_text() {
         // UTF-16 schemes keep a surrogate pair together; zero-width-lib writes the code
-        // point. LemmeKnow doesn't take `flag{🚩}` for a flag, so it is handed on.
+        // point.
         for (text, key) in [
             (TEXT_330K_EMOJI, "330k text"),
             (ZWSP_STEG_FULL_EMOJI, "zwsp-steg full"),

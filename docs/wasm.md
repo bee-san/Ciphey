@@ -11,18 +11,16 @@ cargo build --lib --target wasm32-unknown-unknown
 Native builds don't change: `cargo install ciphey` builds the same command-line tool, with
 the same defaults, and `--features mcp` the same MCP server.
 
-**Status.** Ciphey's own code builds for wasm32, but two of its dependencies don't yet, so
-the command above fails on `master` until they are replaced:
+**Status.** Ciphey's own code builds for wasm32, and so does pywhat 6, but one dependency
+doesn't yet, so the command above fails on `master` until it is replaced: gibberish-or-not
+5.0.7 pulls in candle, tokenizers (whose `onig_sys` compiles C) and reqwest with OpenSSL,
+for a BERT model its `is_gibberish` never loads.
 
-- gibberish-or-not 5.0.7 pulls in candle, tokenizers (whose `onig_sys` compiles C) and
-  reqwest with OpenSSL, for a BERT model its `is_gibberish` never loads;
-- lemmeknow 0.8.0's wasm32 `Identifier::identify` takes `&[String]` and hands the slice to
-  `Regex::is_match`, so it doesn't compile.
-
-gibberish-or-not 6 and pywhat 6, which replace them, are built for WebAssembly. Until then
-the WebAssembly build is checked with both crates patched (gibberish-or-not without the
-model, lemmeknow's wasm32 code fixed), and the browser API and a CI job come with the
-switch to the new crates.
+gibberish-or-not 6, which replaces it, is built for WebAssembly. Until then the WebAssembly
+build is checked with gibberish-or-not patched (without the model), and the browser API
+and a CI job come with the switch to gibberish-or-not 6. (lemmeknow 0.8, which Ciphey used
+before 0.13.0, didn't compile for wasm32 either: its `Identifier::identify` handed a
+`&[String]` to `Regex::is_match`.)
 
 ## What is different on WebAssembly
 
@@ -40,7 +38,7 @@ library needs it:
 | The human checker | asks on the terminal | accepts every candidate, as in API mode, whatever `human_checker_on` says |
 | Config file, first-run setup, wordlist files | `~/.ciphey/config.toml`, `--wordlist` (read with memmap2) | none: set the `Config` fields, and pass a wordlist as a `HashSet` (`Config::wordlist`, `DetectOptions::wordlist`) |
 | `top_results` mode | prints the results at the timeout | prints nothing (they are in `storage::wait_athena_storage`), and ends early when the search space is exhausted |
-| LemmeKnow's regexes | compiled on rayon's pool before the first check | compiled when a check first needs them |
+| pyWhat's regexes | compiled on rayon's pool before the first check | compiled when a check first needs them |
 | Colours | ANSI escape codes | none |
 | The `ciphey` binary | the CLI | prints that the CLI doesn't run on WebAssembly |
 | `ciphey-mcp` (`--features mcp`) | the MCP server | not available |
@@ -86,7 +84,7 @@ WebAssembly OS (`wasm32-unknown-unknown`, `wasm32-wasip1`, ...) get the same bui
 preview 1 has no threads either, and SQLite's bundled C would need a WASI C toolchain.
 
 Everything in `[dependencies]` is meant to build for WebAssembly, and everything does
-except gibberish-or-not 5 and lemmeknow 0.8 (see Status); the native-only dependencies are
+except gibberish-or-not 5 (see Status); the native-only dependencies are
 in the table above. Four dependencies no code used (`ansi_term`, `cipher_identifier`,
 `human-panic` and `include_dir`) were removed instead of gated. `human-panic` was also what
 turned on `uuid`'s `v4` feature, which the cache uses, so `uuid` asks for it itself now.
@@ -109,7 +107,7 @@ Decoders and checkers run on every target, so in them:
 - embed data with `include_str!`/`include_bytes!` instead of reading files at run time.
 
 Check a new dependency in a scratch crate (`cargo new`, add it, then `cargo build --target
-wasm32-unknown-unknown`). Once gibberish-or-not and lemmeknow are replaced, check every
+wasm32-unknown-unknown`). Once gibberish-or-not is replaced, check every
 change with
 
 ```sh

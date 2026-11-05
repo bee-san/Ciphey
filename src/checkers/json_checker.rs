@@ -1,6 +1,5 @@
 use crate::checkers::checker_result::CheckResult;
 use gibberish_or_not::Sensitivity;
-use lemmeknow::Identifier;
 use serde_json::Value;
 
 use crate::checkers::checker_type::{Check, Checker};
@@ -20,7 +19,6 @@ impl Check for Checker<JsonChecker> {
             tags: vec!["json", "structured"],
             expected_runtime: 0.01,
             popularity: 1.0,
-            lemmeknow_config: Identifier::default(),
             sensitivity: Sensitivity::Medium,
             _phantom: std::marker::PhantomData,
         }

@@ -8,7 +8,7 @@
 //!   cache hit and as a cache miss (the miss includes writing the result to the cache).
 //! * `startup/cli` (Unix only): the real `ciphey` binary started as a subprocess, which
 //!   adds process start, argument parsing, logger setup and every lazy `static` the run
-//!   touches (LemmeKnow compiles its ~130 regexes on first use).
+//!   touches (pyWhat compiles the regexes a check needs on first use).
 //!
 //! `HOME` is pointed at a scratch dir under `target/tmp` holding `benches/data/config.toml`,
 //! so nothing reads or writes your real `~/.ciphey` and the first-run wizard never starts.

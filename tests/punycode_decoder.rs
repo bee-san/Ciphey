@@ -1,10 +1,9 @@
 //! End-to-end tests for the Punycode decoder (<https://github.com/bee-san/Ciphey/issues/938>):
 //! the whole search, as the CLI runs it, has to find the plaintext through Punycode.
 //!
-//! Most Punycode never reaches the search. LemmeKnow takes bare `xn--` domains such as
-//! `xn--mnchen-3ya.de` for URLs, and the English checker takes sentences with an `xn--`
-//! label or raw Punycode in them (`The flag is caf-pnb`) for English, so Ciphey returns
-//! them unchanged before trying any decoder. The inputs here are ones that aren't
+//! Most Punycode never reaches the search as it is. The English checker takes sentences
+//! with an `xn--` label or raw Punycode in them (`The flag is caf-pnb`) for English, so
+//! Ciphey returns them unchanged before trying any decoder. The inputs here are ones that aren't
 //! plaintext as they are; the unit tests in `src/decoders/punycode_decoder.rs` cover the
 //! rest.
 

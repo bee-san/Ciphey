@@ -338,7 +338,7 @@ fn decode_with_cracks_decodes_and_decrypts() {
         })
     );
 
-    // Decoded, and recognised by LemmeKnow, which says how sure it is.
+    // Decoded, and recognised by pyWhat, which says how sure it is.
     let output = decode_with(
         &mut client,
         json!({ "decoder": "hex", "text": "3139322e3136382e302e31" }),
@@ -348,7 +348,7 @@ fn decode_with_cracks_decodes_and_decrypts() {
     assert_eq!(
         candidate["detection"],
         json!({
-            "checker": "lemmeknow",
+            "checker": "pywhat",
             "description": "Internet Protocol (IP) Address Version 4",
             "confidence": 0.7,
         })
@@ -466,11 +466,11 @@ fn detect_plaintext_identifies_text() {
         json!({
             "is_plaintext": true,
             "detection": {
-                "checker": "lemmeknow",
+                "checker": "pywhat",
                 "description": "Internet Protocol (IP) Address Version 4",
                 "confidence": 0.7,
             },
-            "checkers": ["lemmeknow", "json", "password", "english", "code"],
+            "checkers": ["pywhat", "json", "password", "english", "code"],
         })
     );
 

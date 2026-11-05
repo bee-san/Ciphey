@@ -353,12 +353,12 @@ impl CipheyMcp {
     #[tool(
         title = "Detect plaintext",
         description = "Check whether text is already plaintext, and identify what it is, \
-            without decoding anything. Runs ciphey's plaintext checks: LemmeKnow, which \
+            without decoding anything. Runs ciphey's plaintext checks: pyWhat, which \
             recognises over 100 formats (IP and email addresses, URLs, API keys and tokens, \
             crypto wallets, CTF flags in any format, ...), JSON, a list of common passwords, \
             an English checker and a source code checker. Returns `is_plaintext` and the `detection`: which `checker` \
             accepted the text, its `description` (such as `Internet Protocol (IP) Address \
-            Version 4` or `Words` for English) and, for LemmeKnow, a `confidence` from 0 to 1. \
+            Version 4` or `Words` for English) and, for pyWhat, a `confidence` from 0 to 1. \
             Use it to check a decoding, to choose between candidates, or to see whether text \
             needs decoding at all.",
         annotations(read_only_hint = true, open_world_hint = false)
@@ -793,7 +793,7 @@ mod tests {
     #[test]
     fn from_crack_reports_input_that_already_is_plaintext() {
         let mut step = CrackResult::new(&Decoder::<DefaultDecoder>::default(), "hi".to_string());
-        step.checker_name = "LemmeKnow Checker";
+        step.checker_name = "pyWhat Checker";
         let result = DecoderResult {
             text: vec!["192.168.0.1".to_string()],
             path: vec![step],
@@ -804,7 +804,7 @@ mod tests {
         assert_eq!(output.status, DecodeStatus::Decoded);
         assert_eq!(output.plaintext.as_deref(), Some("192.168.0.1"));
         assert!(output.path.is_empty());
-        assert_eq!(output.checker.as_deref(), Some("LemmeKnow Checker"));
+        assert_eq!(output.checker.as_deref(), Some("pyWhat Checker"));
     }
 
     #[test]
@@ -951,7 +951,7 @@ mod tests {
         assert_eq!(items["type"], json!("string"));
         assert_eq!(
             items["enum"],
-            json!(["lemmeknow", "json", "password", "english", "code"])
+            json!(["pywhat", "json", "password", "english", "code", "lemmeknow"])
         );
         assert_eq!(
             properties["sensitivity"]["enum"],

@@ -1704,7 +1704,7 @@ mod tests {
 
     #[test]
     fn both_dialects_are_identified() {
-        // The English checker accepts the first two and LemmeKnow takes the last for a flag
+        // The English checker accepts the first two and pyWhat takes the last for a flag
         for plaintext in ["hello world", "a nice day", "flag{jsfuck}"] {
             for dialect in ["0.4.0", "0.5.0"] {
                 let result = crack(&vector(dialect, plaintext, false));
