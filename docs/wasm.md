@@ -21,8 +21,8 @@ the command above fails on `master` until they are replaced:
 
 gibberish-or-not 6 and pywhat 6, which replace them, are built for WebAssembly. Until then
 the WebAssembly build is checked with both crates patched (gibberish-or-not without the
-model, lemmeknow's wasm32 code fixed), and the browser API and a CI job come with the
-switch to the new crates.
+model, lemmeknow's wasm32 code fixed), and a CI job comes with the switch to the new
+crates.
 
 ## What is different on WebAssembly
 
@@ -50,7 +50,175 @@ benchmark inputs and every search of the benchmark corpus that has a plaintext, 
 what native builds get. Searches of input that has no plaintext are the exception: where a
 native search ends (which false positive, if any, it settles on) can depend on thread
 timing. The WebAssembly search is sequential: it tries candidates in the same order as a
-native search on one thread (`RAYON_NUM_THREADS=1`).
+native search on one thread (`RAYON_NUM_THREADS=1`), except where two candidates' scores
+differ only in the last bits of a logarithm or exponential, which WebAssembly's maths
+library rounds differently. On the benchmark corpus the results are the same.
+
+## The browser API
+
+The crate in `wasm/`, `ciphey-wasm`, is Ciphey's JavaScript API, made with wasm-bindgen.
+It's a member of Ciphey's workspace and isn't published to crates.io. It wraps the Rust
+API `ciphey::search::Search`, which runs the search a step at a time with its own
+options, and which works natively too.
+
+It's a separate crate, not a `wasm` feature of `ciphey`, because the JavaScript module has
+to be a `cdylib`. A `cdylib` in `ciphey`'s own `[lib]` would be built, natively too, by
+everything that builds the library. The separate crate also keeps wasm-bindgen out of
+`ciphey`'s dependencies.
+
+### Building it
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version 0.2.130   # the version wasm/Cargo.toml pins
+# and binaryen's wasm-opt: https://github.com/WebAssembly/binaryen/releases
+wasm/build.sh            # or wasm/build.sh <out dir>; the default is wasm/pkg
+```
+
+The script builds the module with the `wasm` profile (release, `opt-level = "z"`, fat
+LTO, one codegen unit, `panic = "abort"`), runs `wasm-bindgen --target web` and then
+`wasm-opt -Oz`. It prints the module's size raw and gzipped, and fails above
+`MAX_WASM_BYTES` or `MAX_WASM_GZIP_BYTES` if they are set. The out dir gets
+`ciphey_wasm.js` (ES module), `ciphey_wasm_bg.wasm` and `ciphey_wasm.d.ts` (TypeScript
+types for everything below).
+
+### Exports
+
+The names don't collide with pyWhat's and gibberish-or-not's WebAssembly bindings
+(`identify`, `tags`, `version`, `detect`, `score`, `isGibberish`, ...), so one module can
+link all three.
+
+| Export | What it does |
+| --- | --- |
+| `new Search(input, options?)` | A search for the plaintext of `input`. Nothing runs until `step`; the timeout counts from here. Throws on bad options |
+| `search.step(budgetMs)` | Searches for about `budgetMs` ms and returns a `SearchProgress`. `Infinity` runs it to its end |
+| `search.status` | `"running"`, `"decoded"`, `"not_found"` (nothing left to try) or `"timed_out"` |
+| `search.results()` | Every `SearchResult` so far |
+| `search.free()` | Frees the search's memory in the module |
+| `decode(input, options?)` | The whole search at once: the first `SearchResult`, or `null`. Blocks up to the timeout |
+| `listDecoders()` | `[{name, id, aliases, tags, description, link, keyFormat}]` |
+| `detectPlaintext(text, options?)` | What Ciphey's plaintext checkers take `text` for: `{checker, checkerName, description, confidence}` or `null`. Options: `checkers` (ids), `sensitivity`, `regex` |
+| `cipheyVersion()` | The library's version, such as `"0.12.1"` |
+
+The options of `new Search` and `decode`, all optional:
+
+- `timeout` (seconds) or `timeoutMs`, default 5 s;
+- `regex`: a crib, in Rust's regex syntax; only text it matches is plaintext;
+- `topResults`: keep searching after the first plaintext, until the timeout or the end;
+- `sensitivity`: `"low"`, `"medium"` or `"high"` for the English checker, where `"low"` is
+  the strictest;
+- `previewChars`: how much of each node's text to report, default 120.
+
+Options must be a plain object, `undefined` or `null` (`null` fields are the defaults).
+Unknown fields, numbers that are negative, `NaN` or infinite, and a regex that doesn't
+compile throw an `Error` that says why. Lengths and `previewChars` count characters as
+code points: an emoji is one, though its JavaScript `length` is 2.
+
+`step` returns a `SearchProgress`:
+
+| Field | |
+| --- | --- |
+| `status` | as `search.status` |
+| `elapsedMs` | since `new Search` |
+| `expanded`, `queued`, `seen` | nodes expanded so far, nodes waiting, texts seen (the search never queues a text twice) |
+| `depth` | decoders in the deepest node expanded so far |
+| `nodes` | the nodes this step expanded, in order: `{id, parent, depth, decoder, key, text, length, cost, children}`. The input is node 0 with `parent: null`. A node's parent is always reported before it, so the nodes make a tree. `text` is the start of the node's text and `length` its length in characters. `cost` is the search's priority, f = g + h (it expands the lowest first), and `children` is how many children expanding the node queued |
+| `results` | the plaintexts this step found (more than one only with `topResults`) |
+| `result` | the search's first plaintext, from this step or an earlier one, or `null` |
+
+A `SearchResult` has:
+
+- `plaintext`;
+- `path`: one step per decoder, input first, `[{decoder, key, checker, checkerName,
+  description, confidence}]`, where only the last step has the checker fields;
+- `checker` (an id such as `"english"` or `"lemmeknow"`), `checkerName` (such as
+  `"English Checker"`), `description` (such as `"Words"`) and `confidence` (pyWhat's
+  rarity for its formats, else `null`);
+- `elapsedMs`;
+- `nodeId`: the node it was decoded from, the end of the winning branch, or `null` if
+  the input was already plaintext.
+
+A step returns between two batches of up to ten nodes once its budget has passed, so one
+can run longer than the budget: as long as the slowest batch takes. Playfair's cracker
+allows itself 1.5 s, and on long input the first step can take much longer: on 1 MB of
+text, 11 to 14 s under Node.js, most of it in the Base58 decoders
+([#1138](https://github.com/bee-san/Ciphey/issues/1138)). The search checks its own
+timeout before every decoder. Searches never prompt, use no cache and print nothing. A
+panic is logged to `console.error` before the module aborts; the instance is unusable
+after that, so start a new one.
+
+### Memory
+
+A search keeps every node it hasn't expanded yet, so its memory grows for as long as it
+runs: about 1 KB per queued node for short input, more for long input (a node holds its
+text and its whole decoder path). A search with no plaintext queues hundreds of thousands
+of nodes a minute: one measured in Chrome reached 4 GiB, all a wasm32 module can address,
+after 27 s, and the module aborted. Running out of memory isn't a panic, so nothing is
+logged. Keep timeouts short, or watch `queued` (or the module's memory) and stop the
+search, as ciphey-web does. `search.free()` gives the memory back to the module for the
+next search, though the module itself never shrinks. Bounding the queue is
+[#1144](https://github.com/bee-san/Ciphey/issues/1144).
+
+### In a Web Worker
+
+A step blocks the thread it runs on, so run the search in a Worker and step it between
+messages:
+
+```js
+// worker.js: new Worker(new URL("./worker.js", import.meta.url), { type: "module" })
+import init, { Search } from "./pkg/ciphey_wasm.js";
+
+const ready = init(); // fetches and compiles ciphey_wasm_bg.wasm once
+let current = null;
+
+onmessage = async ({ data }) => {
+  await ready;
+  if (data.type === "cancel") {
+    current?.free();
+    current = null;
+    return;
+  }
+  // { type: "decode", input, options }
+  current?.free();
+  current = null;
+  let search;
+  try {
+    search = new Search(data.input, data.options);
+  } catch (error) {
+    postMessage({ type: "error", message: error.message }); // a bad crib, say
+    return;
+  }
+  current = search;
+  let update;
+  do {
+    update = search.step(40);
+    postMessage({ type: "progress", update }); // update.nodes: the tree's new nodes
+    // Let a "cancel" or a new "decode" message in between steps
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } while (current === search && update.status === "running");
+  if (current === search) {
+    search.free();
+    current = null;
+  }
+};
+```
+
+```js
+// main.js
+const worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
+worker.onmessage = ({ data }) => {
+  if (data.type !== "progress") return;
+  const { update } = data;
+  for (const node of update.nodes) drawNode(node); // node.parent was drawn before it
+  if (update.status === "decoded") {
+    showAnswer(update.result.plaintext, update.result.path, update.result.nodeId);
+  }
+};
+worker.postMessage({ type: "decode", input: "aGVsbG8gdGhlcmUgZ2VuZXJhbA==", options: { timeout: 5 } });
+```
+
+To stop a search at once, even inside a long step, terminate the Worker and start a new
+one.
 
 ## How it is gated, and why
 
@@ -99,11 +267,12 @@ Decoders and checkers run on every target, so in them:
   (`ruzstd` and `lz4_flex` are pure-Rust choices for zstd and LZ4);
 - don't use `std::thread`, `std::fs`, `std::net`, `std::process` or `std::env`;
 - measure time limits with `crate::clock::Instant`, not `std::time::Instant`;
-- don't call what reads std's clock inside: `Condvar::wait_timeout` and
-  `wait_timeout_while`, `mpsc::Receiver::recv_timeout`, `thread::sleep`, and dependencies
-  that call `std::time::Instant::now()` (brainfuck-exe does unless
-  `with_bench_execution(false)`). On wasm32-unknown-unknown they panic with "time not
-  implemented on this platform";
+- don't call what reads std's clock, sleeps or waits for another thread inside:
+  `SystemTime::now()`, `Condvar::wait`, `wait_timeout` and `wait_timeout_while`,
+  `mpsc::Receiver::recv_timeout`, `thread::sleep`, and dependencies that call
+  `std::time::Instant::now()` (brainfuck-exe does unless `with_bench_execution(false)`).
+  On wasm32-unknown-unknown they panic: "time not implemented on this platform", "can't
+  sleep" (`thread::sleep`, `Condvar::wait_timeout`) or "condvar wait not supported";
 - run work in parallel with the iterators of `crate::parallel` (rayon's prelude on native
   targets, sequential on WebAssembly), not `rayon` directly;
 - embed data with `include_str!`/`include_bytes!` instead of reading files at run time.
@@ -141,7 +310,14 @@ export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER=wasm-bindgen-test-runner
 cargo test --target wasm32-unknown-unknown --test wasm
 ```
 
-Only that file runs on WebAssembly. The other tests use what WebAssembly doesn't have
+`tests/search.rs` (the Rust `Search` API) runs the same way, and the browser API's own
+tests under Node.js with
+
+```sh
+cargo test -p ciphey-wasm --target wasm32-unknown-unknown --test node
+```
+
+Only those files run on WebAssembly. The other tests use what WebAssembly doesn't have
 (threads, the database, files, the CLI binary), and wasm-bindgen-test-runner only runs
 tests marked `wasm_bindgen_test`, which `tests/wasm.rs` makes `#[test]` mean on
 wasm32-unknown-unknown.

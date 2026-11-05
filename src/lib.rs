@@ -9,6 +9,8 @@
 //!   and [`list_decoders`].
 //! * [`detection`] says whether a text is plaintext and what it is:
 //!   [`detect_plaintext`] and [`is_plaintext`].
+//! * [`search`] runs the search a step at a time, with its own options, and reports the
+//!   search tree as it grows: [`Search`].
 //!
 //! ```
 //! let decoded = ciphey::decoders::hexadecimal("3139322e3136382e302e31");
@@ -74,6 +76,9 @@ mod error;
 mod filtration_system;
 /// rayon's parallel iterators on native targets, sequential ones on WebAssembly
 mod parallel;
+/// Ciphey's search, a step at a time, with its own options: for showing the search as it
+/// runs, as a web page does.
+pub mod search;
 /// The searcher is the thing which searches for the plaintext
 /// It is the core of the program.
 mod searchers;
@@ -104,6 +109,10 @@ pub use decoders::{
 };
 pub use detection::{detect_plaintext, is_plaintext, DetectOptions, Detection};
 pub use error::CipheyError;
+pub use search::{Search, SearchOptions};
+
+/// The version of this library, such as `0.12.1`.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// The main function to call which performs the cracking.
 /// ```rust
@@ -160,6 +169,8 @@ pub use error::CipheyError;
 pub fn perform_cracking(text: &str, config: Config) -> Result<Option<DecoderResult>, CipheyError> {
     #[cfg(not(target_family = "wasm"))]
     let start_time = SystemTime::now();
+    // A `Search` may have left its own config in place
+    config::use_global_config();
 
     // Reject a bad regex here instead of panicking in the regex checker later.
     if let Some(pattern) = &config.regex {
@@ -336,22 +347,33 @@ fn cached_result(row: storage::database::CacheRow) -> Option<DecoderResult> {
 /// input shaped like that is far more likely a Caesar shift or Atbash of a flag
 /// (`FRXNV{...}`), which keeps the shape, than a flag someone wants decoded.
 fn check_if_input_text_is_plaintext(text: &str) -> CheckResult {
+    check_input(text, gibberish_or_not::Sensitivity::Medium)
+}
+
+/// [`check_if_input_text_is_plaintext`] with the English checker at `sensitivity`.
+pub(crate) fn check_input(text: &str, sensitivity: gibberish_or_not::Sensitivity) -> CheckResult {
     if get_config().regex.is_none() && checkers::lemmeknow_checker::is_unmarked_ctf_flag(text) {
         return CheckResult::new(&Checker::<Athena>::new());
     }
-    check_plaintext(text)
+    check_plaintext_at(text, sensitivity)
 }
 
 /// Runs the checkers on `text` the way the search does: Athena, or WaitAthena in
 /// `top_results` mode.
+#[cfg(not(target_family = "wasm"))]
 fn check_plaintext(text: &str) -> CheckResult {
+    check_plaintext_at(text, gibberish_or_not::Sensitivity::Medium)
+}
+
+/// [`check_plaintext`] with the English checker at `sensitivity`.
+fn check_plaintext_at(text: &str, sensitivity: gibberish_or_not::Sensitivity) -> CheckResult {
     let config = get_config();
 
     if config.top_results {
-        let wait_athena_checker = Checker::<WaitAthena>::new();
+        let wait_athena_checker = Checker::<WaitAthena>::new().with_sensitivity(sensitivity);
         wait_athena_checker.check(text)
     } else {
-        let athena_checker = Checker::<Athena>::new();
+        let athena_checker = Checker::<Athena>::new().with_sensitivity(sensitivity);
         athena_checker.check(text)
     }
 }
