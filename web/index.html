@@ -32,7 +32,7 @@
             <textarea id="input" name="input" rows="7" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="Paste encoded text, such as aGVsbG8gdGhlcmUgZ2VuZXJhbA==" aria-describedby="input-hint input-error"></textarea>
             <div class="dropzone__overlay" aria-hidden="true">Drop the file to decode it</div>
           </div>
-          <p class="field__hint" id="input-hint">Or <button type="button" class="link-button" id="open-file">open a file</button> (or drop one here), up to 65,536 characters. <span class="shortcut-hint" id="shortcut-hint">Ctrl + Enter decodes.</span></p>
+          <p class="field__hint" id="input-hint">Or <button type="button" class="link-button" id="open-file">open a file</button> (or drop one here), up to <span id="input-limit">65,536</span> characters. <span class="shortcut-hint" id="shortcut-hint">Ctrl + Enter decodes.</span></p>
           <p class="field__error" id="input-error" hidden></p>
           <input type="file" id="file" aria-label="A text file" hidden>
         </div>

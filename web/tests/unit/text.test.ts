@@ -186,6 +186,24 @@ describe("pieces", () => {
     for (const p of parts.slice(0, -1)) expect(p.endsWith(" ")).toBe(true);
     expect(parts.join("")).toBe(words);
   });
+  it("never cuts inside a PEM or PGP block, in either mode", () => {
+    const key = ["-----BEGIN RSA PRIVATE KEY-----", ...Array.from({ length: 30 }, (_, i) => `MIIEowIBAAKCAQEA${i}`.padEnd(64, "x")), "-----END RSA PRIVATE KEY-----"].join("\n");
+    const filler = Array.from({ length: 60 }, (_, i) => `line ${i}`).join("\n");
+    const text = `${filler}\n${key}\n${filler}`;
+    for (const whole of [false, true]) {
+      const parts = pieces(text, 600, whole);
+      expect(parts.join("")).toBe(text);
+      const holder = parts.filter((p) => p.includes("-----BEGIN RSA PRIVATE KEY-----"));
+      expect(holder).toHaveLength(1);
+      expect(holder[0]).toContain("-----END RSA PRIVATE KEY-----");
+    }
+  });
+  it("cuts text without spaces at punctuation before cutting a word", () => {
+    const blob = Array.from({ length: 200 }, (_, i) => `user${i}@mail${i}.example`).join(",");
+    const parts = pieces(blob, 300, false);
+    expect(parts.join("")).toBe(blob);
+    for (const p of parts.slice(0, -1)) expect(p.endsWith(",")).toBe(true);
+  });
   it("never cuts a line in anchored mode, however long", () => {
     const long = "x".repeat(500);
     expect(pieces(long, 100, true)).toEqual([long]);

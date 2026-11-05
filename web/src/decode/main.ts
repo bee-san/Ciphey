@@ -1,6 +1,6 @@
 import "../styles/main.css";
 import { count, duration, plural, preview } from "../lib/format";
-import type { DecodeEvent, DecodeOptions, DecodeRequest, DecodeResult, SearchStatus, SearchUpdate, Sensitivity } from "../lib/protocol";
+import type { DecodeErrorKind, DecodeEvent, DecodeOptions, DecodeRequest, DecodeResult, SearchStatus, SearchUpdate, Sensitivity } from "../lib/protocol";
 import { SENSITIVITIES } from "../lib/protocol";
 import { choiceField, decodeHash, intField, MAX_SHARE_CHARS, shareUrl } from "../lib/share";
 import { announce, byId, characterCount, copyButton, copyText, h, icon, readTextFile, responsiveLabel, wireFileInput } from "../shell/dom";
@@ -8,14 +8,16 @@ import { EngineClient } from "../shell/engine";
 import { handOff, pickUp } from "../shell/handoff";
 import { initPage } from "../shell/page";
 import { EXAMPLES } from "./examples";
-import { TreeView } from "./tree-view";
+import { TREE_CAP, TreeView } from "./tree-view";
 import {
   checkCrib,
   checkInput,
   checkTimeout,
   CRIB_INVALID,
   decoderName,
+  inputLimit,
   MAX_INPUT_CHARS,
+  memoryBudget,
   optionsSummary,
   pathSpeech,
   pathText,
@@ -92,6 +94,10 @@ interface Search {
  * WebAssembly memory is never given back, and a phone may close a tab that holds too much.
  */
 const FRESH_WORKER_ABOVE = 512 * 1024 ** 2;
+
+/** This device's memory budget for a search, and the input it can take (words.ts). */
+const MEMORY_BUDGET = memoryBudget(navigator as Navigator & { deviceMemory?: number });
+const INPUT_LIMIT = inputLimit(MEMORY_BUDGET);
 let search: Search | null = null;
 let waiting: DecodeRequest | null = null;
 let nextId = 1;
@@ -139,7 +145,7 @@ engine.on((event) => {
         showEngineError();
         if (search) finish("error", event.message);
       } else if (search && (event.id === search.id || event.id === null)) {
-        finish("error", event.message);
+        finish("error", event.message, undefined, true, event.kind);
       }
       return;
   }
@@ -258,7 +264,7 @@ function onInputChanged(): void {
 input.addEventListener("input", onInputChanged);
 
 wireFileInput(byId("dropzone"), byId<HTMLInputElement>("file"), byId("open-file"), async (file) => {
-  const read = await readTextFile(file, MAX_INPUT_CHARS);
+  const read = await readTextFile(file, INPUT_LIMIT);
   if ("error" in read) {
     setFieldError(input, inputError, read.error);
     announce(read.error);
@@ -334,7 +340,7 @@ function showOnly(...shown: HTMLElement[]): void {
 }
 
 function start(): void {
-  const check = checkInput(input.value);
+  const check = checkInput(input.value, INPUT_LIMIT);
   if (!check.ok) {
     setFieldError(input, inputError, check.message);
     announce(check.message);
@@ -346,7 +352,7 @@ function start(): void {
   if (!opts) return;
   if (search) cancel(false);
 
-  const request: DecodeRequest = { type: "decode", id: nextId++, input: input.value, options: opts };
+  const request: DecodeRequest = { type: "decode", id: nextId++, input: input.value, options: opts, memoryLimit: MEMORY_BUDGET };
   search = {
     id: request.id,
     input: request.input,
@@ -442,7 +448,7 @@ function cancel(say = true): void {
 
 type Ending = SearchStatus | "cancelled" | "error";
 
-function finish(status: Ending, message: string | null, elapsedMs?: number, speak = true): void {
+function finish(status: Ending, message: string | null, elapsedMs?: number, speak = true, kind?: DecodeErrorKind): void {
   const s = search;
   if (!s) return;
   cancelAnimationFrame(s.frame);
@@ -454,11 +460,7 @@ function finish(status: Ending, message: string | null, elapsedMs?: number, spea
 
   // A crashed module can't search again, and one that grew its memory can't give it back:
   // start a fresh one for the next search
-  if (
-    (status === "error" && /^Ciphey (crashed|ran out of memory)/.test(message ?? "")) ||
-    status === "memory_full" ||
-    (status !== "cancelled" && s.memoryBytes > FRESH_WORKER_ABOVE)
-  ) {
+  if ((status === "error" && (kind === "crash" || kind === "memory")) || status === "memory_full" || s.memoryBytes > FRESH_WORKER_ABOVE) {
     restartEngine();
   }
 
@@ -468,14 +470,19 @@ function finish(status: Ending, message: string | null, elapsedMs?: number, spea
   const found = s.results.length > 0 && status !== "error";
   treeHint.textContent = [
     "Each row is a text Ciphey ran every decoder on, under the text it came from.",
-    tree.drawn < tree.size ? `The first ${count(tree.drawn)} rows are drawn${found ? ", and every row on the way to a plaintext" : ""}.` : null,
-    found ? "The highlighted branch leads to the plaintext." : null,
+    tree.drawn < tree.size ? `The first ${count(Math.min(tree.drawn, TREE_CAP))} rows are drawn${found ? ", and every row on the way to a plaintext" : ""}.` : null,
+    found && s.results.length > 1
+      ? "The highlighted branches lead to every text Ciphey's checkers accepted. The one marked plaintext is the result shown first."
+      : found
+        ? "The highlighted branch leads to the plaintext."
+        : null,
   ]
     .filter(Boolean)
     .join(" ");
 
   showOnly(resultBox);
-  outputMeta.textContent = `${duration(elapsed)}${s.expanded ? ` · ${plural(s.expanded, "text")} tried` : ""}`;
+  // A download that failed took no search time worth showing
+  outputMeta.textContent = status === "error" && loadError ? "" : `${duration(elapsed)}${s.expanded ? ` · ${plural(s.expanded, "text")} tried` : ""}`;
   // Plaintexts found before a cancel, the time limit or an error ("Find every plaintext")
   // still count
   if (s.results.length) {
@@ -488,15 +495,17 @@ function finish(status: Ending, message: string | null, elapsedMs?: number, spea
           : status === "timed_out"
             ? `The time limit (${s.options.timeout} s) ended the search`
             : status === "error"
-              ? `The search stopped after ${duration(elapsed)}: ${message ?? "an error"}`
+              ? `The search stopped after ${duration(elapsed)} with an error`
               : null;
     if (why) resultBox.prepend(h("p", { class: "field__hint" }, `${why}; these were found before it.`));
+    if (status === "error" && message) resultBox.prepend(h("p", { class: "field__error" }, message));
     const first = s.results[0] as DecodeResult;
     const how = first.path.length ? ` Path: ${pathSpeech(first.path)}.` : " The input is already plaintext.";
     if (speak) announce(`${why ? `${why}. ` : ""}Found the plaintext in ${duration(first.elapsedMs)}: ${preview(first.plaintext, 140)}.${how}`);
     return;
   }
-  if (status === "error" && message && /regex|crib/i.test(message) && !loadError) {
+  // Recognised by where it came from (the worker tags it), not by its words
+  if (status === "error" && kind === "crib") {
     options.open = true;
     setFieldError(regex, regexError, CRIB_INVALID);
     resultBox.replaceChildren(
@@ -512,8 +521,9 @@ function finish(status: Ending, message: string | null, elapsedMs?: number, spea
     return;
   }
   resultBox.replaceChildren(nothing(status, message, s, elapsed));
-  // An error notice is an alert, which a screen reader says by itself
-  if (speak && status !== "error") announce(resultBox.querySelector(".notice__title")?.textContent ?? "The search ended");
+  // An error notice is an alert, which a screen reader says by itself: drop a pending "Decoding…"
+  if (status === "error") announce("");
+  else if (speak) announce(resultBox.querySelector(".notice__title")?.textContent ?? "The search ended");
 }
 
 function nothing(status: Ending, message: string | null, s: Search, elapsed: number): HTMLElement {
@@ -542,9 +552,11 @@ function nothing(status: Ending, message: string | null, s: Search, elapsed: num
         h(
           "ul",
           {},
-          h("li", {}, `It had found no plaintext, and ${plural(s.queued, "branch", "branches")} were still waiting to be tried.`),
+          h("li", {}, `It had found no plaintext, with ${count(s.queued)} more texts still to try.`),
           h("li", {}, s.options.regex ? "Check the crib: with one set, only text it matches is accepted." : "If you know part of the answer (a flag format, a word), set it as a crib under Options."),
           h("li", {}, "Plaintext that isn't English is often missed. A crib helps there too."),
+          h("li", {}, h("a", { href: "https://github.com/bee-san/Ciphey#install" }, "Ciphey on your own computer"), " can search for longer, without the browser's memory limit."),
+          h("li", {}, "Not sure it's encoded? ", identifyLink(s.input, "See what pyWhat identifies in it"), "."),
         ),
       );
     default: {
@@ -730,6 +742,9 @@ function openShared(): void {
   updateOptionsSummary();
   start();
 }
+
+// A small memory budget takes a smaller input: say so where the limit is given
+if (INPUT_LIMIT !== MAX_INPUT_CHARS) byId("input-limit").textContent = INPUT_LIMIT.toLocaleString("en");
 
 // ⌘ + Enter is the habit on a Mac (both work everywhere)
 if (/Mac|iPhone|iPad/.test(navigator.userAgent)) byId("shortcut-hint").textContent = "⌘ + Enter decodes.";

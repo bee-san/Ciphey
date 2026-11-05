@@ -1,9 +1,9 @@
 import "../styles/main.css";
 import { count, fraction, plural } from "../lib/format";
-import { parseMarkup, safeHref } from "../lib/markup";
+import { parseMarkup } from "../lib/markup";
 import { MAX_MATCHES } from "../lib/pieces";
 import type { IdentifyEvent, IdentifyMatch, IdentifyOptions, IdentifyRequest } from "../lib/protocol";
-import { type Card, formatColours, groupMatches, sortMatches, type SortKey } from "../lib/pywhat";
+import { type Card, formatColours, groupMatches, lookupHref, sortMatches, type SortKey } from "../lib/pywhat";
 import { decodeHash } from "../lib/share";
 import { assignRanges, segment } from "../lib/spans";
 import { announce, byId, characterCount, copyButton, h, icon, readTextFile, wireFileInput } from "../shell/dom";
@@ -28,7 +28,7 @@ const HIGHLIGHTS = 6;
 const EXAMPLES: ReadonlyArray<{ label: string; text: string }> = [
   { label: "Email, IP and URL", text: "Email bee@skerritt.blog from 192.168.0.1 about https://github.com/bee-san/pyWhat" },
   { label: "CTF flag and coordinates", text: "52.6169586, -1.9779857 HTB{this is a flag} https://skerritt.blog" },
-  { label: "Crypto wallets", text: "0x52908400098527886E0F7030069857D2E4169EE7 1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY" },
+  { label: "Crypto wallets", text: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe 1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY" },
   { label: "Network addresses", text: "Router 10.0.0.1 (00:1B:44:11:3A:B7)" },
   { label: "API key", text: "AIzaSyA00000000000000000000000000000000" },
 ];
@@ -63,12 +63,17 @@ const engine = new EngineClient<IdentifyRequest, IdentifyEvent>(
 );
 const latest = new LatestRequest<IdentifyRequest>((r) => engine.post(r));
 let ready = false;
+/** Why pyWhat didn't load, if it didn't: shown where the matches go. */
+let loadError: string | null = null;
 /** The text the shown matches are for. */
 let shownText = "";
 let matches: IdentifyMatch[] = [];
 let ranges: ReturnType<typeof assignRanges> = [];
 const marks = new Map<number, HTMLElement[]>();
 let pendingText = "";
+/** The text and filters pyWhat crashed on: not sent again until one of them changes. */
+let crashedOn: string | null = null;
+let pendingKey = "";
 /** Each format's highlight colour (see formatColours). */
 let colours = new Map<string, number>();
 let lastSaid = "";
@@ -78,6 +83,7 @@ engine.on((event) => {
   switch (event.type) {
     case "ready": {
       ready = true;
+      loadError = null;
       engineStatus.textContent = `pyWhat ${event.version} is ready`;
       byId("tag-list").replaceChildren(...event.tags.map((t) => h("option", { value: t })));
       refresh();
@@ -90,10 +96,16 @@ engine.on((event) => {
       if (event.id === null) {
         ready = false;
         engineStatus.replaceChildren(h("span", { class: "field__error" }, event.message), " ", h("button", { type: "button", class: "link-button", onclick: () => restart() }, "Try again"));
+        loadError = event.message;
+        refresh();
       } else {
         const current = latest.settle(event.id);
-        // A crashed module can't identify again: a new worker, and nothing left in flight
-        if (event.crashed) restart();
+        // A crashed module can't identify again: a new worker, nothing left in flight, and
+        // the same text isn't sent again when it's ready (it would crash again)
+        if (event.crashed) {
+          crashedOn = pendingKey;
+          restart();
+        }
         if (current || event.crashed) showError(event.message);
       }
       return;
@@ -104,6 +116,7 @@ engine.start();
 /** A fresh worker: after a crash, or Try again. Requests in flight are forgotten. */
 function restart(): void {
   ready = false;
+  loadError = null;
   latest.reset();
   engineStatus.replaceChildren(h("span", { class: "spinner", "aria-hidden": "true" }), "Loading pyWhat…");
   engine.restart();
@@ -211,19 +224,23 @@ byId("examples").replaceChildren(
   ),
 );
 
-function setText(value: string): void {
+function setText(value: string, fromLink = false): void {
+  // A new text (an example, a file, a link) is said even if its count is the same as before
+  lastSaid = "";
+  // A link's text leaves the address bar once something else replaces it
+  if (!fromLink && location.hash) history.replaceState(null, "", location.pathname + location.search);
   text.value = value;
   textCount.textContent = characterCount(value);
   syncBackdropText();
   refresh();
 }
 
-function showTextError(message: string | null): void {
+function showTextError(message: string | null, speak = true): void {
   textError.textContent = message ?? "";
   textError.hidden = message === null;
   if (message) {
     text.setAttribute("aria-invalid", "true");
-    announce(message);
+    if (speak) announce(message);
   } else text.removeAttribute("aria-invalid");
 }
 
@@ -232,8 +249,9 @@ function refresh(): void {
   const options = readFilters();
   updateFiltersSummary(options);
   if (!options) {
-    // A reply still on its way is for other filters
+    // A reply still on its way is for other filters, and its count mustn't be said
     latest.reset();
+    window.clearTimeout(sayTimer);
     setBusy(false);
     return;
   }
@@ -243,14 +261,19 @@ function refresh(): void {
   if (chars > MAX_TEXT_CHARS) {
     latest.reset();
     const message = `That's ${count(chars)} characters. pyWhat identifies up to ${count(MAX_TEXT_CHARS)} here.`;
-    showTextError(message);
+    window.clearTimeout(sayTimer); // the count of the text before mustn't be said now
+    lastSaid = "";
+    showTextError(message, false); // the panel's alert says it, once
     // The matches shown were for another text: take them away
     matches = [];
     ranges = [];
     shownText = "";
     render();
     emptyState.hidden = true;
-    matchesError.replaceChildren(h("p", { class: "notice__title" }, "The text is too long to identify."), h("p", {}, message));
+    const tooLong = `pyWhat identifies up to ${count(MAX_TEXT_CHARS)} characters here. Remove some, or identify one part at a time.`;
+    if (matchesError.hidden || matchesError.lastElementChild?.textContent !== tooLong) {
+      matchesError.replaceChildren(h("p", { class: "notice__title" }, "The text is too long to identify."), h("p", {}, tooLong));
+    }
     matchesError.hidden = false;
     setBusy(false);
     return;
@@ -262,9 +285,20 @@ function refresh(): void {
     show("", []);
     return;
   }
+  const key = JSON.stringify([value, options]);
+  if (key === crashedOn) {
+    setBusy(false);
+    showError("pyWhat crashed on this text. Change it, or the filters, to try again.");
+    return;
+  }
   setBusy(true);
-  if (!ready) return; // sent once pyWhat is ready
+  if (!ready) {
+    // Sent once pyWhat is ready; if it didn't load, say so where the matches go
+    if (loadError) showError(loadError);
+    return;
+  }
   pendingText = value;
+  pendingKey = key;
   latest.request((id) => ({ type: "identify", id, text: value, options }));
 }
 
@@ -286,7 +320,11 @@ function show(forText: string, found: IdentifyMatch[], wasCapped = false): void 
   window.clearTimeout(sayTimer);
   if (forText.trim() === "") lastSaid = "";
   else {
-    const said = found.length ? `${plural(found.length, "match", "matches")} found` : "Nothing found";
+    const said = capped
+      ? `pyWhat stopped at ${count(MAX_MATCHES)} matches: the text has more`
+      : found.length
+        ? `${plural(found.length, "match", "matches")} found`
+        : "Nothing found";
     sayTimer = window.setTimeout(() => {
       if (said !== lastSaid) announce(said);
       lastSaid = said;
@@ -301,6 +339,7 @@ function show(forText: string, found: IdentifyMatch[], wasCapped = false): void 
  */
 function showError(message: string): void {
   setBusy(false);
+  window.clearTimeout(sayTimer);
   matches = [];
   ranges = [];
   shownText = "";
@@ -393,23 +432,31 @@ function card(c: Card): HTMLLIElement {
     : null;
   const rarity = Math.max(...members.map((x) => x.rarity));
   // A lookup link sends the match to another site: never for credentials, and always named
-  const secret = m.tags.some((t) => /credential|token|key/i.test(t));
-  const lookup = (x: IdentifyMatch) => (secret || !x.link ? null : safeHref(x.link));
+  const lookup = (x: IdentifyMatch) => lookupHref({ link: x.link, tags: m.tags });
+  // One chip per distinct matched text, with how often it occurs (a log repeats addresses)
+  const distinct = new Map<string, { first: IdentifyMatch; n: number }>();
+  for (const x of members) {
+    const seen = distinct.get(x.matched);
+    if (seen) seen.n++;
+    else distinct.set(x.matched, { first: x, n: 1 });
+  }
+  const values = [...distinct.values()];
   const chips = group
     ? h(
         "ul",
         { class: "match__chips", "aria-label": "Matched text" },
-        ...members.slice(0, MAX_CHIPS).map((x) => {
+        ...values.slice(0, MAX_CHIPS).map(({ first: x, n }) => {
           const href = lookup(x);
           return h(
             "li",
             {},
             href
-              ? h("a", { href, target: "_blank", rel: "noopener noreferrer", title: `Look it up on ${hostOf(href)} (sends ${x.matched} there)` }, h("code", {}, x.matched))
+              ? h("a", { href, target: "_blank", rel: "noopener noreferrer" }, h("code", {}, x.matched), h("span", { class: "visually-hidden" }, ` (opens ${hostOf(href)})`))
               : h("code", {}, x.matched),
+            n > 1 ? h("span", { class: "field__meta" }, ` ×${count(n)}`) : null,
           );
         }),
-        members.length > MAX_CHIPS ? h("li", { class: "field__meta" }, `and ${count(members.length - MAX_CHIPS)} more`) : null,
+        values.length > MAX_CHIPS ? h("li", { class: "field__meta" }, `and ${count(values.length - MAX_CHIPS)} more`) : null,
       )
     : h(
         "p",
@@ -417,6 +464,8 @@ function card(c: Card): HTMLLIElement {
         h("code", {}, m.matched),
         m.fragment ? h("span", { class: "badge", title: "This match is part of a longer word or match" }, "inside longer text") : null,
       );
+  // A format's matches all link to the same site, if any: name it on screen
+  const site = group ? (members.map(lookup).find(Boolean) ?? null) : null;
   const li = h(
     "li",
     { class: `match ${colourOf(m.name)}`, "data-ids": members.map((x) => x.id).join(" ") },
@@ -432,6 +481,7 @@ function card(c: Card): HTMLLIElement {
       ),
     ),
     chips,
+    site ? h("p", { class: "field__meta" }, `Each one links to ${hostOf(site)}: opening it sends that match there.`) : null,
     desc,
     m.tags.length ? h("ul", { class: "tags", "aria-label": "Tags" }, ...m.tags.map((t) => h("li", {}, t))) : null,
     m.exploit
@@ -557,7 +607,7 @@ function activate(ids: readonly number[] | null): void {
 // share links, the text leaves the address bar as soon as it's edited
 const fromLink = decodeHash(location.hash).get("text");
 const shared = pickUp() ?? fromLink;
-if (shared) setText(Array.from(shared).slice(0, MAX_TEXT_CHARS).join(""));
+if (shared) setText(Array.from(shared).slice(0, MAX_TEXT_CHARS).join(""), true);
 if (fromLink) {
   text.addEventListener("input", () => history.replaceState(null, "", location.pathname + location.search), { once: true });
 }

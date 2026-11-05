@@ -93,14 +93,44 @@ export function optionsSummary(o: DecodeOptions): string {
 
 /** The most characters Ciphey's search takes here (the MCP server's limit too). */
 export const MAX_INPUT_CHARS = 65_536;
+/**
+ * On a device with a small memory budget, less: one step of the search on a 65,536-character
+ * input can grow the module by 0.5 to 0.8 GiB, more than such a budget; 16,000 characters
+ * overshoot it by under 50 MiB (audit-ciphey-web-b, F14).
+ */
+export const SMALL_DEVICE_INPUT_CHARS = 16_000;
+
+const GIB = 1024 ** 3;
+
+/**
+ * The WebAssembly memory a search may use before the worker stops it: a quarter of the
+ * device's memory where the browser says (Chromium's `navigator.deviceMemory`, at most 8 GB),
+ * between 512 MiB and 2 GiB; else 2 GiB on desktops and 512 MiB on phones and tablets.
+ * iPadOS Safari says it's a Mac, but a Mac has no touch screen.
+ */
+export function memoryBudget(nav: { deviceMemory?: number; userAgent: string; maxTouchPoints?: number }): number {
+  if (nav.deviceMemory) return Math.min(2 * GIB, Math.max(GIB / 2, (nav.deviceMemory * GIB) / 4));
+  const tablet = /Macintosh/.test(nav.userAgent) && (nav.maxTouchPoints ?? 0) > 1;
+  return /Mobi|Android|iPhone|iPad/.test(nav.userAgent) || tablet ? GIB / 2 : 2 * GIB;
+}
+
+/** The input limit for a memory budget. */
+export function inputLimit(budget: number): number {
+  return budget <= GIB ? SMALL_DEVICE_INPUT_CHARS : MAX_INPUT_CHARS;
+}
 
 export type InputCheck = { ok: true } | { ok: false; message: string };
 
-export function checkInput(text: string): InputCheck {
+export function checkInput(text: string, max = MAX_INPUT_CHARS): InputCheck {
   if (text.trim() === "") return { ok: false, message: "Paste or type the text to decode first." };
   const n = Array.from(text).length;
-  if (n > MAX_INPUT_CHARS)
-    return { ok: false, message: `That's ${n.toLocaleString("en")} characters. Ciphey decodes up to ${MAX_INPUT_CHARS.toLocaleString("en")} here.` };
+  if (n > max) {
+    const where =
+      max < MAX_INPUT_CHARS
+        ? `On this device Ciphey decodes up to ${max.toLocaleString("en")}, to stay within its memory; a computer takes up to ${MAX_INPUT_CHARS.toLocaleString("en")}.`
+        : `Ciphey decodes up to ${max.toLocaleString("en")} here.`;
+    return { ok: false, message: `That's ${n.toLocaleString("en")} characters. ${where}` };
+  }
   return { ok: true };
 }
 

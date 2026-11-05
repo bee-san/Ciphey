@@ -19,7 +19,10 @@ import { createRequire } from "node:module";
 import puppeteer from "puppeteer-core";
 import { EXAMPLES } from "../../src/decode/examples.ts";
 import { serve } from "../../scripts/serve.mjs";
-import { CSP } from "../../scripts/shell.ts";
+// The policy, written out: a test that imported it from scripts/shell.ts would follow a
+// weakened one
+const CSP =
+  "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'";
 
 const require = createRequire(import.meta.url);
 const AXE = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
@@ -77,9 +80,14 @@ function assert(condition, message) {
 }
 
 /** A fresh page (own cache and storage), recording requests, console errors and CSP violations. */
-async function open(path, { width = 1280, height = 900, theme = "light", reducedMotion = false } = {}) {
-  const context = await browser.createBrowserContext();
+async function open(path, { width = 1280, height = 900, theme = "light", reducedMotion = false, deviceMemory, userAgent, on = browser } = {}) {
+  const context = await on.createBrowserContext();
   const page = await context.newPage();
+  if (userAgent) await page.setUserAgent(userAgent);
+  // The page reads navigator.deviceMemory to size a search's memory budget
+  if (deviceMemory !== undefined) {
+    await page.evaluateOnNewDocument((m) => Object.defineProperty(Navigator.prototype, "deviceMemory", { get: () => m ?? undefined }), deviceMemory);
+  }
   await page.setViewport({ width, height, deviceScaleFactor: 1 });
   await page.emulateMediaFeatures([
     { name: "prefers-color-scheme", value: theme },
@@ -305,7 +313,8 @@ await check("decode: a cancel reaches the worker (no restart), and a stuck step 
   // 65,536 characters: one step takes seconds, so the cancel can't get in
   await setValue(decode, "#input", "aGVsbG8gdGhlcmUgZ2VuZXJhbA".repeat(2521).slice(0, 65536));
   await decode.click("#decode");
-  await new Promise((r) => setTimeout(r, 1500));
+  // Right after the first step's update the worker is in its second long step
+  await decode.waitForFunction(() => / tried/.test(document.getElementById("search-stats").textContent), { timeout: 30_000 });
   const restarting = restartsWithin(decode, 1500);
   await decode.keyboard.press("Escape");
   assert(await restarting, "a cancel during a long step didn't replace the worker");
@@ -404,6 +413,8 @@ await check("decode: Ctrl+Enter decodes, and the share dialog warns and links", 
   assert(url.includes("#input=aGVsbG8gdGhlcmUgZ2VuZXJhbA%3D%3D"), `link ${url}`);
   const warning = await text(decode, "#share-warning");
   assert(/secrets/.test(warning), "no warning about secrets");
+  const display = await decode.$eval("#share-warning", (el) => getComputedStyle(el).display);
+  assert(display === "block", `the warning is laid out as ${display} (one paragraph is block)`);
   await decode.keyboard.press("Escape");
   await decode.waitForFunction(() => !document.getElementById("share-dialog").open);
   return url.slice(url.indexOf("#"));
@@ -457,16 +468,22 @@ await check("decode: the clock waits for Ciphey to load (a share link on a slow 
     await page.goto(`${base}#input=${encodeURIComponent(example.input)}&timeout=3`, { waitUntil: "load" });
     const seen = new Set();
     let over = null;
+    let firstAfterLoad = null;
     for (let i = 0; i < 300; i++) {
       const s = await page.evaluate(() => [document.getElementById("search-text")?.textContent ?? "", !document.getElementById("result").hidden]);
       seen.add(s[0].replace(/[\d.]+ m?s of/, "N of"));
       const m = /([\d.]+) (ms|s) of (\d+) s/.exec(s[0]);
-      if (m && (m[2] === "s" ? Number(m[1]) : Number(m[1]) / 1000) > Number(m[3])) over = s[0];
+      const at = m ? (m[2] === "s" ? Number(m[1]) : Number(m[1]) / 1000) : null;
+      if (at !== null && firstAfterLoad === null) firstAfterLoad = at;
+      if (/time's up/.test(s[0]) && firstAfterLoad === null) firstAfterLoad = Infinity;
+      if (at !== null && at > Number(m[3])) over = s[0];
       if (s[1]) break;
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 50));
     }
     assert(!over, `the clock passed the limit: ${over}`);
     assert([...seen].some((x) => /Loading Ciphey, then searching/.test(x)), `never said it was loading: ${[...seen].join(" | ")}`);
+    // Once loaded, the clock starts from nothing: its first reading is well under the limit
+    assert(firstAfterLoad !== null && firstAfterLoad < 1.5, `first reading after loading: ${firstAfterLoad} s`);
     const r = await page.evaluate(() => document.querySelector("#result .plaintext")?.textContent);
     assert(r === example.plaintext, `got ${r}`);
     return [...seen].join(" | ").slice(0, 120);
@@ -542,6 +559,95 @@ async function keyboardPass(path, tabs) {
     await page.closeAll();
   }
 }
+
+await check("decode: a search started while a step is stuck runs on the new worker", async () => {
+  const page = await open("");
+  try {
+    await engineReady(page);
+    await setValue(page, "#input", "aGVsbG8gdGhlcmUgZ2VuZXJhbA".repeat(2521).slice(0, 65536));
+    await page.click("#decode");
+    await page.waitForFunction(() => / tried/.test(document.getElementById("search-stats").textContent), { timeout: 30_000 });
+    // The worker is in a long step: this search waits behind it until the page replaces it
+    await setValue(page, "#input", "aGVsbG8gdGhlcmUgZ2VuZXJhbA==");
+    await page.click("#decode");
+    const r = await decodeResult(page, 30_000);
+    assert(r.plaintext === "hello there general", `got ${r.plaintext ?? r.notice}`);
+    return r.meta;
+  } finally {
+    await page.closeAll();
+  }
+});
+
+/** A search that can only end on memory: a crib that never matches, a long limit. */
+async function memorySearch(page, input = "kq8vZ2mXw!9tLr#", every = false) {
+  await engineReady(page);
+  await page.click("#options summary");
+  await setValue(page, "#timeout", "60");
+  if (!every) await setValue(page, "#regex", "^no-such-plaintext$");
+  if (every) await page.$eval("#top-results", (el) => (el.checked = true));
+  await setValue(page, "#input", input);
+  await page.click("#decode");
+}
+
+await check("decode: on a small device the search stops on memory, keeps what it found, and gets a fresh worker", async () => {
+  // A 2 GB device: a 512 MiB budget
+  const page = await open("", { deviceMemory: 2 });
+  try {
+    const t0 = Date.now();
+    await memorySearch(page, "aGVsbG8gdGhlcmUgZ2VuZXJhbA==", true);
+    const watching = restartsWithin(page, 40_000);
+    const r = await decodeResult(page, 40_000);
+    const secs = (Date.now() - t0) / 1000;
+    const hint = await page.$eval("#result", (el) => el.querySelector(".field__hint")?.textContent ?? "");
+    assert(r.plaintext === "hello there general", `the plaintext found is gone: ${r.plaintext ?? r.notice}`);
+    assert(/to stay within your browser's memory/.test(hint), `it didn't stop on memory: ${hint}`);
+    assert(secs < 35, `took ${secs} s`);
+    assert(await watching, "no fresh worker after the memory stop");
+    return `${hint.slice(0, 70)} (${secs.toFixed(1)} s)`;
+  } finally {
+    await page.closeAll();
+  }
+});
+
+await check("decode: a phone with no deviceMemory gets the small budget", async () => {
+  const iphone = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
+  const page = await open("", { deviceMemory: null, userAgent: iphone, width: 390, height: 844 });
+  try {
+    const hint = await page.$eval("#input-limit", (el) => el.textContent);
+    assert(hint === "16,000", `input limit shown as ${hint}`);
+    await memorySearch(page);
+    const r = await decodeResult(page, 40_000);
+    assert(/before your browser ran out of memory/.test(r.notice ?? ""), `got ${r.notice}`);
+    return r.notice;
+  } finally {
+    await page.closeAll();
+  }
+});
+
+await check("decode: when the browser refuses memory, it says so (not a crib, not a bug) and keeps the plaintexts", async () => {
+  // V8 lets the module grow to 384 MiB only, under the page's 2 GiB budget
+  const small = await puppeteer.launch({
+    executablePath: chrome,
+    headless: true,
+    args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--js-flags=--wasm-max-mem-pages=6144"],
+  });
+  try {
+    const page = await open("", { on: small, deviceMemory: 8 });
+    try {
+      await memorySearch(page, "aGVsbG8gdGhlcmUgZ2VuZXJhbA==", true);
+      const r = await decodeResult(page, 60_000);
+      const said = await page.evaluate(() => [...document.querySelectorAll("#result .field__error, #result .notice__title, #result .field__hint")].map((e) => e.textContent).join(" | "));
+      assert(r.plaintext === "hello there general", `the plaintexts are gone: ${said}`);
+      assert(/ran out of memory/.test(said), `it says ${said}`);
+      assert(!/crib/i.test(await text(page, "#regex-error").catch(() => "")), "it blamed the crib");
+      return said.slice(0, 100);
+    } finally {
+      await page.closeAll();
+    }
+  } finally {
+    await small.close();
+  }
+});
 
 await check("decode: keyboard focus is visible on every stop, skip link first", async () => {
   const order = await keyboardPass("", 14);
@@ -634,8 +740,64 @@ await check("identify: a format with many matches gets one card", async () => {
   );
   const ip = cards.find((c) => /Address Version 4/.test(c[0]));
   assert(ip && /· 5$/.test(ip[0]) && ip[1] === 5, `cards: ${JSON.stringify(cards)}`);
+  // Its chips link to Shodan: the card says so on screen, and each link's name says where
+  const said = await identify.$$eval("#matches .match", (els) => {
+    const card = els.find((el) => /Address Version 4/.test(el.querySelector(".match__name")?.textContent ?? ""));
+    return [card?.textContent ?? "", card?.querySelector(".match__chips a")?.textContent ?? ""];
+  });
+  assert(/links to shodan\.io/.test(said[0]), "the card doesn't name the site its chips open");
+  assert(/opens shodan\.io/.test(said[1]), `a chip link is named ${said[1]}`);
   assert(r.marks.filter((m) => /^10\.0\.0\.\d$/.test(m)).length === 5, `marks: ${r.marks.join(" | ")}`);
   return cards.map((c) => c[0]).join("; ");
+});
+
+await check("identify: 100,000 dense characters stop at 5,000 matches, and say so", async () => {
+  // 12,000 addresses in 96,000 characters: more than the cap
+  const dense = "1.1.1.1 ".repeat(12_000);
+  await setValue(identify, "#text", dense);
+  await identify.waitForFunction(() => document.getElementById("matches-panel").getAttribute("aria-busy") === "false", { timeout: 60_000 });
+  const state = await identify.evaluate(() => [document.getElementById("match-count").textContent, document.querySelector("#matches .notice")?.textContent ?? ""]);
+  assert(state[0] === "5,000", `count ${state[0]}`);
+  assert(/stopped at 5,000 matches/.test(state[1]), `notice: ${state[1]}`);
+  return state[0];
+});
+
+await check("identify: credentials in a busy format get no lookup links", async () => {
+  const tokens = Array.from({ length: 5 }, (_, i) => `12345678901234${i}|AbCdEfGhIjKlMnOpQrStUvWxYz${i}`).join(" ");
+  await identifyText(tokens);
+  const links = await identify.$$eval("#matches .match", (els) =>
+    els.filter((el) => /Facebook/.test(el.querySelector(".match__name")?.textContent ?? "")).map((el) => el.querySelectorAll("a[target=_blank]").length),
+  );
+  assert(links.length > 0, "no Facebook card");
+  assert(links.every((n) => n === 0), `links on credential cards: ${links}`);
+  return `${links.length} card(s), no links`;
+});
+
+await check("identify: the limit counts characters, not UTF-16 units", async () => {
+  await setValue(identify, "#text", "🙂".repeat(60_000));
+  await identify.waitForFunction(() => document.getElementById("matches-panel").getAttribute("aria-busy") === "false", { timeout: 60_000 });
+  const emoji = await identify.evaluate(() => document.getElementById("text-error").hidden);
+  await setValue(identify, "#text", "a".repeat(100_001));
+  await identify.waitForFunction(() => !document.getElementById("text-error").hidden, { timeout: 10_000 });
+  assert(emoji, "60,000 emoji (120,000 UTF-16 units) were refused");
+  return "60,000 emoji taken, 100,001 characters refused";
+});
+
+await check("identify: typing is announced once it pauses", async () => {
+  await setValue(identify, "#text", "");
+  await identify.evaluate(() => {
+    window.__said = [];
+    new MutationObserver(() => {
+      const t = document.getElementById("announcer").textContent;
+      if (t) window.__said.push(t);
+    }).observe(document.getElementById("announcer"), { childList: true, characterData: true, subtree: true });
+  });
+  await identify.focus("#text");
+  await identify.keyboard.type("mail bee@skerritt.blog now", { delay: 120 });
+  await new Promise((r) => setTimeout(r, 2000));
+  const said = await identify.evaluate(() => window.__said);
+  assert(said.length >= 1 && said.length <= 2, `said ${said.length} times: ${said.join(" | ")}`);
+  return said.join(" | ");
 });
 
 await check("identify: the default sort puts the most specific first", async () => {
@@ -768,6 +930,13 @@ for (const [input, verdict] of [
     return `${verdict}, ${await text(language, "#verdict-detail")}, score ${await text(language, "#score-value")}`;
   });
 }
+await check("language: over 10,000 characters it says only the first are checked", async () => {
+  await setValue(language, "#text", "The quick brown fox jumps over the lazy dog. ".repeat(230));
+  const hint = await text(language, "#text-hint");
+  assert(/Only the first 10,000 characters are checked/.test(hint), `hint: ${hint}`);
+  return hint;
+});
+
 await check("language: the verdict follows the sensitivity", async () => {
   // Scores 0.835: language at High (0.5) and Medium (0.75), not at Low (0.9)
   await setValue(language, "#text", "the quick brwn fx");
@@ -892,6 +1061,15 @@ await check("narrow screens: no page scrolls sideways at 320 px", async () => {
 });
 
 // --- What the pages asked for ---------------------------------------------------------------
+
+await check("every page's footer states the privacy promise and its one exception", async () => {
+  for (const path of ["", "identify/", "language/"]) {
+    const html = await (await fetch(base + path)).text();
+    assert(/What you paste stays on this page, unless you open one of Identify's lookup links/.test(html), `${path || "decode"}: footer`);
+    assert(/Tatoeba/.test(html) && /CC BY-SA 4\.0/.test(html), `${path || "decode"}: data credits`);
+  }
+  return "3 pages";
+});
 
 if (!only) {
   report("privacy: no request left the site's origin", problems.foreign.size === 0, [...problems.foreign].slice(0, 5).join(", "));

@@ -28,7 +28,9 @@ bindgen=$(wasm-bindgen --version | awk '{print $2}')
 # The modules embed source paths in their panic messages: write them relative to the cargo
 # home and the repository, so a build is the same, byte for byte, on any machine
 cargo_home=${CARGO_HOME:-$HOME/.cargo}
-export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$cargo_home=/cargo --remap-path-prefix=$repo=/ciphey"
+# (the target directory too: a build script's OUT_DIR, such as lemmeknow's, ends up in them; it comes
+# last because rustc applies the last prefix that matches, and the target may be in the repository)
+export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$cargo_home=/cargo --remap-path-prefix=$repo=/ciphey --remap-path-prefix=$CARGO_TARGET_DIR=/target"
 
 size() { printf '%-9s %9d bytes, gzip -9: %d\n' "$1" "$(stat -c %s "$2")" "$(gzip -9 -c "$2" | wc -c)"; }
 

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { printable } from "../../src/decode/tree-view";
-import { checkCrib, checkerLabel, checkInput, checkTimeout, decoderName, optionsSummary, pathSpeech, pathText, verdictSentence } from "../../src/decode/words";
+import { checkCrib, checkerLabel, checkInput, checkTimeout, decoderName, inputLimit, memoryBudget, optionsSummary, pathSpeech, pathText, verdictSentence } from "../../src/decode/words";
 import { bytes, count, duration, plural, preview } from "../../src/lib/format";
 import { isLanguageAt, languageName, listNames, THRESHOLDS } from "../../src/lib/language";
 import type { IdentifyMatch, Step } from "../../src/lib/protocol";
-import { flattenMatches, formatColours, groupMatches, identifyOptionsJson, sortMatches } from "../../src/lib/pywhat";
+import { flattenMatches, formatColours, groupMatches, identifyOptionsJson, lookupHref, sortMatches } from "../../src/lib/pywhat";
 import { SearchTree } from "../../src/lib/tree";
 import { LatestRequest } from "../../src/shell/engine";
 
@@ -71,6 +71,17 @@ describe("sortMatches", () => {
   it("doesn't change its input", () => {
     sortMatches(list, "name");
     expect(list.map((x) => x.id)).toEqual([0, 1, 2, 3]);
+  });
+});
+
+describe("lookupHref", () => {
+  it("gives http(s) lookup links, and none for credentials, tokens or keys", () => {
+    expect(lookupHref({ link: "https://www.shodan.io/host/1.2.3.4", tags: ["Identifiers", "IP"] })).toBe("https://www.shodan.io/host/1.2.3.4");
+    expect(lookupHref({ link: "https://developers.facebook.com/tools/debug/accesstoken/?access_token=x", tags: ["Credentials"] })).toBeNull();
+    expect(lookupHref({ link: "https://x.example/", tags: ["API Keys"] })).toBeNull();
+    expect(lookupHref({ link: "https://x.example/", tags: ["JWT Token"] })).toBeNull();
+    expect(lookupHref({ link: "javascript:alert(1)", tags: [] })).toBeNull();
+    expect(lookupHref({ link: null, tags: [] })).toBeNull();
   });
 });
 
@@ -170,6 +181,33 @@ describe("Decode's words", () => {
     expect(checkTimeout(" 60 ")).toEqual({ ok: true, value: 60 });
     for (const bad of ["0", "61", "1.5", "", "-3", "five"]) expect(checkTimeout(bad).ok).toBe(false);
     expect(checkCrib("x".repeat(1001)).ok).toBe(false);
+  });
+});
+
+describe("memory budget", () => {
+  const GiB = 1024 ** 3;
+  const desktop = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0 Safari/537.36";
+  const iphone = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
+  const ipad = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15";
+  it("is a quarter of the device's memory, from 512 MiB to 2 GiB", () => {
+    expect(memoryBudget({ deviceMemory: 8, userAgent: desktop })).toBe(2 * GiB);
+    expect(memoryBudget({ deviceMemory: 4, userAgent: desktop })).toBe(GiB);
+    expect(memoryBudget({ deviceMemory: 2, userAgent: iphone })).toBe(GiB / 2);
+    expect(memoryBudget({ deviceMemory: 0.5, userAgent: desktop })).toBe(GiB / 2);
+  });
+  it("without deviceMemory: 2 GiB on desktops, 512 MiB on phones and iPads", () => {
+    expect(memoryBudget({ userAgent: desktop })).toBe(2 * GiB);
+    expect(memoryBudget({ userAgent: ipad, maxTouchPoints: 0 })).toBe(2 * GiB); // a Mac
+    expect(memoryBudget({ userAgent: iphone })).toBe(GiB / 2);
+    expect(memoryBudget({ userAgent: ipad, maxTouchPoints: 5 })).toBe(GiB / 2); // an iPad says it's a Mac
+  });
+  it("takes a smaller input on a small budget, and says why", () => {
+    expect(inputLimit(2 * GiB)).toBe(65_536);
+    expect(inputLimit(GiB)).toBe(16_000);
+    const small = checkInput("a".repeat(16_001), inputLimit(GiB / 2));
+    expect(small.ok).toBe(false);
+    expect(small.ok ? "" : small.message).toMatch(/On this device Ciphey decodes up to 16,000/);
+    expect(checkInput("a".repeat(16_001), inputLimit(2 * GiB)).ok).toBe(true);
   });
 });
 

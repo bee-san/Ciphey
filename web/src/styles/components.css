@@ -139,6 +139,8 @@
   gap: var(--space-2);
 }
 .site-footer__privacy { color: var(--text); }
+.site-footer__credits > summary { cursor: pointer; width: fit-content; min-height: 24px; border-radius: var(--radius-s); }
+.site-footer__credits ul { margin: var(--space-2) 0 0; padding-left: 1.2em; display: grid; gap: 4px; max-width: 80ch; }
 .site-footer a { color: var(--link); }
 
 /* Form fields */

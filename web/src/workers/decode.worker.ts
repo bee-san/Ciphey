@@ -6,7 +6,7 @@
 
 import init, { cipheyVersion, listDecoders, Search, type SearchProgress, type SearchResult } from "../wasm/decode/ciphey_wasm.js";
 import wasmUrl from "../wasm/decode/ciphey_wasm_bg.wasm?url";
-import type { DecodeEvent, DecodeRequest, DecodeResult, DecoderInfo, TreeNode } from "../lib/protocol";
+import type { DecodeErrorKind, DecodeEvent, DecodeRequest, DecodeResult, DecoderInfo, TreeNode } from "../lib/protocol";
 
 declare const self: DedicatedWorkerGlobalScope;
 
@@ -20,20 +20,9 @@ const post = (event: DecodeEvent) => self.postMessage(event);
 
 /** How long one step searches before it reports back: about 25 updates a second. */
 const STEP_MS = 40;
-/**
- * The search stops before Ciphey's WebAssembly memory passes this. Its queue of branches
- * grows by about 1 KB per branch (for a 56-character input), about 150 MB a second, and a
- * long search with no plaintext reached the 4 GiB a 32-bit module can have after 23 to 39 s,
- * which aborts the module. So: a quarter of the device's memory where the browser says how
- * much it has (Chromium, at most 8 GB), between 512 MiB and 2 GiB; else 2 GiB on desktops
- * and 512 MiB on phones.
- */
-const MEMORY_LIMIT = (() => {
-  const gib = 1024 ** 3;
-  const device = (navigator as { deviceMemory?: number }).deviceMemory;
-  if (device) return Math.min(2 * gib, Math.max(gib / 2, (device * gib) / 4));
-  return /Mobi|Android|iPhone|iPad/.test(navigator.userAgent) ? gib / 2 : 2 * gib;
-})();
+/** If the page gives no budget (it always does), the desktop one. */
+const DEFAULT_MEMORY_LIMIT = 2 * 1024 ** 3;
+
 /** Characters of each node's text the page gets (it shows up to 160). */
 const PREVIEW_CHARS = 160;
 
@@ -48,18 +37,30 @@ const cancelled = new Set<number>();
 
 const memoryBytes = () => memory?.buffer.byteLength ?? 0;
 
-function describe(error: unknown): string {
+// Ciphey's panic hook writes "ciphey: panicked at ..." to the console before the module
+// aborts. A failed allocation aborts without a word. So an abort after that line is a bug,
+// and one without it is the module running out of memory.
+let panicked = false;
+const consoleError = console.error.bind(console);
+console.error = (...args: unknown[]) => {
+  if (args.some((a) => /panicked/.test(String(a)))) panicked = true;
+  consoleError(...args);
+};
+
+function describe(error: unknown): { message: string; kind?: DecodeErrorKind } {
   const text = error instanceof Error ? error.message : String(error);
-  // A Rust panic or a failed allocation aborts the module: the call throws a RuntimeError
-  // ("unreachable"), and the instance is unusable from then on
+  // An abort throws a RuntimeError ("unreachable"), and the instance is unusable from then on
   if (error instanceof WebAssembly.RuntimeError || /unreachable|out of memory/i.test(text)) {
     dead = true;
-    if (memoryBytes() > MEMORY_LIMIT / 2 || /out of memory/i.test(text)) {
-      return "Ciphey ran out of memory. Try a shorter time limit, or a crib.";
+    if (panicked) {
+      return {
+        message: "Ciphey crashed on this input. That's a bug in Ciphey: please report it, with the input, at github.com/bee-san/Ciphey/issues.",
+        kind: "crash",
+      };
     }
-    return "Ciphey crashed on this input. That's a bug in Ciphey: please report it, with the input, at github.com/bee-san/Ciphey/issues.";
+    return { message: "Ciphey ran out of memory. Try a shorter time limit, or a crib.", kind: "memory" };
   }
-  return text;
+  return { message: text };
 }
 
 const ready = init({ module_or_path: wasmUrl })
@@ -107,6 +108,7 @@ function withStepTexts(r: SearchResult, texts: Map<number, { parent: number | nu
 
 async function run(request: Decode): Promise<void> {
   const { id, input, options } = request;
+  const budget = request.memoryLimit || DEFAULT_MEMORY_LIMIT;
   let search: Search;
   try {
     search = new Search(input, {
@@ -117,18 +119,25 @@ async function run(request: Decode): Promise<void> {
       previewChars: PREVIEW_CHARS,
     });
   } catch (error) {
-    post({ type: "error", id, message: describe(error) });
+    const d = describe(error);
+    // Options Ciphey rejects: with a crib set, a crib that doesn't compile
+    const kind = d.kind ?? (options.regex && /regex/i.test(d.message) ? "crib" : undefined);
+    post({ type: "error", id, message: d.message, kind });
     return;
   }
   const texts = new Map<number, { parent: number | null; text: string }>();
+  // The most one step has grown the memory: the next may grow it as much
+  let stepGrowth = 0;
   current = { id, search, texts };
   try {
     for (;;) {
+      const before = memoryBytes();
       const p: SearchProgress = search.step(STEP_MS);
       if (current?.search !== search) return; // cancelled or replaced while stepping
-      // Stop before the module runs out of memory (it can't give memory back: the page
-      // starts a new worker for the next search)
-      const full = p.status === "running" && memoryBytes() > MEMORY_LIMIT;
+      stepGrowth = Math.max(stepGrowth, memoryBytes() - before);
+      // Stop before the module runs out of memory, if the next step could take it past the
+      // budget (it can't give memory back: the page starts a new worker for the next search)
+      const full = p.status === "running" && memoryBytes() + stepGrowth > budget;
       const nodes: TreeNode[] = p.nodes.map((n) => ({
         id: n.id,
         parent: n.parent,
@@ -162,7 +171,8 @@ async function run(request: Decode): Promise<void> {
       if (current?.search !== search) return;
     }
   } catch (error) {
-    post({ type: "error", id, message: describe(error) });
+    const d = describe(error);
+    post({ type: "error", id, message: d.message, kind: d.kind });
   } finally {
     if (!dead) search.free();
     if (current?.search === search) current = null;

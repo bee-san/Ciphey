@@ -1,6 +1,7 @@
 // pyWhat's WebAssembly API takes its options as JSON and returns what `pywhat --json`
 // prints. These turn the page's filters into those options and the output into a flat list.
 
+import { safeHref } from "./markup";
 import type { IdentifyMatch, IdentifyOptions } from "./protocol";
 
 /** The options JSON for pywhat's `identify(text, options)`. */
@@ -140,4 +141,13 @@ export function formatColours(matches: readonly IdentifyMatch[], colours: number
     if (!order.has(m.name)) order.set(m.name, order.size % colours);
   }
   return order;
+}
+
+/**
+ * The lookup link a match may carry, or null: none for formats tagged as credentials, tokens
+ * or keys (opening it would send the secret to another site), and only http(s) links.
+ */
+export function lookupHref(m: Pick<IdentifyMatch, "link" | "tags">): string | null {
+  if (!m.link || m.tags.some((t) => /credential|token|key/i.test(t))) return null;
+  return safeHref(m.link);
 }

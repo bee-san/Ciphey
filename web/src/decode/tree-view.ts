@@ -127,12 +127,19 @@ export class TreeView {
 
     const onPath = new Set<number>();
     for (const r of this.results) for (const n of this.tree.pathTo(r)) onPath.add(n.id);
+    // The first result is the plaintext; later ones ("Find every plaintext") were also accepted
+    const [first] = this.results;
     for (const [id, li] of this.items) {
       const path = onPath.has(id);
       li.classList.toggle("node--path", path);
-      li.classList.toggle("node--result", this.results.has(id));
+      li.classList.toggle("node--result", id === first);
+      li.classList.toggle("node--also", this.results.has(id) && id !== first);
       if (this.results.has(id) && !li.querySelector(":scope > .node__row > .node__found")) {
-        li.querySelector(":scope > .node__row")?.append(h("span", { class: "badge badge--success node__found" }, icon("check"), "plaintext"));
+        li.querySelector(":scope > .node__row")?.append(
+          id === first
+            ? h("span", { class: "badge badge--success node__found" }, icon("check"), "plaintext")
+            : h("span", { class: "badge node__found" }, "also accepted"),
+        );
       }
       const group = this.groupOf.get(id);
       if (group && path && !group.li.classList.contains("node-group--path")) {

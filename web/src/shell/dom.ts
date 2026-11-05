@@ -55,11 +55,15 @@ export function icon(name: keyof typeof ICONS): SVGSVGElement {
  * Says `message` through the page's polite live region. Repeating the same message still
  * announces it: the region is emptied first.
  */
+let pending = 0;
+
 export function announce(message: string): void {
   const region = document.getElementById("announcer");
   if (!region) return;
+  // A newer message replaces one still waiting to be said
+  window.clearTimeout(pending);
   region.textContent = "";
-  window.setTimeout(() => {
+  pending = window.setTimeout(() => {
     region.textContent = message;
   }, 50);
 }
@@ -121,11 +125,14 @@ export function copyButton(label: string, get: () => string, options: { spoken?:
 export async function readTextFile(file: File, maxChars: number): Promise<{ text: string } | { error: string }> {
   const tooLong = (n: string) =>
     `${file.name} has ${n} characters: files up to ${maxChars.toLocaleString("en")} characters can be read here. Open a smaller file, or paste part of it.`;
+  const looksBinary = (t: string) => t.includes("\u0000") || (t.match(/\uFFFD/g)?.length ?? 0) > t.length / 20;
+  const notText = { error: `${file.name} doesn't look like text. Ciphey and pyWhat read text, such as a .txt file.` };
+  // A photo is refused as not text, whatever its size: look at its start first
+  const decoder = new TextDecoder("utf-8", { fatal: false });
+  if (looksBinary(decoder.decode(await file.slice(0, 4096).arrayBuffer()))) return notText;
   if (file.size > maxChars * 4) return { error: tooLong(`over ${maxChars.toLocaleString("en")}`) };
-  const text = new TextDecoder("utf-8", { fatal: false }).decode(await file.arrayBuffer());
-  if (text.includes("\u0000") || (text.match(/\uFFFD/g)?.length ?? 0) > text.length / 20) {
-    return { error: `${file.name} doesn't look like text. Ciphey and pyWhat read text, such as a .txt file.` };
-  }
+  const text = decoder.decode(await file.arrayBuffer());
+  if (looksBinary(text)) return notText;
   const chars = Array.from(text).length;
   if (chars > maxChars) return { error: tooLong(chars.toLocaleString("en")) };
   return { text };

@@ -96,8 +96,12 @@ export interface DecoderInfo {
 }
 
 export type DecodeRequest =
-  | { type: "decode"; id: number; input: string; options: DecodeOptions }
+  /** `memoryLimit`: the bytes of WebAssembly memory the search may use (the page decides, see words.ts). */
+  | { type: "decode"; id: number; input: string; options: DecodeOptions; memoryLimit: number }
   | { type: "cancel"; id: number };
+
+/** Why a search failed: a crib that isn't a regex, a panic in Ciphey, or memory running out. */
+export type DecodeErrorKind = "crib" | "crash" | "memory";
 
 export type DecodeEvent =
   | {
@@ -111,7 +115,7 @@ export type DecodeEvent =
     }
   | { type: "update"; id: number; update: SearchUpdate }
   | { type: "cancelled"; id: number }
-  | { type: "error"; id: number | null; message: string };
+  | { type: "error"; id: number | null; message: string; kind?: DecodeErrorKind };
 
 // --- Identify (pyWhat) -------------------------------------------------------------------
 

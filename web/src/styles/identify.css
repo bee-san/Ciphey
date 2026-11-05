@@ -198,5 +198,7 @@
 .match__count { color: var(--text-muted); font-weight: 500; }
 .match__chips { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; align-items: center; }
 .match__chips code { display: inline-block; background: var(--hl); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; font-size: 0.8125rem; }
-.match__chips a { text-decoration: none; border-radius: 4px; }
-.match__chips a:hover code { text-decoration: underline; }
+/* Chips that are lookup links look like links: body text on the highlight, underlined */
+.match__chips a { color: var(--text); border-radius: 4px; }
+.match__chips a code { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+.match__chips a:hover code { text-decoration-thickness: 2px; }

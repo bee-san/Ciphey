@@ -39,6 +39,11 @@ const engine = new EngineClient<LanguageRequest, LanguageEvent>(
 );
 const latest = new LatestRequest<LanguageRequest>((r) => engine.post(r));
 let ready = false;
+/** The text and sensitivity gibberish-or-not crashed on: not sent again until one changes. */
+let crashedOn: string | null = null;
+let pendingKey = "";
+/** Why gibberish-or-not didn't load, if it didn't: shown where the verdict goes. */
+let loadError: string | null = null;
 let lastSaid = "";
 let sayTimer = 0;
 
@@ -46,6 +51,7 @@ engine.on((event) => {
   switch (event.type) {
     case "ready": {
       ready = true;
+      loadError = null;
       engineStatus.textContent = `gibberish-or-not ${versions.gibberish} is ready`;
       const names = event.languages.map(languageName);
       languagesNote.textContent = names.length
@@ -61,9 +67,14 @@ engine.on((event) => {
       if (event.id === null) {
         ready = false;
         engineStatus.replaceChildren(h("span", { class: "field__error" }, event.message), " ", h("button", { type: "button", class: "link-button", onclick: () => restart() }, "Try again"));
+        loadError = event.message;
+        refresh();
       } else {
         const current = latest.settle(event.id);
-        if (event.crashed) restart();
+        if (event.crashed) {
+          crashedOn = pendingKey;
+          restart();
+        }
         if (current || event.crashed) verdictDetail.textContent = event.message;
       }
       return;
@@ -74,6 +85,7 @@ engine.start();
 /** A fresh worker: after a crash, or Try again. Requests in flight are forgotten. */
 function restart(): void {
   ready = false;
+  loadError = null;
   latest.reset();
   engineStatus.replaceChildren(h("span", { class: "spinner", "aria-hidden": "true" }), "Loading gibberish-or-not…");
   engine.restart();
@@ -99,7 +111,20 @@ function refresh(): void {
     showEmpty();
     return;
   }
-  if (!ready) return;
+  const key = JSON.stringify([value, sensitivity()]);
+  if (key === crashedOn) {
+    verdictTitle.textContent = "Not checked";
+    verdictDetail.textContent = "gibberish-or-not crashed on this text. Change it to try again.";
+    return;
+  }
+  if (!ready) {
+    if (loadError) {
+      verdictTitle.textContent = "Not checked";
+      verdictDetail.textContent = loadError;
+    }
+    return;
+  }
+  pendingKey = key;
   latest.request((id) => ({ type: "detect", id, text: value, sensitivity: sensitivity() }));
 }
 
@@ -114,6 +139,8 @@ byId("examples").replaceChildren(
         class: "chip",
         onclick: () => {
           text.value = e.text;
+          // A new text is said even if its verdict is the same as before
+          lastSaid = "";
           refresh();
         },
       },

@@ -78,18 +78,26 @@ tests/unit/, tests/e2e/                                  the tests
   runs Ciphey's `Search` a step (40 ms) at a time and posts the tree's new nodes after each,
   and the page draws them once per frame. Cancel tells the worker to stop between two steps;
   if a step doesn't end within 300 ms (a slow decoder on a big input), the page terminates
-  the worker and starts a new one. A search with no plaintext keeps queueing branches, about
-  1 KB each for a short input and some 150 MB a second, and at 4 GiB a 32-bit module aborts
-  (after 23 to 39 s, in the audit's runs). So the worker stops a search before the module's
-  memory passes a budget (a quarter of the device's memory where the browser says, between
-  512 MiB and 2 GiB; else 2 GiB on desktops and 512 MiB on phones) and says why, and the
-  page replaces the worker after any search that left it holding more than 512 MiB, since
-  WebAssembly memory is never given back. Identify and Is it language? run as you type: one
+  the worker and starts a new one, which also takes any search that was waiting behind the
+  stuck step. A search with no plaintext keeps queueing texts to try, about 1 KB each for a
+  short input and some 150 MB a second, and at 4 GiB a 32-bit module aborts (after 23 to 39
+  s, in the audit's runs). So the page gives each search a memory budget (`memoryBudget()`
+  in `src/decode/words.ts`: a quarter of the device's memory where the browser says, between
+  512 MiB and 2 GiB; else 2 GiB on desktops and 512 MiB on phones and tablets, iPads
+  included), and the worker stops the search when the next step could take the module past
+  it (it tracks the largest step so far), and says why. On a budget of 1 GiB or less, Decode
+  takes up to 16,000 characters, since one step on a 65,536-character input can add 0.5 to
+  0.8 GiB. The page replaces the worker after any search, cancelled or not, that left it
+  holding more than 512 MiB, since WebAssembly memory is never given back. An abort is
+  reported as running out of memory, unless Ciphey's panic hook wrote "panicked" to the
+  console first, which makes it a bug. Identify and Is it language? run as you type: one
   request is with the worker at a time, and only the newest text waits behind it
-  (`LatestRequest` in `src/shell/engine.ts`). pyWhat's output repeats each format's whole
-  entry for every match (about 11 KB of JSON per match, 41 KB per URL), so Identify sends a
-  long text to pyWhat in pieces of about 10,000 characters, cut at line ends, and stops at
-  5,000 matches; it takes up to 100,000 characters.
+  (`LatestRequest` in `src/shell/engine.ts`); a text that crashes their module isn't sent
+  again until it changes. pyWhat's output repeats each format's whole entry for every match
+  (about 11 KB of JSON per match, 41 KB per URL), so Identify sends a long text to pyWhat in
+  pieces of about 10,000 characters (`src/lib/pieces.ts`: cut at line ends, else at spaces
+  or punctuation, never inside a PEM or PGP block), and stops at 5,000 matches; it takes up
+  to 100,000 characters.
 - **One module per tool**, loaded only by its page's worker. Measured with `wasm-opt -Oz`:
 
   | Module | Raw | gzip -9 |
@@ -190,14 +198,22 @@ The target is WCAG 2.2 AA.
 `tests/e2e/e2e.mjs` serves `dist/` the way GitHub Pages does (or tests a live copy with
 `--url https://bee-san.github.io/Ciphey/`) and checks that:
 
-- every Decode example decodes to its plaintext (`src/decode/examples.ts`; an example that
-  needs a decoder Ciphey doesn't have yet, such as #1029's hash cracker, is hidden);
+- every Decode example decodes to its plaintext, and the path shows each layer
+  (`src/decode/examples.ts`; an example that needs a decoder Ciphey doesn't have yet, such as
+  #1029's hash cracker, is hidden);
+- the memory budget: a search on a small device stops on memory, keeps what it found and gets
+  a fresh worker; a phone without `deviceMemory` gets the small budget; and when the browser
+  refuses memory below the budget (V8's `--wasm-max-mem-pages`), the page says Ciphey ran out
+  of memory, not that the crib or Ciphey is wrong;
 - the tree grows while a search runs, a search without a plaintext ends with advice,
   Escape cancels, a crib that isn't a valid regex is reported at the crib, Ctrl+Enter
   decodes, a share link opens and runs its search, a text file opens and a binary one is
   refused, input that is already plaintext says so, and Find every plaintext lists several;
 - Identify finds and highlights an email address, an IP address, a CTF flag, a Bitcoin
-  wallet and a URL, and its filters and sorting work;
+  wallet and a URL; a busy format gets one card whose chips say where they link, and
+  credentials get no links; 96,000 dense characters stop at 5,000 matches and say so; the
+  limit counts characters; typing is announced once it pauses; and its filters, sorting and
+  `#text=` links work;
 - Is it language? says a sentence is language and a keyboard mash and a Caesar shift aren't;
 - and the accessibility and privacy checks above pass.
 

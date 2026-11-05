@@ -78,7 +78,15 @@ export function footer(v: Versions, commit: string | undefined): string {
   <div class="site-footer__inner">
     <p class="site-footer__privacy">Everything runs in your browser: no server, no analytics, no cookies. What you paste stays on this page, unless you open one of Identify's lookup links, which sends that match to the site it names.</p>
     <p class="site-footer__meta"><a href="https://github.com/bee-san/Ciphey">Ciphey</a> ${esc(v.ciphey)} · <a href="https://github.com/bee-san/pyWhat">pyWhat</a> ${esc(v.pywhat)} · <a href="https://github.com/bee-san/gibberish-or-not">gibberish-or-not</a> ${esc(v.gibberish)} · MIT licence${built}</p>
-    <p class="site-footer__meta">pyWhat's file signatures come from Wikipedia's <a href="https://en.wikipedia.org/wiki/List_of_file_signatures">List of file signatures</a> (CC BY-SA 4.0). Where pyWhat's data comes from: <a href="https://github.com/bee-san/pyWhat/blob/main/docs/data-sources.md">data sources</a>; gibberish-or-not's: <a href="https://github.com/bee-san/gibberish-or-not/blob/main/NOTICE">notice</a>.</p>
+    <details class="site-footer__credits">
+      <summary>Credits and data licences</summary>
+      <ul>
+        <li>Formats identified with <a href="https://github.com/bee-san/pyWhat">pyWhat</a> (MIT). Some of its regexes are based on <a href="https://regex101.com/library">regex101</a> community library entries, and on Dora (Siddharth Dushantha, MIT) and gf (Tom Hudson, MIT).</li>
+        <li>pyWhat's file signatures come from Wikipedia's <a href="https://en.wikipedia.org/wiki/List_of_file_signatures">List of file signatures</a> (CC BY-SA 4.0).</li>
+        <li>gibberish-or-not's English model is built from <a href="https://tatoeba.org">Tatoeba</a> sentences (CC BY 2.0 FR, by the Tatoeba contributors), public-domain Project Gutenberg books and the public-domain Moby word lists.</li>
+        <li>The rest is in pyWhat's <a href="https://github.com/bee-san/pyWhat/blob/main/docs/data-sources.md">data sources</a> and gibberish-or-not's <a href="https://github.com/bee-san/gibberish-or-not/blob/main/NOTICE">NOTICE</a>.</li>
+      </ul>
+    </details>
   </div>
 </footer>`;
 }
