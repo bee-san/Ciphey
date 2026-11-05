@@ -244,8 +244,9 @@ fn top_results_collects_every_plaintext() {
 }
 
 fn sensitivity_changes_what_the_english_checker_accepts() {
-    // English with typos: only the most lenient sensitivity takes it as it is
-    let typos = "Tihs is a sentnce wtih smoe tyops in it"; // codespell:ignore tihs,wtih,smoe
+    // English with typos: only the most lenient sensitivity takes it as it is, with
+    // gibberish-or-not 5 and 6 alike
+    let typos = "Thsi sentense has meny speling misteaks in it"; // codespell:ignore thsi,sentense,meny,speling,misteaks
     let first_check = |sensitivity| {
         let mut search = Search::new(typos, options().sensitivity(sensitivity)).unwrap();
         search.step(Duration::ZERO).found
@@ -270,7 +271,7 @@ fn base64(text: &str) -> String {
 fn sensitivity_reaches_the_decoders() {
     // The Base64 decoder checks its output with Athena at the search's sensitivity: only
     // the most lenient takes the typos for English
-    let typos = "Tihs is a sentnce wtih smoe tyops in it"; // codespell:ignore tihs,wtih,smoe
+    let typos = "Thsi sentense has meny speling misteaks in it"; // codespell:ignore thsi,sentense,meny,speling,misteaks
     let encoded = base64(typos);
     let decoded = |sensitivity| {
         let options = SearchOptions::default()
