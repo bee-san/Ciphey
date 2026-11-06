@@ -97,7 +97,7 @@ half = "=2.3.1"  # Required for candle-core compatibility
 memmap2 = "0.9.10"
 rand = "0.8"  # Required for candle-core compatibility
 rayon = "1.12.0"
-rusqlite = { version = "0.37", features = ["bundled"] }
+rusqlite = { version = "0.41", features = ["bundled"] }
 text_io = "0.1.13"
 # v4 for the IDs of cache and human-rejection rows
 uuid = { version = "1.23.3", features = ["v4"] }
