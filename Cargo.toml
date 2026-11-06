@@ -6,7 +6,7 @@ edition = "2021"
 description = "Automated decoding tool, Ciphey but in Rust"
 license = "MIT"
 # The end-to-end benchmark (its scripts, corpus and baseline) is for this repository, not the crate
-exclude = ["benches/e2e/", "benches/data/e2e/"]
+exclude = ["benches/e2e/", "benches/data/e2e/", "fuzz/"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -112,7 +112,6 @@ winapi-util = "0.1.9"
 lzma-rust2 = { version = "0.21.0", default-features = false, features = ["std", "xz", "encoder"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
-cargo-nextest = "0.9.117"
 criterion = "0.8.2"
 
 # Runs the tests marked `wasm_bindgen_test` under Node.js:

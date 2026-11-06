@@ -1,0 +1,25 @@
+[package]
+name = "ciphey-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.ciphey]
+path = ".."
+
+# Its own workspace, so the main crate's builds and lockfile don't include it
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "decode_with"
+path = "fuzz_targets/decode_with.rs"
+test = false
+doc = false
+bench = false

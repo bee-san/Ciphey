@@ -17,8 +17,9 @@
 # anyone with notifications before the release is actually ready.
 name: Release
 
+# Read-only by default; jobs that create or edit the GitHub Release ask for contents: write.
 permissions:
-  contents: write
+  contents: read
 
 # This task will run whenever you push a git tag that looks like a version
 # like "v1", "v1.2.0", "v0.1.0-prerelease01", "my-app-v1.0.0", etc.
@@ -48,16 +49,19 @@ jobs:
   # Create the Github Release™ so the packages have something to be uploaded to
   create-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       has-releases: ${{ steps.create-release.outputs.has-releases }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           submodules: recursive
+      # Built from crates.io with its lockfile rather than piping a downloaded script to a shell
       - name: Install cargo-dist
-        run: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.1.0/cargo-dist-installer.sh | sh"
+        run: cargo install cargo-dist --version 0.1.0 --locked
       - id: create-release
         run: |
           cargo dist plan --tag=${{ github.ref_name }} --output-format=json > dist-manifest.json
@@ -91,26 +95,24 @@ jobs:
         include:
         - os: "macos-15"
           dist-args: "--artifacts=local --target=aarch64-apple-darwin"
-          install-dist: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.1.0/cargo-dist-installer.sh | sh"
         - os: "macos-15-intel"
           dist-args: "--artifacts=local --target=x86_64-apple-darwin"
-          install-dist: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.1.0/cargo-dist-installer.sh | sh"
         - os: "windows-2022"
           dist-args: "--artifacts=local --target=x86_64-pc-windows-msvc"
-          install-dist: "irm  https://github.com/axodotdev/cargo-dist/releases/download/v0.1.0/cargo-dist-installer.ps1 | iex"
         - os: "ubuntu-22.04"
           dist-args: "--artifacts=local --target=x86_64-unknown-linux-gnu"
-          install-dist: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.1.0/cargo-dist-installer.sh | sh"
 
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           submodules: recursive
       - name: Install cargo-dist
-        run: ${{ matrix.install-dist }}
+        run: cargo install cargo-dist --version 0.1.0 --locked
       - name: Run cargo-dist
         # This logic is a bit janky because it's trying to be a polyglot between
         # powershell and bash since this will run on windows, macos, and linux!
@@ -136,10 +138,12 @@ jobs:
     needs: [create-release, upload-artifacts]
     if: ${{ always() && needs.create-release.result == 'success' && (needs.upload-artifacts.result == 'skipped' || needs.upload-artifacts.result == 'success') }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           submodules: recursive
       - name: mark release as non-draft
@@ -151,7 +155,7 @@ jobs:
     needs: publish-release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Publish package to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

@@ -1,0 +1,41 @@
+name: Sign Release Assets
+
+# Adds a keyless Sigstore signature (<asset>.sigstore.json) to each asset of an existing
+# release that doesn't have one yet. New releases are signed by release-builds.yml.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing GitHub release tag whose assets to sign
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    permissions:
+      # Upload the signature bundles to the release
+      contents: write
+      # Keyless Sigstore signing (cosign sign-blob)
+      id-token: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      - name: Sign assets and upload the signatures
+        run: |
+          mkdir assets && cd assets
+          gh release download "$RELEASE_TAG"
+          for asset in *; do
+            case "$asset" in *.sigstore.json) continue ;; esac
+            [ -e "$asset.sigstore.json" ] && continue
+            cosign sign-blob --yes --bundle "$asset.sigstore.json" "$asset"
+            gh release upload "$RELEASE_TAG" "$asset.sigstore.json"
+          done

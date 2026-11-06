@@ -1,0 +1,3 @@
+# Hash-pinned so CI installs exactly this wheel (OpenSSF Scorecard: Pinned-Dependencies).
+codespell==2.4.1 \
+    --hash=sha256:3dadafa67df7e4a3dbf51e0d7315061b80d265f9552ebd699b3dd6834b47e425

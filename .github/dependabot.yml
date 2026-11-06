@@ -16,3 +16,12 @@ updates:
         versions: [">= 0.9"]
       - dependency-name: "half"
         versions: [">= 2.4"]
+  # Keeps the SHA-pinned actions and digest-pinned Docker images current
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"

@@ -5,14 +5,16 @@ on:
     workflow_dispatch:
 
 permissions:
-    issues: write
-    pull-requests: write
+    contents: read
 
 jobs:
     stale:
         runs-on: ubuntu-latest
+        permissions:
+            issues: write
+            pull-requests: write
         steps:
-            - uses: actions/stale@v4
+            - uses: actions/stale@a20b814fb01b71def3bd6f56e7494d667ddf28da # v4
               with:
                   only: pulls
                   stale-pr-message: "This PR hasn't seen activity in 2 weeks! Should it be merged, closed, or worked on further? If you want to keep it open, post a comment or remove the `stale` label – otherwise this will be closed in another week."

@@ -5,12 +5,15 @@ on:
     workflows: ["Test"]
     types: [completed]
 
+# Read-only by default; the merge job asks for the writes it needs.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   dependabot:
+    permissions:
+      contents: write
+      pull-requests: write
     if: >-
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success' &&

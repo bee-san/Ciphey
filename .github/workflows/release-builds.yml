@@ -11,12 +11,17 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      # Upload assets to the release
+      contents: write
+      # Keyless Sigstore signing of the assets (cosign sign-blob)
+      id-token: write
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
     strategy:
@@ -46,7 +51,7 @@ jobs:
 
     steps:
       - name: Checkout release tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ env.RELEASE_TAG }}
           submodules: recursive
@@ -79,8 +84,19 @@ jobs:
           $hash = (Get-FileHash -Algorithm SHA256 $asset).Hash.ToLower()
           "$hash  $asset" | Set-Content -NoNewline -Encoding ascii "$asset.sha256"
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      # Keyless signature bound to this workflow's identity. Verify with:
+      #   cosign verify-blob --bundle <asset>.sigstore.json \
+      #     --certificate-identity-regexp '^https://github.com/bee-san/Ciphey/' \
+      #     --certificate-oidc-issuer https://token.actions.githubusercontent.com <asset>
+      - name: Sign release asset
+        shell: bash
+        run: cosign sign-blob --yes --bundle "${{ matrix.asset_name }}.sigstore.json" "${{ matrix.asset_name }}"
+
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
-        run: gh release upload "$RELEASE_TAG" "${{ matrix.asset_name }}" "${{ matrix.asset_name }}.sha256" --clobber
+        run: gh release upload "$RELEASE_TAG" "${{ matrix.asset_name }}" "${{ matrix.asset_name }}.sha256" "${{ matrix.asset_name }}.sigstore.json" --clobber

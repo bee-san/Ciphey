@@ -66,3 +66,14 @@ Current repository behavior that matters for security review:
 - `ciphey` asks for no tokens or credentials and downloads nothing. (The first-run "enhanced detection" prompt, which asked for a Hugging Face token to download a model that was never used, was removed; see [#1031](https://github.com/bee-san/Ciphey/issues/1031).)
 
 If you report an issue, avoid sending real secrets or private datasets unless they are necessary to reproduce the problem.
+
+## Verifying release binaries
+
+Release binaries are signed in GitHub Actions with [Sigstore](https://www.sigstore.dev/) keyless signing. Each asset has a `<asset>.sigstore.json` bundle next to it on the release page. To verify one with [cosign](https://docs.sigstore.dev/cosign/system_config/installation/):
+
+```sh
+cosign verify-blob --bundle ciphey-linux-x86_64.tar.gz.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/bee-san/Ciphey/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ciphey-linux-x86_64.tar.gz
+```
