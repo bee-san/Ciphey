@@ -94,6 +94,11 @@ fn verify(case: &SearchCase) {
             "{}: expected a timeout, got {result:?}",
             case.name
         ),
+        ("no_solution", Some("any")) => assert!(
+            matches!(result, Ok(_) | Err(CipheyError::Timeout { .. })),
+            "{}: expected a search result or timeout, got {result:?}",
+            case.name
+        ),
         ("no_solution", _) => {}
         _ => {
             let found = result
