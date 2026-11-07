@@ -110,7 +110,8 @@ update the fixture. Search results are only checked in optimised builds: under
   as in a fresh `ciphey` process instead of depending on how many searches ran before.
 * The no-solution searches end when the decoders run out of candidates, when the
   search settles on a false positive, or at the timeout. Which one happens can depend on
-  machine speed, so only the "exhausted" and "timeout" outcomes are checked. Before
+  machine speed. Fixtures marked `outcome = "any"` accept any valid search result or timeout;
+  the other fixtures check their stable "exhausted" or "timeout" outcome. Before
   [#1031](https://github.com/bee-san/Ciphey/issues/1031) both gibberish inputs ended
   early on a false positive (rot47 → Vigenere); now they run until the timeout.
 * The search runs on rayon's thread pool, so its numbers depend on core count and on

@@ -171,7 +171,7 @@ pub struct SearchCase {
     pub input: String,
     /// Expected plaintext, empty for no_solution cases.
     pub expected: String,
-    /// How a no_solution search ends: "exhausted", "false_positive" or "timeout".
+    /// How a no_solution search ends: "exhausted", "false_positive", "timeout" or "any".
     #[serde(default)]
     pub outcome: Option<String>,
 }
