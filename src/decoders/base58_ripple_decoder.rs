@@ -12,6 +12,8 @@ use super::interface::Decoder;
 
 use log::{debug, info, trace};
 
+const MAX_INPUT_BYTES: usize = 5_000;
+
 /// The Base58_ripple decoder, call:
 /// `let base58_ripple_decoder = Decoder::<Base58RippleDecoder>::new()` to create a new instance
 /// And then call:
@@ -99,6 +101,10 @@ impl Crack for Decoder<Base58RippleDecoder> {
 fn decode_base58_ripple_no_error_handling(text: &str) -> Option<String> {
     // Runs the code to decode base58_ripple
     // Doesn't perform error handling, call from_base58_ripple
+    if text.len() > MAX_INPUT_BYTES {
+        return None;
+    }
+
     if let Ok(decoded_text) = bs58::decode(text)
         .with_alphabet(bs58::Alphabet::RIPPLE)
         .into_vec()
@@ -110,7 +116,7 @@ fn decode_base58_ripple_no_error_handling(text: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::Base58RippleDecoder;
+    use super::{decode_base58_ripple_no_error_handling, Base58RippleDecoder, MAX_INPUT_BYTES};
     use crate::{
         checkers::{
             athena::Athena,
@@ -131,6 +137,12 @@ mod tests {
         let base58_ripple_decoder = Decoder::<Base58RippleDecoder>::new();
         let result = base58_ripple_decoder.crack("StVrDLaUATiyKyV", &get_athena_checker());
         assert_eq!(result.unencrypted_text.unwrap()[0], "hello world");
+    }
+
+    #[test]
+    fn rejects_input_over_max_bytes() {
+        let text = "a".repeat(MAX_INPUT_BYTES + 1);
+        assert!(decode_base58_ripple_no_error_handling(&text).is_none());
     }
 
     #[test]
