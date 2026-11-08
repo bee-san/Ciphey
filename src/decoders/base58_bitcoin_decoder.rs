@@ -12,6 +12,8 @@ use super::interface::Decoder;
 
 use log::{debug, info, trace};
 
+const MAX_INPUT_BYTES: usize = 5_000;
+
 /// The Base58_bitcoin decoder, call:
 /// `let base58_bitcoin_decoder = Decoder::<Base58BitcoinDecoder>::new()` to create a new instance
 /// And then call:
@@ -99,6 +101,10 @@ impl Crack for Decoder<Base58BitcoinDecoder> {
 fn decode_base58_bitcoin_no_error_handling(text: &str) -> Option<String> {
     // Runs the code to decode base58_bitcoin
     // Doesn't perform error handling, call from_base58_bitcoin
+    if text.len() > MAX_INPUT_BYTES {
+        return None;
+    }
+
     if let Ok(decoded_text) = bs58::decode(text)
         .with_alphabet(bs58::Alphabet::BITCOIN)
         .into_vec()
@@ -110,7 +116,7 @@ fn decode_base58_bitcoin_no_error_handling(text: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::Base58BitcoinDecoder;
+    use super::{decode_base58_bitcoin_no_error_handling, Base58BitcoinDecoder, MAX_INPUT_BYTES};
     use crate::{
         checkers::{
             athena::Athena,
@@ -131,6 +137,12 @@ mod tests {
         let base58_bitcoin_decoder = Decoder::<Base58BitcoinDecoder>::new();
         let result = base58_bitcoin_decoder.crack("StV1DL6CwTryKyV", &get_athena_checker());
         assert_eq!(result.unencrypted_text.unwrap()[0], "hello world");
+    }
+
+    #[test]
+    fn rejects_input_over_max_bytes() {
+        let text = "a".repeat(MAX_INPUT_BYTES + 1);
+        assert!(decode_base58_bitcoin_no_error_handling(&text).is_none());
     }
 
     #[test]

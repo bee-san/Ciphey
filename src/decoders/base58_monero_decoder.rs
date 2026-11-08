@@ -12,6 +12,8 @@ use super::interface::Decoder;
 
 use log::{debug, info, trace};
 
+const MAX_INPUT_BYTES: usize = 5_000;
+
 /// The Base58_monero decoder, call:
 /// `let base58_monero_decoder = Decoder::<Base58MoneroDecoder>::new()` to create a new instance
 /// And then call:
@@ -99,6 +101,10 @@ impl Crack for Decoder<Base58MoneroDecoder> {
 fn decode_base58_monero_no_error_handling(text: &str) -> Option<String> {
     // Runs the code to decode base58_monero
     // Doesn't perform error handling, call from_base58_monero
+    if text.len() > MAX_INPUT_BYTES {
+        return None;
+    }
+
     if let Ok(decoded_text) = bs58::decode(text)
         .with_alphabet(bs58::Alphabet::MONERO)
         .into_vec()
@@ -110,7 +116,7 @@ fn decode_base58_monero_no_error_handling(text: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::Base58MoneroDecoder;
+    use super::{decode_base58_monero_no_error_handling, Base58MoneroDecoder, MAX_INPUT_BYTES};
     use crate::{
         checkers::{
             athena::Athena,
@@ -131,6 +137,12 @@ mod tests {
         let base58_monero_decoder = Decoder::<Base58MoneroDecoder>::new();
         let result = base58_monero_decoder.crack("StV1DL6CwTryKyV", &get_athena_checker());
         assert_eq!(result.unencrypted_text.unwrap()[0], "hello world");
+    }
+
+    #[test]
+    fn rejects_input_over_max_bytes() {
+        let text = "a".repeat(MAX_INPUT_BYTES + 1);
+        assert!(decode_base58_monero_no_error_handling(&text).is_none());
     }
 
     #[test]
