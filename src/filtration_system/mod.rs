@@ -48,6 +48,7 @@ use crate::decoders::base91_decoder::Base91Decoder;
 use crate::decoders::base92_decoder::Base92Decoder;
 use crate::decoders::braille_decoder::BrailleDecoder;
 use crate::decoders::caesar_decoder::CaesarDecoder;
+use crate::decoders::cisco_type7_decoder::CiscoType7Decoder;
 use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
 use crate::decoders::core_socialist_values_decoder::CoreSocialistValuesDecoder;
 use crate::decoders::crack_results::CrackResult;
@@ -312,6 +313,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let dtmf = Decoder::<DtmfDecoder>::new();
     let dna_codon = Decoder::<DnaCodonDecoder>::new();
     let t9 = Decoder::<T9Decoder>::new();
+    let cisco_type7 = Decoder::<CiscoType7Decoder>::new();
     let hexadecimal = Decoder::<HexadecimalDecoder>::new();
     let hexdump = Decoder::<HexdumpDecoder>::new();
     let octal = Decoder::<OctalDecoder>::new();
@@ -476,6 +478,10 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(mime_encoded_word),
             // Before Hexadecimal, which reads a dump's offsets and ASCII column as hex too
             Box::new(hexdump),
+            // Before Hexadecimal, which decodes a type 7 password's offset and bytes as hex
+            // too: when two decoders find plaintext in the same step, the search reports the
+            // one listed first.
+            Box::new(cisco_type7),
             Box::new(hexadecimal),
             Box::new(octal),
             Box::new(html_entity),

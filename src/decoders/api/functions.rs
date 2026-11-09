@@ -35,6 +35,7 @@ use crate::decoders::braille_decoder::BrailleDecoder;
 use crate::decoders::brainfuck_interpreter::BrainfuckInterpreter;
 use crate::decoders::bzip2_decoder::Bzip2Decoder;
 use crate::decoders::caesar_decoder::CaesarDecoder;
+use crate::decoders::cisco_type7_decoder::CiscoType7Decoder;
 use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
 use crate::decoders::core_socialist_values_decoder::CoreSocialistValuesDecoder;
 use crate::decoders::decimal_decoder::DecimalDecoder;
@@ -437,6 +438,20 @@ decoder_functions! {
     /// assert_eq!(plaintext.key.as_deref(), Some("13"));
     /// ```
     caesar: CaesarDecoder, aliases ["rot13"], key Some(keys::CAESAR);
+
+    /// Decodes Cisco IOS type 7 passwords, the `password 7 …` of a router config: an
+    /// offset of 00 to 15, then the password XORed with a fixed key, in hex. A `password 7`
+    /// or `key 7` in front is skipped. Most passwords aren't words, so Ciphey's checks only
+    /// recognise some of them, like a common password.
+    ///
+    /// ```
+    /// let decoded = ciphey::decoders::cisco_type7("password 7 02050D480809");
+    /// assert_eq!(decoded.plaintext().unwrap().text, "cisco");
+    ///
+    /// let decoded = ciphey::decoders::cisco_type7("073C345C1D1B2A5614000E1845");
+    /// assert_eq!(decoded.candidates[0].text, "Sup3rS3cret!");
+    /// ```
+    cisco_type7: CiscoType7Decoder, aliases ["cisco7", "type7"], key None;
 
     /// Decodes Citrix CTX1, which Citrix uses to obfuscate stored passwords.
     ///
